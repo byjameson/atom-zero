@@ -29,6 +29,7 @@ Endpoints:
   POST /v1/weekly-review
   GET  /v1/weekly-review/export?session_id=...&days=7
   GET  /v1/tasks/list?session_id=default&status=open&due=week&priority=high&sort=priority
+  GET  /v1/tasks/tags?session_id=default
   GET  /v1/tasks/export?session_id=default&status=open&due=week&priority=high&sort=priority&format=csv
   GET  /v1/tasks/overdue?session_id=default&sort=priority
   GET  /v1/tasks/due-soon?session_id=default&days=7&sort=priority
@@ -343,6 +344,7 @@ and suggested next actions.</p>
 <button id="tasklistbtn">Task list</button>
 <button id="tasklistcsv">Download CSV</button>
 <button id="tasklistmd">Download .md</button>
+<button id="tasktagsbtn">Tags</button>
 <input id="rescheduletaskid" type="number" min="1" placeholder="task ID"
        style="width:5em">
 <input id="rescheduledue" placeholder="new due date" style="width:9em">
@@ -370,6 +372,8 @@ Confirm delete</label>
 <p id="tasksearchmsg" class="hint"></p>
 <p id="tasklistmsg" class="hint"></p>
 <div id="tasklistres"></div>
+<p id="tasktagsmsg" class="hint"></p>
+<div id="tasktagsres"></div>
 <p id="reschedulemsg" class="hint"></p>
 <p id="taskprioritymsg" class="hint"></p>
 <p id="deletetaskmsg" class="hint"></p>
@@ -898,6 +902,49 @@ async function getTaskList() {
     });
   } catch (e) {
     msg.textContent = 'task list error: ' + e;
+  }
+}
+async function getTaskTags() {
+  const msg = document.getElementById('tasktagsmsg');
+  const box = document.getElementById('tasktagsres');
+  msg.textContent = 'loading task tags...';
+  box.textContent = '';
+  try {
+    const params = new URLSearchParams({session_id: sessionId});
+    const r = await fetch('/v1/tasks/tags?' + params.toString());
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'task tags error: ' + (j.error || r.status);
+      return;
+    }
+    msg.textContent = 'task tags | ' + (j.tag_count || 0) + ' tag(s) | ' +
+      (j.tagged_task_count || 0) + ' tagged task(s)' +
+      ((j.untagged_task_count || 0) ? ' | ' + j.untagged_task_count +
+        ' untagged' : '');
+    const tags = j.tags || [];
+    if (!tags.length) {
+      const none = document.createElement('div');
+      none.className = 'hint';
+      none.textContent = 'No task tags yet.';
+      box.appendChild(none);
+      return;
+    }
+    tags.forEach(item => {
+      const chip = document.createElement('button');
+      chip.className = 'qitem';
+      chip.style.display = 'inline-block';
+      chip.style.margin = '2px';
+      chip.title = 'Filter the task list by #' + item.tag;
+      chip.textContent = '#' + item.tag + ' (' + item.open + ' open, ' +
+        item.done + ' done)';
+      chip.onclick = () => {
+        document.getElementById('tasklisttag').value = item.tag;
+        getTaskList();
+      };
+      box.appendChild(chip);
+    });
+  } catch (e) {
+    msg.textContent = 'task tags error: ' + e;
   }
 }
 async function downloadTaskList(format) {
@@ -1519,6 +1566,7 @@ document.getElementById('overduebtn').onclick = () => getOverdueTasks();
 document.getElementById('duesoonbtn').onclick = () => getDueSoonTasks();
 document.getElementById('tasksearchbtn').onclick = () => searchTasks();
 document.getElementById('tasklistbtn').onclick = () => getTaskList();
+document.getElementById('tasktagsbtn').onclick = () => getTaskTags();
 document.getElementById('tasklistcsv').onclick = () => downloadTaskList('csv');
 document.getElementById('tasklistmd').onclick = () => downloadTaskList('markdown');
 document.getElementById('rescheduletaskbtn').onclick = () => rescheduleTask();
@@ -3320,6 +3368,22 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(
                 200, body.encode("utf-8"), content_type,
                 {"Content-Disposition": f'attachment; filename="{filename}"'})
+        elif (self.path == "/v1/tasks/tags"
+              or self.path.startswith("/v1/tasks/tags?")):
+            params = urllib.parse.parse_qs(
+                urllib.parse.urlparse(self.path).query)
+            session_id = (params.get("session_id", ["default"])[0]
+                          or "default")
+            try:
+                session = self._session(session_id)
+                from atomzero.briefing import task_tag_view
+
+                result = task_tag_view(
+                    session.human.data,
+                    now=params.get("today", [None])[0])
+            except Exception as exc:
+                return self._json(400, {"error": str(exc)})
+            return self._json(200, result)
         elif (self.path == "/v1/tasks/list"
               or self.path.startswith("/v1/tasks/list?")):
             params = urllib.parse.parse_qs(

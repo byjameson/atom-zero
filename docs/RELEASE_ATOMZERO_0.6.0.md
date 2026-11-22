@@ -30,7 +30,8 @@ after `0.5.0`.
 - Task priorities (`low`, `normal`, `high`), priority updates and priority
   labels in lists, briefs, reviews and exports.
 - Task tags (up to five per task), `tag task` updates, tag filters in task
-  lists/search and tags in CSV/Markdown task exports.
+  lists/search, tags in CSV/Markdown task exports and a `list tags` inventory
+  with open/done counts plus clickable UI chips.
 - Rescheduling and confirmed deletion.
 - Task text search plus status/due/priority filters.
 - Priority-first sorting in search, overdue, due-soon, list, brief and review
@@ -57,7 +58,7 @@ after `0.5.0`.
 
 ## Verified regressions
 
-- `364 passed` in the assistant test suite.
+- `366 passed` in the assistant test suite.
 - Weekly chat regression: 7/7.
 - Weekly export/archive regression: 29/29.
 - Weekly review regression: 6/6.

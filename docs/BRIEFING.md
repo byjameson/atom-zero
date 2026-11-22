@@ -80,6 +80,18 @@ tag task 1 clear
 Tags are lower-case letters, numbers, `-` and `_`; the UI task-list filter
 also accepts `#work`.
 
+`list tags` (also `show tags` or just `tags`) counts the tag vocabulary:
+
+```text
+Task tags: 2 distinct | 3 tagged task(s) (2 open, 1 done) | 1 untagged
+- work: 2 open, 1 done, 3 total
+- finance: 1 open, 1 done, 2 total
+```
+
+The CLI form is `atomzero-brief --session ... --list-tags [--json]`, HTTP uses
+`GET /v1/tasks/tags?session_id=default`, and the UI **Tags** button shows
+clickable counts that fill the task-list tag filter.
+
 Priority can also be updated outside chat:
 
 ```powershell

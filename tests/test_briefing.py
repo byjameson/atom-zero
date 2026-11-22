@@ -351,6 +351,60 @@ def test_cli_search_tasks(tmp_path, capsys):
     assert exc.value.code == 2
 
 
+def test_cli_task_tags(tmp_path, capsys):
+    session_path = tmp_path / "session.json"
+    session_path.write_text(json.dumps({"tasks": [
+        {"id": 1, "text": "write report", "status": "open",
+         "tags": ["work"]},
+        {"id": 2, "text": "send invoice", "status": "done",
+         "tags": ["work", "finance"]},
+        {"id": 3, "text": "read book", "status": "open", "tags": []},
+        {"id": 4, "text": "plan budget", "status": "open",
+         "tags": ["work", "finance"]},
+    ]}), encoding="utf-8")
+    common = [
+        "--session", str(session_path),
+        "--docs", str(tmp_path / "missing.db"),
+        "--gaps", str(tmp_path / "missing-gaps.json")]
+    assert main(common + ["--list-tags", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["tag_count"] == 2
+    assert payload["task_count"] == 4
+    assert payload["tagged_task_count"] == 3
+    assert payload["untagged_task_count"] == 1
+    assert payload["open_tagged"] == 2
+    assert payload["done_tagged"] == 1
+    assert payload["tags"] == [
+        {"tag": "work", "open": 2, "done": 1, "total": 3},
+        {"tag": "finance", "open": 1, "done": 1, "total": 2},
+    ]
+    assert payload["weights_changed"] is False
+
+    assert main(common + ["--list-tags"]) == 0
+    output = capsys.readouterr().out
+    assert ("Task tags: 2 distinct | 3 tagged task(s) "
+            "(2 open, 1 done) | 1 untagged") in output
+    assert "- work: 2 open, 1 done, 3 total" in output
+    assert "- finance: 1 open, 1 done, 2 total" in output
+
+    empty_path = tmp_path / "empty.json"
+    empty_path.write_text(json.dumps({"tasks": [
+        {"id": 1, "text": "no tags", "status": "open", "tags": []},
+    ]}), encoding="utf-8")
+    assert main(["--session", str(empty_path), "--list-tags"]) == 0
+    assert "Task tags: none" in capsys.readouterr().out
+
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--list-tags", "--weekly"])
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--list-tags", "--task-list"])
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--list-tags", "--task-sort", "priority"])
+    assert exc.value.code == 2
+
+
 def test_cli_priority_sort_views(tmp_path, capsys):
     session_path = tmp_path / "session.json"
     today = date.today()

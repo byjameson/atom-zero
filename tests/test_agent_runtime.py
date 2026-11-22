@@ -286,6 +286,45 @@ def test_agent_searches_task_text(tmp_path):
     assert "Tell me task text to search" in no_text["reply"]
 
 
+def test_agent_lists_task_tags(tmp_path):
+    agent = AgentSession("s-task-tags", tmp_path / "memory.json")
+    empty = agent.chat("list tags")
+    assert empty["tool_calls"][0]["name"] == "list_task_tags"
+    assert empty["task_tags"]["tag_count"] == 0
+    assert "There are no tasks." in empty["reply"]
+    agent.chat("add task write report tags work")
+    agent.chat("add task pay invoice tags work,finance")
+    agent.chat("add task read book")
+    agent.chat("complete task 1")
+    result = agent.chat("list tags")
+    assert result["tool_calls"][0]["name"] == "list_task_tags"
+    assert result["tool_calls"][0]["tag_count"] == 2
+    assert result["tool_calls"][0]["tagged_task_count"] == 2
+    assert result["tool_calls"][0]["untagged_task_count"] == 1
+    view = result["task_tags"]
+    assert view["open_tagged"] == 1
+    assert view["done_tagged"] == 1
+    assert view["tags"] == [
+        {"tag": "work", "open": 1, "done": 1, "total": 2},
+        {"tag": "finance", "open": 1, "done": 0, "total": 1},
+    ]
+    assert ("Task tags: 2 distinct | 2 tagged task(s) "
+            "(1 open, 1 done) | 1 untagged") in result["reply"]
+    assert "- finance: 1 open, 0 done, 1 total" in result["reply"]
+    assert "- work: 1 open, 1 done, 2 total" in result["reply"]
+    assert agent.chat("show tags")["task_tags"]["tag_count"] == 2
+    assert agent.chat("list task tags")["task_tags"]["tag_count"] == 2
+    assert agent.chat("tags?")["task_tags"]["tag_count"] == 2
+    assert agent.chat("tag task 2 finance,home")["reply"].startswith(
+        "Set tags on task 2")
+    refreshed = agent.chat("tags")
+    assert refreshed["task_tags"]["tag_count"] == 3
+    assert [item["tag"] for item in refreshed["task_tags"]["tags"]] == [
+        "finance", "home", "work"]
+    assert agent.chat("tag task 2 clear")["reply"] == (
+        "Cleared tags on task 2.")
+
+
 def test_agent_priority_sort_task_views(tmp_path):
     today = date.today()
     agent = AgentSession("s-priority-task-views", tmp_path / "memory.json")

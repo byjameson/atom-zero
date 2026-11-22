@@ -10,8 +10,8 @@ from pathlib import Path
 from atomzero.briefing import (
     build_briefing, build_weekly_review, due_soon_view, overdue_view,
     plan_goal, render_due_soon_view, render_overdue_view,
-    render_task_search_view, render_weekly_report_comparison,
-    task_search_view)
+    render_task_search_view, render_task_tag_view,
+    render_weekly_report_comparison, task_search_view, task_tag_view)
 from atomzero.contradictions import compare_sources
 from atomzero.doc_memory import format_citation, grounded_answer
 from atomzero.knowledge_gaps import KnowledgeGapError
@@ -993,6 +993,21 @@ class AgentSession:
             "weights_changed": False,
         }
 
+    def _list_task_tags(self) -> dict:
+        view = task_tag_view(self.human.data)
+        return {
+            "reply": render_task_tag_view(view),
+            "tool_calls": [{"name": "list_task_tags",
+                            "tag_count": view["tag_count"],
+                            "tagged_task_count": view["tagged_task_count"],
+                            "untagged_task_count":
+                                view["untagged_task_count"]}],
+            "sources": [],
+            "evidence": [],
+            "task_tags": view,
+            "weights_changed": False,
+        }
+
     def _search_tasks(self, raw_query: str) -> dict:
         query, status, due, priority, sort, tag = (
             parse_task_search_filters(raw_query))
@@ -1402,6 +1417,10 @@ class AgentSession:
         if brief_match:
             return self._briefing(
                 brief_match.groupdict().get("sort") or "default")
+        if (re.match(r"^(?:list|show)\s+(?:task\s+)?tags\??$", text,
+                     re.IGNORECASE)
+                or low.rstrip("?") in ("tags", "task tags")):
+            return self._list_task_tags()
         if "list tasks" in low:
             return self._list_tasks(text)
         task_search = re.match(

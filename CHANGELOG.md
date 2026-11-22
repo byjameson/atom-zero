@@ -126,6 +126,9 @@
   `tags` columns in CSV/Markdown exports.
 - Added tag filters to task text search: chat `search tasks ... tag work` /
   `#work`, CLI `--search-tag`, HTTP `tag` and a UI search tag field.
+- Added a task-tag inventory: chat `list tags` / `show tags`, CLI
+  `--list-tags`, HTTP `/v1/tasks/tags` and clickable UI tag chips with
+  open/done counts.
 - Added optional AISC architecture specs for the critical read and
   task-action paths, plus `scripts/aisc_audit.py` for external AISC checks.
 - Fixed `add task` priority parsing so task text ending in "priority task" is

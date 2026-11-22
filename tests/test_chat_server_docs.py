@@ -879,12 +879,17 @@ def test_ui_collection_scope_contract():
     assert 'id="tasklistmd"' in page
     assert 'id="tasklistmsg"' in page
     assert 'id="tasklistres"' in page
+    assert 'id="tasktagsbtn"' in page
+    assert 'id="tasktagsmsg"' in page
+    assert 'id="tasktagsres"' in page
     assert '<option value="open" selected>Open</option>' in page
     assert "getTaskList" in page
+    assert "getTaskTags" in page
     assert "downloadTaskList" in page
     assert "task.tags" in page
     assert "tasklisttag" in page
     assert "/v1/tasks/list" in page
+    assert "/v1/tasks/tags" in page
     assert "/v1/tasks/export" in page
     assert page.count("document.getElementById('tasksort').value") >= 4
     assert "session_id: sessionId, sort" in page
@@ -2017,6 +2022,31 @@ def test_http_search_tasks(tmp_path):
         empty = search(q="missing")
         assert empty["count"] == 0
         assert empty["tasks"] == []
+        tag_view = json.loads(urllib.request.urlopen(
+            base + "/v1/tasks/tags?session_id=task-search-http&today="
+            + urllib.parse.quote(today.isoformat()),
+            timeout=10).read().decode("utf-8"))
+        assert tag_view["tag_count"] == 2
+        assert tag_view["task_count"] == 5
+        assert tag_view["tagged_task_count"] == 5
+        assert tag_view["untagged_task_count"] == 0
+        assert tag_view["open_tagged"] == 4
+        assert tag_view["done_tagged"] == 1
+        assert tag_view["tags"] == [
+            {"tag": "work", "open": 2, "done": 1, "total": 3},
+            {"tag": "finance", "open": 2, "done": 0, "total": 2},
+        ]
+        assert "Task tags: 2 distinct" in tag_view["text"]
+        assert "- work: 2 open, 1 done, 3 total" in tag_view["text"]
+        _post(base + "/v1/agent/chat", {
+            "session_id": "task-search-http",
+            "message": "add task untagged note"})
+        tag_view = json.loads(urllib.request.urlopen(
+            base + "/v1/tasks/tags?session_id=task-search-http&today="
+            + urllib.parse.quote(today.isoformat()),
+            timeout=10).read().decode("utf-8"))
+        assert tag_view["untagged_task_count"] == 1
+        assert tag_view["task_count"] == 6
         for bad in ({"status": "blocked"}, {"due": "month"},
                     {"priority": "urgent"}):
             with pytest.raises(urllib.error.HTTPError) as invalid:

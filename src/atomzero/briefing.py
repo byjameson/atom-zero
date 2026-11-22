@@ -282,6 +282,65 @@ def render_task_list_markdown(view: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def task_tag_view(session_data: dict | None, now=None) -> dict:
+    """Count task tags across open and done tasks."""
+    data = session_data if isinstance(session_data, dict) else {}
+    rows = data.get("tasks", [])
+    tasks = ([task for task in rows if isinstance(task, dict)]
+             if isinstance(rows, list) else [])
+    counts = {}
+    tagged_tasks = 0
+    open_tagged = 0
+    done_tagged = 0
+    for task in tasks:
+        tags = _task_tags(task)
+        is_done = str(task.get("status", "open")) == "done"
+        if tags:
+            tagged_tasks += 1
+            if is_done:
+                done_tagged += 1
+            else:
+                open_tagged += 1
+        for tag in tags:
+            entry = counts.setdefault(
+                tag, {"tag": tag, "open": 0, "done": 0, "total": 0})
+            entry["done" if is_done else "open"] += 1
+            entry["total"] += 1
+    tags = sorted(counts.values(),
+                  key=lambda item: (-item["total"], item["tag"]))
+    stamp = (now.strftime("%Y-%m-%d %H:%M")
+             if isinstance(now, datetime)
+             else str(now or time.strftime("%Y-%m-%d %H:%M")))
+    if not tasks:
+        text = "There are no tasks."
+    elif not tags:
+        text = ("Task tags: none | 0 tagged tasks. Add one with "
+                "'add task ... tags work'.")
+    else:
+        text = (f"Task tags: {len(tags)} distinct | {tagged_tasks} tagged "
+                f"task(s) ({open_tagged} open, {done_tagged} done) | "
+                f"{len(tasks) - tagged_tasks} untagged")
+        text += "\n" + "\n".join(
+            f"- {item['tag']}: {item['open']} open, {item['done']} done, "
+            f"{item['total']} total" for item in tags)
+    return {
+        "generated": stamp,
+        "tag_count": len(tags),
+        "task_count": len(tasks),
+        "tagged_task_count": tagged_tasks,
+        "untagged_task_count": len(tasks) - tagged_tasks,
+        "open_tagged": open_tagged,
+        "done_tagged": done_tagged,
+        "tags": tags,
+        "text": text,
+        "weights_changed": False,
+    }
+
+
+def render_task_tag_view(view: dict) -> str:
+    return str(view.get("text", ""))
+
+
 def set_task_priority(session_data: dict | None, tid, priority) -> dict:
     """Update one task's priority in a session dict."""
     try:
@@ -1277,6 +1336,8 @@ def main(argv=None) -> int:
                         help="sort tasks in brief, review and task views")
     parser.add_argument("--task-list", action="store_true",
                         help="render a filtered task list")
+    parser.add_argument("--list-tags", action="store_true",
+                        help="count task tags across open and done tasks")
     parser.add_argument("--task-status", choices=TASK_SEARCH_STATUSES,
                         default=None, help="task-list status filter")
     parser.add_argument("--task-due", choices=TASK_SEARCH_DUE_FILTERS,
@@ -1358,6 +1419,13 @@ def main(argv=None) -> int:
         if args.json and args.task_format != "text":
             parser.error(
                 "--json cannot be combined with --task-format csv/markdown")
+    if args.list_tags and (
+            args.task_list or args.weekly or args.goal or args.reports
+            or args.markdown or args.out or args.overdue or args.due_soon
+            or args.search_tasks is not None
+            or args.set_task_priority is not None
+            or args.task_sort != "default"):
+        parser.error("--list-tags cannot be combined with other views")
     if args.set_task_priority is not None:
         raw_id, raw_priority = args.set_task_priority
         try:
@@ -1549,6 +1617,22 @@ def main(argv=None) -> int:
         return 0
     session_path = Path(args.session) if args.session else (
         Path(args.sessions_dir) / f"{args.session_id}.json")
+    if args.list_tags:
+        try:
+            session = load_session(session_path)
+            result = task_tag_view(session)
+        except (ValueError, OSError) as exc:
+            if args.json:
+                print(json.dumps({"ok": False, "error": str(exc)},
+                                 indent=2, ensure_ascii=False))
+            else:
+                print(f"briefing error: {exc}")
+            return 1
+        if args.json:
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+        else:
+            print(result["text"])
+        return 0
     if args.task_list:
         status = args.task_status or "open"
         due = args.task_due or "all"
