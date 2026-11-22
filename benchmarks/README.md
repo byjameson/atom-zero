@@ -21,6 +21,26 @@ python benchmarks/scoped_regression.py
 Latest result: **10/10 checks pass**. Raw result:
 [`results/scoped_regression.json`](results/scoped_regression.json).
 
+## Briefing and goal-plan regression
+
+`benchmarks/briefing_regression.py` checks the daily brief and goal planner
+without a model:
+
+- open-task and pending-gap counts;
+- focus selection and next actions;
+- index and graph summaries;
+- cited goal context and suggested tasks;
+- plans do not mutate session tasks;
+- empty/no-doc plans remain honest;
+- missing session files are empty, not errors.
+
+```powershell
+python benchmarks/briefing_regression.py
+```
+
+Latest result: **9/9 checks pass**. Raw result:
+[`results/briefing_regression.json`](results/briefing_regression.json).
+
 ## SQuAD v2 retrieval
 
 This is a **public retrieval benchmark**, not a generation benchmark. It uses

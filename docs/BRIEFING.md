@@ -22,6 +22,23 @@ If `--session` is omitted, the CLI uses
 `data/sessions/<session-id>.json`. Missing session/document/gap files are
 treated as empty, not as errors.
 
+## Chat flow
+
+```text
+plan goal prepare the warranty page
+-> cited plan skeleton, no task creation
+-> "Reply 'confirm plan' to create these tasks, or 'cancel plan'."
+
+confirm plan
+-> creates up to three suggested tasks
+
+cancel plan
+-> discards the pending plan
+```
+
+Task creation requires the explicit `confirm plan` message. There is no
+background task creation and no side effect from the initial plan request.
+
 ## API
 
 ```text

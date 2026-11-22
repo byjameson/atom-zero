@@ -96,6 +96,38 @@ def test_agent_answers_graph_relation_query(tmp_path):
     docs.close()
 
 
+def test_agent_plan_goal_requires_confirmation(tmp_path):
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("notes/warranty.txt",
+                  "The warranty period is 24 months. Claims need a receipt.",
+                  title="Warranty")
+    agent = AgentSession("s-plan", tmp_path / "memory.json", docs=docs)
+    plan = agent.chat("plan goal prepare the warranty page")
+    assert "Suggested plan" in plan["reply"]
+    assert "confirm plan" in plan["reply"].lower()
+    assert plan["suggested_tasks"]
+    assert plan["sources"][0]["source"] == "notes/warranty.txt"
+    assert agent.human.data["tasks"] == []
+    confirmed = agent.chat("confirm plan")
+    assert "Created 3 task" in confirmed["reply"]
+    assert len(agent.human.data["tasks"]) == 3
+    assert agent.chat("confirm plan")["reply"].startswith(
+        "There is no pending")
+    docs.close()
+
+
+def test_agent_can_cancel_plan(tmp_path):
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("notes/warranty.txt",
+                  "The warranty period is 24 months.", title="Warranty")
+    agent = AgentSession("s-plan-2", tmp_path / "memory.json", docs=docs)
+    agent.chat("plan goal prepare the warranty page")
+    assert "cancelled" in agent.chat("cancel plan")["reply"].lower()
+    assert "no pending" in agent.chat("confirm plan")["reply"].lower()
+    assert agent.human.data["tasks"] == []
+    docs.close()
+
+
 def test_agent_records_missing_source_as_gap(tmp_path):
     docs = DocMemory(tmp_path / "docs.db")
     gaps = KnowledgeGapStore(tmp_path / "gaps.json")

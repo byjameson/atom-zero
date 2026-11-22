@@ -1,0 +1,54 @@
+{
+  "benchmark": "atomzero-briefing-regression",
+  "generated": "2026-11-22T21:46:03",
+  "checks": [
+    {
+      "name": "brief_counts_and_focus",
+      "ok": true,
+      "detail": "task 1: review warranty page"
+    },
+    {
+      "name": "brief_index_and_graph",
+      "ok": true,
+      "detail": "- Finish task 1: review warranty page"
+    },
+    {
+      "name": "brief_actions_and_no_weights",
+      "ok": true,
+      "detail": "['Finish task 1: review warranty page', 'Review the open gap: What is the warranty claim deadline?', 'Explore the graph: what is related to Claims?']"
+    },
+    {
+      "name": "plan_context",
+      "ok": true,
+      "detail": "notes/warranty.txt"
+    },
+    {
+      "name": "plan_suggestions",
+      "ok": true,
+      "detail": "['Review the evidence from notes/warranty.txt for: prepare the warranty page', 'Resolve the open question: What is the warranty claim deadline?', 'Connect the goal to task 1: review warranty page']"
+    },
+    {
+      "name": "plan_does_not_mutate_session",
+      "ok": true,
+      "detail": "2 task(s)"
+    },
+    {
+      "name": "empty_plan_is_honest",
+      "ok": true,
+      "detail": "['Find one local source for: invent a new product', 'Write down one assumption to test for: invent a new product', 'Define the first concrete step for: invent a new product']"
+    },
+    {
+      "name": "empty_brief_is_honest",
+      "ok": true,
+      "detail": "add a local document or sync a folder"
+    },
+    {
+      "name": "missing_session_is_empty",
+      "ok": true,
+      "detail": "unexpected session data"
+    }
+  ],
+  "passed": 9,
+  "failed": 0,
+  "ok": true
+}

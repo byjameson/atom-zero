@@ -86,6 +86,20 @@ python benchmarks/scoped_regression.py
 Current result: **10/10 checks pass**. Raw result:
 [`results/scoped_regression.json`](results/scoped_regression.json).
 
+## Briefing and goal-plan regression
+
+`benchmarks/briefing_regression.py` is a deterministic gate for the local
+daily brief and goal planner: task/gap counts, focus/actions, index and graph
+summary, cited goal context, no hidden task mutation, honest empty cases and
+missing-session handling.
+
+```powershell
+python benchmarks/briefing_regression.py
+```
+
+Current result: **9/9 checks pass**. Raw result:
+[`results/briefing_regression.json`](results/briefing_regression.json).
+
 ## Product benchmark
 
 ```bash

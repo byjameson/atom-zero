@@ -824,6 +824,7 @@ def test_ui_collection_scope_contract():
     assert "Daily brief" in page
     assert 'id="briefrefresh"' in page
     assert "planGoal" in page
+    assert 'data-q="plan goal prepare the warranty page"' in page
 
 
 def test_doc_answer_returns_evidence_confidence_and_source_scope(tmp_path):

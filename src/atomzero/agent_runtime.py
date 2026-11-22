@@ -7,6 +7,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+from atomzero.briefing import plan_goal
 from atomzero.doc_memory import (
     best_snippet, format_citation, grounded_answer)
 from atomzero.knowledge_gaps import KnowledgeGapError
@@ -88,6 +89,7 @@ class AgentSession:
         self.gap_store = gap_store
         self.safety = safety
         self.skills = skills
+        self.pending_plan = None
         self.human = ChatHuman(memory_path, model, tokenizer, device,
                                "transformer", docs, on_gap=self._record_gap,
                                generator=generator,
@@ -189,6 +191,63 @@ class AgentSession:
             "sources": sources,
             "evidence": data["sources"],
             "connections": data.get("connections", []),
+        }
+
+    def _plan_goal(self, goal: str, confirm: bool = False) -> dict:
+        if confirm:
+            if self.pending_plan is None:
+                return {
+                    "reply": ("There is no pending goal plan. Use "
+                              "'plan goal ...' first."),
+                    "tool_calls": [], "sources": [], "evidence": [],
+                }
+            goal = self.pending_plan["goal"]
+        try:
+            plan = plan_goal(
+                goal, self.docs, self.gap_store, self.human.data)
+        except ValueError as exc:
+            return {"reply": str(exc), "tool_calls": [],
+                    "sources": [], "evidence": []}
+        sources = []
+        evidence = []
+        for item in plan.get("context", []):
+            source = {"source": item.get("source", ""),
+                      "title": item.get("title", "")}
+            if source not in sources:
+                sources.append(source)
+            evidence.append({
+                "source": item.get("source", ""),
+                "title": item.get("title", ""),
+                "page": item.get("page"),
+                "section": item.get("section", ""),
+                "snippet": item.get("snippet", ""),
+            })
+        if not confirm:
+            self.pending_plan = plan
+            reply = (plan["text"] + "\n\nReply 'confirm plan' to create "
+                     "these tasks, or 'cancel plan'.")
+            return {
+                "reply": reply,
+                "tool_calls": [{"name": "goal_plan", "goal": goal}],
+                "sources": sources,
+                "evidence": evidence,
+                "confidence": plan.get("confidence"),
+                "suggested_tasks": plan.get("suggested_tasks", []),
+            }
+        created = []
+        for text in plan.get("suggested_tasks", [])[:3]:
+            task_id = self.human.add_task(text)
+            created.append({"id": task_id, "text": text})
+        self.pending_plan = None
+        lines = [f"Created {len(created)} task(s) from the plan:"]
+        lines.extend(f"- {item['id']}: {item['text']}" for item in created)
+        return {
+            "reply": "\n".join(lines),
+            "tool_calls": [{"name": "goal_plan_confirm", "goal": goal}],
+            "sources": sources,
+            "evidence": evidence,
+            "confidence": plan.get("confidence"),
+            "created_tasks": created,
         }
 
     def _run_skill(self, skill: dict, text: str) -> dict:
@@ -308,6 +367,20 @@ class AgentSession:
             r"graph)\s*:?\s*(.+?)\??$", text, re.IGNORECASE)
         if graph_query:
             return self._graph_entity(graph_query.group(1).strip())
+        plan_match = re.match(
+            r"^(?:plan goal|goal plan)\s*:?\s*(.+)$", text, re.IGNORECASE)
+        if plan_match:
+            return self._plan_goal(plan_match.group(1).strip())
+        if low in ("confirm plan", "create plan tasks", "yes plan"):
+            return self._plan_goal("", confirm=True)
+        if low in ("cancel plan", "discard plan"):
+            had_plan = self.pending_plan is not None
+            self.pending_plan = None
+            return {
+                "reply": ("Plan cancelled." if had_plan
+                          else "There is no pending goal plan."),
+                "tool_calls": [], "sources": [], "evidence": [],
+            }
         if self.skills is not None:
             skill = self.skills.match(text)
             if skill is not None:

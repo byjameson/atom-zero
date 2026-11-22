@@ -222,6 +222,7 @@ hr{border:0;border-top:1px solid #ddd;margin:22px 0}
 <button data-q="how long do I have to submit a warranty claim?">warranty</button>
 <button data-q="what is the visitor badge code?">visitor badge</button>
 <button data-q="what is the population of Paris?">no-source demo</button>
+<button data-q="plan goal prepare the warranty page">plan goal</button>
 </div>
 <hr>
 <h3>Daily brief</h3>

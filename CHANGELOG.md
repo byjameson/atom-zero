@@ -25,6 +25,9 @@ work stays on `main`; see `docs/RELEASING.md`.
 - Added a cited **goal planner** (`POST /v1/goals/plan`) with suggested tasks;
   task creation requires explicit `confirm: true`.
 - Added the Daily brief UI panel and `docs/BRIEFING.md`.
+- Added chat goal planning: `plan goal ...`, `confirm plan` and `cancel plan`.
+  Task creation requires the explicit confirmation message.
+- Added `benchmarks/briefing_regression.py` (9/9 checks) and its test.
 
 ## atomzero 0.4.2 - UI collection scope (2026-11-22)
 
