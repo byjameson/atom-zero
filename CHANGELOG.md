@@ -27,6 +27,8 @@ work stays on `main`; see `docs/RELEASING.md`.
 - Added the Daily brief UI panel and `docs/BRIEFING.md`.
 - Added chat goal planning: `plan goal ...`, `confirm plan` and `cancel plan`.
   Task creation requires the explicit confirmation message.
+- Added chat `brief me` / `daily brief`, returning open tasks, pending gaps,
+  index status and graph entities with source items.
 - Added `benchmarks/briefing_regression.py` (9/9 checks) and its test.
 - Added `benchmarks/goal_flow_regression.py` (6/6 checks), an end-to-end HTTP
   test for plan/no-task, exactly-once confirmation and cancel/no-mutation.

@@ -7,7 +7,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from atomzero.briefing import plan_goal
+from atomzero.briefing import build_briefing, plan_goal
 from atomzero.doc_memory import (
     best_snippet, format_citation, grounded_answer)
 from atomzero.knowledge_gaps import KnowledgeGapError
@@ -193,6 +193,18 @@ class AgentSession:
             "connections": data.get("connections", []),
         }
 
+    def _briefing(self) -> dict:
+        brief = build_briefing(
+            self.human.data, self.gap_store, self.docs)
+        sources = brief.get("documents", {}).get("items", [])
+        return {
+            "reply": brief["text"],
+            "tool_calls": [{"name": "briefing"}],
+            "sources": sources,
+            "brief": brief,
+            "weights_changed": False,
+        }
+
     def _plan_goal(self, goal: str, confirm: bool = False) -> dict:
         if confirm:
             if self.pending_plan is None:
@@ -367,6 +379,9 @@ class AgentSession:
             r"graph)\s*:?\s*(.+?)\??$", text, re.IGNORECASE)
         if graph_query:
             return self._graph_entity(graph_query.group(1).strip())
+        if low in ("brief me", "brief me?", "daily brief", "daily brief?",
+                   "what should i do today", "what should i do today?"):
+            return self._briefing()
         plan_match = re.match(
             r"^(?:plan goal|goal plan)\s*:?\s*(.+)$", text, re.IGNORECASE)
         if plan_match:

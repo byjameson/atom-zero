@@ -25,6 +25,9 @@ treated as empty, not as errors.
 ## Chat flow
 
 ```text
+brief me
+-> daily brief in the chat: open tasks, pending gaps, index and graph
+
 plan goal prepare the warranty page
 -> cited plan skeleton, no task creation
 -> "Reply 'confirm plan' to create these tasks, or 'cancel plan'."

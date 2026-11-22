@@ -109,6 +109,12 @@ def build_briefing(session_data: dict | None, gaps, docs,
             "sources": len(sources),
             "titles": [item.get("title", item.get("source", ""))
                        for item in sources[:5]],
+            "items": [{
+                "source": item.get("source", ""),
+                "title": item.get("title", ""),
+                "kind": item.get("kind", "document"),
+                "verified": bool(item.get("verified", True)),
+            } for item in sources[:5]],
         },
         "graph": {
             "entities": nodes[:8],

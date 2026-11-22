@@ -96,6 +96,29 @@ def test_agent_answers_graph_relation_query(tmp_path):
     docs.close()
 
 
+def test_agent_brief_me_returns_local_brief(tmp_path):
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("notes/launch.txt", "The launch code is L-7781.",
+                  title="Launch")
+    docs.add_text("notes/warranty.txt",
+                  "The warranty period is 24 months.", title="Warranty")
+    gaps = KnowledgeGapStore(tmp_path / "gaps.json")
+    gaps.add("What is the warranty claim deadline?")
+    agent = AgentSession(
+        "s-brief", tmp_path / "memory.json", docs=docs, gap_store=gaps)
+    agent.chat("add task buy milk")
+    result = agent.chat("brief me")
+    assert "Daily brief" in result["reply"]
+    assert "buy milk" in result["reply"]
+    assert "Tasks: 1 open" in result["reply"]
+    assert "Index: 2 chunk(s)" in result["reply"]
+    assert result["tool_calls"][0]["name"] == "briefing"
+    assert result["brief"]["open_task_count"] == 1
+    assert result["brief"]["pending_gap_count"] == 1
+    assert result["sources"]
+    docs.close()
+
+
 def test_agent_plan_goal_requires_confirmation(tmp_path):
     docs = DocMemory(tmp_path / "docs.db")
     docs.add_text("notes/warranty.txt",
