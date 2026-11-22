@@ -1,8 +1,8 @@
 """End-to-end HTTP/chat regression for the weekly review.
 
 Creates tasks through chat, completes one, then asks for the weekly review.
-Checks the tool call, counts, text sections, sources, graph and the 14-day
-Turkish variant.
+Checks the tool call, counts, text sections, sources, graph, priority-first
+chat commands and the 14-day Turkish variant.
 
 Run:
 
@@ -73,7 +73,8 @@ def run(output: str | Path | None = None) -> dict:
             check(
                 "chat_weekly_tool",
                 result.get("tool_calls") == [
-                    {"name": "weekly_review", "days": 7}],
+                    {"name": "weekly_review", "days": 7,
+                     "sort": "default"}],
                 str(result.get("tool_calls")))
             check(
                 "chat_weekly_tasks",
@@ -106,6 +107,21 @@ def run(output: str | Path | None = None) -> dict:
                     for node in review.get("graph", {}).get("entities", [])}
                 and result.get("weights_changed") is False,
                 str(review.get("graph")))
+            priority_review = _post(base, "/v1/agent/chat", {
+                "session_id": "weekly-chat",
+                "message": "weekly review priority"})
+            priority_brief = _post(base, "/v1/agent/chat", {
+                "session_id": "weekly-chat",
+                "message": "brief me priority"})
+            check(
+                "chat_priority_sort",
+                priority_review.get("review", {}).get("sort") == "priority"
+                and priority_brief.get("brief", {}).get("sort") == "priority"
+                and (priority_review.get("tool_calls") or [{}])[0].get("sort")
+                == "priority"
+                and "sort=priority" in priority_review.get("reply", "")
+                and "sort=priority" in priority_brief.get("reply", ""),
+                priority_review.get("reply", "")[:160])
             turkish = _post(base, "/v1/agent/chat", {
                 "session_id": "weekly-chat",
                 "message": "haftalık özet 14 gün"})

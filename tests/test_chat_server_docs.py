@@ -948,6 +948,8 @@ def test_ui_collection_scope_contract():
     assert "planGoal" in page
     assert 'data-q="plan goal prepare the warranty page"' in page
     assert 'data-q="brief me"' in page
+    assert 'data-q="brief me priority"' in page
+    assert 'data-q="weekly review priority"' in page
 
 
 def test_doc_answer_returns_evidence_confidence_and_source_scope(tmp_path):
@@ -2239,13 +2241,19 @@ def test_http_chat_weekly_review(tmp_path):
         _post(base + "/v1/agent/chat", {
             "session_id": "week-chat", "message": "add task write report"})
         _post(base + "/v1/agent/chat", {
+            "session_id": "week-chat",
+            "message": "add task low priority task priority low"})
+        _post(base + "/v1/agent/chat", {
+            "session_id": "week-chat",
+            "message": "add task high priority task priority high"})
+        _post(base + "/v1/agent/chat", {
             "session_id": "week-chat", "message": "complete task 1"})
         result = _post(base + "/v1/agent/chat", {
             "session_id": "week-chat", "message": "weekly review"})
         assert result["tool_calls"][0] == {
-            "name": "weekly_review", "days": 7}
+            "name": "weekly_review", "days": 7, "sort": "default"}
         assert result["review"]["task_counts"] == {
-            "open": 1, "completed_recent": 1, "completed_total": 1}
+            "open": 3, "completed_recent": 1, "completed_total": 1}
         assert result["review"]["pending_gap_count"] == 1
         assert result["review"]["recent_source_count"] == 1
         assert "Weekly review" in result["reply"]
@@ -2253,6 +2261,22 @@ def test_http_chat_weekly_review(tmp_path):
         assert "buy milk" in result["reply"]
         assert result["sources"][0]["source"] == "notes/launch.txt"
         assert result["weights_changed"] is False
+        priority_review = _post(base + "/v1/agent/chat", {
+            "session_id": "week-chat", "message": "weekly review priority"})
+        assert priority_review["tool_calls"][0] == {
+            "name": "weekly_review", "days": 7, "sort": "priority"}
+        assert priority_review["review"]["sort"] == "priority"
+        assert [task["id"] for task in
+                priority_review["review"]["open_tasks"]] == [4, 2, 3]
+        assert "sort=priority" in priority_review["reply"]
+        priority_brief = _post(base + "/v1/agent/chat", {
+            "session_id": "week-chat", "message": "brief me priority"})
+        assert priority_brief["tool_calls"][0] == {
+            "name": "briefing", "sort": "priority"}
+        assert priority_brief["brief"]["sort"] == "priority"
+        assert [task["id"] for task in
+                priority_brief["brief"]["tasks"]] == [4, 2, 3]
+        assert "sort=priority" in priority_brief["reply"]
         turkish = _post(base + "/v1/agent/chat", {
             "session_id": "week-chat", "message": "haftalık özet 14 gün"})
         assert turkish["tool_calls"][0]["days"] == 14

@@ -563,6 +563,41 @@ def test_agent_report_archive_maintenance_flow(tmp_path):
     assert "no pending report action" in cancelled["reply"].lower()
 
 
+def test_agent_priority_first_brief_and_review(tmp_path):
+    agent = AgentSession("s-priority-brief", tmp_path / "memory.json")
+    agent.chat("add task low task priority low")
+    agent.chat("add task normal task")
+    agent.chat("add task high task priority high")
+    default_brief = agent.chat("brief me")
+    assert default_brief["tool_calls"] == [
+        {"name": "briefing", "sort": "default"}]
+    assert default_brief["brief"]["sort"] == "default"
+    assert [task["id"] for task in default_brief["brief"]["tasks"]] == [1, 2, 3]
+    brief = agent.chat("brief me priority")
+    assert brief["tool_calls"] == [{"name": "briefing", "sort": "priority"}]
+    assert brief["brief"]["sort"] == "priority"
+    assert [task["id"] for task in brief["brief"]["tasks"]] == [3, 2, 1]
+    assert "sort=priority" in brief["reply"]
+    assert brief["reply"].index("high task") < brief["reply"].index("low task")
+    daily = agent.chat("daily brief priority")
+    assert daily["brief"]["sort"] == "priority"
+    default_review = agent.chat("weekly review")
+    assert default_review["tool_calls"] == [
+        {"name": "weekly_review", "days": 7, "sort": "default"}]
+    assert [task["id"] for task in default_review["review"]["open_tasks"]] == [
+        1, 2, 3]
+    review = agent.chat("weekly review priority")
+    assert review["tool_calls"] == [
+        {"name": "weekly_review", "days": 7, "sort": "priority"}]
+    assert review["review"]["sort"] == "priority"
+    assert [task["id"] for task in review["review"]["open_tasks"]] == [3, 2, 1]
+    assert "sort=priority" in review["reply"]
+    longer = agent.chat("weekly review 14 days priority")
+    assert longer["tool_calls"] == [
+        {"name": "weekly_review", "days": 14, "sort": "priority"}]
+    assert longer["review"]["sort"] == "priority"
+
+
 def test_agent_weekly_review_intent(tmp_path):
     docs = DocMemory(tmp_path / "docs.db")
     docs.add_text("notes/launch.txt", "The launch code is L-7781.",
@@ -582,7 +617,8 @@ def test_agent_weekly_review_intent(tmp_path):
     assert "What is the warranty claim deadline?" in result["reply"]
     assert "L-7781" in {node["name"]
                         for node in result["review"]["graph"]["entities"]}
-    assert result["tool_calls"][0] == {"name": "weekly_review", "days": 7}
+    assert result["tool_calls"][0] == {
+        "name": "weekly_review", "days": 7, "sort": "default"}
     assert result["review"]["task_counts"]["completed_recent"] == 1
     assert result["review"]["pending_gap_count"] == 1
     assert result["review"]["recent_source_count"] == 1
@@ -590,7 +626,8 @@ def test_agent_weekly_review_intent(tmp_path):
     assert result["weights_changed"] is False
 
     turkish = agent.chat("haftalık özet 14 gün")
-    assert turkish["tool_calls"][0] == {"name": "weekly_review", "days": 14}
+    assert turkish["tool_calls"][0] == {
+        "name": "weekly_review", "days": 14, "sort": "default"}
     assert "last 14 days" in turkish["reply"]
     assert "completed in the last 14 days" in turkish["reply"]
     assert "Completed in the last 14 days:" in turkish["reply"]

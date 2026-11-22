@@ -94,6 +94,11 @@ daily brief and weekly review. The HTTP JSON forms accept
 the Markdown export accepts `GET /v1/weekly-review/export?sort=priority`.
 Priority-sorted brief and review titles show `| sort=priority`.
 
+Chat uses the same sort option: `brief me priority`, `daily brief priority`,
+`weekly review priority` and `weekly review 14 days priority`. Plain
+`brief me` / `weekly review` keep session order, and chat tool calls expose the
+selected `sort` value.
+
 This is local metadata only: there are no background reminders, notifications
 or calendar sync.
 

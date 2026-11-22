@@ -258,6 +258,8 @@ hr{border:0;border-top:1px solid #ddd;margin:22px 0}
 <button data-q="what is the visitor badge code?">visitor badge</button>
 <button data-q="what is the population of Paris?">no-source demo</button>
 <button data-q="brief me">brief me</button>
+<button data-q="brief me priority">priority brief</button>
+<button data-q="weekly review priority">priority review</button>
 <button data-q="due soon">due soon</button>
 <button data-q="search tasks report">search tasks</button>
 <button data-q="find report weekly">find report</button>

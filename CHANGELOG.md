@@ -104,6 +104,11 @@
   selector.
 - Applied priority-first sorting to daily brief and weekly review task lists,
   HTTP briefing/review JSON, Markdown export and the UI sort selector.
+- Added chat commands `brief me priority`, `daily brief priority` and
+  `weekly review priority` (including `weekly review 14 days priority`), with
+  `sort` exposed in tool calls.
+- Fixed `add task` priority parsing so task text ending in "priority task" is
+  not interpreted as a second priority clause.
 - Added `benchmarks/weekly_export_regression.py` (29/29 checks: CLI, HTTP, UI,
   the report archive, pruning, retention, dry-run preview, deletion, query
   filtering, chat search/list/maintenance, chat/HTTP sorting, report viewing,

@@ -418,32 +418,40 @@ class ChatHuman:
             priority = "normal"
             due_error = ""
             priority_error = ""
+            priority_seen = False
+            due_seen = False
             while task:
-                priority_match = re.search(
-                    r"\s+priority\s+(\S+)\s*$", task, re.IGNORECASE)
-                if priority_match:
-                    raw_priority = priority_match.group(1).strip().lower()
-                    if raw_priority not in TASK_PRIORITIES:
-                        priority_error = (
-                            f"I could not read the priority '{raw_priority}'. "
-                            "Use low, normal or high.")
-                        break
-                    priority = raw_priority
-                    task = task[:priority_match.start()].strip(" :")
-                    continue
-                due_match = re.search(
-                    r"\s+due\s+(.+)$", task, re.IGNORECASE)
-                if due_match:
-                    due_value = due_match.group(1).strip()
-                    parsed_due = _parse_due(due_value)
-                    if not parsed_due:
-                        due_error = (
-                            f"I could not read the due date '{due_value}'. "
-                            "Use YYYY-MM-DD, today, tomorrow or in N days.")
-                        break
-                    due = parsed_due
-                    task = task[:due_match.start()].strip(" :")
-                    continue
+                if not priority_seen:
+                    priority_match = re.search(
+                        r"\s+priority\s+(\S+)\s*$", task, re.IGNORECASE)
+                    if priority_match:
+                        raw_priority = (
+                            priority_match.group(1).strip().lower())
+                        if raw_priority not in TASK_PRIORITIES:
+                            priority_error = (
+                                f"I could not read the priority "
+                                f"'{raw_priority}'. Use low, normal or high.")
+                            break
+                        priority = raw_priority
+                        task = task[:priority_match.start()].strip(" :")
+                        priority_seen = True
+                        continue
+                if not due_seen:
+                    due_match = re.search(
+                        r"\s+due\s+(.+)$", task, re.IGNORECASE)
+                    if due_match:
+                        due_value = due_match.group(1).strip()
+                        parsed_due = _parse_due(due_value)
+                        if not parsed_due:
+                            due_error = (
+                                f"I could not read the due date "
+                                f"'{due_value}'. Use YYYY-MM-DD, today, "
+                                "tomorrow or in N days.")
+                            break
+                        due = parsed_due
+                        task = task[:due_match.start()].strip(" :")
+                        due_seen = True
+                        continue
                 break
             if priority_error:
                 reply = priority_error

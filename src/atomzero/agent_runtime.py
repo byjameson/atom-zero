@@ -366,13 +366,13 @@ class AgentSession:
             "comparison": comparison,
         }
 
-    def _briefing(self) -> dict:
+    def _briefing(self, sort: str = "default") -> dict:
         brief = build_briefing(
-            self.human.data, self.gap_store, self.docs)
+            self.human.data, self.gap_store, self.docs, sort=sort)
         sources = brief.get("documents", {}).get("items", [])
         return {
             "reply": brief["text"],
-            "tool_calls": [{"name": "briefing"}],
+            "tool_calls": [{"name": "briefing", "sort": brief["sort"]}],
             "sources": sources,
             "brief": brief,
             "weights_changed": False,
@@ -989,9 +989,9 @@ class AgentSession:
             "weights_changed": False,
         }
 
-    def _weekly_review(self, days: int = 7) -> dict:
+    def _weekly_review(self, days: int = 7, sort: str = "default") -> dict:
         review = build_weekly_review(
-            self.human.data, self.gap_store, self.docs, days=days)
+            self.human.data, self.gap_store, self.docs, days=days, sort=sort)
         sources = []
         for item in review.get("recent_sources", []):
             source = {
@@ -1008,6 +1008,7 @@ class AgentSession:
             "tool_calls": [{
                 "name": "weekly_review",
                 "days": review.get("period_days", days),
+                "sort": review["sort"],
             }],
             "sources": sources,
             "review": review,
@@ -1337,9 +1338,12 @@ class AgentSession:
             return self._compare_sources(
                 compare_match.group(1).strip(),
                 compare_match.group(2).strip())
-        if low in ("brief me", "brief me?", "daily brief", "daily brief?",
-                   "what should i do today", "what should i do today?"):
-            return self._briefing()
+        brief_match = re.match(
+            r"^(?:brief me|daily brief|what should i do today)"
+            r"(?:\s+(?P<sort>priority))?\??$", text, re.IGNORECASE)
+        if brief_match:
+            return self._briefing(
+                brief_match.groupdict().get("sort") or "default")
         task_search = re.match(
             r"^(?:search|find)\s+tasks?\s+(.+?)\??$",
             text, re.IGNORECASE)
@@ -1359,7 +1363,8 @@ class AgentSession:
             r"^(?:(?:weekly|week)\s+(?:review|summary)|"
             r"haftal[ıi]k\s+(?:özet|rapor|değerlendirme))"
             r"(?:\s+(?:for|last|son)?\s*(?P<days>\d+)\s*"
-            r"(?:days?|gün))?\??$",
+            r"(?:days?|gün))?"
+            r"(?:\s+(?P<sort>priority))?\??$",
             text, re.IGNORECASE)
         if not weekly_match:
             weekly_match = re.match(
@@ -1369,8 +1374,11 @@ class AgentSession:
             weekly_match = re.match(
                 r"^bu\s+haftan[ıi]n\s+özeti\??$", text, re.IGNORECASE)
         if weekly_match:
-            days_raw = weekly_match.groupdict().get("days")
-            return self._weekly_review(int(days_raw) if days_raw else 7)
+            groups = weekly_match.groupdict()
+            days_raw = groups.get("days")
+            return self._weekly_review(
+                int(days_raw) if days_raw else 7,
+                sort=groups.get("sort") or "default")
         plan_match = re.match(
             r"^(?:plan goal|goal plan)\s*:?\s*(.+)$", text, re.IGNORECASE)
         if plan_match:
