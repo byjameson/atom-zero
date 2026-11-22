@@ -854,6 +854,9 @@ def test_ui_collection_scope_contract():
     assert "/v1/weekly-review/reports/delete" in page
     assert 'id="weeklyreportsearch"' in page
     assert 'id="weeklyreportssearch"' in page
+    assert 'id="weeklyreportsort"' in page
+    assert 'value="oldest"' in page
+    assert 'value="largest"' in page
     assert 'data-q="find report weekly"' in page
     assert 'data-q="list reports"' in page
     assert 'data-q="keep reports 2 dry-run"' in page
@@ -1393,6 +1396,23 @@ def test_http_weekly_reports_archive(tmp_path):
         by_id = {item["id"]: item for item in listing["data"]}
         assert by_id[entry["id"]]["exists"] is True
         assert by_id[missing_entry["id"]]["exists"] is False
+        oldest = json.loads(urllib.request.urlopen(
+            base + "/v1/weekly-review/reports?limit=5&sort=oldest",
+            timeout=10).read().decode("utf-8"))
+        newest = json.loads(urllib.request.urlopen(
+            base + "/v1/weekly-review/reports?limit=5&sort=newest",
+            timeout=10).read().decode("utf-8"))
+        largest = json.loads(urllib.request.urlopen(
+            base + "/v1/weekly-review/reports?limit=5&sort=largest",
+            timeout=10).read().decode("utf-8"))
+        assert oldest["sort"] == "oldest"
+        assert oldest["data"][0]["id"] == entry["id"]
+        assert newest["data"][0]["id"] == missing_entry["id"]
+        assert largest["data"][0]["id"] == entry["id"]
+        with pytest.raises(urllib.error.HTTPError) as invalid_sort:
+            urllib.request.urlopen(
+                base + "/v1/weekly-review/reports?sort=random", timeout=10)
+        assert invalid_sort.value.code == 400
         chat = _post(base + "/v1/agent/chat", {
             "session_id": "report-chat",
             "message": "find report weekly"})

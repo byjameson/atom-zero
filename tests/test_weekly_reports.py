@@ -64,6 +64,28 @@ def test_archive_records_dedupes_and_reads_bom_index(tmp_path):
     assert reloaded.list()[0]["task_counts"]["open"] == 4
 
 
+def test_archive_sort_orders(tmp_path):
+    index_path = tmp_path / "weekly_reports.json"
+    archive = WeeklyReportArchive(index_path)
+    for number, name in enumerate(("a", "b", "c"), start=1):
+        report = tmp_path / f"report-{name}.md"
+        report.write_text(name * (5 * (number + 1)), encoding="utf-8")
+        archive.record(
+            report, _review(),
+            exported_at=f"2026-11-2{number}T09:00:00")
+
+    assert [item["name"] for item in archive.list(order="newest")] == [
+        "report-c.md", "report-b.md", "report-a.md"]
+    assert [item["name"] for item in archive.list(order="oldest")] == [
+        "report-a.md", "report-b.md", "report-c.md"]
+    assert [item["name"] for item in archive.list(order="largest")] == [
+        "report-c.md", "report-b.md", "report-a.md"]
+    assert [item["name"] for item in archive.list(
+        order="oldest", query="report-b")] == ["report-b.md"]
+    with pytest.raises(WeeklyReportError):
+        archive.list(order="random")
+
+
 def test_archive_query_filters_entries(tmp_path):
     index_path = tmp_path / "weekly_reports.json"
     archive = WeeklyReportArchive(index_path)

@@ -51,9 +51,11 @@
   actions require `confirm reports`, cancellation uses `cancel reports`.
 - Added queryless chat archive listing (`list reports`,
   `show report archive 5`) with an optional recent-entry limit.
-- Added `benchmarks/weekly_export_regression.py` (18/18 checks: CLI, HTTP, UI,
+- Added archive ordering: `--reports --sort newest|oldest|largest`,
+  `GET /v1/weekly-review/reports?sort=...` and a UI sort selector.
+- Added `benchmarks/weekly_export_regression.py` (19/19 checks: CLI, HTTP, UI,
   the report archive, pruning, retention, dry-run preview, deletion, query
-  filtering and chat search/list/maintenance).
+  filtering, chat search/list/maintenance and sorting).
 - Fixed BOM-sensitive session loading: `atomzero-brief` and `ChatHuman` now
   accept PowerShell-written UTF-8 session files with a BOM.
 - Extended BOM-tolerant reads to feedback, knowledge-gap, research-queue,

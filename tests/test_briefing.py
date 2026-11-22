@@ -218,6 +218,37 @@ def test_cli_reports_prune_missing_files(tmp_path, capsys):
     assert exc.value.code == 2
 
 
+def test_cli_reports_sort_orders(tmp_path, capsys):
+    index_path = tmp_path / "weekly_reports.json"
+    archive = WeeklyReportArchive(index_path)
+    for number, name in enumerate(("a", "b", "c"), start=1):
+        report = tmp_path / f"report-{name}.md"
+        report.write_text(name * (5 * (number + 1)), encoding="utf-8")
+        archive.record(report, {
+            "generated": f"2026-11-2{number} 09:00", "period_days": 7,
+            "task_counts": {"open": number}, "recent_source_count": 1,
+            "graph": {"entities": [], "connections": []},
+        }, exported_at=f"2026-11-2{number}T09:00:00")
+
+    assert main(["--reports", "--sort", "oldest", "--json",
+                 "--reports-index", str(index_path)]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["sort"] == "oldest"
+    assert [item["name"] for item in payload["data"]] == [
+        "report-a.md", "report-b.md", "report-c.md"]
+    assert main(["--reports", "--sort", "largest",
+                 "--reports-index", str(index_path)]) == 0
+    output = capsys.readouterr().out
+    assert "sort: largest" in output
+    assert output.index("report-c.md") < output.index("report-b.md")
+    with pytest.raises(SystemExit) as exc:
+        main(["--reports", "--sort", "random"])
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
+        main(["--sort", "oldest"])
+    assert exc.value.code == 2
+
+
 def test_cli_reports_delete_entry(tmp_path, capsys):
     index_path = tmp_path / "weekly_reports.json"
     report = tmp_path / "kept.md"

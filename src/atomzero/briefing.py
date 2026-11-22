@@ -376,12 +376,14 @@ def render_weekly_report_index(entries: list[dict],
                                index_path: str | Path,
                                query: str = "",
                                matched: int | None = None,
-                               total: int | None = None) -> str:
+                               total: int | None = None,
+                               sort: str = "newest") -> str:
     heading = f"Weekly report archive: {index_path}"
     if query:
         heading += (f" | query: {query} | "
                     f"{matched if matched is not None else len(entries)} "
                     f"match(es) of {total if total is not None else '?'}")
+    heading += f" | sort: {sort}"
     lines = [heading]
     if not entries:
         lines.append("No archived weekly reports." if not query
@@ -579,6 +581,9 @@ def main(argv=None) -> int:
                         help="remove one archive entry by report id")
     parser.add_argument("--query", default="",
                         help="filter archived reports by text")
+    parser.add_argument("--sort", choices=("newest", "oldest", "largest"),
+                        default=None,
+                        help="sort archived reports")
     parser.add_argument("--reports-index", default=DEFAULT_REPORTS_PATH,
                         help="weekly report archive JSON path")
     parser.add_argument("--limit", type=int, default=10,
@@ -612,9 +617,12 @@ def main(argv=None) -> int:
     if args.query and (args.prune or args.keep is not None
                        or args.delete is not None or args.dry_run):
         parser.error("--query cannot be combined with maintenance options")
+    if args.sort and not args.reports:
+        parser.error("--sort requires --reports")
     if args.reports:
         index_path = args.reports_index or DEFAULT_REPORTS_PATH
         query = str(args.query or "").strip()
+        sort = args.sort or "newest"
         removed = 0
         trimmed = 0
         preview = []
@@ -630,7 +638,8 @@ def main(argv=None) -> int:
                     preview = archive.keep_preview(args.keep)
                 else:
                     trimmed = archive.keep(args.keep)
-            entries = archive.list(args.limit, query=query)
+            entries = archive.list(
+                args.limit, query=query, order=sort)
             total = archive.count()
             matched = archive.count(query=query)
         except (WeeklyReportError, OSError) as exc:
@@ -646,6 +655,7 @@ def main(argv=None) -> int:
                 "count": len(entries),
                 "total": total,
                 "index": str(archive.path),
+                "sort": sort,
             }
             if query:
                 payload["query"] = query
@@ -678,7 +688,7 @@ def main(argv=None) -> int:
                       f"{args.keep}.")
             print(render_weekly_report_index(
                 entries, archive.path, query=query,
-                matched=matched, total=total))
+                matched=matched, total=total, sort=sort))
         return 0
     session_path = Path(args.session) if args.session else (
         Path(args.sessions_dir) / f"{args.session_id}.json")

@@ -13,7 +13,8 @@ Checks:
   flow;
 - deleting one archive entry while leaving its report file on disk;
 - filtering the archive with a text query;
-- searching, listing and maintaining the archive from chat with confirmation.
+- searching, listing and maintaining the archive from chat with confirmation;
+- sorting archive entries by newest, oldest and largest.
 
 Run:
 
@@ -108,6 +109,9 @@ def run(output: str | Path | None = None) -> dict:
                 and "/v1/weekly-review/reports/delete" in page
                 and 'id="weeklyreportsearch"' in page
                 and 'id="weeklyreportssearch"' in page
+                and 'id="weeklyreportsort"' in page
+                and 'value="oldest"' in page
+                and 'value="largest"' in page
                 and 'data-q="find report weekly"' in page
                 and 'data-q="list reports"' in page
                 and 'data-q="keep reports 2 dry-run"' in page
@@ -312,6 +316,26 @@ def run(output: str | Path | None = None) -> dict:
                     "pending_gap_count": 0, "recent_source_count": 0,
                     "graph": {"entities": [], "connections": []},
                 }, exported_at=f"2026-11-2{number}T09:00:00")
+            oldest = json.loads(urllib.request.urlopen(
+                base + "/v1/weekly-review/reports?limit=5&sort=oldest",
+                timeout=15).read().decode("utf-8"))
+            newest = json.loads(urllib.request.urlopen(
+                base + "/v1/weekly-review/reports?limit=5&sort=newest",
+                timeout=15).read().decode("utf-8"))
+            largest = json.loads(urllib.request.urlopen(
+                base + "/v1/weekly-review/reports?limit=5&sort=largest",
+                timeout=15).read().decode("utf-8"))
+            check(
+                "archive_sort",
+                oldest.get("sort") == "oldest"
+                and newest.get("sort") == "newest"
+                and largest.get("sort") == "largest"
+                and oldest.get("data", [{}])[0].get("id")
+                != newest.get("data", [{}])[0].get("id")
+                and largest.get("data", [{}])[0].get("id")
+                == entry.get("id"),
+                f"oldest={oldest.get('data', [{}])[0].get('id')} "
+                f"newest={newest.get('data', [{}])[0].get('id')}")
             preview = _post(
                 base, "/v1/weekly-review/reports/keep",
                 {"keep": 2, "dry_run": True})

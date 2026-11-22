@@ -148,16 +148,34 @@ class WeeklyReportArchive:
             str(entry.get(field, "") or "") for field in fields).lower()
         return needle in haystack
 
-    def list(self, limit: int = 10, query: str = "") -> list[dict]:
+    def list(self, limit: int = 10, query: str = "",
+             order: str = "newest") -> list[dict]:
         try:
             limit = max(1, min(int(limit), 100))
         except (TypeError, ValueError):
             limit = 10
         needle = str(query or "").strip().lower()
+        order = str(order or "newest").strip().lower()
+        if order not in ("newest", "oldest", "largest"):
+            raise WeeklyReportError(
+                "order must be newest, oldest or largest")
+
+        def sort_key(entry: dict):
+            if order == "largest":
+                try:
+                    size = int(entry.get("size_bytes", 0) or 0)
+                except (TypeError, ValueError):
+                    size = 0
+                return (size, str(entry.get("exported_at", "")))
+            return str(entry.get("exported_at", ""))
+
         with self._lock:
             self._reload()
+            ordered = sorted(
+                self.reports, key=sort_key,
+                reverse=order in ("newest", "largest"))
             items = []
-            for entry in self.reports:
+            for entry in ordered:
                 if not self._matches(entry, needle):
                     continue
                 item = dict(entry)

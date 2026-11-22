@@ -267,6 +267,11 @@ and suggested next actions.</p>
 <div id="briefres"></div>
 <div class="row"><input id="weeklyreportsearch" placeholder="Search reports...">
 <button id="weeklyreportssearch">Search</button>
+<select id="weeklyreportsort" title="Report order">
+<option value="newest" selected>Newest</option>
+<option value="oldest">Oldest</option>
+<option value="largest">Largest</option>
+</select>
 <button id="weeklyreportsrefresh">Recent reports</button>
 <button id="weeklyreportsprune">Prune missing</button>
 <input id="weeklykeep" type="number" min="1" max="500" value="5"
@@ -646,8 +651,9 @@ async function refreshWeeklyReports() {
   if (previewBox) previewBox.textContent = '';
   const query = (document.getElementById('weeklyreportsearch').value || '')
     .trim();
+  const sort = document.getElementById('weeklyreportsort').value || 'newest';
   try {
-    const params = new URLSearchParams({limit: '10'});
+    const params = new URLSearchParams({limit: '10', sort});
     if (query) params.set('query', query);
     const r = await fetch('/v1/weekly-review/reports?' + params.toString());
     const j = await r.json();
@@ -892,6 +898,8 @@ document.getElementById('briefrefresh').onclick = () => getBriefing();
 document.getElementById('briefweekly').onclick = () => getWeeklyReview();
 document.getElementById('weeklymd').onclick = () => downloadWeeklyMarkdown();
 document.getElementById('weeklyreportssearch').onclick =
+  () => refreshWeeklyReports();
+document.getElementById('weeklyreportsort').onchange =
   () => refreshWeeklyReports();
 document.getElementById('weeklyreportsearch').addEventListener(
   'keydown', event => {
@@ -2666,7 +2674,9 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 limit = int(params.get("limit", ["10"])[0])
                 query = str(params.get("query", [""])[0] or "").strip()
-                entries = archive.list(limit, query=query)
+                sort = str(params.get("sort", ["newest"])[0]
+                           or "newest").strip().lower()
+                entries = archive.list(limit, query=query, order=sort)
                 total = archive.count()
                 matched = archive.count(query=query)
             except (TypeError, ValueError, WeeklyReportError) as exc:
@@ -2676,6 +2686,7 @@ class Handler(BaseHTTPRequestHandler):
                 "count": len(entries),
                 "total": total,
                 "index": str(archive.path),
+                "sort": sort,
             }
             if query:
                 payload["query"] = query
