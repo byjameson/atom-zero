@@ -18,12 +18,8 @@ param(
 )
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
-$atomSrc = Join-Path $root "packages\atomzero\src"
-$serverModule = if (Test-Path (Join-Path $atomSrc "atomzero\chat_server.py")) {
-    "atomzero.chat_server"
-} else {
-    "streamft.chat_server"
-}
+$atomSrc = Join-Path $root "src"
+$serverModule = "atomzero.chat_server"
 $extra = ""
 if ($Adapter) { $extra += " --adapter $Adapter" }
 if ($Docs) { $extra += " --docs $Docs" }

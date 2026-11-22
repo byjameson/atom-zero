@@ -27,6 +27,12 @@ jobs:
         run: pip install -e .
       - name: Tests
         run: python -m pytest tests -q
+      - name: Document benchmark
+        run: python research/benchmark_documents.py --out /tmp/document_benchmark.json --check
+      - name: Safety and injection red-team
+        run: |
+          python research/redteam_safety.py --out /tmp/redteam_safety.json
+          python research/redteam_injection.py --out /tmp/redteam_injection.json
       - name: Build and entry points
         run: |
           python -m build
