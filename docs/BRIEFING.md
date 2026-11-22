@@ -70,18 +70,23 @@ filters are `low`, `normal` and `high`. `week` means today through the next
 seven days, and `overdue` applies to open tasks only.
 
 The HTTP endpoint is
-`GET /v1/tasks/search?q=report&status=open&due=week&priority=high`, the CLI
-form is `atomzero-brief --session ... --search-tasks report --search-status
-open --search-due week --search-priority high [--json]` and the UI has a
-**Search tasks** field with status, due and priority selectors.
+`GET /v1/tasks/search?q=report&status=open&due=week&priority=high&sort=priority`,
+the CLI form is `atomzero-brief --session ... --search-tasks report
+--search-status open --search-due week --search-priority high
+--task-sort priority [--json]` and the UI has a **Search tasks** field with
+status, due, priority and task-order selectors. `priority` sorting places
+high before normal before low, then earliest due date, then task id; the
+default keeps session order.
 
 The daily brief and weekly review add overdue/due-soon counts, a focus item,
 priority/due-date labels and dedicated Markdown sections. Chat understands
 `due soon` and `due soon in 14 days`. The UI **Overdue tasks** and **Due soon** buttons
-expose the same session views; HTTP equivalents are `/v1/tasks/overdue` and
-`/v1/tasks/due-soon?days=7`. CLI equivalents are
-`atomzero-brief --session ... --overdue [--json]` and
-`atomzero-brief --session ... --due-soon --due-days 7 [--json]`.
+expose the same session views; HTTP equivalents are
+`/v1/tasks/overdue?sort=priority` and
+`/v1/tasks/due-soon?days=7&sort=priority`. CLI equivalents are
+`atomzero-brief --session ... --overdue --task-sort priority [--json]` and
+`atomzero-brief --session ... --due-soon --due-days 7 --task-sort priority
+[--json]`. The shared UI **Task order** selector applies to all three views.
 
 This is local metadata only: there are no background reminders, notifications
 or calendar sync.

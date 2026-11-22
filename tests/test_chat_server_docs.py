@@ -854,6 +854,7 @@ def test_ui_collection_scope_contract():
     assert 'id="tasksearchstatus"' in page
     assert 'id="tasksearchdue"' in page
     assert 'id="tasksearchpriority"' in page
+    assert 'id="tasksort"' in page
     assert 'id="tasksearchbtn"' in page
     assert 'id="tasksearchres"' in page
     assert 'id="tasksearchmsg"' in page
@@ -862,7 +863,10 @@ def test_ui_collection_scope_contract():
     assert '<option value="none">' in page
     assert '<option value="high">' in page
     assert '<option value="normal">' in page
+    assert '<option value="priority">Priority first</option>' in page
     assert "searchTasks" in page
+    assert "tasksort" in page
+    assert "&sort=" in page
     assert "/v1/tasks/search" in page
     assert "tasksearchstatus" in page
     assert "tasksearchdue" in page
@@ -2033,6 +2037,60 @@ def test_http_update_task_priority(tmp_path):
                 "session_id": "priority-http", "id": 99,
                 "priority": "high"})
         assert missing.value.code == 404
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
+
+
+def test_http_priority_sort_views(tmp_path):
+    old = dict(chat_server._state)
+    chat_server._state.update({
+        "model": None, "tok": None, "docs": None, "adapter": "",
+        "name": "tiny-test", "params": 1, "config": {}, "step": 0,
+        "api_key": "", "metrics": {"requests": 0, "generated_tokens": 0},
+        "safety": None, "wiki_lang": "en",
+        "session_dir": str(tmp_path / "sessions"), "sessions": {},
+        "generator": None, "allow_general_chat": False, "skills": None,
+    })
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    today = date.today()
+    try:
+        for text, offset, priority in (
+                ("low overdue task", -1, "low"),
+                ("high overdue task", -2, "high"),
+                ("normal soon task", 2, "normal"),
+                ("high soon task", 1, "high")):
+            due = (today + timedelta(days=offset)).isoformat()
+            _post(base + "/v1/agent/chat", {
+                "session_id": "priority-sort-http",
+                "message": f"add task {text} due {due} priority {priority}"})
+
+        def get(path, **params):
+            params.update({
+                "session_id": "priority-sort-http",
+                "today": today.isoformat(),
+            })
+            return json.loads(urllib.request.urlopen(
+                base + path + "?" + urllib.parse.urlencode(params),
+                timeout=10).read().decode("utf-8"))
+
+        overdue = get("/v1/tasks/overdue", sort="priority")
+        assert overdue["sort"] == "priority"
+        assert [task["id"] for task in overdue["overdue_tasks"]] == [2, 1]
+        due_soon = get("/v1/tasks/due-soon", days=7, sort="priority")
+        assert due_soon["sort"] == "priority"
+        assert [task["id"] for task in due_soon["due_soon_tasks"]] == [4, 3]
+        search = get("/v1/tasks/search", q="task", sort="priority")
+        assert search["sort"] == "priority"
+        assert [task["id"] for task in search["tasks"]] == [2, 4, 3, 1]
+        with pytest.raises(urllib.error.HTTPError) as invalid:
+            get("/v1/tasks/overdue", sort="bogus")
+        assert invalid.value.code == 400
     finally:
         httpd.shutdown()
         httpd.server_close()

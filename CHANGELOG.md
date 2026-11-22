@@ -99,6 +99,9 @@
   labels, `priority` search filters in chat/CLI/HTTP and a UI selector.
 - Added priority updates outside chat: `--set-task-priority ID LEVEL`,
   `POST /v1/tasks/priority` and a UI task ID/priority form.
+- Added priority-first sorting for task search, overdue and due-soon views:
+  `--task-sort priority`, HTTP `sort=priority` and a shared UI task-order
+  selector.
 - Added `benchmarks/weekly_export_regression.py` (29/29 checks: CLI, HTTP, UI,
   the report archive, pruning, retention, dry-run preview, deletion, query
   filtering, chat search/list/maintenance, chat/HTTP sorting, report viewing,

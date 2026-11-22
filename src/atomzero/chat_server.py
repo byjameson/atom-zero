@@ -28,9 +28,9 @@ Endpoints:
   POST /v1/briefing
   POST /v1/weekly-review
   GET  /v1/weekly-review/export?session_id=...&days=7
-  GET  /v1/tasks/overdue?session_id=default
-  GET  /v1/tasks/due-soon?session_id=default&days=7
-  GET  /v1/tasks/search?session_id=default&q=report&status=open&due=week&priority=high
+  GET  /v1/tasks/overdue?session_id=default&sort=priority
+  GET  /v1/tasks/due-soon?session_id=default&days=7&sort=priority
+  GET  /v1/tasks/search?session_id=default&q=report&status=open&due=week&priority=high&sort=priority
   POST /v1/tasks/reschedule
   POST /v1/tasks/priority
   POST /v1/tasks/delete
@@ -298,6 +298,10 @@ and suggested next actions.</p>
 <option value="low">Low</option>
 <option value="normal">Normal</option>
 <option value="high">High</option>
+</select>
+<select id="tasksort" title="Task order">
+<option value="default" selected>Session order</option>
+<option value="priority">Priority first</option>
 </select>
 <button id="tasksearchbtn">Search tasks</button>
 <input id="rescheduletaskid" type="number" min="1" placeholder="task ID"
@@ -659,11 +663,12 @@ async function getBriefing() {
 async function getOverdueTasks() {
   const msg = document.getElementById('briefmsg');
   const box = document.getElementById('overdueres');
+  const sort = document.getElementById('tasksort').value;
   msg.textContent = 'loading overdue tasks...';
   box.textContent = '';
   try {
     const r = await fetch('/v1/tasks/overdue?session_id=' +
-      encodeURIComponent(sessionId));
+      encodeURIComponent(sessionId) + '&sort=' + encodeURIComponent(sort));
     const j = await r.json();
     if (!r.ok) {
       msg.textContent = 'overdue error: ' + (j.error || r.status);
@@ -671,7 +676,8 @@ async function getOverdueTasks() {
     }
     msg.textContent = 'overdue tasks | ' +
       (j.overdue_task_count || 0) + ' of ' +
-      (j.open_task_count || 0) + ' open';
+      (j.open_task_count || 0) + ' open' +
+      ((j.sort || sort) !== 'default' ? ' | sort=' + (j.sort || sort) : '');
     const tasks = j.overdue_tasks || [];
     if (!tasks.length) {
       const none = document.createElement('div');
@@ -695,6 +701,7 @@ async function getDueSoonTasks() {
   const msg = document.getElementById('briefmsg');
   const box = document.getElementById('dueres');
   const days = parseInt(document.getElementById('duedays').value, 10);
+  const sort = document.getElementById('tasksort').value;
   if (!Number.isInteger(days) || days < 1) {
     msg.textContent = 'enter a due-soon window of at least 1 day';
     return;
@@ -703,7 +710,8 @@ async function getDueSoonTasks() {
   box.textContent = '';
   try {
     const r = await fetch('/v1/tasks/due-soon?session_id=' +
-      encodeURIComponent(sessionId) + '&days=' + days);
+      encodeURIComponent(sessionId) + '&days=' + days +
+      '&sort=' + encodeURIComponent(sort));
     const j = await r.json();
     if (!r.ok) {
       msg.textContent = 'due-soon error: ' + (j.error || r.status);
@@ -711,7 +719,8 @@ async function getDueSoonTasks() {
     }
     msg.textContent = 'due soon | ' + (j.due_soon_count || 0) +
       ' of ' + (j.open_task_count || 0) + ' open | next ' +
-      (j.days || days) + ' days';
+      (j.days || days) + ' days' +
+      ((j.sort || sort) !== 'default' ? ' | sort=' + (j.sort || sort) : '');
     const tasks = j.due_soon_tasks || [];
     if (!tasks.length) {
       const none = document.createElement('div');
@@ -738,6 +747,7 @@ async function searchTasks() {
   const status = document.getElementById('tasksearchstatus').value;
   const due = document.getElementById('tasksearchdue').value;
   const priority = document.getElementById('tasksearchpriority').value;
+  const sort = document.getElementById('tasksort').value;
   if (!query) {
     msg.textContent = 'enter text to search tasks';
     return;
@@ -746,7 +756,7 @@ async function searchTasks() {
   box.textContent = '';
   try {
     const params = new URLSearchParams({
-      session_id: sessionId, q: query, status, due, priority});
+      session_id: sessionId, q: query, status, due, priority, sort});
     const r = await fetch('/v1/tasks/search?' + params.toString());
     const j = await r.json();
     if (!r.ok) {
@@ -762,6 +772,9 @@ async function searchTasks() {
     }
     if ((j.priority || priority) !== 'all') {
       filters.push('priority=' + (j.priority || priority));
+    }
+    if ((j.sort || sort) !== 'default') {
+      filters.push('sort=' + (j.sort || sort));
     }
     msg.textContent = 'task search "' + (j.query || query) + '" | ' +
       (j.count || 0) + ' match(es)' +
@@ -3127,6 +3140,7 @@ class Handler(BaseHTTPRequestHandler):
             due = str(params.get("due", ["all"])[0] or "all").strip()
             priority = str(
                 params.get("priority", ["all"])[0] or "all").strip()
+            sort = str(params.get("sort", ["default"])[0] or "default").strip()
             if not query:
                 return self._json(400, {"error": "q is required"})
             try:
@@ -3135,7 +3149,7 @@ class Handler(BaseHTTPRequestHandler):
 
                 result = task_search_view(
                     session.human.data, query, status=status, due=due,
-                    priority=priority,
+                    priority=priority, sort=sort,
                     now=params.get("today", [None])[0])
             except Exception as exc:
                 return self._json(400, {"error": str(exc)})
@@ -3150,11 +3164,13 @@ class Handler(BaseHTTPRequestHandler):
                 days = int(params.get("days", ["7"])[0])
                 if days < 1:
                     raise ValueError("days must be at least 1")
+                sort = str(
+                    params.get("sort", ["default"])[0] or "default").strip()
                 session = self._session(session_id)
                 from atomzero.briefing import due_soon_view
 
                 result = due_soon_view(
-                    session.human.data, days=days,
+                    session.human.data, days=days, sort=sort,
                     now=params.get("today", [None])[0])
             except (TypeError, ValueError) as exc:
                 return self._json(400, {"error": str(exc)})
@@ -3168,11 +3184,13 @@ class Handler(BaseHTTPRequestHandler):
             session_id = (params.get("session_id", ["default"])[0]
                           or "default")
             try:
+                sort = str(
+                    params.get("sort", ["default"])[0] or "default").strip()
                 session = self._session(session_id)
                 from atomzero.briefing import overdue_view
 
                 result = overdue_view(
-                    session.human.data,
+                    session.human.data, sort=sort,
                     now=params.get("today", [None])[0])
             except Exception as exc:
                 return self._json(400, {"error": str(exc)})

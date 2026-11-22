@@ -263,6 +263,18 @@ def test_cli_search_tasks(tmp_path, capsys):
     low = json.loads(capsys.readouterr().out)
     assert [task["id"] for task in low["tasks"]] == [3]
     assert main(common + [
+        "--search-tasks", "submit", "--task-sort", "priority",
+        "--json"]) == 0
+    priority_sorted = json.loads(capsys.readouterr().out)
+    assert priority_sorted["sort"] == "priority"
+    assert [task["id"] for task in priority_sorted["tasks"]] == [4, 1, 2]
+    assert main(common + [
+        "--search-tasks", "submit", "--task-sort", "priority"]) == 0
+    sorted_output = capsys.readouterr().out
+    assert '| sort=priority' in sorted_output
+    assert (sorted_output.index("submit late report")
+            < sorted_output.index("Submit quarterly report"))
+    assert main(common + [
         "--search-tasks", "launch", "--search-due", "none", "--json"]) == 0
     undated = json.loads(capsys.readouterr().out)
     assert [task["id"] for task in undated["tasks"]] == [3]
@@ -313,6 +325,54 @@ def test_cli_search_tasks(tmp_path, capsys):
     assert exc.value.code == 2
     with pytest.raises(SystemExit) as exc:
         main(common + ["--set-task-priority", "1", "high", "--weekly"])
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--task-sort", "priority"])
+    assert exc.value.code == 2
+
+
+def test_cli_priority_sort_views(tmp_path, capsys):
+    session_path = tmp_path / "session.json"
+    today = date.today()
+    session_path.write_text(json.dumps({"tasks": [
+        {"id": 1, "text": "low overdue task", "status": "open",
+         "created": "2026-11-01T09:00:00", "completed": "",
+         "due": (today - timedelta(days=1)).isoformat(),
+         "priority": "low"},
+        {"id": 2, "text": "high overdue task", "status": "open",
+         "created": "2026-11-01T09:00:00", "completed": "",
+         "due": (today - timedelta(days=2)).isoformat(),
+         "priority": "high"},
+        {"id": 3, "text": "normal soon task", "status": "open",
+         "created": "2026-11-01T09:00:00", "completed": "",
+         "due": (today + timedelta(days=2)).isoformat(),
+         "priority": "normal"},
+        {"id": 4, "text": "high soon task", "status": "open",
+         "created": "2026-11-01T09:00:00", "completed": "",
+         "due": (today + timedelta(days=1)).isoformat(),
+         "priority": "high"},
+    ]}), encoding="utf-8")
+    common = [
+        "--session", str(session_path),
+        "--docs", str(tmp_path / "missing.db"),
+        "--gaps", str(tmp_path / "missing-gaps.json")]
+    assert main(common + [
+        "--overdue", "--task-sort", "priority", "--json"]) == 0
+    overdue = json.loads(capsys.readouterr().out)
+    assert overdue["sort"] == "priority"
+    assert [task["id"] for task in overdue["overdue_tasks"]] == [2, 1]
+    assert main(common + [
+        "--due-soon", "--due-days", "7", "--task-sort", "priority",
+        "--json"]) == 0
+    due_soon = json.loads(capsys.readouterr().out)
+    assert due_soon["sort"] == "priority"
+    assert [task["id"] for task in due_soon["due_soon_tasks"]] == [4, 3]
+    assert main(common + ["--overdue", "--task-sort", "priority"]) == 0
+    output = capsys.readouterr().out
+    assert "sort=priority" in output
+    assert output.index("high overdue task") < output.index("low overdue task")
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--task-sort", "priority"])
     assert exc.value.code == 2
 
 
