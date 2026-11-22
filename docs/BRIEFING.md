@@ -60,6 +60,26 @@ son 14 günün özeti
 The reply contains the same review text and exposes the full `review` payload
 (tasks, gaps, sources, graph, highlights and next actions) to clients.
 
+### Markdown export
+
+```powershell
+atomzero-brief --session data/sessions/default.json `
+  --docs data/atomzero_demo.db --weekly --days 7 --markdown
+```
+
+```text
+GET /v1/weekly-review/export?session_id=default&days=7
+```
+
+The endpoint returns `text/markdown; charset=utf-8` with a
+`Content-Disposition: attachment` filename such as
+`atomzero-weekly-review-2026-11-22.md`. The UI **Download .md** button fetches
+the same endpoint and saves the report.
+
+The export contains task checkboxes (`[ ]` / `[x]`), pending gaps, recent
+sources, graph entities/connections, highlights and next-week actions. It is
+generated locally and does not change model weights.
+
 ## Chat flow
 
 ```text

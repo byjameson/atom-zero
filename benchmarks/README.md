@@ -46,6 +46,17 @@ python benchmarks/weekly_chat_regression.py
 Latest result: **6/6 checks pass**. Raw result:
 [`results/weekly_chat_regression.json`](results/weekly_chat_regression.json).
 
+`benchmarks/weekly_export_regression.py` checks the UI export controls,
+Markdown content type/filename, task checkboxes, gaps, sources, graph, next
+actions, the 14-day window and invalid day input.
+
+```powershell
+python benchmarks/weekly_export_regression.py
+```
+
+Latest result: **7/7 checks pass**. Raw result:
+[`results/weekly_export_regression.json`](results/weekly_export_regression.json).
+
 ## Graph-path regression
 
 `benchmarks/graph_path_regression.py` checks the UI path controls, the

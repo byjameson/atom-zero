@@ -27,6 +27,7 @@ Endpoints:
   POST /v1/hungry/run
   POST /v1/briefing
   POST /v1/weekly-review
+  GET  /v1/weekly-review/export?session_id=...&days=7
   POST /v1/goals/plan
   GET  /v1/teacher/notes
   POST /v1/teacher/notes
@@ -239,6 +240,7 @@ graph entities. No provider is required. A goal plan adds cited local context
 and suggested next actions.</p>
 <div class="row"><button id="briefrefresh">Get daily brief</button>
 <button id="briefweekly">Weekly review</button>
+<button id="weeklymd">Download .md</button>
 <input id="goalinput" placeholder="Optional goal, e.g. prepare the warranty page">
 <button id="goalplan">Plan goal</button></div>
 <p id="briefmsg" class="hint"></p>
@@ -571,6 +573,39 @@ async function getWeeklyReview() {
     msg.textContent = 'weekly review error: ' + e;
   }
 }
+async function downloadWeeklyMarkdown() {
+  const msg = document.getElementById('briefmsg');
+  msg.textContent = 'exporting weekly review...';
+  try {
+    const query = new URLSearchParams({session_id: sessionId, days: 7});
+    const r = await fetch('/v1/weekly-review/export?' + query.toString());
+    if (!r.ok) {
+      let detail = r.status;
+      try {
+        const j = await r.json();
+        detail = j.error || detail;
+      } catch (e) {}
+      msg.textContent = 'markdown export error: ' + detail;
+      return;
+    }
+    const text = await r.text();
+    const disposition = r.headers.get('Content-Disposition') || '';
+    const match = disposition.match(/filename="([^"]+)"/);
+    const filename = match ? match[1] : 'atomzero-weekly-review.md';
+    const blob = new Blob([text], {type: 'text/markdown;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    msg.textContent = 'weekly review exported | ' + filename;
+  } catch (e) {
+    msg.textContent = 'markdown export error: ' + e;
+  }
+}
 async function planGoal(confirmCreate) {
   const goal = document.getElementById('goalinput').value.trim();
   const msg = document.getElementById('briefmsg');
@@ -641,6 +676,7 @@ async function planGoal(confirmCreate) {
 }
 document.getElementById('briefrefresh').onclick = () => getBriefing();
 document.getElementById('briefweekly').onclick = () => getWeeklyReview();
+document.getElementById('weeklymd').onclick = () => downloadWeeklyMarkdown();
 document.getElementById('goalplan').onclick = () => planGoal(false);
 document.getElementById('goalinput').addEventListener('keydown', event => {
   if (event.key === 'Enter') planGoal(false);
@@ -2299,11 +2335,14 @@ def chat_prompt(messages) -> str:
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
-    def _send(self, code: int, body: bytes, ctype: str = "application/json"):
+    def _send(self, code: int, body: bytes, ctype: str = "application/json",
+              headers: dict | None = None):
         self.send_response(code)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Access-Control-Allow-Origin", "*")
+        for name, value in (headers or {}).items():
+            self.send_header(name, value)
         self.end_headers()
         self.wfile.write(body)
 
@@ -2369,6 +2408,31 @@ class Handler(BaseHTTPRequestHandler):
             }]})
         elif self.path == "/metrics":
             self._json(200, _state["metrics"])
+        elif (self.path == "/v1/weekly-review/export"
+              or self.path.startswith("/v1/weekly-review/export?")):
+            params = urllib.parse.parse_qs(
+                urllib.parse.urlparse(self.path).query)
+            session_id = (params.get("session_id", ["default"])[0]
+                          or "default")
+            try:
+                days = int(params.get("days", ["7"])[0])
+                session = self._session(session_id)
+                from atomzero.briefing import (
+                    build_weekly_review, render_weekly_markdown)
+
+                review = build_weekly_review(
+                    session.human.data, _state.get("gaps"),
+                    _state.get("docs"), days=days)
+                markdown = render_weekly_markdown(review)
+            except Exception as exc:
+                return self._json(400, {"error": str(exc)})
+            day = str(review.get("generated", ""))[:10] or "latest"
+            filename = f"atomzero-weekly-review-{day}.md"
+            return self._send(
+                200, markdown.encode("utf-8"),
+                "text/markdown; charset=utf-8",
+                {"Content-Disposition":
+                 f'attachment; filename="{filename}"'})
         elif self.path == "/v1/documents":
             docs = _state.get("docs")
             self._json(200, {"data": docs.sources() if docs else []})

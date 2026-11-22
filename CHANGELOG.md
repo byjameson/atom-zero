@@ -17,6 +17,11 @@
 - Weekly review text now says “completed in the last N days” for non-default
   windows instead of always “this week”.
 - Added `benchmarks/weekly_chat_regression.py` (6/6 checks).
+- Added weekly-review **Markdown export**:
+  `atomzero-brief --weekly --markdown`, `GET /v1/weekly-review/export` and a UI
+  Download .md button, with task checkboxes, gaps, sources, graph and next
+  actions.
+- Added `benchmarks/weekly_export_regression.py` (7/7 checks).
 - Added deterministic **source comparison**: `atomzero-docs compare`,
   `GET /v1/documents/compare` and UI Compare sources, flagging numeric,
   identifier and negation conflicts with both snippets/locators.

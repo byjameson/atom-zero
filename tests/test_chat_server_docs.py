@@ -836,11 +836,14 @@ def test_ui_collection_scope_contract():
     assert "runRecipe" in page
     assert "/v1/briefing" in page
     assert "/v1/weekly-review" in page
+    assert "/v1/weekly-review/export" in page
     assert "/v1/goals/plan" in page
     assert "Daily brief" in page
     assert 'id="briefrefresh"' in page
     assert 'id="briefweekly"' in page
+    assert 'id="weeklymd"' in page
     assert "getWeeklyReview" in page
+    assert "downloadWeeklyMarkdown" in page
     assert "planGoal" in page
     assert 'data-q="plan goal prepare the warranty page"' in page
     assert 'data-q="brief me"' in page
@@ -1291,6 +1294,27 @@ def test_http_weekly_review(tmp_path):
         assert "write report" in review["text"]
         assert "buy milk" in review["text"]
         assert review["weights_changed"] is False
+        with urllib.request.urlopen(
+                base + "/v1/weekly-review/export"
+                       "?session_id=week-1&days=7", timeout=10) as response:
+            assert response.headers.get_content_type() == "text/markdown"
+            assert "attachment" in response.headers[
+                "Content-Disposition"]
+            assert "atomzero-weekly-review-" in response.headers[
+                "Content-Disposition"]
+            markdown = response.read().decode("utf-8")
+        assert markdown.startswith("# Weekly review - ")
+        assert "Period: last 7 days" in markdown
+        assert "- [ ] **#2** write report" in markdown
+        assert "- [x] **#1** buy milk" in markdown
+        assert "What is the warranty claim deadline?" in markdown
+        assert "`notes/launch.txt`" in markdown
+        assert "L-7781" in markdown
+        with pytest.raises(urllib.error.HTTPError) as invalid:
+            urllib.request.urlopen(
+                base + "/v1/weekly-review/export?days=not-a-number",
+                timeout=10)
+        assert invalid.value.code == 400
     finally:
         httpd.shutdown()
         httpd.server_close()

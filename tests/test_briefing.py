@@ -96,6 +96,44 @@ def test_cli_weekly_review(tmp_path, capsys):
     assert review["recent_source_count"] == 1
 
 
+def test_cli_weekly_markdown_export(tmp_path, capsys):
+    session_path = tmp_path / "session.json"
+    now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    session_path.write_text(json.dumps({"tasks": [
+        {"id": 1, "text": "buy milk", "status": "done",
+         "created": now, "completed": now},
+        {"id": 2, "text": "write report", "status": "open",
+         "created": now, "completed": ""},
+    ]}), encoding="utf-8")
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("notes/launch.txt", "The launch code is L-7781.",
+                  title="Launch")
+    docs.close()
+    gaps_path = tmp_path / "gaps.json"
+    KnowledgeGapStore(gaps_path).add("What is the warranty deadline?")
+    assert main([
+        "--session", str(session_path), "--docs", str(tmp_path / "docs.db"),
+        "--gaps", str(gaps_path), "--weekly", "--days", "7",
+        "--markdown"]) == 0
+    markdown = capsys.readouterr().out
+    assert markdown.startswith("# Weekly review - ")
+    assert "Period: last 7 days" in markdown
+    assert "- Open: 1" in markdown
+    assert "- Completed in the last 7 days: 1" in markdown
+    assert "### Open" in markdown
+    assert "- [ ] **#2** write report" in markdown
+    assert "### Completed in the last 7 days" in markdown
+    assert "- [x] **#1** buy milk" in markdown
+    assert "## Pending gaps (1)" in markdown
+    assert "What is the warranty deadline?" in markdown
+    assert "## Recent sources (1)" in markdown
+    assert "**Launch** - `notes/launch.txt` (1 chunk(s))" in markdown
+    assert "## Graph" in markdown
+    assert "L-7781" in markdown
+    assert "## Next week" in markdown
+    assert "No model weights were changed." in markdown
+
+
 def test_plan_goal_adds_cited_context_and_suggestions(tmp_path):
     docs = DocMemory(tmp_path / "docs.db")
     docs.add_text("notes/warranty.txt",

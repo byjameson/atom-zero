@@ -357,6 +357,122 @@ def render_plan(plan: dict) -> str:
     return "\n".join(lines)
 
 
+def render_weekly_markdown(review: dict) -> str:
+    """Render a weekly review as a portable Markdown report."""
+    days = review.get("period_days", 7)
+    counts = review.get("task_counts", {})
+    lines = [
+        f"# Weekly review - {review.get('generated', '')}",
+        "",
+        f"Period: last {days} days",
+        "",
+        "## Tasks",
+        "",
+        f"- Open: {counts.get('open', 0)}",
+        f"- Completed in the last {days} days: "
+        f"{counts.get('completed_recent', 0)}",
+        f"- Completed total: {counts.get('completed_total', 0)}",
+        "",
+        "### Open",
+        "",
+    ]
+    open_tasks = review.get("open_tasks", [])
+    if open_tasks:
+        lines.extend(
+            f"- [ ] **#{task.get('id')}** {task.get('text', '')}"
+            for task in open_tasks)
+    else:
+        lines.append("- None")
+    lines.extend([
+        "",
+        f"### Completed in the last {days} days",
+        "",
+    ])
+    completed = review.get("completed_tasks", [])
+    if completed:
+        lines.extend(
+            f"- [x] **#{task.get('id')}** {task.get('text', '')}"
+            for task in completed)
+    else:
+        lines.append("- None")
+    undated = review.get("completed_undated", [])
+    if undated:
+        lines.extend(["", "### Completed (undated)", ""])
+        lines.extend(
+            f"- [x] **#{task.get('id')}** {task.get('text', '')}"
+            for task in undated)
+    gaps = review.get("pending_gaps", [])
+    lines.extend([
+        "",
+        f"## Pending gaps ({review.get('pending_gap_count', len(gaps))})",
+        "",
+    ])
+    if gaps:
+        lines.extend(f"- {gap.get('query', '')}" for gap in gaps)
+    else:
+        lines.append("- None")
+    sources = review.get("recent_sources", [])
+    lines.extend([
+        "",
+        f"## Recent sources "
+        f"({review.get('recent_source_count', len(sources))})",
+        "",
+    ])
+    if sources:
+        for source in sources:
+            title = source.get("title") or source.get("source", "")
+            lines.append(
+                f"- **{title}** - `{source.get('source', '')}` "
+                f"({source.get('chunks', 0)} chunk(s))")
+    else:
+        lines.append("- None")
+    graph = review.get("graph", {})
+    entities = graph.get("entities", [])
+    connections = graph.get("connections", [])
+    lines.extend([
+        "",
+        "## Graph",
+        "",
+        f"- Entities shown: {len(entities)}",
+        f"- Connections shown: {len(connections)}",
+    ])
+    if entities:
+        lines.extend(["", "### Top entities", ""])
+        lines.extend(
+            f"- **{entity.get('name', '')}** - "
+            f"{entity.get('mentions', 0)} mention(s), "
+            f"{entity.get('sources', 0)} source(s)"
+            for entity in entities)
+    if connections:
+        lines.extend(["", "### Connections", ""])
+        lines.extend(
+            f"- `{edge.get('source', '')}` <-> `{edge.get('target', '')}` - "
+            f"{edge.get('sources', 0)} shared chunk(s)"
+            for edge in connections)
+    highlights = review.get("highlights", [])
+    lines.extend(["", "## Highlights", ""])
+    if highlights:
+        lines.extend(f"- {item}" for item in highlights)
+    else:
+        lines.append("- None")
+    next_week = review.get("next_week", [])
+    lines.extend(["", "## Next week", ""])
+    if next_week:
+        lines.extend(f"- [ ] {item}" for item in next_week)
+    else:
+        lines.append("- None")
+    lines.extend([
+        "",
+        "---",
+        "",
+        "Generated locally from Atom Zero tasks, gaps, sources and graph "
+        "co-occurrence.",
+        "No model weights were changed. This review is a local summary, not "
+        "an autonomous decision.",
+    ])
+    return "\n".join(lines) + "\n"
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
         prog="atomzero-brief",
@@ -374,7 +490,13 @@ def main(argv=None) -> int:
     parser.add_argument("--days", type=int, default=7)
     parser.add_argument("--max-steps", type=int, default=3)
     parser.add_argument("--json", action="store_true")
+    parser.add_argument("--markdown", action="store_true",
+                        help="render the weekly review as Markdown")
     args = parser.parse_args(argv)
+    if args.markdown and not args.weekly:
+        parser.error("--markdown requires --weekly")
+    if args.markdown and args.json:
+        parser.error("--markdown cannot be combined with --json")
     session_path = Path(args.session) if args.session else (
         Path(args.sessions_dir) / f"{args.session_id}.json")
     docs = None
@@ -405,6 +527,8 @@ def main(argv=None) -> int:
             docs.close()
     if args.json:
         print(json.dumps(result, indent=2, ensure_ascii=False))
+    elif args.markdown:
+        print(render_weekly_markdown(result), end="")
     elif args.goal:
         print(render_plan(result))
     else:

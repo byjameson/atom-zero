@@ -1,0 +1,44 @@
+{
+  "benchmark": "atomzero-weekly-export-regression",
+  "generated": "2026-11-22T22:46:57",
+  "checks": [
+    {
+      "name": "ui_export_controls",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "name": "export_headers",
+      "ok": true,
+      "detail": "attachment; filename=\"atomzero-weekly-review-2026-11-22.md\""
+    },
+    {
+      "name": "export_tasks",
+      "ok": true,
+      "detail": "# Weekly review - 2026-11-22 22:46\n\nPeriod: last 7 days\n\n## Tasks\n\n- Open: 1\n- Completed in the last 7 days: 1\n- Completed total: 1\n\n### Open\n\n- [ ] **#2** write report\n\n### Completed in the last 7 days\n\n- [x] **#1** buy"
+    },
+    {
+      "name": "export_context",
+      "ok": true,
+      "detail": "# Weekly review - 2026-11-22 22:46\n\nPeriod: last 7 days\n\n## Tasks\n\n- Open: 1\n- Completed in the last 7 days: 1\n- Completed total: 1\n\n### Open\n\n- [ ] **#2** write report\n\n### Completed in the last 7 days\n\n- [x] **#1** buy milk\n\n## Pending gaps (1)\n\n- What is the warranty claim deadline?\n\n## Recent sources (1)\n\n- **Launc"
+    },
+    {
+      "name": "export_next_and_limits",
+      "ok": true,
+      "detail": "d L-7781\n- [ ] Run a skill or named recipe for a recurring task\n\n---\n\nGenerated locally from Atom Zero tasks, gaps, sources and graph co-occurrence.\nNo model weights were changed. This review is a local summary, not an autonomous decision.\n"
+    },
+    {
+      "name": "export_14_day_window",
+      "ok": true,
+      "detail": "# Weekly review - 2026-11-22 22:46\n\nPeriod: last 14 days\n\n## Tasks\n\n- Open: 1\n- Completed in the last 14 days: 1\n- Completed total: 1\n\n### Open\n\n- [ ] **#2** write report\n\n### Comp"
+    },
+    {
+      "name": "export_invalid_days",
+      "ok": true,
+      "detail": "400 for a non-numeric window"
+    }
+  ],
+  "passed": 7,
+  "failed": 0,
+  "ok": true
+}
