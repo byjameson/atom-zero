@@ -22,6 +22,8 @@
   Download .md button, with task checkboxes, gaps, sources, graph and next
   actions.
 - Added `benchmarks/weekly_export_regression.py` (7/7 checks).
+- Fixed BOM-sensitive session loading: `atomzero-brief` and `ChatHuman` now
+  accept PowerShell-written UTF-8 session files with a BOM.
 - Added deterministic **source comparison**: `atomzero-docs compare`,
   `GET /v1/documents/compare` and UI Compare sources, flagging numeric,
   identifier and negation conflicts with both snippets/locators.

@@ -75,7 +75,7 @@ class ChatHuman:
 
     def _load(self) -> dict:
         if self.path.exists():
-            return json.loads(self.path.read_text(encoding="utf-8"))
+            return json.loads(self.path.read_text(encoding="utf-8-sig"))
         return {
             "persona": {"name": "Tiny", "style": "warm, concise, curious"},
             "facts": [],

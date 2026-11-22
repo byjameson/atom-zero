@@ -20,7 +20,9 @@ atomzero-brief --session data/sessions/default.json --docs data/atomzero_demo.db
 
 If `--session` is omitted, the CLI uses
 `data/sessions/<session-id>.json`. Missing session/document/gap files are
-treated as empty, not as errors.
+treated as empty, not as errors. Session JSON is read as UTF-8 with or without
+a BOM, so files written by PowerShell `Set-Content -Encoding utf8` work
+directly.
 
 ## Weekly review
 

@@ -337,7 +337,7 @@ def load_session(path: str | Path | None) -> dict:
     if not p.exists():
         return {}
     try:
-        data = json.loads(p.read_text(encoding="utf-8"))
+        data = json.loads(p.read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError) as exc:
         raise ValueError(f"cannot read session: {exc}") from exc
     return data if isinstance(data, dict) else {}
