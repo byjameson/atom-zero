@@ -19,6 +19,8 @@ Endpoints:
   POST /v1/documents/search
   POST /v1/documents/answer
   POST /v1/hungry/run
+  POST /v1/briefing
+  POST /v1/goals/plan
   GET  /v1/teacher/notes
   POST /v1/teacher/notes
   POST /v1/teacher/notes/verify
@@ -221,6 +223,16 @@ hr{border:0;border-top:1px solid #ddd;margin:22px 0}
 <button data-q="what is the visitor badge code?">visitor badge</button>
 <button data-q="what is the population of Paris?">no-source demo</button>
 </div>
+<hr>
+<h3>Daily brief</h3>
+<p class="hint">A local summary of open tasks, pending gaps, index status and
+graph entities. No provider is required. A goal plan adds cited local context
+and suggested next actions.</p>
+<div class="row"><button id="briefrefresh">Get daily brief</button>
+<input id="goalinput" placeholder="Optional goal, e.g. prepare the warranty page">
+<button id="goalplan">Plan goal</button></div>
+<p id="briefmsg" class="hint"></p>
+<div id="briefres"></div>
 <hr>
 <h3>Teach a fact</h3>
 <p class="hint">Stored in the local document index with a source. Facts do not
@@ -483,6 +495,103 @@ async function sendFeedback(user, assistant, rating, corrected, status) {
     status.textContent = 'error: ' + e;
   }
 }
+async function getBriefing() {
+  const msg = document.getElementById('briefmsg');
+  const box = document.getElementById('briefres');
+  msg.textContent = 'building local brief...';
+  box.textContent = '';
+  try {
+    const r = await fetch('/v1/briefing', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({session_id: sessionId})});
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'brief error: ' + (j.error || r.status);
+      return;
+    }
+    msg.textContent = 'daily brief | ' + (j.open_task_count || 0) +
+      ' open task(s) | ' + (j.pending_gap_count || 0) + ' pending gap(s)';
+    const card = document.createElement('div');
+    card.className = 'qitem';
+    card.textContent = j.text || '';
+    box.appendChild(card);
+  } catch (e) {
+    msg.textContent = 'brief error: ' + e;
+  }
+}
+async function planGoal(confirmCreate) {
+  const goal = document.getElementById('goalinput').value.trim();
+  const msg = document.getElementById('briefmsg');
+  const box = document.getElementById('briefres');
+  if (!goal) { msg.textContent = 'enter a goal first'; return; }
+  msg.textContent = confirmCreate ? 'creating suggested tasks...'
+                                  : 'planning from local evidence...';
+  box.textContent = '';
+  try {
+    const r = await fetch('/v1/goals/plan', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        session_id: sessionId, goal,
+        confirm: confirmCreate === true, max_steps: 3})});
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'goal error: ' + (j.error || r.status);
+      return;
+    }
+    msg.textContent = 'goal plan | confidence: ' +
+      ((j.confidence && j.confidence.label) || 'none');
+    const card = document.createElement('div');
+    card.className = 'qitem';
+    card.textContent = j.text || '';
+    box.appendChild(card);
+    (j.suggested_tasks || []).forEach(task => {
+      const item = document.createElement('div');
+      item.className = 'qitem';
+      item.textContent = 'suggested: ' + task;
+      box.appendChild(item);
+    });
+    (j.context || []).forEach(item => {
+      const evidence = document.createElement('div');
+      evidence.className = 'qitem';
+      const title = document.createElement('div');
+      title.textContent = (item.title || item.source) + ' | ' + item.source +
+        (item.page ? ' | p. ' + item.page : '') +
+        (item.section ? ' | ' + item.section : '');
+      evidence.appendChild(title);
+      const snippet = document.createElement('div');
+      snippet.className = 'src';
+      snippet.textContent = item.snippet || '';
+      evidence.appendChild(snippet);
+      const actions = document.createElement('div');
+      actions.className = 'actions';
+      actions.appendChild(qbutton('Evidence', () =>
+        showEvidence(item.source, item.page, item.section)));
+      actions.appendChild(qbutton('Copy citation', () =>
+        copyCitation(item.source, item.page, item.section)));
+      evidence.appendChild(actions);
+      box.appendChild(evidence);
+    });
+    if ((j.created_tasks || []).length) {
+      const created = document.createElement('div');
+      created.className = 'hint';
+      created.textContent = 'created tasks: ' +
+        j.created_tasks.map(task => task.id + ' ' + task.text).join('; ');
+      box.appendChild(created);
+    } else if (!confirmCreate && (j.suggested_tasks || []).length) {
+      const actions = document.createElement('div');
+      actions.className = 'actions';
+      actions.appendChild(qbutton('Create suggested tasks', () => planGoal(true)));
+      box.appendChild(actions);
+    }
+  } catch (e) {
+    msg.textContent = 'goal error: ' + e;
+  }
+}
+document.getElementById('briefrefresh').onclick = () => getBriefing();
+document.getElementById('goalplan').onclick = () => planGoal(false);
+document.getElementById('goalinput').addEventListener('keydown', event => {
+  if (event.key === 'Enter') planGoal(false);
+});
 document.getElementById('g').onclick = () => send();
 document.getElementById('p').addEventListener('keydown', e => {
   if (e.key === 'Enter') send();
@@ -2100,6 +2209,7 @@ class Handler(BaseHTTPRequestHandler):
                          "/v1/learning/gaps/propose",
                          "/v1/learning/gaps/dismiss",
                          "/v1/curiosity/propose", "/v1/hungry/run",
+                         "/v1/briefing", "/v1/goals/plan",
                          "/v1/learn_url", "/v1/research",
                          "/v1/research/queue",
                          "/v1/research/queue/approve",
@@ -2156,6 +2266,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self._curiosity_propose(req)
             if route == "/v1/hungry/run":
                 return self._hungry_run(req)
+            if route == "/v1/briefing":
+                return self._briefing(req)
+            if route == "/v1/goals/plan":
+                return self._goal_plan(req)
             if route == "/v1/research/queue":
                 return self._queue_add(req)
             if route == "/v1/research/queue/approve":
@@ -2492,6 +2606,48 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError, OSError) as exc:
             return self._json(400, {"error": str(exc)})
         return self._json(200, result)
+
+    def _briefing(self, req: dict):
+        session_id = str(req.get("session_id", "default")).strip() or "default"
+        try:
+            session = self._session(session_id)
+            from atomzero.briefing import build_briefing
+
+            result = build_briefing(
+                session.human.data, _state.get("gaps"), _state.get("docs"))
+        except Exception as exc:
+            return self._json(400, {"error": str(exc)})
+        return self._json(200, result)
+
+    def _goal_plan(self, req: dict):
+        goal = str(req.get("goal", "") or "").strip()
+        if not goal:
+            return self._json(400, {"error": "goal is required"})
+        safety = _state.get("safety")
+        if safety is not None:
+            verdict = safety.check(goal)
+            if verdict is not None:
+                return self._json(400, {
+                    "error": safety.refusal(verdict["category"]),
+                    "safety": verdict,
+                })
+        session_id = str(req.get("session_id", "default")).strip() or "default"
+        try:
+            session = self._session(session_id)
+            from atomzero.briefing import plan_goal
+
+            plan = plan_goal(
+                goal, _state.get("docs"), _state.get("gaps"),
+                session.human.data, req.get("max_steps", 3))
+            created = []
+            if req.get("confirm") is True:
+                for text in plan["suggested_tasks"][:3]:
+                    task_id = session.human.add_task(text)
+                    created.append({"id": task_id, "text": text})
+            plan["created_tasks"] = created
+        except ValueError as exc:
+            return self._json(400, {"error": str(exc)})
+        return self._json(200, plan)
 
     def _gap_dismiss(self, req: dict):
         try:

@@ -72,6 +72,7 @@ atomzero-docs summary manual.pdf --sentences 5 --db data/docs.db
 atomzero-docs summary-collection --prefix notes/ --sentences 8 `
   --db data/docs.db
 atomzero-docs doctor --db data/docs.db
+atomzero-brief --session data/sessions/default.json --docs data/docs.db
 ```
 
 `sync` keeps a portable relative-path collection, skips unchanged/duplicate

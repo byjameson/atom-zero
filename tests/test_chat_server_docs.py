@@ -819,6 +819,11 @@ def test_ui_collection_scope_contract():
     assert "Custom skills" in page
     assert 'id="skrefresh"' in page
     assert "refreshSkills" in page
+    assert "/v1/briefing" in page
+    assert "/v1/goals/plan" in page
+    assert "Daily brief" in page
+    assert 'id="briefrefresh"' in page
+    assert "planGoal" in page
 
 
 def test_doc_answer_returns_evidence_confidence_and_source_scope(tmp_path):
@@ -1051,6 +1056,57 @@ def test_http_graph_and_entity(tmp_path):
             urllib.request.urlopen(
                 base + "/v1/graph/entity?name=", timeout=10)
         assert missing.value.code == 400
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
+        docs.close()
+
+
+def test_http_briefing_and_goal_plan(tmp_path):
+    try:
+        docs = DocMemory(tmp_path / "docs.db")
+    except Exception as exc:
+        pytest.skip(f"sqlite fts5 unavailable: {exc}")
+    docs.add_text("notes/warranty.txt",
+                  "The warranty period is 24 months. Claims need a receipt.",
+                  title="Warranty")
+    gaps = KnowledgeGapStore(tmp_path / "gaps.json")
+    gaps.add("What is the warranty claim deadline?")
+    old = dict(chat_server._state)
+    chat_server._state.update({
+        "model": None, "tok": None, "docs": docs, "adapter": "",
+        "name": "tiny-test", "params": 1, "config": {}, "step": 0,
+        "api_key": "", "metrics": {"requests": 0, "generated_tokens": 0},
+        "safety": None, "wiki_lang": "en", "gaps": gaps,
+        "session_dir": str(tmp_path / "sessions"), "sessions": {},
+        "generator": None, "allow_general_chat": False, "skills": None,
+    })
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        brief = _post(base + "/v1/briefing", {"session_id": "brief-1"})
+        assert brief["open_task_count"] == 0
+        assert "Daily brief" in brief["text"]
+        _post(base + "/v1/agent/chat", {
+            "session_id": "brief-1", "message": "add task buy milk"})
+        brief = _post(base + "/v1/briefing", {"session_id": "brief-1"})
+        assert brief["open_task_count"] == 1
+        assert "buy milk" in brief["text"]
+        plan = _post(base + "/v1/goals/plan", {
+            "session_id": "brief-1", "goal": "warranty page"})
+        assert plan["context"][0]["source"] == "notes/warranty.txt"
+        assert plan["suggested_tasks"]
+        assert plan["created_tasks"] == []
+        confirmed = _post(base + "/v1/goals/plan", {
+            "session_id": "brief-1", "goal": "warranty page",
+            "confirm": True})
+        assert len(confirmed["created_tasks"]) == 3
+        after = _post(base + "/v1/briefing", {"session_id": "brief-1"})
+        assert after["open_task_count"] == 4
     finally:
         httpd.shutdown()
         httpd.server_close()

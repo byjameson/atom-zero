@@ -20,6 +20,11 @@ work stays on `main`; see `docs/RELEASING.md`.
   panel, three example skills and `docs/SKILLS.md`.
 - Added skill regression tests for loading, matching, context rendering,
   provider/template modes and the CLI.
+- Added a deterministic **daily brief** (`atomzero-brief`, `POST /v1/briefing`)
+  combining open tasks, pending gaps, index stats and graph entities.
+- Added a cited **goal planner** (`POST /v1/goals/plan`) with suggested tasks;
+  task creation requires explicit `confirm: true`.
+- Added the Daily brief UI panel and `docs/BRIEFING.md`.
 
 ## atomzero 0.4.2 - UI collection scope (2026-11-22)
 
