@@ -407,14 +407,16 @@ def test_cli_task_list_export(tmp_path, capsys):
     session_path.write_text(json.dumps({"tasks": [
         {"id": 1, "text": "high soon task", "status": "open",
          "created": now, "completed": "", "due": soon,
-         "priority": "high"},
+         "priority": "high", "tags": ["work", "finance"]},
         {"id": 2, "text": "low overdue task", "status": "open",
          "created": now, "completed": "", "due": overdue,
-         "priority": "low"},
+         "priority": "low", "tags": ["home"]},
         {"id": 3, "text": "normal soon task", "status": "open",
-         "created": now, "completed": "", "due": later},
+         "created": now, "completed": "", "due": later,
+         "tags": ["work"]},
         {"id": 4, "text": "done task", "status": "done",
-         "created": now, "completed": now, "priority": "high"},
+         "created": now, "completed": now, "priority": "high",
+         "tags": ["done"]},
     ]}), encoding="utf-8")
     common = [
         "--session", str(session_path),
@@ -422,17 +424,18 @@ def test_cli_task_list_export(tmp_path, capsys):
         "--gaps", str(tmp_path / "missing-gaps.json")]
     assert main(common + [
         "--task-list", "--task-status", "open", "--task-due", "week",
-        "--task-priority", "high", "--task-sort", "priority",
-        "--task-format", "csv"]) == 0
+        "--task-priority", "high", "--task-tag", "work",
+        "--task-sort", "priority", "--task-format", "csv"]) == 0
     output = capsys.readouterr().out
     rows = list(csv.reader(io.StringIO(output)))
     assert rows[0] == [
-        "id", "status", "priority", "text", "due", "overdue",
+        "id", "status", "priority", "tags", "text", "due", "overdue",
         "created", "completed"]
     assert len(rows) == 2
-    assert rows[1][:4] == ["1", "open", "high", "high soon task"]
-    assert rows[1][4] == soon
-    assert rows[1][5] == "false"
+    assert rows[1][:5] == [
+        "1", "open", "high", "work,finance", "high soon task"]
+    assert rows[1][5] == soon
+    assert rows[1][6] == "false"
 
     assert main(common + [
         "--task-list", "--task-status", "all",
@@ -441,7 +444,9 @@ def test_cli_task_list_export(tmp_path, capsys):
     assert markdown.startswith("# Task list - ")
     assert "- Status: all" in markdown
     assert "- Count: 4" in markdown
-    assert "| 1 | open | high | high soon task |" in markdown
+    assert "| ID | Status | Priority | Tags | Task | Due | Overdue |" in markdown
+    assert ("| 1 | open | high | work,finance | high soon task |"
+            in markdown)
     assert (markdown.index("high soon task")
             < markdown.index("low overdue task"))
 
@@ -457,8 +462,17 @@ def test_cli_task_list_export(tmp_path, capsys):
     done = json.loads(capsys.readouterr().out)
     assert [task["id"] for task in done["tasks"]] == [4]
 
+    assert main(common + [
+        "--task-list", "--task-tag", "work", "--json"]) == 0
+    tagged = json.loads(capsys.readouterr().out)
+    assert tagged["tag"] == "work"
+    assert [task["id"] for task in tagged["tasks"]] == [1, 3]
+
     with pytest.raises(SystemExit) as exc:
         main(common + ["--task-format", "csv"])
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--task-tag", "work"])
     assert exc.value.code == 2
     with pytest.raises(SystemExit) as exc:
         main(common + ["--task-list", "--weekly"])

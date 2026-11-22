@@ -29,6 +29,8 @@ after `0.5.0`.
   overdue and due-soon views.
 - Task priorities (`low`, `normal`, `high`), priority updates and priority
   labels in lists, briefs, reviews and exports.
+- Task tags (up to five per task), `tag task` updates, tag filters and tags in
+  CSV/Markdown task exports.
 - Rescheduling and confirmed deletion.
 - Task text search plus status/due/priority filters.
 - Priority-first sorting in search, overdue, due-soon, list, brief and review
@@ -38,6 +40,7 @@ after `0.5.0`.
 - Filtered task-list export as CSV or Markdown:
   `atomzero-brief --task-list --task-format csv|markdown`,
   `GET /v1/tasks/export` and UI Download CSV/.md buttons.
+- Task tags are included as a `tags` column in CSV and Markdown exports.
 
 ## Source comparison and reliability
 
@@ -52,7 +55,7 @@ after `0.5.0`.
 
 ## Verified regressions
 
-- `362 passed` in the assistant test suite.
+- `363 passed` in the assistant test suite.
 - Weekly chat regression: 7/7.
 - Weekly export/archive regression: 29/29.
 - Weekly review regression: 6/6.

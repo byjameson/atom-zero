@@ -334,6 +334,7 @@ and suggested next actions.</p>
 <option value="normal">Normal</option>
 <option value="high">High</option>
 </select>
+<input id="tasklisttag" placeholder="tag" style="width:7em">
 <select id="tasklistsort" title="Task list order">
 <option value="default" selected>Session order</option>
 <option value="priority">Priority first</option>
@@ -847,12 +848,14 @@ async function getTaskList() {
   const status = document.getElementById('taskliststatus').value;
   const due = document.getElementById('tasklistdue').value;
   const priority = document.getElementById('tasklistpriority').value;
+  const tag = document.getElementById('tasklisttag').value.trim();
   const sort = document.getElementById('tasklistsort').value;
   msg.textContent = 'loading task list...';
   box.textContent = '';
   try {
     const params = new URLSearchParams({
       session_id: sessionId, status, due, priority, sort});
+    if (tag) params.set('tag', tag);
     const r = await fetch('/v1/tasks/list?' + params.toString());
     const j = await r.json();
     if (!r.ok) {
@@ -863,6 +866,7 @@ async function getTaskList() {
     if (j.status !== 'open') filters.push('status=' + j.status);
     if (j.due !== 'all') filters.push('due=' + j.due);
     if (j.priority !== 'all') filters.push('priority=' + j.priority);
+    if (j.tag && j.tag !== 'all') filters.push('tag=' + j.tag);
     if (j.sort !== 'default') filters.push('sort=' + j.sort);
     msg.textContent = 'task list | ' + (j.count || 0) + ' task(s)' +
       (filters.length ? ' | ' + filters.join(' | ') : '');
@@ -879,6 +883,9 @@ async function getTaskList() {
       card.className = 'qitem';
       let line = '#' + task.id + ' [' + (task.status || '?') + '] [' +
         (task.priority || 'normal') + '] ' + (task.text || '');
+      if (task.tags && task.tags.length) {
+        line += ' | tags: ' + task.tags.join(',');
+      }
       if (task.due) line += ' | due ' + task.due;
       card.textContent = line;
       box.appendChild(card);
@@ -892,11 +899,13 @@ async function downloadTaskList(format) {
   const status = document.getElementById('taskliststatus').value;
   const due = document.getElementById('tasklistdue').value;
   const priority = document.getElementById('tasklistpriority').value;
+  const tag = document.getElementById('tasklisttag').value.trim();
   const sort = document.getElementById('tasklistsort').value;
   msg.textContent = 'exporting task list...';
   try {
     const params = new URLSearchParams({
       session_id: sessionId, status, due, priority, sort, format});
+    if (tag) params.set('tag', tag);
     const r = await fetch('/v1/tasks/export?' + params.toString());
     if (!r.ok) {
       let detail = r.status;
@@ -3274,6 +3283,7 @@ class Handler(BaseHTTPRequestHandler):
             due = str(params.get("due", ["all"])[0] or "all").strip()
             priority = str(
                 params.get("priority", ["all"])[0] or "all").strip()
+            tag = str(params.get("tag", ["all"])[0] or "all").strip()
             sort = str(params.get("sort", ["default"])[0] or "default").strip()
             export_format = str(
                 params.get("format", ["csv"])[0] or "csv").strip().lower()
@@ -3288,7 +3298,7 @@ class Handler(BaseHTTPRequestHandler):
 
                 view = task_list_view(
                     session.human.data, status=status, due=due,
-                    priority=priority, sort=sort,
+                    priority=priority, tag=tag, sort=sort,
                     now=params.get("today", [None])[0])
                 if export_format == "csv":
                     body = render_task_list_csv(view)
@@ -3314,6 +3324,7 @@ class Handler(BaseHTTPRequestHandler):
             due = str(params.get("due", ["all"])[0] or "all").strip()
             priority = str(
                 params.get("priority", ["all"])[0] or "all").strip()
+            tag = str(params.get("tag", ["all"])[0] or "all").strip()
             sort = str(params.get("sort", ["default"])[0] or "default").strip()
             try:
                 session = self._session(session_id)
@@ -3321,7 +3332,7 @@ class Handler(BaseHTTPRequestHandler):
 
                 result = task_list_view(
                     session.human.data, status=status, due=due,
-                    priority=priority, sort=sort,
+                    priority=priority, tag=tag, sort=sort,
                     now=params.get("today", [None])[0])
             except Exception as exc:
                 return self._json(400, {"error": str(exc)})

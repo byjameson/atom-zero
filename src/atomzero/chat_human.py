@@ -69,6 +69,7 @@ def _parse_due(value: str) -> str:
 
 
 TASK_PRIORITIES = ("low", "normal", "high")
+TASK_TAG_LIMIT = 5
 
 
 def _normalize_priority(value: str) -> str:
@@ -79,18 +80,43 @@ def _normalize_priority(value: str) -> str:
     return priority
 
 
+def _normalize_tags(values) -> list[str]:
+    if values is None:
+        return []
+    if isinstance(values, str):
+        values = values.split(",")
+    tags = []
+    for raw in values:
+        tag = str(raw or "").strip().lower().lstrip("#")
+        if not tag:
+            continue
+        if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,23}", tag):
+            raise ValueError(
+                "tags must use letters, numbers, - or _ (max 24 chars)")
+        if tag not in tags:
+            tags.append(tag)
+    if len(tags) > TASK_TAG_LIMIT:
+        raise ValueError(f"at most {TASK_TAG_LIMIT} tags are allowed")
+    return tags
+
+
 def _task_label(task: dict) -> str:
     due = str(task.get("due", "") or "").strip()
     priority = str(task.get("priority", "normal") or "normal").lower()
     priority_tag = f" [{priority}]" if priority != "normal" else ""
+    try:
+        tags = _normalize_tags(task.get("tags", []))
+    except ValueError:
+        tags = []
+    tag_text = f" [tags: {', '.join(tags)}]" if tags else ""
     suffix = ""
     if due:
         overdue = due < date.today().isoformat()
         suffix = f" (due {due}{', overdue' if overdue else ''})"
-    return f"{task['id']}{priority_tag} {task['text']}{suffix}"
+    return f"{task['id']}{priority_tag} {task['text']}{tag_text}{suffix}"
 
 
-def _parse_list_task_filters(text: str) -> tuple[str, str, str, str]:
+def _parse_list_task_filters(text: str) -> tuple[str, str, str, str, str]:
     match = re.search(r"list\s+tasks\b", text, re.IGNORECASE)
     tail = text[match.end():] if match else ""
     tokens = tail.split()
@@ -98,6 +124,7 @@ def _parse_list_task_filters(text: str) -> tuple[str, str, str, str]:
     due = "all"
     priority = "all"
     sort = "default"
+    tag = "all"
     status_words = {"open", "done", "all"}
     due_words = {"overdue", "today", "week", "none"}
     priority_words = {"low", "normal", "high"}
@@ -129,6 +156,10 @@ def _parse_list_task_filters(text: str) -> tuple[str, str, str, str]:
             priority = last
             tokens = tokens[:-2]
             continue
+        if (len(tokens) >= 2 and tokens[-2].lower() in {"tag", "tags"}):
+            tag = last.lstrip("#")
+            tokens = tokens[:-2]
+            continue
         if last in status_words:
             status = last
             tokens.pop()
@@ -145,8 +176,12 @@ def _parse_list_task_filters(text: str) -> tuple[str, str, str, str]:
             sort = last
             tokens.pop()
             continue
+        if last.startswith("#") and len(last) > 1:
+            tag = last[1:]
+            tokens.pop()
+            continue
         break
-    return status, due, priority, sort
+    return status, due, priority, sort, tag
 
 
 def looks_like_question(text: str) -> bool:
@@ -282,24 +317,27 @@ class ChatHuman:
         self.save()
 
     def add_task(self, text: str, due: str = "",
-                 priority: str = "normal") -> int:
+                 priority: str = "normal", tags=None) -> int:
         priority = _normalize_priority(priority)
+        tags = _normalize_tags(tags)
         tid = int(self.data.get("next_task", 1))
         self.data["next_task"] = tid + 1
         self.data["tasks"].append({
             "id": tid, "text": text, "status": "open",
             "created": time.strftime("%Y-%m-%dT%H:%M:%S"),
             "completed": "", "due": due, "priority": priority,
+            "tags": tags,
         })
         self.save()
         return tid
 
     def build_task_list(self, text: str) -> dict:
-        status, due, priority, sort = _parse_list_task_filters(text)
+        status, due, priority, sort, tag = _parse_list_task_filters(text)
         from atomzero.briefing import task_list_view
 
         return task_list_view(
-            self.data, status=status, due=due, priority=priority, sort=sort)
+            self.data, status=status, due=due, priority=priority,
+            tag=tag, sort=sort)
 
     def set_task_priority(self, tid: int, priority: str) -> dict | None:
         normalized = _normalize_priority(priority)
@@ -307,6 +345,16 @@ class ChatHuman:
             if int(task["id"]) == int(tid):
                 task["priority"] = normalized
                 task["prioritized"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+                self.save()
+                return task
+        return None
+
+    def set_task_tags(self, tid: int, tags) -> dict | None:
+        normalized = _normalize_tags(tags)
+        for task in self.data["tasks"]:
+            if int(task["id"]) == int(tid):
+                task["tags"] = normalized
+                task["tagged"] = time.strftime("%Y-%m-%dT%H:%M:%S")
                 self.save()
                 return task
         return None
@@ -482,11 +530,26 @@ class ChatHuman:
             task = text.split("add task", 1)[1].strip(" :")
             due = ""
             priority = "normal"
+            tags = []
             due_error = ""
             priority_error = ""
+            tags_error = ""
             priority_seen = False
             due_seen = False
+            tags_seen = False
             while task:
+                if not tags_seen:
+                    tags_match = re.search(
+                        r"\s+tags?\s+(.+)$", task, re.IGNORECASE)
+                    if tags_match:
+                        try:
+                            tags = _normalize_tags(tags_match.group(1))
+                        except ValueError as exc:
+                            tags_error = str(exc)
+                            break
+                        task = task[:tags_match.start()].strip(" :")
+                        tags_seen = True
+                        continue
                 if not priority_seen:
                     priority_match = re.search(
                         r"\s+priority\s+(\S+)\s*$", task, re.IGNORECASE)
@@ -519,15 +582,20 @@ class ChatHuman:
                         due_seen = True
                         continue
                 break
-            if priority_error:
+            if tags_error:
+                reply = tags_error
+            elif priority_error:
                 reply = priority_error
             elif due_error:
                 reply = due_error
             elif task:
-                tid = self.add_task(task, due=due, priority=priority)
+                tid = self.add_task(
+                    task, due=due, priority=priority, tags=tags)
                 suffix = f" (due {due})" if due else ""
                 if priority != "normal":
                     suffix += f" (priority {priority})"
+                if tags:
+                    suffix += f" (tags {', '.join(tags)})"
                 reply = f"Added task {tid}: {task}{suffix}"
             else:
                 reply = "Tell me the task after 'add task'."
@@ -551,6 +619,27 @@ class ChatHuman:
                     else:
                         reply = (f"Rescheduled task {task['id']} to "
                                  f"{task['due']}.")
+        elif low.startswith("tag task"):
+            match = re.match(
+                r"tag\s+task\s*(\d+)\s+(.+)$", text, re.IGNORECASE)
+            if not match:
+                reply = "Use 'tag task ID tag1,tag2' to set task tags."
+            else:
+                value = match.group(2).strip()
+                tags = [] if value.lower() in ("clear", "none", "-") else value
+                try:
+                    task = self.set_task_tags(int(match.group(1)), tags)
+                except ValueError as exc:
+                    task = None
+                    reply = str(exc)
+                else:
+                    if task is None:
+                        reply = "I could not find that task."
+                    elif not task["tags"]:
+                        reply = f"Cleared tags on task {task['id']}."
+                    else:
+                        reply = (f"Set tags on task {task['id']}: "
+                                 f"{', '.join(task['tags'])}.")
         elif low.startswith("set task"):
             match = re.match(
                 r"set task\s*(\d+)\s+(?:priority\s+)?"

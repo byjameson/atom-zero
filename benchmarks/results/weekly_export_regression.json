@@ -1,6 +1,6 @@
 {
   "benchmark": "atomzero-weekly-export-regression",
-  "generated": "2026-11-23T01:48:50",
+  "generated": "2026-11-23T02:10:31",
   "checks": [
     {
       "name": "ui_export_controls",
@@ -15,12 +15,12 @@
     {
       "name": "export_tasks",
       "ok": true,
-      "detail": "# Weekly review - 2026-11-23 01:48\n\nPeriod: last 7 days\n\n## Tasks\n\n- Open: 1\n- Completed in the last 7 days: 1\n- Completed total: 1\n\n### Open\n\n- [ ] **#2** write report\n\n### Completed in the last 7 days\n\n- [x] **#1** buy"
+      "detail": "# Weekly review - 2026-11-23 02:10\n\nPeriod: last 7 days\n\n## Tasks\n\n- Open: 1\n- Completed in the last 7 days: 1\n- Completed total: 1\n\n### Open\n\n- [ ] **#2** write report\n\n### Completed in the last 7 days\n\n- [x] **#1** buy"
     },
     {
       "name": "export_context",
       "ok": true,
-      "detail": "# Weekly review - 2026-11-23 01:48\n\nPeriod: last 7 days\n\n## Tasks\n\n- Open: 1\n- Completed in the last 7 days: 1\n- Completed total: 1\n\n### Open\n\n- [ ] **#2** write report\n\n### Completed in the last 7 days\n\n- [x] **#1** buy milk\n\n## Pending gaps (1)\n\n- What is the warranty claim deadline?\n\n## Recent sources (1)\n\n- **Launc"
+      "detail": "# Weekly review - 2026-11-23 02:10\n\nPeriod: last 7 days\n\n## Tasks\n\n- Open: 1\n- Completed in the last 7 days: 1\n- Completed total: 1\n\n### Open\n\n- [ ] **#2** write report\n\n### Completed in the last 7 days\n\n- [x] **#1** buy milk\n\n## Pending gaps (1)\n\n- What is the warranty claim deadline?\n\n## Recent sources (1)\n\n- **Launc"
     },
     {
       "name": "export_next_and_limits",
@@ -30,7 +30,7 @@
     {
       "name": "export_14_day_window",
       "ok": true,
-      "detail": "# Weekly review - 2026-11-23 01:48\n\nPeriod: last 14 days\n\n## Tasks\n\n- Open: 1\n- Completed in the last 14 days: 1\n- Completed total: 1\n\n### Open\n\n- [ ] **#2** write report\n\n### Comp"
+      "detail": "# Weekly review - 2026-11-23 02:10\n\nPeriod: last 14 days\n\n## Tasks\n\n- Open: 1\n- Completed in the last 14 days: 1\n- Completed total: 1\n\n### Open\n\n- [ ] **#2** write report\n\n### Comp"
     },
     {
       "name": "export_invalid_days",
@@ -40,12 +40,12 @@
     {
       "name": "cli_markdown_out",
       "ok": true,
-      "detail": "exit=0 path=C:\\Users\\biris\\AppData\\Local\\Temp\\atomzero-weekly-export-3i6q1k9u\\cli\\reports\\weekly.md"
+      "detail": "exit=0 path=C:\\Users\\biris\\AppData\\Local\\Temp\\atomzero-weekly-export-w8tlq2vf\\cli\\reports\\weekly.md"
     },
     {
       "name": "archive_listing",
       "ok": true,
-      "detail": "{'id': 'w0001', 'title': 'Weekly review - 2026-11-23 01:48', 'path': 'C:\\\\Users\\\\biris\\\\AppData\\\\Local\\\\Temp\\\\atomzero-weekly-export-3i6q1k9u\\\\cli\\\\reports\\\\weekly.md', 'name': 'weekly.md', 'generated': '2026-11-23 01:48', 'exported_at': '2026-11-23T01:48:49', 'period_days': 7, 'task_counts': {'open': 1, 'completed_recent': 1, 'completed_total': 1}, 'pending_gap_count': 1, 'recent_source_count': 1, 'entities': 1, 'connections': 0, 'size_bytes': 1007, 'sha256': '020071cf4c1b24d759a0dd89b2798f44da2a3b46b8cb295819bae8d6413617b3', 'exists': True}"
+      "detail": "{'id': 'w0001', 'title': 'Weekly review - 2026-11-23 02:10', 'path': 'C:\\\\Users\\\\biris\\\\AppData\\\\Local\\\\Temp\\\\atomzero-weekly-export-w8tlq2vf\\\\cli\\\\reports\\\\weekly.md', 'name': 'weekly.md', 'generated': '2026-11-23 02:10', 'exported_at': '2026-11-23T02:10:30', 'period_days': 7, 'task_counts': {'open': 1, 'completed_recent': 1, 'completed_total': 1}, 'pending_gap_count': 1, 'recent_source_count': 1, 'entities': 1, 'connections': 0, 'size_bytes': 1007, 'sha256': '75c114fdc5f57a6f43dba319ed329bcc62721b31335452ba4c1bc78973f42960', 'exists': True}"
     },
     {
       "name": "archive_query",
@@ -55,12 +55,12 @@
     {
       "name": "chat_report_search",
       "ok": true,
-      "detail": "Archived weekly reports matching \"weekly\" (1 of 1) | sort: newest:\n- w0001 | exported 2026-11-23T01:48:49 | last 7 days | C:\\Users\\biris\\AppData\\Local\\Temp\\atomzero-weekly-export-3i6q1k9u\\cli\\reports\\weekly.md\nReport files stay on your disk"
+      "detail": "Archived weekly reports matching \"weekly\" (1 of 1) | sort: newest:\n- w0001 | exported 2026-11-23T02:10:30 | last 7 days | C:\\Users\\biris\\AppData\\Local\\Temp\\atomzero-weekly-export-w8tlq2vf\\cli\\reports\\weekly.md\nReport files stay on your disk"
     },
     {
       "name": "chat_report_list",
       "ok": true,
-      "detail": "Archived weekly reports (1 of 1) | sort: newest:\n- w0001 | exported 2026-11-23T01:48:49 | last 7 days | C:\\Users\\biris\\AppData\\Local\\Temp\\atomzero-weekly-export-3i6q1k9u\\cli\\reports\\weekly.md\nReport f"
+      "detail": "Archived weekly reports (1 of 1) | sort: newest:\n- w0001 | exported 2026-11-23T02:10:30 | last 7 days | C:\\Users\\biris\\AppData\\Local\\Temp\\atomzero-weekly-export-w8tlq2vf\\cli\\reports\\weekly.md\nReport f"
     },
     {
       "name": "chat_report_maintenance",
@@ -70,7 +70,7 @@
     {
       "name": "archive_download",
       "ok": true,
-      "detail": "# Weekly review - 2026-11-23 01:48\n\nPeriod: last 7 days\n\n## Tasks\n\n- Open: 1\n- Completed in the last 7 days: 1\n- Completed total: 1\n\n### Open\n\n- [ ] **#2** write report\n\n### Comple"
+      "detail": "# Weekly review - 2026-11-23 02:10\n\nPeriod: last 7 days\n\n## Tasks\n\n- Open: 1\n- Completed in the last 7 days: 1\n- Completed total: 1\n\n### Open\n\n- [ ] **#2** write report\n\n### Comple"
     },
     {
       "name": "archive_verify",
@@ -80,7 +80,7 @@
     {
       "name": "chat_report_verify",
       "ok": true,
-      "detail": "Report integrity: 1 ok, 1 failed, 1 missing (2 total)\n- w0002 | missing | C:\\Users\\biris\\AppData\\Local\\Temp\\atomzero-weekly-export-3i6q1k9u\\gone.md [missing]"
+      "detail": "Report integrity: 1 ok, 1 failed, 1 missing (2 total)\n- w0002 | missing | C:\\Users\\biris\\AppData\\Local\\Temp\\atomzero-weekly-export-w8tlq2vf\\gone.md [missing]"
     },
     {
       "name": "archive_repair",
@@ -90,7 +90,7 @@
     {
       "name": "archive_prune",
       "ok": true,
-      "detail": "{'removed': 1, 'remaining': 1, 'index': 'C:\\\\Users\\\\biris\\\\AppData\\\\Local\\\\Temp\\\\atomzero-weekly-export-3i6q1k9u\\\\weekly_reports.json'}"
+      "detail": "{'removed': 1, 'remaining': 1, 'index': 'C:\\\\Users\\\\biris\\\\AppData\\\\Local\\\\Temp\\\\atomzero-weekly-export-w8tlq2vf\\\\weekly_reports.json'}"
     },
     {
       "name": "chat_report_repair",
@@ -120,7 +120,7 @@
     {
       "name": "comparison_export",
       "ok": true,
-      "detail": "# Report comparison: w0001 -> w0002\n\n| Report | Exported | Path |\n| --- | --- | --- |\n| w0001 | 2026-11-23T01:48:49 | `C:\\Users\\biris\\AppData\\Local\\Temp\\atomzer"
+      "detail": "# Report comparison: w0001 -> w0002\n\n| Report | Exported | Path |\n| --- | --- | --- |\n| w0001 | 2026-11-23T02:10:30 | `C:\\Users\\biris\\AppData\\Local\\Temp\\atomzer"
     },
     {
       "name": "chat_report_sort",
@@ -130,22 +130,22 @@
     {
       "name": "chat_report_show",
       "ok": true,
-      "detail": "Report w0001 | exported 2026-11-23T01:48:49 | C:\\Users\\biris\\AppData\\Local\\Temp\\atomzero-weekly-export-3i6q1k9u\\cli\\reports\\weekly.md\n\n# Changed weekly report"
+      "detail": "Report w0001 | exported 2026-11-23T02:10:30 | C:\\Users\\biris\\AppData\\Local\\Temp\\atomzero-weekly-export-w8tlq2vf\\cli\\reports\\weekly.md\n\n# Changed weekly report"
     },
     {
       "name": "archive_keep_preview",
       "ok": true,
-      "detail": "{'keep': 2, 'dry_run': True, 'trimmed': 0, 'remaining': 4, 'would_remove': [{'id': 'w0003', 'title': 'Weekly review - 2026-11-22 09:00', 'path': 'C:\\\\Users\\\\biris\\\\AppData\\\\Local\\\\Temp\\\\atomzero-weekly-export-3i6q1k9u\\\\extra-2.md', 'name': 'extra-2.md', 'generated': '2026-11-22 09:00', 'exported_at': '2026-11-22T09:00:00', 'period_days': 7, 'task_counts': {'open': 0}, 'pending_gap_count': 0, 'recent_source_count': 0, 'entities': 0, 'connections': 0, 'size_bytes': 21, 'sha256': '62ab9b1489c965456af4302212c70f5fcd89b6a57f45c639a92182a4bdc0a151', 'metadata_repaired_at': '2026-11-23T01:48:49'}, {'id': 'w0002', 'title': 'Weekly review - 2026-11-21 09:00', 'path': 'C:\\\\Users\\\\biris\\\\AppData\\\\Local\\\\Temp\\\\atomzero-weekly-export-3i6q1k9u\\\\extra-1.md', 'name': 'extra-1.md', 'generated': '2026-11-21 09:00', 'exported_at': '2026-11-21T09:00:00', 'period_days': 7, 'task_counts': {'open': 0}, 'pending_gap_count': 0, 'recent_source_count': 0, 'entities': 0, 'connections': 0, 'size_bytes': 17, 'sha256': 'd3885de3aba13f21de09886db0c93f991c8008eea3d1bcf09f22babc603ea36f', 'metadata_repaired_at': '2026-11-23T01:48:49'}], 'would_remove_count': 2, 'index': 'C:\\\\Users\\\\biris\\\\AppData\\\\Local\\\\Temp\\\\atomzero-weekly-export-3i6q1k9u\\\\weekly_reports.json'}"
+      "detail": "{'keep': 2, 'dry_run': True, 'trimmed': 0, 'remaining': 4, 'would_remove': [{'id': 'w0003', 'title': 'Weekly review - 2026-11-22 09:00', 'path': 'C:\\\\Users\\\\biris\\\\AppData\\\\Local\\\\Temp\\\\atomzero-weekly-export-w8tlq2vf\\\\extra-2.md', 'name': 'extra-2.md', 'generated': '2026-11-22 09:00', 'exported_at': '2026-11-22T09:00:00', 'period_days': 7, 'task_counts': {'open': 0}, 'pending_gap_count': 0, 'recent_source_count': 0, 'entities': 0, 'connections': 0, 'size_bytes': 21, 'sha256': '62ab9b1489c965456af4302212c70f5fcd89b6a57f45c639a92182a4bdc0a151', 'metadata_repaired_at': '2026-11-23T02:10:30'}, {'id': 'w0002', 'title': 'Weekly review - 2026-11-21 09:00', 'path': 'C:\\\\Users\\\\biris\\\\AppData\\\\Local\\\\Temp\\\\atomzero-weekly-export-w8tlq2vf\\\\extra-1.md', 'name': 'extra-1.md', 'generated': '2026-11-21 09:00', 'exported_at': '2026-11-21T09:00:00', 'period_days': 7, 'task_counts': {'open': 0}, 'pending_gap_count': 0, 'recent_source_count': 0, 'entities': 0, 'connections': 0, 'size_bytes': 17, 'sha256': 'd3885de3aba13f21de09886db0c93f991c8008eea3d1bcf09f22babc603ea36f', 'metadata_repaired_at': '2026-11-23T02:10:30'}], 'would_remove_count': 2, 'index': 'C:\\\\Users\\\\biris\\\\AppData\\\\Local\\\\Temp\\\\atomzero-weekly-export-w8tlq2vf\\\\weekly_reports.json'}"
     },
     {
       "name": "archive_keep",
       "ok": true,
-      "detail": "{'keep': 2, 'trimmed': 2, 'remaining': 2, 'index': 'C:\\\\Users\\\\biris\\\\AppData\\\\Local\\\\Temp\\\\atomzero-weekly-export-3i6q1k9u\\\\weekly_reports.json'}"
+      "detail": "{'keep': 2, 'trimmed': 2, 'remaining': 2, 'index': 'C:\\\\Users\\\\biris\\\\AppData\\\\Local\\\\Temp\\\\atomzero-weekly-export-w8tlq2vf\\\\weekly_reports.json'}"
     },
     {
       "name": "archive_delete",
       "ok": true,
-      "detail": "{'deleted': {'id': 'w0004', 'title': 'Weekly review - 2026-11-23 09:00', 'path': 'C:\\\\Users\\\\biris\\\\AppData\\\\Local\\\\Temp\\\\atomzero-weekly-export-3i6q1k9u\\\\extra-3.md', 'name': 'extra-3.md', 'generated': '2026-11-23 09:00', 'exported_at': '2026-11-23T09:00:00', 'period_days': 7, 'task_counts': {'open': 0}, 'pending_gap_count': 0, 'recent_source_count': 0, 'entities': 0, 'connections': 0, 'size_bytes': 11, 'sha256': '2047503fba206e17484e70b51b648ed4974e9e2dec4df1ba74f9102c1ff03180'}, 'remaining': 1, 'index': 'C:\\\\Users\\\\biris\\\\AppData\\\\Local\\\\Temp\\\\atomzero-weekly-export-3i6q1k9u\\\\weekly_reports.json'}"
+      "detail": "{'deleted': {'id': 'w0004', 'title': 'Weekly review - 2026-11-23 09:00', 'path': 'C:\\\\Users\\\\biris\\\\AppData\\\\Local\\\\Temp\\\\atomzero-weekly-export-w8tlq2vf\\\\extra-3.md', 'name': 'extra-3.md', 'generated': '2026-11-23 09:00', 'exported_at': '2026-11-23T09:00:00', 'period_days': 7, 'task_counts': {'open': 0}, 'pending_gap_count': 0, 'recent_source_count': 0, 'entities': 0, 'connections': 0, 'size_bytes': 11, 'sha256': '2047503fba206e17484e70b51b648ed4974e9e2dec4df1ba74f9102c1ff03180'}, 'remaining': 1, 'index': 'C:\\\\Users\\\\biris\\\\AppData\\\\Local\\\\Temp\\\\atomzero-weekly-export-w8tlq2vf\\\\weekly_reports.json'}"
     }
   ],
   "passed": 29,

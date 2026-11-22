@@ -71,9 +71,9 @@ More fixes are in [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
   filtered task search (status/due/priority) and priority-first sorting in
   search/overdue/due-soon, daily-brief, weekly-review and chat commands
   (`brief me priority`, `weekly review priority`, `list tasks priority`,
-  filtered `list tasks` status/due/priority views with structured tool calls,
-  matching `/v1/tasks/list` + UI panel and CSV/Markdown export via
-  `/v1/tasks/export`, `search tasks report sort priority`,
+  filtered `list tasks` status/due/priority/tag views with structured tool
+  calls, task tags, matching `/v1/tasks/list` + UI panel and CSV/Markdown
+  export via `/v1/tasks/export`, `search tasks report sort priority`,
   `overdue tasks priority`, `due soon priority`), notes, arithmetic, time and
   source-cited document lookup.
 - **A source-cited RAG system** over your own text, Markdown, HTML, PDF and DOCX
@@ -145,7 +145,7 @@ LoRA adapters.
 | document benchmark, 100 authored questions | **80/80 answerable, 20/20 no-answer** |
 | public SQuAD v2 retrieval (20 contexts) | **0.98 top-1 context (FTS), 1.00 top-5** |
 | public SQuAD v2 retrieval (50 contexts) | **hybrid 0.975 top-1; 0.816 answer in visible snippet** |
-| test suite | **362 passed** |
+| test suite | **363 passed** |
 
 The raw-model probe asks ten simple general questions with no documents, no
 calculator and no agent. The 49.2M model gets **2/10**. The product gets

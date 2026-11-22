@@ -974,6 +974,7 @@ class AgentSession:
                             "status": view["status"],
                             "due": view["due"],
                             "priority": view["priority"],
+                            "tag": view["tag"],
                             "sort": view["sort"],
                             "count": view["count"]}],
             "sources": [],

@@ -43,29 +43,42 @@ overdue items and tags non-normal priorities as `[low]` or `[high]`.
 low, then earliest due date, then task id.
 
 `list tasks` also accepts filters: `done`, `all`, `due week`, `due overdue`,
-`due today`, `due none`, and `priority high|normal|low`. Filters can be
-combined, for example `list tasks done`, `list tasks due week priority high`
-or `list tasks all due none priority high`. Status defaults to open; due
-filters match the task-search semantics.
+`due today`, `due none`, `priority high|normal|low` and `tag work`. Filters can
+be combined, for example `list tasks done`,
+`list tasks due week priority high`, `list tasks tag work` or
+`list tasks all due none priority high`. Status defaults to open; due filters
+match the task-search semantics. A bare `#work` suffix is also accepted.
 
 Chat returns a structured `list_tasks` tool call with `status`, `due`,
-`priority`, `sort` and `count`. The same view is available over HTTP as
-`GET /v1/tasks/list?status=open&due=week&priority=high&sort=priority` and in
-the UI **Task list** controls.
+`priority`, `tag`, `sort` and `count`. The same view is available over HTTP as
+`GET /v1/tasks/list?status=open&due=week&priority=high&tag=work&sort=priority`
+and in the UI **Task list** controls.
 
 Filtered task lists export as CSV or Markdown:
 
 ```powershell
 atomzero-brief --session data/sessions/default.json `
   --task-list --task-status open --task-due week `
-  --task-priority high --task-sort priority --task-format csv
+  --task-priority high --task-tag work --task-sort priority `
+  --task-format csv
 ```
 
 `--task-format markdown` emits a filtered Markdown table. HTTP uses
-`GET /v1/tasks/export?status=open&due=week&priority=high&sort=priority&format=csv`
+`GET /v1/tasks/export?status=open&due=week&priority=high&tag=work&sort=priority&format=csv`
 (or `format=markdown`). The UI **Download CSV** and **Download .md** buttons
 use the currently selected task-list filters. CSV columns are
-`id,status,priority,text,due,overdue,created,completed`.
+`id,status,priority,tags,text,due,overdue,created,completed`.
+
+Tasks can carry up to five tags:
+
+```text
+add task submit report tags work,finance
+tag task 1 work,urgent
+tag task 1 clear
+```
+
+Tags are lower-case letters, numbers, `-` and `_`; the UI task-list filter
+also accepts `#work`.
 
 Priority can also be updated outside chat:
 

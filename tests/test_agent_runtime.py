@@ -301,7 +301,7 @@ def test_agent_priority_sort_task_views(tmp_path):
     default_list = default_result["reply"]
     assert default_result["tool_calls"][0] == {
         "name": "list_tasks", "status": "open", "due": "all",
-        "priority": "all", "sort": "default", "count": 4}
+        "priority": "all", "tag": "all", "sort": "default", "count": 4}
     assert default_list.startswith("Open tasks: ")
     assert (default_list.index("low overdue task")
             < default_list.index("high overdue task"))
@@ -323,7 +323,7 @@ def test_agent_priority_sort_task_views(tmp_path):
     done_list = done_result["reply"]
     assert done_result["tool_calls"][0] == {
         "name": "list_tasks", "status": "done", "due": "all",
-        "priority": "all", "sort": "default", "count": 1}
+        "priority": "all", "tag": "all", "sort": "default", "count": 1}
     assert done_list.startswith("Done tasks: ")
     assert "done filtered task" in done_list
     assert "high overdue task" not in done_list
@@ -331,7 +331,7 @@ def test_agent_priority_sort_task_views(tmp_path):
     due_high = due_high_result["reply"]
     assert due_high_result["tool_calls"][0] == {
         "name": "list_tasks", "status": "open", "due": "week",
-        "priority": "high", "sort": "default", "count": 1}
+        "priority": "high", "tag": "all", "sort": "default", "count": 1}
     assert [task["id"] for task in
             due_high_result["task_list"]["tasks"]] == [4]
     assert due_high.startswith(
@@ -342,7 +342,7 @@ def test_agent_priority_sort_task_views(tmp_path):
     all_list = all_result["reply"]
     assert all_result["tool_calls"][0] == {
         "name": "list_tasks", "status": "all", "due": "all",
-        "priority": "all", "sort": "default", "count": 5}
+        "priority": "all", "tag": "all", "sort": "default", "count": 5}
     assert all_list.startswith("All tasks: ")
     assert "done filtered task" in all_list
     assert "normal soon task" in all_list
@@ -357,7 +357,7 @@ def test_agent_priority_sort_task_views(tmp_path):
     overdue_high = overdue_high_result["reply"]
     assert overdue_high_result["tool_calls"][0] == {
         "name": "list_tasks", "status": "open", "due": "overdue",
-        "priority": "all", "sort": "priority", "count": 2}
+        "priority": "all", "tag": "all", "sort": "priority", "count": 2}
     assert overdue_high.startswith(
         "Open tasks (due overdue, priority first): ")
     assert (overdue_high.index("high overdue task")
@@ -397,6 +397,35 @@ def test_agent_priority_sort_task_views(tmp_path):
     longer = agent.chat("due soon in 7 days sort priority")
     assert longer["tool_calls"][0] == {
         "name": "due_soon", "days": 7, "sort": "priority"}
+
+
+def test_agent_task_tags_filter_and_clear(tmp_path):
+    agent = AgentSession("s-task-tags", tmp_path / "memory.json")
+    added = agent.chat(
+        "add task submit report priority high tags work,finance")
+    assert "(tags work, finance)" in added["reply"]
+    assert agent.human.data["tasks"][0]["tags"] == ["work", "finance"]
+    agent.chat("add task buy milk tags home")
+    retagged = agent.chat("tag task 1 work,urgent")
+    assert "Set tags on task 1: work, urgent." in retagged["reply"]
+    assert agent.human.data["tasks"][0]["tags"] == ["work", "urgent"]
+    work = agent.chat("list tasks tag work")
+    assert work["tool_calls"][0]["tag"] == "work"
+    assert work["task_list"]["count"] == 1
+    assert work["reply"].startswith("Open tasks (tag work): ")
+    assert "submit report" in work["reply"]
+    assert "buy milk" not in work["reply"]
+    home = agent.chat("list tasks #home")
+    assert home["task_list"]["count"] == 1
+    assert "buy milk" in home["reply"]
+    cleared = agent.chat("tag task 1 clear")
+    assert "Cleared tags on task 1." in cleared["reply"]
+    empty = agent.chat("list tasks tag work")
+    assert empty["task_list"]["count"] == 0
+    assert "No tasks match." in empty["reply"]
+    invalid = agent.chat("add task bad tags bad tag!")
+    assert "tags must use letters" in invalid["reply"]
+    assert len(agent.human.data["tasks"]) == 2
 
 
 def test_agent_task_priority_metadata(tmp_path):

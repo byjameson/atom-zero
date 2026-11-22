@@ -1,9 +1,9 @@
 <!-- Medium title: Atom Zero: A 49M Local Assistant That Says “I Don’t Know” -->
-<!-- Medium subtitle: Why I put facts in RAG instead of the model weights — and what 362 tests taught me about small local AI. -->
+<!-- Medium subtitle: Why I put facts in RAG instead of the model weights — and what 363 tests taught me about small local AI. -->
 
 # Atom Zero: A 49M Local Assistant That Says “I Don’t Know”
 
-Why I put facts in RAG instead of the model weights — and what 362 tests taught me about small local AI.
+Why I put facts in RAG instead of the model weights — and what 363 tests taught me about small local AI.
 
 *This is not a ChatGPT competitor. It is a deliberately small, local assistant with source citations, deterministic tools, and an approval gate for research.*
 
@@ -35,7 +35,7 @@ This is the part I wish more small-model projects published.
 - Behavior checks: **16/16**
 - Source-cited retrieval top-1: **1.000** (FTS 0.850)
 - Document benchmark, 100 authored questions: **80/80 answerable, 20/20 no-answer**
-- Test suite: **362 passed in the assistant package**
+- Test suite: **363 passed in the assistant package**
 
 The raw-model probe asks ten simple general questions with no documents, no calculator and no agent. The 49.2M model gets **2/10**. The product gets **21/21** because the runtime does the work.
 
@@ -58,7 +58,7 @@ The latest release is not a bigger model. It is a better runtime around the same
 - A **constrained plan API** with an allowlist, a three-step cap and explicit confirmation for task/research side effects.
 - **Two independent packages:** `atomzero` for the assistant and `streamft` for the low-VRAM trainer.
 - A **weekly review and report archive** with Markdown export, integrity checks, metadata repair, comparison and retention controls.
-- A **local task workflow** with due dates, priorities, text search, status/due/priority filters, priority-first sorting and CSV/Markdown task-list export.
+- A **local task workflow** with due dates, priorities, tags, text search, status/due/priority/tag filters, priority-first sorting and CSV/Markdown task-list export.
 - **Source comparison** that flags numeric, identifier and negation conflicts with both snippets and locators.
 
 The document benchmark is authored, not a public leaderboard: 80 answerable questions and 20 no-answer questions on a generated 10-document corpus. It currently reaches 80/80 answerable and 20/20 no-answer, with top-1 source, page/section and complete citation at 1.000. That is a regression gate, not a claim of general retrieval quality.

@@ -871,6 +871,7 @@ def test_ui_collection_scope_contract():
     assert 'id="taskliststatus"' in page
     assert 'id="tasklistdue"' in page
     assert 'id="tasklistpriority"' in page
+    assert 'id="tasklisttag"' in page
     assert 'id="tasklistsort"' in page
     assert 'id="tasklistbtn"' in page
     assert 'id="tasklistcsv"' in page
@@ -880,6 +881,8 @@ def test_ui_collection_scope_contract():
     assert '<option value="open" selected>Open</option>' in page
     assert "getTaskList" in page
     assert "downloadTaskList" in page
+    assert "task.tags" in page
+    assert "tasklisttag" in page
     assert "/v1/tasks/list" in page
     assert "/v1/tasks/export" in page
     assert page.count("document.getElementById('tasksort').value") >= 4
@@ -2087,15 +2090,16 @@ def test_http_priority_sort_views(tmp_path):
     base = f"http://127.0.0.1:{httpd.server_address[1]}"
     today = date.today()
     try:
-        for text, offset, priority in (
-                ("low overdue task", -1, "low"),
-                ("high overdue task", -2, "high"),
-                ("normal soon task", 2, "normal"),
-                ("high soon task", 1, "high")):
+        for text, offset, priority, tags in (
+                ("low overdue task", -1, "low", "home"),
+                ("high overdue task", -2, "high", "work"),
+                ("normal soon task", 2, "normal", "home,work"),
+                ("high soon task", 1, "high", "work")):
             due = (today + timedelta(days=offset)).isoformat()
             _post(base + "/v1/agent/chat", {
                 "session_id": "priority-sort-http",
-                "message": f"add task {text} due {due} priority {priority}"})
+                "message": f"add task {text} due {due} priority {priority} "
+                           f"tags {tags}"})
 
         def get(path, **params):
             params.update({
@@ -2116,28 +2120,33 @@ def test_http_priority_sort_views(tmp_path):
         assert search["sort"] == "priority"
         assert [task["id"] for task in search["tasks"]] == [2, 4, 3, 1]
         task_list = get(
-            "/v1/tasks/list", status="open", due="week", priority="high")
+            "/v1/tasks/list", status="open", due="week",
+            priority="high", tag="work")
         assert task_list["status"] == "open"
         assert task_list["due"] == "week"
         assert task_list["priority"] == "high"
+        assert task_list["tag"] == "work"
         assert task_list["sort"] == "default"
         assert task_list["count"] == 1
         assert [task["id"] for task in task_list["tasks"]] == [4]
         all_priority = get("/v1/tasks/list", status="all", sort="priority")
         assert [task["id"] for task in all_priority["tasks"]] == [2, 4, 3, 1]
+        tagged = get("/v1/tasks/list", tag="work")
+        assert [task["id"] for task in tagged["tasks"]] == [2, 3, 4]
         chat_list = _post(base + "/v1/agent/chat", {
             "session_id": "priority-sort-http",
-            "message": "list tasks due week priority high"})
+            "message": "list tasks due week priority high tag work"})
         assert chat_list["tool_calls"][0] == {
             "name": "list_tasks", "status": "open", "due": "week",
-            "priority": "high", "sort": "default", "count": 1}
+            "priority": "high", "tag": "work", "sort": "default",
+            "count": 1}
         assert ([task["id"] for task in chat_list["task_list"]["tasks"]]
                 == [task["id"] for task in task_list["tasks"]])
         export_params = urllib.parse.urlencode({
             "session_id": "priority-sort-http",
             "today": today.isoformat(),
             "status": "open", "due": "week", "priority": "high",
-            "sort": "priority", "format": "csv",
+            "tag": "work", "sort": "priority", "format": "csv",
         })
         with urllib.request.urlopen(
                 base + "/v1/tasks/export?" + export_params,
@@ -2146,17 +2155,17 @@ def test_http_priority_sort_views(tmp_path):
             assert ".csv" in response.headers.get("Content-Disposition", "")
             csv_body = response.read().decode("utf-8")
         csv_rows = list(csv.reader(io.StringIO(csv_body)))
-        assert csv_rows[0][:6] == [
-            "id", "status", "priority", "text", "due", "overdue"]
+        assert csv_rows[0][:7] == [
+            "id", "status", "priority", "tags", "text", "due", "overdue"]
         assert len(csv_rows) == 2
-        assert csv_rows[1][:5] == [
-            "4", "open", "high", "high soon task",
+        assert csv_rows[1][:6] == [
+            "4", "open", "high", "work", "high soon task",
             (today + timedelta(days=1)).isoformat()]
         export_params = urllib.parse.urlencode({
             "session_id": "priority-sort-http",
             "today": today.isoformat(),
             "status": "open", "due": "week", "priority": "high",
-            "sort": "priority", "format": "markdown",
+            "tag": "work", "sort": "priority", "format": "markdown",
         })
         with urllib.request.urlopen(
                 base + "/v1/tasks/export?" + export_params,
@@ -2165,7 +2174,8 @@ def test_http_priority_sort_views(tmp_path):
             assert ".md" in response.headers.get("Content-Disposition", "")
             markdown_body = response.read().decode("utf-8")
         assert markdown_body.startswith("# Task list - ")
-        assert "| 4 | open | high | high soon task |" in markdown_body
+        assert "- Tag: work" in markdown_body
+        assert "| 4 | open | high | work | high soon task |" in markdown_body
         brief = _post(base + "/v1/briefing", {
             "session_id": "priority-sort-http", "sort": "priority"})
         assert brief["sort"] == "priority"

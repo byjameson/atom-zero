@@ -84,16 +84,29 @@ def _task_priority_label(task: dict) -> str:
     return f" [{priority}]" if priority != "normal" else ""
 
 
+def _task_tags(task: dict) -> list[str]:
+    values = task.get("tags", [])
+    if isinstance(values, str):
+        values = values.split(",")
+    if not isinstance(values, (list, tuple)):
+        return []
+    return [str(value).strip().lower().lstrip("#")
+            for value in values if str(value).strip()]
+
+
 def _task_list_label(task: dict, today: str) -> str:
     due = str(task.get("due", "") or "").strip()
     priority = str(task.get("priority", "normal") or "normal").lower()
     priority_tag = f" [{priority}]" if priority != "normal" else ""
+    tags = _task_tags(task)
+    tag_text = f" [tags: {', '.join(tags)}]" if tags else ""
     suffix = ""
     if due:
         is_open = task.get("status", "open") == "open"
         overdue = ", overdue" if due < today and is_open else ""
         suffix = f" (due {due}{overdue})"
-    return f"{task.get('id')}{priority_tag} {task.get('text', '')}{suffix}"
+    return (f"{task.get('id')}{priority_tag} {task.get('text', '')}"
+            f"{tag_text}{suffix}")
 
 
 def _normalize_task_sort(sort="default") -> str:
@@ -125,11 +138,13 @@ def sort_tasks(tasks, sort="default") -> list[dict]:
 
 
 def task_list_view(session_data: dict | None, status="open", due="all",
-                   priority="all", sort="default", now=None) -> dict:
+                   priority="all", sort="default", now=None,
+                   tag="all") -> dict:
     """Filter and render a local task list for chat, HTTP and UI."""
     status = str(status or "open").strip().lower()
     status, due, priority = _normalize_search_filters(
         status, due, priority)
+    tag = str(tag or "all").strip().lower().lstrip("#")
     sort = _normalize_task_sort(sort)
     today = _today_from_now(now)
     week_end = (date.fromisoformat(today) + timedelta(days=7)).isoformat()
@@ -159,6 +174,8 @@ def task_list_view(session_data: dict | None, status="open", due="all",
         tasks = [task for task in tasks
                  if str(task.get("priority", "normal")
                         or "normal").lower() == priority]
+    if tag != "all":
+        tasks = [task for task in tasks if tag in _task_tags(task)]
     tasks = sort_tasks(tasks, sort)
     base = {"open": "Open tasks", "done": "Done tasks",
             "all": "All tasks"}[status]
@@ -167,12 +184,15 @@ def task_list_view(session_data: dict | None, status="open", due="all",
         descriptors.append(f"due {due}")
     if priority != "all":
         descriptors.append(f"priority {priority}")
+    if tag != "all":
+        descriptors.append(f"tag {tag}")
     if sort != "default":
         descriptors.append("priority first")
     heading = base + (f" ({', '.join(descriptors)})"
                       if descriptors else "") + ": "
     filtered = (status != "open" or due != "all"
-                or priority != "all" or sort != "default")
+                or priority != "all" or tag != "all"
+                or sort != "default")
     text = (heading + "; ".join(_task_list_label(task, today)
                                 for task in tasks)
             if tasks else ("No tasks match." if filtered
@@ -185,6 +205,7 @@ def task_list_view(session_data: dict | None, status="open", due="all",
         "status": status,
         "due": due,
         "priority": priority,
+        "tag": tag,
         "sort": sort,
         "count": len(tasks),
         "heading": heading,
@@ -205,7 +226,7 @@ def render_task_list_csv(view: dict) -> str:
     output = io.StringIO()
     writer = csv.writer(output, lineterminator="\n")
     writer.writerow([
-        "id", "status", "priority", "text", "due", "overdue",
+        "id", "status", "priority", "tags", "text", "due", "overdue",
         "created", "completed",
     ])
     for task in view.get("tasks", []):
@@ -213,6 +234,7 @@ def render_task_list_csv(view: dict) -> str:
             task.get("id", ""),
             task.get("status", ""),
             task.get("priority", "normal"),
+            ",".join(_task_tags(task)),
             task.get("text", ""),
             task.get("due", ""),
             "true" if _task_overdue(task, today) else "false",
@@ -234,17 +256,19 @@ def render_task_list_markdown(view: dict) -> str:
         f"- Status: {view.get('status', 'open')}",
         f"- Due: {view.get('due', 'all')}",
         f"- Priority: {view.get('priority', 'all')}",
+        f"- Tag: {view.get('tag', 'all')}",
         f"- Sort: {view.get('sort', 'default')}",
         f"- Count: {view.get('count', 0)}",
         "",
-        "| ID | Status | Priority | Task | Due | Overdue |",
-        "|---:|---|---|---|---|---|",
+        "| ID | Status | Priority | Tags | Task | Due | Overdue |",
+        "|---:|---|---|---|---|---|---|",
     ]
     for task in view.get("tasks", []):
         lines.append(
             f"| {_markdown_cell(task.get('id'))} "
             f"| {_markdown_cell(task.get('status'))} "
             f"| {_markdown_cell(task.get('priority', 'normal'))} "
+            f"| {_markdown_cell(','.join(_task_tags(task)))} "
             f"| {_markdown_cell(task.get('text'))} "
             f"| {_markdown_cell(task.get('due'))} "
             f"| {'yes' if _task_overdue(task, today) else 'no'} |")
@@ -1243,6 +1267,8 @@ def main(argv=None) -> int:
                         default=None, help="task-list due-date filter")
     parser.add_argument("--task-priority", choices=TASK_SEARCH_PRIORITIES,
                         default=None, help="task-list priority filter")
+    parser.add_argument("--task-tag", default=None,
+                        help="task-list tag filter")
     parser.add_argument("--task-format", choices=TASK_EXPORT_FORMATS,
                         default="text",
                         help="task-list output: text, csv or markdown")
@@ -1302,10 +1328,11 @@ def main(argv=None) -> int:
     if not args.task_list:
         if (args.task_status is not None or args.task_due is not None
                 or args.task_priority is not None
+                or args.task_tag is not None
                 or args.task_format != "text"):
             parser.error(
-                "--task-status/--task-due/--task-priority/--task-format "
-                "require --task-list")
+                "--task-status/--task-due/--task-priority/--task-tag/"
+                "--task-format require --task-list")
     else:
         if (args.weekly or args.goal or args.reports or args.markdown
                 or args.out or args.overdue or args.due_soon
@@ -1509,11 +1536,12 @@ def main(argv=None) -> int:
         status = args.task_status or "open"
         due = args.task_due or "all"
         priority = args.task_priority or "all"
+        tag = args.task_tag or "all"
         try:
             session = load_session(session_path)
             result = task_list_view(
                 session, status=status, due=due, priority=priority,
-                sort=args.task_sort)
+                tag=tag, sort=args.task_sort)
         except (ValueError, OSError) as exc:
             if args.json:
                 print(json.dumps({"ok": False, "error": str(exc)},
