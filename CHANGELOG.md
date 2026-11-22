@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased - next batch
+## atomzero 0.6.0 - weekly review and task workflow (2026-11-23)
 
 - Added multi-hop **graph paths**: `atomzero-docs path`, `GET /v1/graph/path`,
   chat “how is X connected to Y?” and UI Find path.
@@ -140,6 +140,8 @@
   (`compare sources A and B`, Turkish equivalent) with the same reasons,
   snippets and locators, plus `benchmarks/compare_chat_regression.py`
   (6/6 checks).
+- Release notes:
+  [`docs/RELEASE_ATOMZERO_0.6.0.md`](docs/RELEASE_ATOMZERO_0.6.0.md).
 
 ## atomzero 0.5.0 - second brain and skill workflows (2026-11-22)
 

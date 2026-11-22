@@ -3,6 +3,9 @@
 Canonical surfaces: GitHub, Hugging Face, PyPI, dev.to, Medium, LinkedIn and
 ModelScope.
 
+Current local batch: **0.6.0 prepared; public surfaces remain 0.5.0 until the
+authenticated publication steps are completed.**
+
 ## Release cadence
 
 Atom Zero uses a batched release train: accumulate about **10 development
@@ -22,9 +25,13 @@ At the batch boundary:
 - run preflight and `scripts/verify_release.py`;
 - publish every canonical surface once.
 
-`0.5.0` is the first batched release under this policy. It includes the graph,
+`0.5.0` was the first batched release under this policy. It included the graph,
 skills, chains, recipes, daily brief and goal planner accumulated after 0.4.2.
-The next batch should be published after roughly ten further increments.
+
+`0.6.0` is the second batch. It includes the weekly review/report archive,
+task due dates/priorities/search/filters/exports, priority-first sorting,
+source comparison, graph paths and reliability fixes accumulated after
+`0.5.0`.
 
 ## 1. Preflight
 
@@ -37,6 +44,9 @@ python -m twine check dist/*
 Expected for the next batch: `362 passed` or more.
 
 ## 2. PyPI
+
+Use a fresh scoped API token supplied by the owner. Never reuse a token that
+has appeared in chat or logs.
 
 ```powershell
 python -m twine upload dist/atomzero-<version>-py3-none-any.whl dist/atomzero-<version>.tar.gz

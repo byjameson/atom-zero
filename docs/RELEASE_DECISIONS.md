@@ -3,8 +3,9 @@
 Status: **open-source release approved by the owner (2026-11-21)**. Atom Zero
 is released as source and weights under Apache-2.0; **no hosted service is
 operated by this project**. Third-party hosting is the host's responsibility.
-PyPI publication is pending the owner's token. This document is a decision
-pack, not legal advice.
+PyPI publication of `0.6.0` is pending the owner's fresh token, together with
+Hugging Face, ModelScope and dev.to access. This document is a decision pack,
+not legal advice.
 
 The training-data attribution and licence caveat remains: source text stays
 under its original dataset terms. See [`NOTICE`](../NOTICE).

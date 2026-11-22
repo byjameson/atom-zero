@@ -6,7 +6,7 @@ pre{background:#f4f4f4;padding:14px;overflow:auto;font:14px/1.5 Consolas,monospa
 img{max-width:100%}a{color:#1a6b5f}blockquote{border-left:4px solid #ccc;margin-left:0;padding-left:16px;color:#555}
 </style>
 <h1>Atom Zero: A 49M Local Assistant That Says “I Don’t Know”</h1>
-<p><em>Why I put facts in RAG instead of the model weights — and what 403 tests taught me about small local AI.</em></p>
+<p><em>Why I put facts in RAG instead of the model weights — and what 362 tests taught me about small local AI.</em></p>
 <p><em>This is not a ChatGPT competitor. It is a deliberately small, local assistant with source citations, deterministic tools, and an approval gate for research.</em></p>
 <hr />
 <p>Most local AI demos start with a bigger model. I went the other way: a <strong>49.2M parameter language model trained from scratch</strong>, wrapped in a runtime that does the things a small model is bad at.</p>
@@ -29,7 +29,7 @@ img{max-width:100%}a{color:#1a6b5f}blockquote{border-left:4px solid #ccc;margin-
 <li>Behavior checks: <strong>16/16</strong></li>
 <li>Source-cited retrieval top-1: <strong>1.000</strong> (FTS 0.850)</li>
 <li>Document benchmark, 100 authored questions: <strong>80/80 answerable, 20/20 no-answer</strong></li>
-<li>Test suite: <strong>403 passed across both repos</strong> (200 trainer + 203 assistant)</li>
+<li>Test suite: <strong>362 passed in the assistant package</strong></li>
 </ul>
 <p>The raw-model probe asks ten simple general questions with no documents, no calculator and no agent. The 49.2M model gets <strong>2/10</strong>. The product gets <strong>21/21</strong> because the runtime does the work.</p>
 <p>The product benchmark is narrow and authored: tools, memory, tasks, source-cited retrieval, teacher-note review, missing-source detection and one short generation. It is <strong>not MMLU, GSM8K or HumanEval</strong>. I am not claiming the 49M model is generally intelligent.</p>
@@ -39,7 +39,7 @@ img{max-width:100%}a{color:#1a6b5f}blockquote{border-left:4px solid #ccc;margin-
 <li>assistant loss: <strong>4.2153 → 3.8551</strong></li>
 </ul>
 <p>But the raw knowledge probe stays at <strong>2/10</strong>. Training the behavior model did not turn it into a knowledge base. That is why facts belong in RAG.</p>
-<h2>What the 0.9 document layer adds</h2>
+<h2>What the runtime adds</h2>
 <p>The latest release is not a bigger model. It is a better runtime around the same 49.2M weights:</p>
 <ul>
 <li><strong>PDF, DOCX, HTML and Markdown ingestion</strong> with page/section citations.</li>
@@ -47,6 +47,9 @@ img{max-width:100%}a{color:#1a6b5f}blockquote{border-left:4px solid #ccc;margin-
 <li>A <strong>100-question document benchmark</strong> covering source, page/section, answer hit, no-answer refusal and latency.</li>
 <li>A <strong>constrained plan API</strong> with an allowlist, a three-step cap and explicit confirmation for task/research side effects.</li>
 <li><strong>Two independent packages:</strong> <code>atomzero</code> for the assistant and <code>streamft</code> for the low-VRAM trainer.</li>
+<li>A <strong>weekly review and report archive</strong> with Markdown export, integrity checks, metadata repair, comparison and retention controls.</li>
+<li>A <strong>local task workflow</strong> with due dates, priorities, text search, status/due/priority filters, priority-first sorting and CSV/Markdown task-list export.</li>
+<li><strong>Source comparison</strong> that flags numeric, identifier and negation conflicts with both snippets and locators.</li>
 </ul>
 <p>The document benchmark is authored, not a public leaderboard: 80 answerable questions and 20 no-answer questions on a generated 10-document corpus. It currently reaches 80/80 answerable and 20/20 no-answer, with top-1 source, page/section and complete citation at 1.000. That is a regression gate, not a claim of general retrieval quality.</p>
 <h2>Why the adapter doesn’t magically add facts</h2>
@@ -114,7 +117,7 @@ weights_changed: false
 </ul>
 <p>The closest description is: a compact <strong>agent harness</strong> with a small language model inside. The harness is the reusable asset.</p>
 <h2>Try it</h2>
-<pre><code class="language-powershell">pip install atomzero==0.5.0
+<pre><code class="language-powershell">pip install atomzero==0.6.0
 atomzero-quickstart
 </code></pre>
 <p>Atom Zero is the standalone <code>atomzero</code> package. The first <code>atomzero-quickstart</code> run downloads the ~197 MB checkpoint/tokenizer from Hugging Face, seeds a small demo corpus (launch code, warranty, travel, visitor badge), starts the server and opens the browser. <code>streamft</code> remains the low-VRAM trainer and is not required. Try:</p>
@@ -140,7 +143,7 @@ Add task buy milk / My name is Alex              -&gt; local tools + memory
 <p>If you want to inspect the claims:</p>
 <ul>
 <li>GitHub: https://github.com/byjameson/atom-zero</li>
-<li>PyPI: https://pypi.org/project/atomzero/0.5.0/</li>
+<li>PyPI: https://pypi.org/project/atomzero/0.6.0/</li>
 <li>streamft trainer: https://pypi.org/project/streamft/1.0.1/</li>
 <li>Hugging Face: https://huggingface.co/byjameson/atom-zero-49m</li>
 <li>ModelScope: https://modelscope.cn/models/byjameson/atom-zero-49m</li>

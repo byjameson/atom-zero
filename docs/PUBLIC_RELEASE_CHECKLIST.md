@@ -1,9 +1,11 @@
 # Public release checklist
 
 Current status: **open-source release approved by the owner**; no hosted
-service is operated. PyPI upload is pending the owner's fresh token. Data
-attribution and per-source review remain caveats for commercial redistribution.
-Do not publish until the remaining release items are checked.
+service is operated. `0.6.0` is prepared locally, but public surfaces remain
+`0.5.0` until a fresh PyPI token, Hugging Face/ModelScope access and dev.to
+access are supplied and the GitHub tag/release is created. Data attribution
+and per-source review remain caveats for commercial redistribution. Do not
+publish until the remaining release items are checked.
 
 Decision pack: [`RELEASE_DECISIONS.md`](RELEASE_DECISIONS.md). Scaling:
 [`SCALING_PLAN.md`](SCALING_PLAN.md). Research worker:

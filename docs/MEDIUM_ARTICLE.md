@@ -1,9 +1,9 @@
 <!-- Medium title: Atom Zero: A 49M Local Assistant That Says “I Don’t Know” -->
-<!-- Medium subtitle: Why I put facts in RAG instead of the model weights — and what 403 tests taught me about small local AI. -->
+<!-- Medium subtitle: Why I put facts in RAG instead of the model weights — and what 362 tests taught me about small local AI. -->
 
 # Atom Zero: A 49M Local Assistant That Says “I Don’t Know”
 
-Why I put facts in RAG instead of the model weights — and what 403 tests taught me about small local AI.
+Why I put facts in RAG instead of the model weights — and what 362 tests taught me about small local AI.
 
 *This is not a ChatGPT competitor. It is a deliberately small, local assistant with source citations, deterministic tools, and an approval gate for research.*
 
@@ -35,7 +35,7 @@ This is the part I wish more small-model projects published.
 - Behavior checks: **16/16**
 - Source-cited retrieval top-1: **1.000** (FTS 0.850)
 - Document benchmark, 100 authored questions: **80/80 answerable, 20/20 no-answer**
-- Test suite: **215 passed across both repos** (200 trainer + 203 assistant)
+- Test suite: **362 passed in the assistant package**
 
 The raw-model probe asks ten simple general questions with no documents, no calculator and no agent. The 49.2M model gets **2/10**. The product gets **21/21** because the runtime does the work.
 
@@ -48,7 +48,7 @@ On the clean scaled validation shard, the trained checkpoint does improve langua
 
 But the raw knowledge probe stays at **2/10**. Training the behavior model did not turn it into a knowledge base. That is why facts belong in RAG.
 
-## What the 0.9 document layer adds
+## What the runtime adds
 
 The latest release is not a bigger model. It is a better runtime around the same 49.2M weights:
 
@@ -57,6 +57,9 @@ The latest release is not a bigger model. It is a better runtime around the same
 - A **100-question document benchmark** covering source, page/section, answer hit, no-answer refusal and latency.
 - A **constrained plan API** with an allowlist, a three-step cap and explicit confirmation for task/research side effects.
 - **Two independent packages:** `atomzero` for the assistant and `streamft` for the low-VRAM trainer.
+- A **weekly review and report archive** with Markdown export, integrity checks, metadata repair, comparison and retention controls.
+- A **local task workflow** with due dates, priorities, text search, status/due/priority filters, priority-first sorting and CSV/Markdown task-list export.
+- **Source comparison** that flags numeric, identifier and negation conflicts with both snippets and locators.
 
 The document benchmark is authored, not a public leaderboard: 80 answerable questions and 20 no-answer questions on a generated 10-document corpus. It currently reaches 80/80 answerable and 20/20 no-answer, with top-1 source, page/section and complete citation at 1.000. That is a regression gate, not a claim of general retrieval quality.
 
@@ -152,7 +155,7 @@ The closest description is: a compact **agent harness** with a small language mo
 ## Try it
 
 ```powershell
-pip install atomzero==0.5.0
+pip install atomzero==0.6.0
 atomzero-quickstart
 ```
 
@@ -188,7 +191,7 @@ The honest gaps are model capability, tool planning, multilingual quality and a 
 If you want to inspect the claims:
 
 - GitHub: https://github.com/byjameson/atom-zero
-- PyPI: https://pypi.org/project/atomzero/0.5.0/
+- PyPI: https://pypi.org/project/atomzero/0.6.0/
 - streamft trainer: https://pypi.org/project/streamft/1.0.1/
 - Hugging Face: https://huggingface.co/byjameson/atom-zero-49m
 - ModelScope: https://modelscope.cn/models/byjameson/atom-zero-49m
