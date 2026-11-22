@@ -67,7 +67,14 @@ The reply contains the same review text and exposes the full `review` payload
 ```powershell
 atomzero-brief --session data/sessions/default.json `
   --docs data/atomzero_demo.db --weekly --days 7 --markdown
+atomzero-brief --session data/sessions/default.json `
+  --docs data/atomzero_demo.db --weekly --days 7 --markdown `
+  --out reports\weekly-review.md
 ```
+
+Without `--out` the report goes to stdout. With `--out` the CLI creates parent
+directories, writes UTF-8 Markdown and prints a short confirmation. `--out`
+requires both `--weekly` and `--markdown`.
 
 ```text
 GET /v1/weekly-review/export?session_id=default&days=7

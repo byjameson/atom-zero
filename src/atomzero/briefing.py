@@ -492,11 +492,15 @@ def main(argv=None) -> int:
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--markdown", action="store_true",
                         help="render the weekly review as Markdown")
+    parser.add_argument("--out", default="",
+                        help="write the Markdown review to PATH")
     args = parser.parse_args(argv)
     if args.markdown and not args.weekly:
         parser.error("--markdown requires --weekly")
     if args.markdown and args.json:
         parser.error("--markdown cannot be combined with --json")
+    if args.out and not (args.weekly and args.markdown):
+        parser.error("--out requires --weekly --markdown")
     session_path = Path(args.session) if args.session else (
         Path(args.sessions_dir) / f"{args.session_id}.json")
     docs = None
@@ -528,7 +532,18 @@ def main(argv=None) -> int:
     if args.json:
         print(json.dumps(result, indent=2, ensure_ascii=False))
     elif args.markdown:
-        print(render_weekly_markdown(result), end="")
+        markdown = render_weekly_markdown(result)
+        if args.out:
+            target = Path(args.out).expanduser()
+            try:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(markdown, encoding="utf-8")
+            except OSError as exc:
+                print(f"briefing error: {exc}")
+                return 1
+            print(f"weekly review written to {target}")
+        else:
+            print(markdown, end="")
     elif args.goal:
         print(render_plan(result))
     else:

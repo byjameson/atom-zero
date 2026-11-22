@@ -2,6 +2,8 @@ import json
 import time
 from datetime import datetime, timedelta
 
+import pytest
+
 from atomzero.briefing import (
     build_briefing, build_weekly_review, load_session, main, plan_goal)
 from atomzero.doc_memory import DocMemory
@@ -132,6 +134,34 @@ def test_cli_weekly_markdown_export(tmp_path, capsys):
     assert "L-7781" in markdown
     assert "## Next week" in markdown
     assert "No model weights were changed." in markdown
+
+
+def test_cli_weekly_markdown_out_file(tmp_path, capsys):
+    session_path = tmp_path / "session.json"
+    now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    session_path.write_text(json.dumps({"tasks": [
+        {"id": 1, "text": "raporu yaz", "status": "open",
+         "created": now, "completed": ""},
+    ]}), encoding="utf-8")
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("notes/launch.txt", "The launch code is L-7781.",
+                  title="Launch")
+    docs.close()
+    out = tmp_path / "reports" / "weekly.md"
+    assert main([
+        "--session", str(session_path), "--docs", str(tmp_path / "docs.db"),
+        "--weekly", "--markdown", "--out", str(out)]) == 0
+    captured = capsys.readouterr()
+    assert "weekly review written to" in captured.out
+    assert out.exists()
+    payload = out.read_bytes()
+    assert not payload.startswith(b"\xef\xbb\xbf")
+    markdown = payload.decode("utf-8")
+    assert markdown.startswith("# Weekly review - ")
+    assert "- [ ] **#1** raporu yaz" in markdown
+    with pytest.raises(SystemExit) as exc:
+        main(["--out", str(tmp_path / "invalid.md")])
+    assert exc.value.code == 2
 
 
 def test_plan_goal_adds_cited_context_and_suggestions(tmp_path):

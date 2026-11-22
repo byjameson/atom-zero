@@ -48,13 +48,14 @@ Latest result: **6/6 checks pass**. Raw result:
 
 `benchmarks/weekly_export_regression.py` checks the UI export controls,
 Markdown content type/filename, task checkboxes, gaps, sources, graph, next
-actions, the 14-day window and invalid day input.
+actions, the 14-day window, invalid day input and
+`atomzero-brief --markdown --out PATH` file output.
 
 ```powershell
 python benchmarks/weekly_export_regression.py
 ```
 
-Latest result: **7/7 checks pass**. Raw result:
+Latest result: **8/8 checks pass**. Raw result:
 [`results/weekly_export_regression.json`](results/weekly_export_regression.json).
 
 ## Graph-path regression

@@ -1,11 +1,12 @@
-"""End-to-end HTTP/UI regression for weekly-review Markdown export.
+"""End-to-end CLI, HTTP and UI regression for weekly-review Markdown export.
 
 Checks:
 - the served UI controls and endpoint contract;
 - Markdown content type and attachment filename;
 - task checkboxes, gaps, sources, graph and next actions;
 - the 14-day window label;
-- invalid day input returning 400.
+- invalid day input returning 400;
+- `atomzero-brief --weekly --markdown --out PATH` writing a file directly.
 
 Run:
 
@@ -14,6 +15,8 @@ Run:
 from __future__ import annotations
 
 import argparse
+import contextlib
+import io
 import json
 import tempfile
 import threading
@@ -24,6 +27,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 from atomzero import chat_server
+from atomzero.briefing import main as brief_main
 from atomzero.doc_memory import DocMemory
 from atomzero.knowledge_gaps import KnowledgeGapStore
 
@@ -138,6 +142,25 @@ def run(output: str | Path | None = None) -> dict:
                 "export_invalid_days",
                 invalid_ok,
                 "400 for a non-numeric window")
+            out_path = Path(folder) / "cli" / "reports" / "weekly.md"
+            session_path = Path(folder) / "sessions" / "export-chat.json"
+            buffer = io.StringIO()
+            with contextlib.redirect_stdout(buffer):
+                cli_code = brief_main([
+                    "--session", str(session_path),
+                    "--docs", str(Path(folder) / "docs.db"),
+                    "--gaps", str(Path(folder) / "gaps.json"),
+                    "--weekly", "--markdown", "--out", str(out_path)])
+            cli_markdown = (out_path.read_text(encoding="utf-8")
+                            if out_path.exists() else "")
+            check(
+                "cli_markdown_out",
+                cli_code == 0
+                and "weekly review written to" in buffer.getvalue()
+                and cli_markdown.startswith("# Weekly review - ")
+                and "- [ ] **#2** write report" in cli_markdown
+                and not out_path.read_bytes().startswith(b"\xef\xbb\xbf"),
+                f"exit={cli_code} path={out_path}")
         finally:
             httpd.shutdown()
             httpd.server_close()

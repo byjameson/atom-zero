@@ -21,7 +21,10 @@
   `atomzero-brief --weekly --markdown`, `GET /v1/weekly-review/export` and a UI
   Download .md button, with task checkboxes, gaps, sources, graph and next
   actions.
-- Added `benchmarks/weekly_export_regression.py` (7/7 checks).
+- Added `atomzero-brief --weekly --markdown --out PATH` to write the report
+  directly to a file and create parent directories.
+- Added `benchmarks/weekly_export_regression.py` (8/8 checks: CLI, HTTP and
+  UI).
 - Fixed BOM-sensitive session loading: `atomzero-brief` and `ChatHuman` now
   accept PowerShell-written UTF-8 session files with a BOM.
 - Extended BOM-tolerant reads to feedback, knowledge-gap, research-queue,
