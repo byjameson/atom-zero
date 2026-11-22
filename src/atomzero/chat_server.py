@@ -373,6 +373,10 @@ function extra(result) {
   const parts = [];
   const tools = result.tool_calls || [];
   if (tools.length) parts.push('tools: ' + tools.map(t => t.name).join(', '));
+  const confidence = result.confidence || {};
+  if (confidence.label && confidence.label !== 'none') {
+    parts.push('match: ' + confidence.label + ' (' + confidence.score + ')');
+  }
   const sources = result.sources || [];
   if (sources.length) parts.push('sources: ' + sources.map(s => {
     let status = '';

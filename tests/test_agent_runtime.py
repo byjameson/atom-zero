@@ -13,7 +13,10 @@ def test_agent_session_handles_tools_and_memory(tmp_path):
     agent = AgentSession("s1", tmp_path / "memory.json", docs=docs)
     assert "Added task 1" in agent.chat("add task buy milk")["reply"]
     assert "buy milk" in agent.chat("list tasks")["reply"]
-    assert "Paris" in agent.chat("search docs capital France")["reply"]
+    search = agent.chat("search docs capital France")
+    assert "Paris" in search["reply"]
+    assert search["evidence"][0]["source"] == "law.txt"
+    assert search["confidence"]["label"] in {"low", "medium", "high"}
     assert "It is" in agent.chat("what time is it")["reply"]
     assert agent.chat("what is my name?")["reply"].startswith(
         "I do not know your name")
@@ -73,6 +76,8 @@ def test_agent_returns_sources_for_grounded_answer(tmp_path):
     result = agent.chat("what is the capital of France?")
     assert "Paris" in result["reply"]
     assert result["sources"][0]["source"] == "law.txt"
+    assert result["evidence"][0]["source"] == "law.txt"
+    assert result["confidence"]["label"] in {"low", "medium", "high"}
     docs.close()
 
 

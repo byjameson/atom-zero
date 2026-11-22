@@ -153,7 +153,8 @@ short generation. It is **not MMLU, GSM8K or HumanEval**.
 - **Evidence panel/API:** `GET /v1/documents/evidence` opens the exact local
   chunks behind a citation.
 - **Grounded answers:** `POST /v1/documents/answer` returns cited notes,
-  evidence and a transparent match-confidence score.
+  evidence and a transparent match-confidence score; chat replies use the same
+  core and expose the match label.
 - **Source-scoped retrieval:** search and answers can be limited to one exact
   source, a source prefix or teacher notes.
 - **Headless CLI:** `atomzero-docs add/sync/status/doctor/search/answer/

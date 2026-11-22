@@ -12,6 +12,8 @@
 - Added extractive document summaries (`atomzero-docs summary`,
   `GET /v1/documents/summary` and a UI Summary action) with page/section
   citations; no model generation and no new facts.
+- Chat replies now use the shared grounded-answer core and expose
+  `evidence`/`confidence`; the UI shows the match label.
 - Added source, source-prefix and kind filters to document search.
 - Added `POST /v1/documents/answer` and `atomzero-docs answer`: cited answer,
   evidence list and a transparent heuristic match-confidence score from one

@@ -7,7 +7,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from atomzero.doc_memory import add_citation_source, format_citation
+from atomzero.doc_memory import grounded_answer
 from atomzero.knowledge_gaps import KnowledgeGapError
 from atomzero.web_research import wikipedia_research
 
@@ -126,38 +126,20 @@ class AgentSession:
         }
 
     def _search_docs(self, query: str) -> dict:
-        hits = self.docs.search(query, k=3) if self.docs else []
+        hits = self.docs.search(query, k=6) if self.docs else []
         if not hits:
             return {"reply": "I found no matching local notes.",
                     "tool_calls": [{"name": "search_docs", "query": query}],
-                    "sources": []}
-        lines = []
-        source_map = {}
-        unverified = False
-        for hit in hits:
-            teacher = hit.get("kind") == "teacher"
-            verified = bool(hit.get("verified", True))
-            if teacher and not verified:
-                label = "teacher note, unverified"
-            elif teacher:
-                reviewer = str(hit.get("reviewer", "")).strip()
-                label = (f"teacher note, verified by {reviewer}"
-                         if reviewer else "teacher note, verified")
-            else:
-                label = "source"
-            location = format_citation(hit)
-            lines.append(f"- {hit['chunk']} ({label}: {location})")
-            add_citation_source(source_map, hit)
-            if not verified:
-                unverified = True
-        reply = (f"I found these notes:\n" + "\n".join(lines) + "\n\n"
-                 "This is a local note, not professional advice.")
-        if unverified:
-            reply += "\n\nThis includes an unverified teacher-derived note."
+                    "sources": [], "evidence": [],
+                    "confidence": {"score": 0.0, "label": "none",
+                                   "coverage": 0.0, "margin": 0.0}}
+        answer = grounded_answer(query, hits)
         return {
-            "reply": reply,
+            "reply": answer["text"],
             "tool_calls": [{"name": "search_docs", "query": query}],
-            "sources": list(source_map.values()),
+            "sources": answer["sources"],
+            "evidence": answer["evidence"],
+            "confidence": answer["confidence"],
         }
 
     def chat(self, text: str) -> dict:
@@ -222,4 +204,9 @@ class AgentSession:
             return self._search_docs(query)
         reply = self.human.respond(text)
         return {"reply": reply, "tool_calls": [],
-                "sources": list(getattr(self.human, "last_sources", []))}
+                "sources": list(getattr(self.human, "last_sources", [])),
+                "evidence": list(getattr(self.human, "last_evidence", [])),
+                "confidence": getattr(
+                    self.human, "last_confidence",
+                    {"score": 0.0, "label": "none",
+                     "coverage": 0.0, "margin": 0.0})}

@@ -16,7 +16,7 @@ from pathlib import Path
 
 import torch
 
-from atomzero.doc_memory import best_snippet
+from atomzero.doc_memory import grounded_answer
 from atomzero.transformer import TransformerLM, generate as transformer_generate
 
 ROOT = Path.cwd()
@@ -312,6 +312,9 @@ class ChatHuman:
 
     def respond(self, text: str) -> str:
         self.last_sources = []
+        self.last_evidence = []
+        self.last_confidence = {"score": 0.0, "label": "none",
+                                "coverage": 0.0, "margin": 0.0}
         self.add_episode("user", text)
         extracted = extract_facts(text)
         for key, value in extracted:
@@ -368,41 +371,13 @@ class ChatHuman:
         elif extracted:
             reply = "I will remember that."
         else:
-            hits = self.docs.search(text, k=3) if self.docs else []
+            hits = self.docs.search(text, k=6) if self.docs else []
             if hits:
-                lines = []
-                sources = []
-                unverified = False
-                for hit in hits[:3]:
-                    teacher = hit.get("kind") == "teacher"
-                    verified = bool(hit.get("verified", True))
-                    if teacher and not verified:
-                        label = "teacher note, unverified"
-                    elif teacher:
-                        reviewer = str(hit.get("reviewer", "")).strip()
-                        label = (f"teacher note, verified by {reviewer}"
-                                 if reviewer else "teacher note, verified")
-                    else:
-                        label = "source"
-                    location = hit.get("source_url") or hit["source"]
-                    lines.append(
-                        f"- {best_snippet(text, hit['chunk'])} "
-                        f"({label}: {location})")
-                    source = {"source": hit["source"], "title": hit["title"]}
-                    for key in ("kind", "source_url", "teacher", "model",
-                                "verified", "reviewer", "verified_at"):
-                        if key in hit:
-                            source[key] = hit[key]
-                    if source not in sources:
-                        sources.append(source)
-                    if teacher and not verified:
-                        unverified = True
-                self.last_sources = sources
-                reply = (f"I found these notes:\n" + "\n".join(lines) + "\n\n"
-                         "This is a local note, not professional advice.")
-                if unverified:
-                    reply += ("\n\nThis includes an unverified "
-                              "teacher-derived note.")
+                answer = grounded_answer(text, hits)
+                self.last_sources = answer["sources"]
+                self.last_evidence = answer["evidence"]
+                self.last_confidence = answer["confidence"]
+                reply = answer["text"]
             else:
                 formatted = self.format_skill(text)
                 if formatted is not None:
