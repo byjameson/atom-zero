@@ -28,6 +28,7 @@ Endpoints:
   POST /v1/briefing
   POST /v1/weekly-review
   GET  /v1/weekly-review/export?session_id=...&days=7
+  GET  /v1/tasks/list?session_id=default&status=open&due=week&priority=high&sort=priority
   GET  /v1/tasks/overdue?session_id=default&sort=priority
   GET  /v1/tasks/due-soon?session_id=default&days=7&sort=priority
   GET  /v1/tasks/search?session_id=default&q=report&status=open&due=week&priority=high&sort=priority
@@ -312,6 +313,31 @@ and suggested next actions.</p>
 <option value="priority">Priority first</option>
 </select>
 <button id="tasksearchbtn">Search tasks</button>
+</div>
+<div class="row"><span class="hint">Task list:</span>
+<select id="taskliststatus" title="Task list status">
+<option value="open" selected>Open</option>
+<option value="done">Done</option>
+<option value="all">All</option>
+</select>
+<select id="tasklistdue" title="Task list due date">
+<option value="all" selected>Any due date</option>
+<option value="overdue">Overdue</option>
+<option value="today">Today</option>
+<option value="week">Next 7 days</option>
+<option value="none">No due date</option>
+</select>
+<select id="tasklistpriority" title="Task list priority">
+<option value="all" selected>Any priority</option>
+<option value="low">Low</option>
+<option value="normal">Normal</option>
+<option value="high">High</option>
+</select>
+<select id="tasklistsort" title="Task list order">
+<option value="default" selected>Session order</option>
+<option value="priority">Priority first</option>
+</select>
+<button id="tasklistbtn">Task list</button>
 <input id="rescheduletaskid" type="number" min="1" placeholder="task ID"
        style="width:5em">
 <input id="rescheduledue" placeholder="new due date" style="width:9em">
@@ -337,6 +363,8 @@ Confirm delete</label>
 <div id="dueres"></div>
 <div id="tasksearchres"></div>
 <p id="tasksearchmsg" class="hint"></p>
+<p id="tasklistmsg" class="hint"></p>
+<div id="tasklistres"></div>
 <p id="reschedulemsg" class="hint"></p>
 <p id="taskprioritymsg" class="hint"></p>
 <p id="deletetaskmsg" class="hint"></p>
@@ -808,6 +836,52 @@ async function searchTasks() {
     });
   } catch (e) {
     msg.textContent = 'task search error: ' + e;
+  }
+}
+async function getTaskList() {
+  const msg = document.getElementById('tasklistmsg');
+  const box = document.getElementById('tasklistres');
+  const status = document.getElementById('taskliststatus').value;
+  const due = document.getElementById('tasklistdue').value;
+  const priority = document.getElementById('tasklistpriority').value;
+  const sort = document.getElementById('tasklistsort').value;
+  msg.textContent = 'loading task list...';
+  box.textContent = '';
+  try {
+    const params = new URLSearchParams({
+      session_id: sessionId, status, due, priority, sort});
+    const r = await fetch('/v1/tasks/list?' + params.toString());
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'task list error: ' + (j.error || r.status);
+      return;
+    }
+    const filters = [];
+    if (j.status !== 'open') filters.push('status=' + j.status);
+    if (j.due !== 'all') filters.push('due=' + j.due);
+    if (j.priority !== 'all') filters.push('priority=' + j.priority);
+    if (j.sort !== 'default') filters.push('sort=' + j.sort);
+    msg.textContent = 'task list | ' + (j.count || 0) + ' task(s)' +
+      (filters.length ? ' | ' + filters.join(' | ') : '');
+    const tasks = j.tasks || [];
+    if (!tasks.length) {
+      const none = document.createElement('div');
+      none.className = 'hint';
+      none.textContent = 'No tasks match.';
+      box.appendChild(none);
+      return;
+    }
+    tasks.forEach(task => {
+      const card = document.createElement('div');
+      card.className = 'qitem';
+      let line = '#' + task.id + ' [' + (task.status || '?') + '] [' +
+        (task.priority || 'normal') + '] ' + (task.text || '');
+      if (task.due) line += ' | due ' + task.due;
+      card.textContent = line;
+      box.appendChild(card);
+    });
+  } catch (e) {
+    msg.textContent = 'task list error: ' + e;
   }
 }
 async function rescheduleTask() {
@@ -1384,6 +1458,7 @@ document.getElementById('briefweekly').onclick = () => getWeeklyReview();
 document.getElementById('overduebtn').onclick = () => getOverdueTasks();
 document.getElementById('duesoonbtn').onclick = () => getDueSoonTasks();
 document.getElementById('tasksearchbtn').onclick = () => searchTasks();
+document.getElementById('tasklistbtn').onclick = () => getTaskList();
 document.getElementById('rescheduletaskbtn').onclick = () => rescheduleTask();
 document.getElementById('taskprioritybtn').onclick = () => setTaskPriority();
 document.getElementById('deletetaskbtn').onclick = () => deleteTask();
@@ -3142,6 +3217,28 @@ class Handler(BaseHTTPRequestHandler):
             }]})
         elif self.path == "/metrics":
             self._json(200, _state["metrics"])
+        elif (self.path == "/v1/tasks/list"
+              or self.path.startswith("/v1/tasks/list?")):
+            params = urllib.parse.parse_qs(
+                urllib.parse.urlparse(self.path).query)
+            session_id = (params.get("session_id", ["default"])[0]
+                          or "default")
+            status = str(params.get("status", ["open"])[0] or "open").strip()
+            due = str(params.get("due", ["all"])[0] or "all").strip()
+            priority = str(
+                params.get("priority", ["all"])[0] or "all").strip()
+            sort = str(params.get("sort", ["default"])[0] or "default").strip()
+            try:
+                session = self._session(session_id)
+                from atomzero.briefing import task_list_view
+
+                result = task_list_view(
+                    session.human.data, status=status, due=due,
+                    priority=priority, sort=sort,
+                    now=params.get("today", [None])[0])
+            except Exception as exc:
+                return self._json(400, {"error": str(exc)})
+            return self._json(200, result)
         elif (self.path == "/v1/tasks/search"
               or self.path.startswith("/v1/tasks/search?")):
             params = urllib.parse.parse_qs(

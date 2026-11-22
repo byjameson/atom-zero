@@ -866,6 +866,16 @@ def test_ui_collection_scope_contract():
     assert '<option value="priority">Priority first</option>' in page
     assert "searchTasks" in page
     assert "tasksort" in page
+    assert 'id="taskliststatus"' in page
+    assert 'id="tasklistdue"' in page
+    assert 'id="tasklistpriority"' in page
+    assert 'id="tasklistsort"' in page
+    assert 'id="tasklistbtn"' in page
+    assert 'id="tasklistmsg"' in page
+    assert 'id="tasklistres"' in page
+    assert '<option value="open" selected>Open</option>' in page
+    assert "getTaskList" in page
+    assert "/v1/tasks/list" in page
     assert page.count("document.getElementById('tasksort').value") >= 4
     assert "session_id: sessionId, sort" in page
     assert "session_id: sessionId, days: 7, sort" in page
@@ -2099,6 +2109,24 @@ def test_http_priority_sort_views(tmp_path):
         search = get("/v1/tasks/search", q="task", sort="priority")
         assert search["sort"] == "priority"
         assert [task["id"] for task in search["tasks"]] == [2, 4, 3, 1]
+        task_list = get(
+            "/v1/tasks/list", status="open", due="week", priority="high")
+        assert task_list["status"] == "open"
+        assert task_list["due"] == "week"
+        assert task_list["priority"] == "high"
+        assert task_list["sort"] == "default"
+        assert task_list["count"] == 1
+        assert [task["id"] for task in task_list["tasks"]] == [4]
+        all_priority = get("/v1/tasks/list", status="all", sort="priority")
+        assert [task["id"] for task in all_priority["tasks"]] == [2, 4, 3, 1]
+        chat_list = _post(base + "/v1/agent/chat", {
+            "session_id": "priority-sort-http",
+            "message": "list tasks due week priority high"})
+        assert chat_list["tool_calls"][0] == {
+            "name": "list_tasks", "status": "open", "due": "week",
+            "priority": "high", "sort": "default", "count": 1}
+        assert ([task["id"] for task in chat_list["task_list"]["tasks"]]
+                == [task["id"] for task in task_list["tasks"]])
         brief = _post(base + "/v1/briefing", {
             "session_id": "priority-sort-http", "sort": "priority"})
         assert brief["sort"] == "priority"
@@ -2128,6 +2156,9 @@ def test_http_priority_sort_views(tmp_path):
             _post(base + "/v1/briefing", {
                 "session_id": "priority-sort-http", "sort": "bogus"})
         assert invalid_brief.value.code == 400
+        with pytest.raises(urllib.error.HTTPError) as invalid_list:
+            get("/v1/tasks/list", status="blocked")
+        assert invalid_list.value.code == 400
     finally:
         httpd.shutdown()
         httpd.server_close()

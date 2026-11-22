@@ -48,6 +48,11 @@ combined, for example `list tasks done`, `list tasks due week priority high`
 or `list tasks all due none priority high`. Status defaults to open; due
 filters match the task-search semantics.
 
+Chat returns a structured `list_tasks` tool call with `status`, `due`,
+`priority`, `sort` and `count`. The same view is available over HTTP as
+`GET /v1/tasks/list?status=open&due=week&priority=high&sort=priority` and in
+the UI **Task list** controls.
+
 Priority can also be updated outside chat:
 
 ```powershell

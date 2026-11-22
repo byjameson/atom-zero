@@ -966,6 +966,23 @@ class AgentSession:
             "tool_calls": [], "sources": [], "evidence": [],
         }
 
+    def _list_tasks(self, text: str) -> dict:
+        view = self.human.build_task_list(text)
+        return {
+            "reply": view["text"],
+            "tool_calls": [{"name": "list_tasks",
+                            "status": view["status"],
+                            "due": view["due"],
+                            "priority": view["priority"],
+                            "sort": view["sort"],
+                            "count": view["count"]}],
+            "sources": [],
+            "evidence": [],
+            "tasks": view["tasks"],
+            "task_list": view,
+            "weights_changed": False,
+        }
+
     def _search_tasks(self, raw_query: str) -> dict:
         query, status, due, priority, sort = parse_task_search_filters(
             raw_query)
@@ -1374,6 +1391,8 @@ class AgentSession:
         if brief_match:
             return self._briefing(
                 brief_match.groupdict().get("sort") or "default")
+        if "list tasks" in low:
+            return self._list_tasks(text)
         task_search = re.match(
             r"^(?:search|find)\s+tasks?\s+(.+?)\??$",
             text, re.IGNORECASE)

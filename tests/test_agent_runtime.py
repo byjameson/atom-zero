@@ -297,11 +297,18 @@ def test_agent_priority_sort_task_views(tmp_path):
     assert filtered["tool_calls"][0]["priority"] == "high"
     assert filtered["tool_calls"][0]["sort"] == "priority"
     assert [task["id"] for task in filtered["task_search"]["tasks"]] == [2, 4]
-    default_list = agent.chat("list tasks")["reply"]
+    default_result = agent.chat("list tasks")
+    default_list = default_result["reply"]
+    assert default_result["tool_calls"][0] == {
+        "name": "list_tasks", "status": "open", "due": "all",
+        "priority": "all", "sort": "default", "count": 4}
     assert default_list.startswith("Open tasks: ")
     assert (default_list.index("low overdue task")
             < default_list.index("high overdue task"))
-    priority_list = agent.chat("list tasks priority")["reply"]
+    priority_result = agent.chat("list tasks priority")
+    priority_list = priority_result["reply"]
+    assert priority_result["tool_calls"][0]["sort"] == "priority"
+    assert priority_result["task_list"]["count"] == 4
     assert priority_list.startswith("Open tasks (priority first): ")
     assert (priority_list.index("high overdue task")
             < priority_list.index("high soon task")
@@ -312,36 +319,61 @@ def test_agent_priority_sort_task_views(tmp_path):
             == priority_list)
     agent.chat("add task done filtered task priority high")
     agent.chat("complete task 5")
-    done_list = agent.chat("list tasks done")["reply"]
+    done_result = agent.chat("list tasks done")
+    done_list = done_result["reply"]
+    assert done_result["tool_calls"][0] == {
+        "name": "list_tasks", "status": "done", "due": "all",
+        "priority": "all", "sort": "default", "count": 1}
     assert done_list.startswith("Done tasks: ")
     assert "done filtered task" in done_list
     assert "high overdue task" not in done_list
-    due_high = agent.chat("list tasks due week priority high")["reply"]
+    due_high_result = agent.chat("list tasks due week priority high")
+    due_high = due_high_result["reply"]
+    assert due_high_result["tool_calls"][0] == {
+        "name": "list_tasks", "status": "open", "due": "week",
+        "priority": "high", "sort": "default", "count": 1}
+    assert [task["id"] for task in
+            due_high_result["task_list"]["tasks"]] == [4]
     assert due_high.startswith(
         "Open tasks (due week, priority high): ")
     assert "high soon task" in due_high
     assert "high overdue task" not in due_high
-    all_list = agent.chat("list tasks all")["reply"]
+    all_result = agent.chat("list tasks all")
+    all_list = all_result["reply"]
+    assert all_result["tool_calls"][0] == {
+        "name": "list_tasks", "status": "all", "due": "all",
+        "priority": "all", "sort": "default", "count": 5}
     assert all_list.startswith("All tasks: ")
     assert "done filtered task" in all_list
     assert "normal soon task" in all_list
-    high_list = agent.chat("list tasks high")["reply"]
+    high_result = agent.chat("list tasks high")
+    high_list = high_result["reply"]
+    assert high_result["tool_calls"][0]["priority"] == "high"
+    assert high_result["task_list"]["count"] == 2
     assert "high overdue task" in high_list
     assert "high soon task" in high_list
     assert "normal soon task" not in high_list
-    overdue_high = agent.chat("list tasks due overdue priority")["reply"]
+    overdue_high_result = agent.chat("list tasks due overdue priority")
+    overdue_high = overdue_high_result["reply"]
+    assert overdue_high_result["tool_calls"][0] == {
+        "name": "list_tasks", "status": "open", "due": "overdue",
+        "priority": "all", "sort": "priority", "count": 2}
     assert overdue_high.startswith(
         "Open tasks (due overdue, priority first): ")
     assert (overdue_high.index("high overdue task")
             < overdue_high.index("low overdue task"))
-    undated_high = agent.chat(
-        "list tasks all due none priority high")["reply"]
+    undated_high_result = agent.chat(
+        "list tasks all due none priority high")
+    undated_high = undated_high_result["reply"]
+    assert undated_high_result["tool_calls"][0]["count"] == 1
+    assert [task["id"] for task in
+            undated_high_result["task_list"]["tasks"]] == [5]
     assert "done filtered task" in undated_high
     assert "high soon task" not in undated_high
     parity_search = agent.chat(
         "search tasks task open due week priority high")
-    assert "high soon task" in parity_search["reply"]
-    assert "high overdue task" not in parity_search["reply"]
+    assert ([task["id"] for task in parity_search["task_search"]["tasks"]]
+            == [task["id"] for task in due_high_result["task_list"]["tasks"]])
     default_overdue = agent.chat("overdue tasks")
     assert default_overdue["tool_calls"][0] == {
         "name": "overdue", "sort": "default", "count": 2}

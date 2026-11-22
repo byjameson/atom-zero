@@ -81,6 +81,18 @@ def _task_priority_label(task: dict) -> str:
     return f" [{priority}]" if priority != "normal" else ""
 
 
+def _task_list_label(task: dict, today: str) -> str:
+    due = str(task.get("due", "") or "").strip()
+    priority = str(task.get("priority", "normal") or "normal").lower()
+    priority_tag = f" [{priority}]" if priority != "normal" else ""
+    suffix = ""
+    if due:
+        is_open = task.get("status", "open") == "open"
+        overdue = ", overdue" if due < today and is_open else ""
+        suffix = f" (due {due}{overdue})"
+    return f"{task.get('id')}{priority_tag} {task.get('text', '')}{suffix}"
+
+
 def _normalize_task_sort(sort="default") -> str:
     sort = str(sort or "default").strip().lower()
     if sort not in TASK_SORTS:
@@ -107,6 +119,76 @@ def sort_tasks(tasks, sort="default") -> list[dict]:
         return ranks.get(priority, 1), due, task_id
 
     return sorted(items, key=key)
+
+
+def task_list_view(session_data: dict | None, status="open", due="all",
+                   priority="all", sort="default", now=None) -> dict:
+    """Filter and render a local task list for chat, HTTP and UI."""
+    status = str(status or "open").strip().lower()
+    status, due, priority = _normalize_search_filters(
+        status, due, priority)
+    sort = _normalize_task_sort(sort)
+    today = _today_from_now(now)
+    week_end = (date.fromisoformat(today) + timedelta(days=7)).isoformat()
+    data = session_data if isinstance(session_data, dict) else {}
+    rows = data.get("tasks", [])
+    tasks = ([task for task in rows if isinstance(task, dict)]
+             if isinstance(rows, list) else [])
+    if status != "all":
+        tasks = [task for task in tasks
+                 if str(task.get("status", "open")) == status]
+    if due == "overdue":
+        tasks = [task for task in tasks
+                 if task.get("status") == "open"
+                 and str(task.get("due", "") or "").strip()
+                 and str(task["due"]) < today]
+    elif due == "today":
+        tasks = [task for task in tasks
+                 if str(task.get("due", "") or "").strip() == today]
+    elif due == "week":
+        tasks = [task for task in tasks
+                 if str(task.get("due", "") or "").strip()
+                 and today <= str(task["due"]) <= week_end]
+    elif due == "none":
+        tasks = [task for task in tasks
+                 if not str(task.get("due", "") or "").strip()]
+    if priority != "all":
+        tasks = [task for task in tasks
+                 if str(task.get("priority", "normal")
+                        or "normal").lower() == priority]
+    tasks = sort_tasks(tasks, sort)
+    base = {"open": "Open tasks", "done": "Done tasks",
+            "all": "All tasks"}[status]
+    descriptors = []
+    if due != "all":
+        descriptors.append(f"due {due}")
+    if priority != "all":
+        descriptors.append(f"priority {priority}")
+    if sort != "default":
+        descriptors.append("priority first")
+    heading = base + (f" ({', '.join(descriptors)})"
+                      if descriptors else "") + ": "
+    filtered = (status != "open" or due != "all"
+                or priority != "all" or sort != "default")
+    text = (heading + "; ".join(_task_list_label(task, today)
+                                for task in tasks)
+            if tasks else ("No tasks match." if filtered
+                           else "There are no open tasks."))
+    stamp = (now.strftime("%Y-%m-%d %H:%M")
+             if isinstance(now, datetime)
+             else str(now or time.strftime("%Y-%m-%d %H:%M")))
+    return {
+        "generated": stamp,
+        "status": status,
+        "due": due,
+        "priority": priority,
+        "sort": sort,
+        "count": len(tasks),
+        "heading": heading,
+        "tasks": tasks,
+        "text": text,
+        "weights_changed": False,
+    }
 
 
 def set_task_priority(session_data: dict | None, tid, priority) -> dict:

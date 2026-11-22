@@ -115,6 +115,8 @@
 - Added status/due/priority filters to chat `list tasks` (`done`, `all`,
   `due week|overdue|today|none`, `priority low|normal|high`), including
   combined filters and query-free views.
+- Added a structured `list_tasks` chat tool call, `GET /v1/tasks/list` and UI
+  **Task list** controls backed by the same shared filter/sort view.
 - Fixed `add task` priority parsing so task text ending in "priority task" is
   not interpreted as a second priority clause.
 - Added `benchmarks/weekly_export_regression.py` (29/29 checks: CLI, HTTP, UI,
