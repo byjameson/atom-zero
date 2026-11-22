@@ -79,6 +79,7 @@ browser.
 ```powershell
 atomzero-docs add manual.pdf --db data/docs.db
 atomzero-docs add .\notes --db data/docs.db --skip-unchanged
+atomzero-docs sync .\notes --db data/docs.db
 atomzero-docs search "warranty code" --db data/docs.db
 atomzero-docs search "warranty" --db data/docs.db --source policy.docx
 atomzero-docs answer "what is the warranty period?" --source policy.docx `
@@ -94,6 +95,13 @@ skips and failures. With `--skip-unchanged`, a file whose extracted content
 hash matches the stored hash is not deleted or re-embedded. With `--dedupe`,
 a file whose extracted content hash already exists under another source is
 skipped and reported as `duplicate_of` instead of being indexed twice.
+
+`sync` is the repository-style command for a maintained collection. It stores
+sources as `<prefix>/<relative-path>` (prefix defaults to the directory name),
+skips unchanged files and duplicate content, and prunes sources whose files
+disappeared. Use `--no-prune`, `--no-dedupe` or `--prefix NAME` to change that
+behavior. This keeps the index portable when the folder moves to another
+machine.
 
 `search` accepts `--source` (exact), `--source-prefix`, `--kind` (`document`
 or `teacher`) and `--no-rerank`. `answer` runs the same grounded-answer path as

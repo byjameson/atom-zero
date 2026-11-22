@@ -630,11 +630,17 @@ class DocMemory:
     def add_file_result(self, path: str | Path, title: str = "",
                         meta: dict | None = None,
                         skip_if_unchanged: bool = False,
-                        dedupe_across_sources: bool = False) -> dict:
-        """Extract and index one file, returning hashes and a skip flag."""
+                        dedupe_across_sources: bool = False,
+                        source: str = "") -> dict:
+        """Extract and index one file, returning hashes and a skip flag.
+
+        ``source`` overrides the stored locator; this keeps a synced directory
+        portable (``notes/policy.md`` instead of an absolute machine path).
+        """
         from atomzero.doc_ingest import extract_file
 
         p = Path(path)
+        indexed_source = str(source or p)
         extracted = extract_file(p, title=title)
         content_sha = hashlib.sha256(
             "\n\n".join(str(block.get("text", ""))
@@ -643,10 +649,11 @@ class DocMemory:
         file_sha = hashlib.sha256(p.read_bytes()).hexdigest()
         if dedupe_across_sources:
             duplicates = self.find_by_content_sha(
-                content_sha, exclude_source=str(p))
+                content_sha, exclude_source=indexed_source)
             if duplicates:
                 return {
-                    "source": str(p),
+                    "source": indexed_source,
+                    "path": str(p),
                     "title": extracted["title"],
                     "chunks": 0,
                     "skipped": True,
@@ -656,8 +663,9 @@ class DocMemory:
                     "format": extracted.get("format", ""),
                 }
         result = self.add_blocks_result(
-            str(p), extracted["blocks"], title=extracted["title"],
+            indexed_source, extracted["blocks"], title=extracted["title"],
             meta=meta, skip_if_unchanged=skip_if_unchanged)
+        result["path"] = str(p)
         result["format"] = extracted.get("format", "")
         result["file_sha256"] = file_sha
         return result
@@ -691,6 +699,69 @@ class DocMemory:
             "skipped": sum(1 for item in results if item.get("skipped")),
             "duplicates": sum(1 for item in results
                               if item.get("duplicate_of")),
+            "failed": sum(1 for item in results if "error" in item),
+            "results": results,
+        }
+
+    def sync_directory(self, path: str | Path, prefix: str = "",
+                       recursive: bool = True, prune: bool = True,
+                       dedupe_across_sources: bool = True) -> dict:
+        """Keep a directory collection in sync with the local index.
+
+        Sources are stored as ``<prefix>/<relative-path>`` so the index is
+        portable across machines. Unchanged files are skipped, duplicate
+        content can be skipped, and indexed sources whose files disappeared
+        are removed when ``prune`` is true.
+        """
+        from atomzero.doc_ingest import SUPPORTED_SUFFIXES
+
+        root = Path(path)
+        if not root.is_dir():
+            raise ValueError(f"not a directory: {root}")
+        prefix = str(prefix or root.name).strip().strip("/\\")
+        if not prefix:
+            raise ValueError("prefix cannot be empty")
+        if len(prefix) > 200:
+            raise ValueError("prefix is too long (max 200 chars)")
+        if any(ord(ch) < 32 for ch in prefix):
+            raise ValueError("prefix contains control characters")
+        pattern = "**/*" if recursive else "*"
+        files = sorted(
+            item for item in root.glob(pattern)
+            if item.is_file() and item.suffix.lower() in SUPPORTED_SUFFIXES)
+        current = set()
+        results = []
+        for item in files:
+            relative = item.relative_to(root).as_posix()
+            source = f"{prefix}/{relative}"
+            current.add(source)
+            try:
+                results.append(self.add_file_result(
+                    item, skip_if_unchanged=True,
+                    dedupe_across_sources=dedupe_across_sources,
+                    source=source))
+            except Exception as exc:
+                results.append({"source": source, "path": str(item),
+                                "chunks": 0, "skipped": False,
+                                "error": str(exc)})
+        pruned = []
+        if prune:
+            existing = [item["source"] for item in self.sources()
+                        if item["source"].startswith(f"{prefix}/")]
+            for source in sorted(set(existing) - current):
+                try:
+                    pruned.append(self.forget(source))
+                except SourceNotFound:
+                    continue
+        return {
+            "root": str(root),
+            "prefix": prefix,
+            "files": len(files),
+            "chunks": sum(int(item.get("chunks", 0)) for item in results),
+            "skipped": sum(1 for item in results if item.get("skipped")),
+            "duplicates": sum(1 for item in results
+                              if item.get("duplicate_of")),
+            "pruned": pruned,
             "failed": sum(1 for item in results if "error" in item),
             "results": results,
         }
@@ -1392,6 +1463,14 @@ def main(argv=None):
     answer.add_argument("query")
     answer.add_argument("-k", type=int, default=6)
     answer.add_argument("--source", default="")
+    sync = sub.add_parser(
+        "sync", help="sync a directory collection into the index")
+    sync.add_argument("path")
+    sync.add_argument("--prefix", default="")
+    sync.add_argument("--recursive", action=argparse.BooleanOptionalAction,
+                      default=True)
+    sync.add_argument("--no-prune", action="store_true")
+    sync.add_argument("--no-dedupe", action="store_true")
     list_db = sub.add_parser("list", help="list indexed sources")
     stats_db = sub.add_parser("stats", help="show index statistics")
     evidence = sub.add_parser("evidence", help="show chunks for a source")
@@ -1402,7 +1481,8 @@ def main(argv=None):
     forget.add_argument("source", nargs="?")
     forget.add_argument("--all", action="store_true")
     # Accept --db on either side of the subcommand; the docs use both forms.
-    for parser in (add, search, answer, list_db, stats_db, evidence, forget):
+    for parser in (add, search, answer, sync, list_db, stats_db,
+                   evidence, forget):
         parser.add_argument("--db", dest="db_after", default=None)
     args = ap.parse_args(argv)
     mem = DocMemory(args.db_after or args.db or "data/docs.db")
@@ -1440,6 +1520,13 @@ def main(argv=None):
                 }
             else:
                 result = grounded_answer(args.query, hits)
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+        elif args.cmd == "sync":
+            result = mem.sync_directory(
+                args.path, prefix=args.prefix, recursive=args.recursive,
+                prune=not args.no_prune,
+                dedupe_across_sources=not args.no_dedupe)
+            result["added"] = result["chunks"]
             print(json.dumps(result, indent=2, ensure_ascii=False))
         elif args.cmd == "list":
             print(json.dumps(mem.sources(), indent=2, ensure_ascii=False))

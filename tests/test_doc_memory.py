@@ -377,3 +377,29 @@ def test_cli_answer_returns_evidence_and_no_source(tmp_path, capsys):
     missing = json.loads(capsys.readouterr().out)
     assert missing["sources"] == []
     assert missing["confidence"]["label"] == "none"
+
+
+def test_sync_directory_is_portable_and_prunes_removed_files(tmp_path):
+    root = tmp_path / "notes"
+    (root / "sub").mkdir(parents=True)
+    (root / "a.txt").write_text(
+        "The launch code is L-7781.", encoding="utf-8")
+    (root / "sub" / "b.md").write_text(
+        "# Warranty\n\nThe warranty period is 24 months.", encoding="utf-8")
+    mem = DocMemory(tmp_path / "docs.db")
+    first = mem.sync_directory(root, prefix="notes")
+    assert first["files"] == 2
+    assert first["chunks"] == 2
+    assert first["pruned"] == []
+    indexed = {item["source"] for item in mem.sources()}
+    assert indexed == {"notes/a.txt", "notes/sub/b.md"}
+    second = mem.sync_directory(root, prefix="notes")
+    assert second["chunks"] == 0
+    assert second["skipped"] == 2
+    (root / "sub" / "b.md").unlink()
+    third = mem.sync_directory(root, prefix="notes")
+    assert third["chunks"] == 0
+    assert [item["source"] for item in third["pruned"]] == [
+        "notes/sub/b.md"]
+    assert {item["source"] for item in mem.sources()} == {"notes/a.txt"}
+    mem.close()
