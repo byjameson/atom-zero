@@ -854,6 +854,12 @@ def test_ui_collection_scope_contract():
     assert 'id="rescheduletaskbtn"' in page
     assert 'id="reschedulemsg"' in page
     assert "rescheduleTask" in page
+    assert 'id="deletetaskid"' in page
+    assert 'id="deletetaskconfirm"' in page
+    assert 'id="deletetaskbtn"' in page
+    assert 'id="deletetaskmsg"' in page
+    assert "deleteTask" in page
+    assert "/v1/tasks/delete" in page
     assert 'id="dueres"' in page
     assert "getOverdueTasks" in page
     assert "getDueSoonTasks" in page
@@ -1899,6 +1905,44 @@ def test_http_reschedule_task(tmp_path):
             _post(base + "/v1/tasks/reschedule", {
                 "session_id": "resched", "id": 99, "due": future})
         assert missing.value.code == 404
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
+
+
+def test_http_delete_task_requires_confirmation(tmp_path):
+    old = dict(chat_server._state)
+    chat_server._state.update({
+        "model": None, "tok": None, "docs": None, "adapter": "",
+        "name": "tiny-test", "params": 1, "config": {}, "step": 0,
+        "api_key": "", "metrics": {"requests": 0, "generated_tokens": 0},
+        "safety": None, "wiki_lang": "en",
+        "session_dir": str(tmp_path / "sessions"), "sessions": {},
+        "generator": None, "allow_general_chat": False, "skills": None,
+    })
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        _post(base + "/v1/agent/chat", {
+            "session_id": "delete-http", "message": "add task buy milk"})
+        with pytest.raises(urllib.error.HTTPError) as unconfirmed:
+            _post(base + "/v1/tasks/delete", {
+                "session_id": "delete-http", "id": 1})
+        assert unconfirmed.value.code == 400
+        deleted = _post(base + "/v1/tasks/delete", {
+            "session_id": "delete-http", "id": 1, "confirm": True})
+        assert deleted["deleted"]["text"] == "buy milk"
+        with pytest.raises(urllib.error.HTTPError) as missing:
+            _post(base + "/v1/tasks/delete", {
+                "session_id": "delete-http", "id": 1, "confirm": True})
+        assert missing.value.code == 404
+        chat = _post(base + "/v1/agent/chat", {
+            "session_id": "delete-http", "message": "list tasks"})
+        assert "buy milk" not in chat["reply"]
     finally:
         httpd.shutdown()
         httpd.server_close()

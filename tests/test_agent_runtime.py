@@ -184,6 +184,27 @@ def test_agent_task_due_dates_and_overdue_brief(tmp_path):
     assert "due date must be" in invalid_due["reply"]
 
 
+def test_agent_deletes_task_with_confirmation(tmp_path):
+    agent = AgentSession("s-delete-task", tmp_path / "memory.json")
+    agent.chat("add task buy milk")
+    agent.chat("add task write report")
+    preview = agent.chat("delete task 1")
+    assert "Delete task 1: buy milk?" in preview["reply"]
+    assert 'Reply "confirm task delete"' in preview["reply"]
+    assert len(agent.human.data["tasks"]) == 2
+    deleted = agent.chat("confirm task delete")
+    assert "Deleted task 1: buy milk." in deleted["reply"]
+    assert [task["id"] for task in agent.human.data["tasks"]] == [2]
+    assert "buy milk" not in agent.chat("list tasks")["reply"]
+    cancelled = agent.chat("delete task 2")
+    assert "cancel task delete" in cancelled["reply"]
+    assert "Task delete cancelled." in agent.chat(
+        "cancel task delete")["reply"]
+    assert len(agent.human.data["tasks"]) == 1
+    missing = agent.chat("delete task 99")
+    assert "could not find that task" in missing["reply"]
+
+
 def test_agent_brief_me_returns_local_brief(tmp_path):
     docs = DocMemory(tmp_path / "docs.db")
     docs.add_text("notes/launch.txt", "The launch code is L-7781.",

@@ -31,6 +31,7 @@ Endpoints:
   GET  /v1/tasks/overdue?session_id=default
   GET  /v1/tasks/due-soon?session_id=default&days=7
   POST /v1/tasks/reschedule
+  POST /v1/tasks/delete
   GET  /v1/weekly-review/reports?limit=10
   GET  /v1/weekly-review/reports?id=w0001
   GET  /v1/weekly-review/reports/compare?left=w0001&right=w0002
@@ -280,6 +281,11 @@ and suggested next actions.</p>
        style="width:5em">
 <input id="rescheduledue" placeholder="new due date" style="width:9em">
 <button id="rescheduletaskbtn">Reschedule</button>
+<input id="deletetaskid" type="number" min="1" placeholder="task ID"
+       style="width:5em">
+<label class="hint"><input id="deletetaskconfirm" type="checkbox">
+Confirm delete</label>
+<button id="deletetaskbtn">Delete task</button>
 <input id="goalinput" placeholder="Optional goal, e.g. prepare the warranty page">
 <button id="goalplan">Plan goal</button></div>
 <p id="briefmsg" class="hint"></p>
@@ -287,6 +293,7 @@ and suggested next actions.</p>
 <div id="overdueres"></div>
 <div id="dueres"></div>
 <p id="reschedulemsg" class="hint"></p>
+<p id="deletetaskmsg" class="hint"></p>
 <div class="row"><input id="weeklyreportsearch" placeholder="Search reports...">
 <button id="weeklyreportssearch">Search</button>
 <select id="weeklyreportsort" title="Report order">
@@ -711,6 +718,34 @@ async function rescheduleTask() {
     msg.textContent = 'task ' + j.task.id + ' rescheduled to ' + j.task.due;
   } catch (e) {
     msg.textContent = 'reschedule error: ' + e;
+  }
+}
+async function deleteTask() {
+  const msg = document.getElementById('deletetaskmsg');
+  const taskId = parseInt(document.getElementById('deletetaskid').value, 10);
+  const confirmed = document.getElementById('deletetaskconfirm').checked;
+  if (!Number.isInteger(taskId) || taskId < 1) {
+    msg.textContent = 'enter a task id to delete';
+    return;
+  }
+  if (!confirmed) {
+    msg.textContent = 'check Confirm delete first';
+    return;
+  }
+  msg.textContent = 'deleting task...';
+  try {
+    const r = await fetch('/v1/tasks/delete', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({session_id: sessionId, id: taskId,
+                            confirm: true})});
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'delete error: ' + (j.error || r.status);
+      return;
+    }
+    msg.textContent = 'deleted task ' + j.deleted.id + ': ' + j.deleted.text;
+  } catch (e) {
+    msg.textContent = 'delete error: ' + e;
   }
 }
 async function getWeeklyReview() {
@@ -1208,6 +1243,7 @@ document.getElementById('briefweekly').onclick = () => getWeeklyReview();
 document.getElementById('overduebtn').onclick = () => getOverdueTasks();
 document.getElementById('duesoonbtn').onclick = () => getDueSoonTasks();
 document.getElementById('rescheduletaskbtn').onclick = () => rescheduleTask();
+document.getElementById('deletetaskbtn').onclick = () => deleteTask();
 document.getElementById('weeklymd').onclick = () => downloadWeeklyMarkdown();
 document.getElementById('weeklyreportssearch').onclick =
   () => refreshWeeklyReports();
@@ -3361,7 +3397,7 @@ class Handler(BaseHTTPRequestHandler):
                          "/v1/skills/run", "/v1/skills/chain",
                          "/v1/skills/chains/run",
                          "/v1/briefing", "/v1/weekly-review",
-                         "/v1/tasks/reschedule",
+                         "/v1/tasks/reschedule", "/v1/tasks/delete",
                          "/v1/weekly-review/reports/prune",
                          "/v1/weekly-review/reports/keep",
                          "/v1/weekly-review/reports/delete",
@@ -3443,6 +3479,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._weekly_reports_repair()
             if route == "/v1/tasks/reschedule":
                 return self._tasks_reschedule(req)
+            if route == "/v1/tasks/delete":
+                return self._tasks_delete(req)
             if route == "/v1/goals/plan":
                 return self._goal_plan(req)
             if route == "/v1/research/queue":
@@ -3913,6 +3951,28 @@ class Handler(BaseHTTPRequestHandler):
             "removed": removed,
             "remaining": remaining,
             "index": str(archive.path),
+        })
+
+    def _tasks_delete(self, req: dict):
+        session_id = str(req.get("session_id", "default")).strip() or "default"
+        try:
+            task_id = int(req.get("id"))
+            session = self._session(session_id)
+            task = next((item for item in session.human.data.get("tasks", [])
+                         if int(item.get("id", 0)) == task_id), None)
+        except (TypeError, ValueError) as exc:
+            return self._json(400, {"error": str(exc)})
+        if task is None:
+            return self._json(404, {"error": "task not found"})
+        if req.get("confirm") is not True:
+            return self._json(400, {
+                "error": "confirmation required",
+                "task": task,
+            })
+        deleted = session.human.delete_task(task_id)
+        return self._json(200, {
+            "session_id": session_id,
+            "deleted": deleted,
         })
 
     def _tasks_reschedule(self, req: dict):

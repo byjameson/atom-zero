@@ -86,6 +86,8 @@
   Markdown report and chat (`due soon`, `due soon in 14 days`).
 - Added task rescheduling (`reschedule task ID due DATE`),
   `POST /v1/tasks/reschedule` and a UI reschedule form.
+- Added confirmed task deletion (`delete task ID` → `confirm task delete`),
+  `POST /v1/tasks/delete` with `"confirm": true`, and a UI delete form.
 - Added `benchmarks/weekly_export_regression.py` (29/29 checks: CLI, HTTP, UI,
   the report archive, pruning, retention, dry-run preview, deletion, query
   filtering, chat search/list/maintenance, chat/HTTP sorting, report viewing,

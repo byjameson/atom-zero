@@ -98,6 +98,7 @@ class AgentSession:
             weekly_reports_path or DEFAULT_REPORTS_PATH)
         self.pending_plan = None
         self.pending_report_action = None
+        self.pending_task_action = None
         self.human = ChatHuman(memory_path, model, tokenizer, device,
                                "transformer", docs, on_gap=self._record_gap,
                                generator=generator,
@@ -863,6 +864,52 @@ class AgentSession:
             "tool_calls": [], "sources": [], "evidence": [],
         }
 
+    def _preview_delete_task(self, tid: int) -> dict:
+        task = next((item for item in self.human.data.get("tasks", [])
+                     if int(item.get("id", 0)) == int(tid)), None)
+        if task is None:
+            return {"reply": "I could not find that task.",
+                    "tool_calls": [], "sources": [], "evidence": []}
+        self.pending_task_action = {"action": "delete", "id": int(tid)}
+        return {
+            "reply": (
+                f"Delete task {tid}: {task.get('text', '')}? "
+                'Reply "confirm task delete" to remove it, or '
+                '"cancel task delete".'),
+            "tool_calls": [{"name": "preview_task_delete", "id": int(tid)}],
+            "sources": [],
+            "evidence": [],
+            "task": task,
+        }
+
+    def _apply_task_delete(self) -> dict:
+        pending = self.pending_task_action
+        self.pending_task_action = None
+        if pending is None or pending.get("action") != "delete":
+            return {"reply": "There is no pending task delete.",
+                    "tool_calls": [], "sources": [], "evidence": []}
+        deleted = self.human.delete_task(int(pending["id"]))
+        if deleted is None:
+            return {"reply": "I could not find that task.",
+                    "tool_calls": [], "sources": [], "evidence": []}
+        return {
+            "reply": (f"Deleted task {deleted['id']}: "
+                      f"{deleted.get('text', '')}."),
+            "tool_calls": [{"name": "delete_task", "id": deleted["id"]}],
+            "sources": [],
+            "evidence": [],
+            "deleted_task": deleted,
+        }
+
+    def _cancel_task_delete(self) -> dict:
+        had_action = self.pending_task_action is not None
+        self.pending_task_action = None
+        return {
+            "reply": ("Task delete cancelled." if had_action
+                      else "There is no pending task delete."),
+            "tool_calls": [], "sources": [], "evidence": [],
+        }
+
     def _due_soon(self, days: int = 7) -> dict:
         view = due_soon_view(self.human.data, days=days)
         return {
@@ -1026,6 +1073,22 @@ class AgentSession:
             query = re.sub(r"^search (docs|my notes|documents)\s*:?\s*", "",
                            text, flags=re.IGNORECASE)
             return self._search_docs(query)
+        if low in ("confirm task delete", "confirm delete task",
+                   "yes delete task"):
+            return self._apply_task_delete()
+        if low in ("cancel task delete", "cancel delete task"):
+            return self._cancel_task_delete()
+        task_delete = re.match(
+            r"^(?:delete|remove)\s+task\s*(\d+)\??$",
+            text, re.IGNORECASE)
+        if task_delete:
+            return self._preview_delete_task(int(task_delete.group(1)))
+        if low in ("delete task", "remove task"):
+            return {
+                "reply": ("Tell me the task id, for example "
+                          "'delete task 1'."),
+                "tool_calls": [], "sources": [], "evidence": [],
+            }
         compare_reports = re.match(
             r"^(?:compare|diff)\s+(?:the\s+)?reports?\s+"
             r"(w\d+)\s+(?:and|to|with|vs\.?|versus)?\s*"

@@ -233,6 +233,14 @@ class ChatHuman:
                 return task
         return None
 
+    def delete_task(self, tid: int) -> dict | None:
+        for index, task in enumerate(self.data["tasks"]):
+            if int(task["id"]) == int(tid):
+                deleted = self.data["tasks"].pop(index)
+                self.save()
+                return deleted
+        return None
+
     def complete_task(self, tid: int) -> bool:
         for task in self.data["tasks"]:
             if int(task["id"]) == int(tid):
