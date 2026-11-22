@@ -71,6 +71,19 @@ python benchmarks/squad_retrieval.py `
   --max-contexts 20 --max-questions 100 --per-context 5 --seed 0
 ```
 
+## Graph-path regression
+
+`benchmarks/graph_path_regression.py` checks the UI path controls, the
+multi-hop `/v1/graph/path` result, chat intent, evidence sources and the
+missing-entity path.
+
+```powershell
+python benchmarks/graph_path_regression.py
+```
+
+Current result: **6/6 checks pass**. Raw result:
+[`results/graph_path_regression.json`](results/graph_path_regression.json).
+
 ## Scoped retrieval and summary regression
 
 `benchmarks/scoped_regression.py` is a deterministic regression gate for the

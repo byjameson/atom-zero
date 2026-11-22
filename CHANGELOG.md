@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased - next batch
+
+- Added multi-hop **graph paths**: `atomzero-docs path`, `GET /v1/graph/path`,
+  chat “how is X connected to Y?” and UI Find path.
+- Added `benchmarks/graph_path_regression.py` (6/6 checks).
+
 ## atomzero 0.5.0 - second brain and skill workflows (2026-11-22)
 
 First batched release under the ~10-increment policy. It includes the work

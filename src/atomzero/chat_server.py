@@ -13,6 +13,7 @@ Endpoints:
   GET  /v1/documents/summary?source=...&source_prefix=...&sentences=8
   GET  /v1/graph?limit_chunks=...&min_edge=...&max_entities=...
   GET  /v1/graph/entity?name=...&limit=...
+  GET  /v1/graph/path?source=...&target=...&max_depth=4
   GET  /v1/skills
   GET  /v1/skills/chains
   POST /v1/skills/run
@@ -280,6 +281,9 @@ entity to see evidence.</p>
 <div class="row"><button id="graphrefresh">Refresh graph</button>
 <input id="gramentity" placeholder="Entity, e.g. Ankara">
 <button id="graphentitybtn">Show evidence</button></div>
+<div class="row"><input id="graphsource" placeholder="From entity">
+<input id="graphtarget" placeholder="To entity">
+<button id="graphpathbtn">Find path</button></div>
 <p id="graphmsg" class="hint"></p>
 <div id="graphnodes" class="chips"></div>
 <div id="graphedges"></div>
@@ -1300,6 +1304,52 @@ document.getElementById('skillquery').addEventListener('keydown', event => {
   if (event.key === 'Enter') runSkill();
 });
 document.getElementById('skrefresh').onclick = () => refreshSkills();
+async function showGraphPath() {
+  const source = document.getElementById('graphsource').value.trim();
+  const target = document.getElementById('graphtarget').value.trim();
+  const msg = document.getElementById('graphmsg');
+  const box = document.getElementById('graphevidence');
+  box.textContent = '';
+  if (!source || !target) {
+    msg.textContent = 'enter a source and target entity';
+    return;
+  }
+  msg.textContent = 'finding graph path...';
+  try {
+    const query = new URLSearchParams({source, target, max_depth: 4});
+    const r = await fetch('/v1/graph/path?' + query.toString());
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'path error: ' + (j.error || r.status);
+      return;
+    }
+    if (!j.found) {
+      msg.textContent = 'no path: ' + (j.reason || 'not found');
+      return;
+    }
+    msg.textContent = 'path | ' + j.hops + ' hop(s)';
+    const head = document.createElement('div');
+    head.className = 'qitem';
+    head.textContent = 'Path: ' + j.path.join(' → ');
+    box.appendChild(head);
+    (j.edges || []).forEach(edge => {
+      const card = document.createElement('div');
+      card.className = 'qitem';
+      card.textContent = edge.source + ' ↔ ' + edge.target + ' | ' +
+        edge.sources + ' shared chunk(s)';
+      box.appendChild(card);
+    });
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+    j.path.forEach(name => {
+      actions.appendChild(qbutton(name, () => showEntity(name)));
+    });
+    box.appendChild(actions);
+  } catch (e) {
+    msg.textContent = 'path error: ' + e;
+  }
+}
+document.getElementById('graphpathbtn').onclick = () => showGraphPath();
 document.getElementById('graphrefresh').onclick = () => refreshGraph();
 document.getElementById('graphentitybtn').onclick = () => showEntity();
 document.getElementById('gramentity').addEventListener('keydown', event => {
@@ -2248,6 +2298,24 @@ class Handler(BaseHTTPRequestHandler):
                     min_edge=int(params.get("min_edge", ["1"])[0]),
                     max_entities=int(params.get(
                         "max_entities", ["80"])[0]))
+            except (TypeError, ValueError) as exc:
+                return self._json(400, {"error": str(exc)})
+            return self._json(200, result)
+        elif (self.path == "/v1/graph/path"
+              or self.path.startswith("/v1/graph/path?")):
+            docs = _state.get("docs")
+            if docs is None:
+                return self._json(400, {
+                    "error": "no document memory configured"})
+            params = urllib.parse.parse_qs(
+                urllib.parse.urlparse(self.path).query)
+            from atomzero.knowledge_graph import graph_path
+
+            try:
+                result = graph_path(
+                    docs, params.get("source", [""])[0],
+                    params.get("target", [""])[0],
+                    max_depth=int(params.get("max_depth", ["4"])[0]))
             except (TypeError, ValueError) as exc:
                 return self._json(400, {"error": str(exc)})
             return self._json(200, result)

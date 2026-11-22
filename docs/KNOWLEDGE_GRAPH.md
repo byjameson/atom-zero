@@ -55,6 +55,31 @@ GET /v1/graph/entity?name=Ankara&limit=10
 
 Both endpoints are read-only and local.
 
+## Multi-hop paths
+
+Find a deterministic co-occurrence path between two entities:
+
+```powershell
+atomzero-docs path Ankara L-7781 --max-depth 4 --db data\docs.db
+```
+
+```text
+GET /v1/graph/path?source=Ankara&target=L-7781&max_depth=4
+```
+
+Chat also understands:
+
+```text
+how is Ankara connected to L-7781?
+connection between Ankara and L-7781
+connect Ankara to L-7781
+Ankara ile L-7781 nasıl bağlantılı?
+```
+
+The response is a shortest unweighted BFS path with each edge's source count.
+If an entity is absent or no path exists within `max_depth`, the result is an
+explicit `found: false` with a reason.
+
 ## UI
 
 The **Second brain graph** panel shows:
@@ -62,6 +87,7 @@ The **Second brain graph** panel shows:
 - top entity chips with chunk counts;
 - the strongest co-occurrence edges;
 - an entity input and **Show evidence** action;
+- from/to entity inputs and **Find path**;
 - source/snippet cards with the existing Evidence and Copy citation actions.
 
 ## Honest limits

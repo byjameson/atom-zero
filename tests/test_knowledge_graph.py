@@ -2,7 +2,7 @@ import json
 
 from atomzero.doc_memory import DocMemory, main
 from atomzero.knowledge_graph import (
-    build_graph, entity_sources, extract_entities)
+    build_graph, entity_sources, extract_entities, graph_path)
 
 
 def test_extract_entities_finds_places_codes_and_years():
@@ -42,6 +42,26 @@ def test_graph_and_entity_sources(tmp_path):
     docs.close()
 
 
+def test_graph_path_multihop_and_missing(tmp_path):
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("chain1.txt", "Ankara is in Turkey.", title="Chain 1")
+    docs.add_text("chain2.txt",
+                  "Turkey uses the launch code L-7781.", title="Chain 2")
+    result = graph_path(docs, "Ankara", "L-7781", max_depth=3)
+    assert result["found"] is True
+    assert result["path"] == ["Ankara", "Turkey", "L-7781"]
+    assert result["hops"] == 2
+    assert len(result["edges"]) == 2
+    shallow = graph_path(docs, "Ankara", "L-7781", max_depth=1)
+    assert shallow["found"] is False
+    missing = graph_path(docs, "Ankara", "Missing")
+    assert missing["found"] is False
+    assert "available_entities" in missing
+    same = graph_path(docs, "Ankara", "Ankara")
+    assert same["found"] is True and same["hops"] == 0
+    docs.close()
+
+
 def test_cli_graph_and_entity(tmp_path, capsys):
     note = tmp_path / "geo.txt"
     note.write_text("Ankara is the capital of Turkey.", encoding="utf-8")
@@ -55,3 +75,7 @@ def test_cli_graph_and_entity(tmp_path, capsys):
     entity = json.loads(capsys.readouterr().out)
     assert entity["entity"] == "Ankara"
     assert entity["sources"][0]["source"] == str(note)
+    main(["path", "Ankara", "Turkey", "--db", str(db)])
+    path = json.loads(capsys.readouterr().out)
+    assert path["found"] is True
+    assert path["hops"] == 1

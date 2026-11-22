@@ -812,9 +812,12 @@ def test_ui_collection_scope_contract():
     assert "summarizeCollection" in page
     assert "collection summary" in page
     assert "/v1/graph" in page
+    assert "/v1/graph/path" in page
     assert "Second brain graph" in page
     assert 'id="graphrefresh"' in page
+    assert 'id="graphpathbtn"' in page
     assert "showEntity" in page
+    assert "showGraphPath" in page
     assert "/v1/skills" in page
     assert "/v1/skills/run" in page
     assert "/v1/skills/chain" in page
@@ -1132,6 +1135,12 @@ def test_http_graph_and_entity(tmp_path):
         assert "Ankara" in entity["sources"][0]["snippet"]
         assert any(item["target"] == "Turkey"
                    for item in entity["connections"])
+        path = json.loads(urllib.request.urlopen(
+            base + "/v1/graph/path?source=Ankara&target=Istanbul",
+            timeout=10).read().decode("utf-8"))
+        assert path["found"] is True
+        assert path["path"][0] == "Ankara"
+        assert path["path"][-1] == "Istanbul"
         with pytest.raises(urllib.error.HTTPError) as missing:
             urllib.request.urlopen(
                 base + "/v1/graph/entity?name=", timeout=10)

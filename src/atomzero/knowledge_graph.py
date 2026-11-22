@@ -13,6 +13,7 @@ semantic understanding.
 from __future__ import annotations
 
 import re
+from collections import defaultdict, deque
 from itertools import combinations
 
 from atomzero.doc_memory import _identifier_terms, best_snippet
@@ -150,6 +151,102 @@ def build_graph(docs, limit_chunks: int = 500, min_edge: int = 1,
             "min_edge": min_edge,
         },
         "method": "co-occurrence within a chunk; no trained NER",
+    }
+
+
+def graph_path(docs, source: str, target: str,
+               max_depth: int = 4, limit_chunks: int = 1000,
+               max_entities: int = 300) -> dict:
+    """Find a deterministic co-occurrence path between two entities."""
+    if docs is None:
+        raise ValueError("document memory is required")
+    source = str(source or "").strip()
+    target = str(target or "").strip()
+    if not source or not target:
+        raise ValueError("source and target are required")
+    max_depth = _clamp(max_depth, 1, 6, 4)
+    if source.lower() == target.lower():
+        return {
+            "found": True,
+            "source": source,
+            "target": target,
+            "path": [source],
+            "edges": [],
+            "hops": 0,
+            "method": "co-occurrence BFS",
+        }
+    graph = build_graph(
+        docs, limit_chunks=limit_chunks, min_edge=1,
+        max_entities=max_entities)
+    nodes = {node["name"].lower(): node for node in graph["nodes"]}
+    if source.lower() not in nodes or target.lower() not in nodes:
+        return {
+            "found": False,
+            "source": source,
+            "target": target,
+            "path": [],
+            "edges": [],
+            "reason": "entity not present in the local graph",
+            "available_entities": [node["name"]
+                                   for node in graph["nodes"][:12]],
+            "method": "co-occurrence BFS",
+        }
+    adjacency = defaultdict(list)
+    edge_map = {}
+    for edge in graph["edges"]:
+        left = edge["source"].lower()
+        right = edge["target"].lower()
+        adjacency[left].append(right)
+        adjacency[right].append(left)
+        edge_map[(left, right)] = edge
+        edge_map[(right, left)] = edge
+    start = source.lower()
+    goal = target.lower()
+    best_path = None
+    queue = deque([[start]])
+    seen = {start}
+    while queue and best_path is None:
+        path = queue.popleft()
+        if len(path) - 1 >= max_depth:
+            continue
+        for neighbour in sorted(adjacency[path[-1]]):
+            if neighbour in path:
+                continue
+            candidate = path + [neighbour]
+            if neighbour == goal:
+                best_path = candidate
+                break
+            if neighbour not in seen:
+                seen.add(neighbour)
+                queue.append(candidate)
+    if best_path is None:
+        return {
+            "found": False,
+            "source": nodes[start]["name"],
+            "target": nodes[goal]["name"],
+            "path": [],
+            "edges": [],
+            "reason": f"no path within {max_depth} hop(s)",
+            "method": "co-occurrence BFS",
+        }
+    edges = []
+    for left, right in zip(best_path, best_path[1:]):
+        edge = edge_map[(left, right)]
+        edges.append({
+            "source": edge["source"],
+            "target": edge["target"],
+            "weight": edge["weight"],
+            "sources": edge["sources"],
+        })
+    return {
+        "found": True,
+        "source": nodes[start]["name"],
+        "target": nodes[goal]["name"],
+        "path": [nodes[key]["name"] for key in best_path],
+        "edges": edges,
+        "hops": len(edges),
+        "weight": sum(edge["weight"] for edge in edges),
+        "method": "co-occurrence BFS",
     }
 
 

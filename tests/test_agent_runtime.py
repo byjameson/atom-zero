@@ -96,6 +96,22 @@ def test_agent_answers_graph_relation_query(tmp_path):
     docs.close()
 
 
+def test_agent_graph_path_query(tmp_path):
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("chain1.txt", "Ankara is in Turkey.", title="Chain 1")
+    docs.add_text("chain2.txt",
+                  "Turkey uses the launch code L-7781.", title="Chain 2")
+    agent = AgentSession("s-path", tmp_path / "memory.json", docs=docs)
+    result = agent.chat("how is Ankara connected to L-7781?")
+    assert "Ankara → Turkey → L-7781" in result["reply"]
+    assert result["tool_calls"][0]["name"] == "graph_path"
+    assert result["path"]["hops"] == 2
+    assert result["sources"]
+    missing = agent.chat("how is Ankara connected to Missing?")
+    assert "no local co-occurrence path" in missing["reply"]
+    docs.close()
+
+
 def test_agent_brief_me_returns_local_brief(tmp_path):
     docs = DocMemory(tmp_path / "docs.db")
     docs.add_text("notes/launch.txt", "The launch code is L-7781.",

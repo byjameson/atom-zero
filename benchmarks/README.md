@@ -1,5 +1,18 @@
 # Atom Zero benchmarks
 
+## Graph-path regression
+
+`benchmarks/graph_path_regression.py` checks the UI path controls, the
+multi-hop `/v1/graph/path` result, chat intent, evidence sources and the
+missing-entity path.
+
+```powershell
+python benchmarks/graph_path_regression.py
+```
+
+Latest result: **6/6 checks pass**. Raw result:
+[`results/graph_path_regression.json`](results/graph_path_regression.json).
+
 ## Scoped answer and summary regression
 
 `benchmarks/scoped_regression.py` is a deterministic product regression gate

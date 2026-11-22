@@ -1,0 +1,39 @@
+{
+  "benchmark": "atomzero-graph-path-regression",
+  "generated": "2026-11-22T22:24:27",
+  "checks": [
+    {
+      "name": "ui_path_controls",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "name": "api_multihop_path",
+      "ok": true,
+      "detail": "['Ankara', 'Turkey', 'L-7781']"
+    },
+    {
+      "name": "api_path_edges",
+      "ok": true,
+      "detail": "[{'source': 'Ankara', 'target': 'Turkey', 'weight': 1, 'sources': 1}, {'source': 'L-7781', 'target': 'Turkey', 'weight': 1, 'sources': 1}]"
+    },
+    {
+      "name": "chat_path_intent",
+      "ok": true,
+      "detail": "Local graph path (2 hop(s)):\nAnkara \u2192 Turkey \u2192 L-7781\n- Ankara \u2194 Turkey (1 source(s))\n- L-7781 \u2194 Turkey (1 source(s))\n\nThis is co-occurrence navigation, not a semantic relation claim."
+    },
+    {
+      "name": "chat_path_sources",
+      "ok": true,
+      "detail": "[{'source': 'chain1.txt', 'title': 'Chain 1', 'kind': 'document', 'verified': True}, {'source': 'chain2.txt', 'title': 'Chain 2', 'kind': 'document', 'verified': True}]"
+    },
+    {
+      "name": "missing_path_is_honest",
+      "ok": true,
+      "detail": "entity not present in the local graph"
+    }
+  ],
+  "passed": 6,
+  "failed": 0,
+  "ok": true
+}

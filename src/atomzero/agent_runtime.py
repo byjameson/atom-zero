@@ -10,7 +10,7 @@ from pathlib import Path
 from atomzero.briefing import build_briefing, plan_goal
 from atomzero.doc_memory import format_citation, grounded_answer
 from atomzero.knowledge_gaps import KnowledgeGapError
-from atomzero.knowledge_graph import entity_sources
+from atomzero.knowledge_graph import entity_sources, graph_path
 from atomzero.skills import execute_skill
 from atomzero.web_research import wikipedia_research
 
@@ -192,6 +192,66 @@ class AgentSession:
             "connections": data.get("connections", []),
         }
 
+    def _graph_path(self, source: str, target: str) -> dict:
+        if self.docs is None:
+            return {"reply": "no document memory configured",
+                    "tool_calls": [], "sources": [], "evidence": []}
+        try:
+            data = graph_path(self.docs, source, target)
+        except ValueError as exc:
+            return {"reply": str(exc), "tool_calls": [],
+                    "sources": [], "evidence": []}
+        tool = [{"name": "graph_path", "source": source,
+                 "target": target}]
+        if not data.get("found"):
+            return {
+                "reply": (f"I found no local co-occurrence path from "
+                          f"{source} to {target}: "
+                          f"{data.get('reason', 'not found')}."),
+                "tool_calls": tool,
+                "sources": [],
+                "evidence": [],
+                "path": data,
+            }
+        lines = [f"Local graph path ({data['hops']} hop(s)):",
+                 " → ".join(data["path"])]
+        for edge in data["edges"]:
+            lines.append(
+                f"- {edge['source']} ↔ {edge['target']} "
+                f"({edge['sources']} source(s))")
+        lines.append("\nThis is co-occurrence navigation, not a semantic "
+                     "relation claim.")
+        sources = []
+        evidence = []
+        for name in data["path"]:
+            try:
+                info = entity_sources(self.docs, name, limit=1)
+            except ValueError:
+                continue
+            for item in info.get("sources", []):
+                source_item = {
+                    "source": item.get("source", ""),
+                    "title": item.get("title", ""),
+                    "kind": item.get("kind", "document"),
+                    "verified": bool(item.get("verified", True)),
+                }
+                if source_item not in sources:
+                    sources.append(source_item)
+                evidence.append({
+                    "source": item.get("source", ""),
+                    "title": item.get("title", ""),
+                    "page": item.get("page"),
+                    "section": item.get("section", ""),
+                    "snippet": item.get("snippet", ""),
+                })
+        return {
+            "reply": "\n".join(lines),
+            "tool_calls": tool,
+            "sources": sources,
+            "evidence": evidence,
+            "path": data,
+        }
+
     def _briefing(self) -> dict:
         brief = build_briefing(
             self.human.data, self.gap_store, self.docs)
@@ -335,6 +395,25 @@ class AgentSession:
             r"graph)\s*:?\s*(.+?)\??$", text, re.IGNORECASE)
         if graph_query:
             return self._graph_entity(graph_query.group(1).strip())
+        path_query = re.match(
+            r"^(?:how is|how are)\s+(.+?)\s+connected to\s+(.+?)\??$",
+            text, re.IGNORECASE)
+        if not path_query:
+            path_query = re.match(
+                r"^(?:connection between|path from)\s+(.+?)\s+"
+                r"(?:and|to)\s+(.+?)\??$", text, re.IGNORECASE)
+        if not path_query:
+            path_query = re.match(
+                r"^connect\s+(.+?)\s+to\s+(.+?)\??$", text,
+                re.IGNORECASE)
+        if not path_query:
+            path_query = re.match(
+                r"^(.+?)\s+ile\s+(.+?)\s+(?:nasıl|ne)\s+"
+                r"bağlantılı\??$", text, re.IGNORECASE)
+        if path_query:
+            return self._graph_path(
+                path_query.group(1).strip(),
+                path_query.group(2).strip())
         if low in ("brief me", "brief me?", "daily brief", "daily brief?",
                    "what should i do today", "what should i do today?"):
             return self._briefing()
