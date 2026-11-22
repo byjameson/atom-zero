@@ -11,7 +11,7 @@
 ## Run
 
 ```powershell
-pip install atomzero==0.4.2
+pip install atomzero==0.5.0
 atomzero-quickstart
 ```
 

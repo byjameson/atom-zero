@@ -22,9 +22,9 @@ At the batch boundary:
 - run preflight and `scripts/verify_release.py`;
 - publish every canonical surface once.
 
-`0.4.2` is the transition release after this policy was adopted: PyPI, GitHub,
-Hugging Face and ModelScope are at `0.4.2`; dev.to intentionally remains at
-`0.4.1` and will be synced at the next batch boundary.
+`0.5.0` is the first batched release under this policy. It includes the graph,
+skills, chains, recipes, daily brief and goal planner accumulated after 0.4.2.
+The next batch should be published after roughly ten further increments.
 
 ## 1. Preflight
 
@@ -34,7 +34,7 @@ python -m build
 python -m twine check dist/*
 ```
 
-Expected for the next batch: `286 passed` or more.
+Expected for 0.5.0: `286 passed` or more.
 
 ## 2. PyPI
 

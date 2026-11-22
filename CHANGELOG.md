@@ -1,10 +1,9 @@
 # Changelog
 
-## Unreleased - next batch
+## atomzero 0.5.0 - second brain and skill workflows (2026-11-22)
 
-Batched release train: accumulate about 10 development increments before
-publishing to PyPI/GitHub releases/Hugging Face/ModelScope/dev.to. Intermediate
-work stays on `main`; see `docs/RELEASING.md`.
+First batched release under the ~10-increment policy. It includes the work
+accumulated after 0.4.2.
 
 - Added a local **second brain graph**: capitalized-phrase/code/year entity
   extraction, chunk co-occurrence edges, source counts and evidence lookup.
@@ -52,6 +51,9 @@ work stays on `main`; see `docs/RELEASING.md`.
 - Added `benchmarks/skills_recipe_regression.py` (6/6 checks).
 - Added `benchmarks/skills_recipe_ui_regression.py` (7/7 checks): recipe UI
   contract + exact request, carry override and unknown-recipe path.
+- 286 tests pass.
+- Release notes:
+  [`docs/RELEASE_ATOMZERO_0.5.0.md`](docs/RELEASE_ATOMZERO_0.5.0.md).
 
 ## atomzero 0.4.2 - UI collection scope (2026-11-22)
 
