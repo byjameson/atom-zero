@@ -86,6 +86,19 @@ python benchmarks/scoped_regression.py
 Current result: **10/10 checks pass**. Raw result:
 [`results/scoped_regression.json`](results/scoped_regression.json).
 
+## Goal-flow end-to-end regression
+
+`benchmarks/goal_flow_regression.py` exercises the real HTTP chat handler:
+plan creates no tasks, one confirmation creates exactly three, a second
+confirmation is a no-op, and cancel leaves memory unchanged.
+
+```powershell
+python benchmarks/goal_flow_regression.py
+```
+
+Current result: **6/6 checks pass**. Raw result:
+[`results/goal_flow_regression.json`](results/goal_flow_regression.json).
+
 ## Briefing and goal-plan regression
 
 `benchmarks/briefing_regression.py` is a deterministic gate for the local

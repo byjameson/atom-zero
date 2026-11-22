@@ -21,6 +21,25 @@ python benchmarks/scoped_regression.py
 Latest result: **10/10 checks pass**. Raw result:
 [`results/scoped_regression.json`](results/scoped_regression.json).
 
+## Goal-flow end-to-end regression
+
+`benchmarks/goal_flow_regression.py` starts the real HTTP chat handler and
+checks the full confirmation contract:
+
+- `plan goal ...` creates no tasks;
+- the plan cites local evidence and asks for confirmation;
+- one `confirm plan` creates exactly three tasks;
+- a second confirmation is a no-op;
+- `cancel plan` leaves memory unchanged;
+- confirming after cancel is a no-op.
+
+```powershell
+python benchmarks/goal_flow_regression.py
+```
+
+Latest result: **6/6 checks pass**. Raw result:
+[`results/goal_flow_regression.json`](results/goal_flow_regression.json).
+
 ## Briefing and goal-plan regression
 
 `benchmarks/briefing_regression.py` checks the daily brief and goal planner

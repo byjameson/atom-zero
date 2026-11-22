@@ -1,0 +1,39 @@
+{
+  "benchmark": "atomzero-goal-flow-regression",
+  "generated": "2026-11-22T21:49:26",
+  "checks": [
+    {
+      "name": "plan_creates_no_tasks",
+      "ok": true,
+      "detail": "0 task(s)"
+    },
+    {
+      "name": "plan_requests_confirmation",
+      "ok": true,
+      "detail": "Goal: prepare the warranty page\n\nSuggested plan:\n1. Review the evidence from notes/warranty.txt for: prepare the warranty page\n2. Write down one assumption to t"
+    },
+    {
+      "name": "plan_has_cited_context",
+      "ok": true,
+      "detail": "[{'source': 'notes/warranty.txt', 'title': 'Warranty'}]"
+    },
+    {
+      "name": "confirm_creates_exactly_three",
+      "ok": true,
+      "detail": "3 task(s)"
+    },
+    {
+      "name": "second_confirm_is_noop",
+      "ok": true,
+      "detail": "There is no pending goal plan. Use 'plan goal ...' first."
+    },
+    {
+      "name": "cancel_leaves_memory_unchanged",
+      "ok": true,
+      "detail": "0 task(s)"
+    }
+  ],
+  "passed": 6,
+  "failed": 0,
+  "ok": true
+}
