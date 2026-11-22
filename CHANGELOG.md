@@ -5,6 +5,9 @@
 - `atomzero-doctor` now validates an existing document index (chunk/source
   counts, orphan rows and FTS5 integrity) in addition to file write access.
 - Added doctor tests for absent, clean and orphaned indexes.
+- Added `atomzero-docs summary-collection` and collection mode on
+  `GET /v1/documents/summary`; every selected sentence keeps its source,
+  page and section.
 
 ## atomzero 0.3.0 - document workflow and grounded answers (2026-11-22)
 

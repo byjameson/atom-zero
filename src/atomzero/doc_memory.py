@@ -428,6 +428,65 @@ def extractive_summary(chunks: list[str], max_sentences: int = 5,
             "method": "extractive", "candidates": len(sentences)}
 
 
+def extractive_summary_units(units: list[dict], max_sentences: int = 8,
+                             max_chars: int = 2000) -> dict:
+    """Summarize multiple sources while keeping each sentence's locator."""
+    try:
+        max_sentences = int(max_sentences)
+    except (TypeError, ValueError):
+        max_sentences = 8
+    max_sentences = max(1, min(max_sentences, 30))
+    expanded = []
+    seen = set()
+    for unit in units:
+        source = str(unit.get("source", ""))
+        page = unit.get("page")
+        section = str(unit.get("section", "") or "")
+        text = str(unit.get("text", "")).strip()
+        for sentence in re.split(r"(?<=[.!?])\s+|\n+", text):
+            sentence = sentence.strip()
+            if not sentence:
+                continue
+            key = re.sub(r"\s+", " ", sentence).strip().lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            expanded.append({"text": sentence, "source": source,
+                             "page": page, "section": section})
+    if not expanded:
+        return {"text": "", "sentences": [], "citations": [],
+                "method": "extractive", "candidates": 0}
+    if len(expanded) <= max_sentences:
+        selected = expanded
+    else:
+        frequency = Counter(
+            word for unit in expanded
+            for word in re.findall(r"[^\W_]+", unit["text"].lower())
+            if len(word) > 2 and word not in STOPWORDS)
+        scores = []
+        for index, unit in enumerate(expanded):
+            terms = _query_terms(unit["text"])
+            score = (sum(frequency[term] for term in terms)
+                     / math.sqrt(len(terms))) if terms else 0.0
+            score += 0.5 / (index + 1)
+            score /= 1.0 + len(unit["text"]) / 400.0
+            scores.append(score)
+        chosen = sorted(
+            sorted(range(len(expanded)),
+                   key=lambda i: (-scores[i], i))[:max_sentences])
+        selected = [expanded[index] for index in chosen]
+    citations = []
+    for unit in selected:
+        citation = {"source": unit["source"], "page": unit["page"],
+                    "section": unit["section"]}
+        if citation not in citations:
+            citations.append(citation)
+    text = " ".join(unit["text"] for unit in selected)
+    return {"text": text[:max_chars], "sentences": selected,
+            "citations": citations, "method": "extractive",
+            "candidates": len(expanded)}
+
+
 def format_citation(hit: dict) -> str:
     """Format a hit as ``source (p. N) [section]`` for chat/UI display."""
     location = str(hit.get("source_url") or hit.get("source") or "")
@@ -910,6 +969,15 @@ class DocMemory:
             "details": details,
         }
 
+    def _source_chunk_rows(self, source: str) -> list[tuple]:
+        with self._lock:
+            return self.con.execute(
+                "SELECT d.chunk, d.title, m.page, m.section "
+                "FROM docs d LEFT JOIN doc_chunk_meta m "
+                "ON m.doc_rowid = d.rowid "
+                "WHERE d.source = ? ORDER BY d.rowid",
+                (str(source),)).fetchall()
+
     def export_jsonl(self, path: str | Path, source_prefix: str = "",
                      kind: str = "") -> dict:
         """Export sources as one JSONL record each, preserving provenance."""
@@ -923,13 +991,7 @@ class DocMemory:
         chunks = 0
         with p.open("w", encoding="utf-8", newline="\n") as handle:
             for item in items:
-                with self._lock:
-                    rows = self.con.execute(
-                        "SELECT d.chunk, d.title, m.page, m.section "
-                        "FROM docs d LEFT JOIN doc_chunk_meta m "
-                        "ON m.doc_rowid = d.rowid "
-                        "WHERE d.source = ? ORDER BY d.rowid",
-                        (item["source"],)).fetchall()
+                rows = self._source_chunk_rows(item["source"])
                 if not rows:
                     continue
                 record = {
@@ -1566,6 +1628,36 @@ class DocMemory:
         })
         return result
 
+    def summarize_collection(self, source_prefix: str = "", kind: str = "",
+                             max_sentences: int = 8) -> dict:
+        """Extractive summary across a source prefix and/or kind."""
+        prefix = str(source_prefix or "").strip()
+        kind = str(kind or "").strip()
+        if not prefix and not kind:
+            raise ValueError("source_prefix or kind is required")
+        items = [
+            item for item in self.sources()
+            if (not prefix or item["source"].startswith(prefix))
+            and (not kind or item.get("kind") == kind)]
+        if not items:
+            raise SourceNotFound("no sources matched the collection filter")
+        units = []
+        chunks = 0
+        for item in items:
+            for row in self._source_chunk_rows(item["source"]):
+                units.append({"text": row[0], "source": item["source"],
+                              "page": row[2], "section": row[3] or ""})
+                chunks += 1
+        result = extractive_summary_units(
+            units, max_sentences=max_sentences)
+        result.update({
+            "source_prefix": prefix,
+            "kind": kind,
+            "sources": len(items),
+            "chunks": chunks,
+        })
+        return result
+
     def verify_source(self, source: str, reviewer: str) -> dict:
         """Mark a teacher note verified with reviewer and timestamp."""
         source = str(source or "").strip()
@@ -1809,6 +1901,12 @@ def main(argv=None):
         "summary", help="extractive summary of one indexed source")
     summary.add_argument("source")
     summary.add_argument("--sentences", type=int, default=5)
+    summary_collection = sub.add_parser(
+        "summary-collection",
+        help="extractive summary across a prefix and/or kind")
+    summary_collection.add_argument("--prefix", default="")
+    summary_collection.add_argument("--kind", default="")
+    summary_collection.add_argument("--sentences", type=int, default=8)
     export = sub.add_parser(
         "export", help="export the index to portable JSONL")
     export.add_argument("--out", default="atomzero-index.jsonl")
@@ -1823,7 +1921,8 @@ def main(argv=None):
     forget.add_argument("--all", action="store_true")
     # Accept --db on either side of the subcommand; the docs use both forms.
     for parser in (add, search, answer, sync, status, doctor, list_db,
-                   stats_db, evidence, summary, export, import_cmd, forget):
+                   stats_db, evidence, summary, summary_collection, export,
+                   import_cmd, forget):
         parser.add_argument("--db", dest="db_after", default=None)
     args = ap.parse_args(argv)
     mem = DocMemory(args.db_after or args.db or "data/docs.db")
@@ -1893,6 +1992,15 @@ def main(argv=None):
             try:
                 result = mem.summarize_source(
                     args.source, max_sentences=args.sentences)
+            except (ValueError, SourceNotFound) as exc:
+                print(json.dumps({"error": str(exc)}))
+                return 1
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+        elif args.cmd == "summary-collection":
+            try:
+                result = mem.summarize_collection(
+                    source_prefix=args.prefix, kind=args.kind,
+                    max_sentences=args.sentences)
             except (ValueError, SourceNotFound) as exc:
                 print(json.dumps({"error": str(exc)}))
                 return 1

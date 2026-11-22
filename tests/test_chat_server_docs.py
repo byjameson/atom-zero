@@ -190,6 +190,11 @@ def test_http_document_endpoints_and_grounded_chat(tmp_path, monkeypatch):
             timeout=10).read().decode("utf-8"))
         assert "Paris" in summary["text"]
         assert summary["method"] == "extractive"
+        collection = json.loads(urllib.request.urlopen(
+            base + "/v1/documents/summary?kind=document&sentences=2",
+            timeout=10).read().decode("utf-8"))
+        assert "Paris" in collection["text"]
+        assert collection["sources"] >= 1
         chat = _post(base + "/v1/chat/completions", {
             "messages": [{"role": "user",
                           "content": "what is the capital of France?"}],

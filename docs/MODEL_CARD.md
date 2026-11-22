@@ -31,7 +31,7 @@ benchmarks and release — is
 | vector index | cached `doc_vectors`, prewarmed numpy matrix, IVF ANN above 256 chunks, exact fallback |
 | tools | time, safe arithmetic, task add/list/complete, name/likes memory, allowlisted 3-step plan API with confirmation |
 | sessions | transcript restore, JSON export/import, exact Forget, session Forget |
-| documents | ingest text/Markdown/HTML/PDF/DOCX, page/section citations, evidence panel/API, source/title/sha256, scoped answers, extractive summaries, headless `atomzero-docs` CLI with sync/status/doctor/export/import, per-source delete |
+| documents | ingest text/Markdown/HTML/PDF/DOCX, page/section citations, evidence panel/API, source/title/sha256, scoped answers, extractive source/collection summaries, headless `atomzero-docs` CLI with sync/status/doctor/export/import, per-source delete |
 | research | approved-only queue, Wikipedia fetch, worker lock/log, teacher synthesis |
 | teacher | local Ollama/OpenAI-compatible, unverified notes, reviewer verification |
 | curiosity | gap -> pending topic -> approval -> Wikipedia + teacher -> RAG note |
@@ -41,7 +41,7 @@ benchmarks and release — is
 | privacy | localhost, no telemetry, SSRF guard, upload caps, deletion |
 | UI | chat, documents, gaps, research queue, teacher notes, adapters, health |
 | packaging | standalone `atomzero` package (assistant deps only), `atomzero`/`atomzero-quickstart` entry points, GitHub release, HF/ModelScope weights |
-| tests | 235 passed; product 21/21; behavior 16/16; retrieval 1.000 |
+| tests | 237 passed; product 21/21; behavior 16/16; retrieval 1.000 |
 | document benchmark | 100 authored questions: 80/80 answerable, 20/20 no-answer |
 | public retrieval benchmark | SQuAD v2: 0.975 top-1, 1.000 top-5 (50 contexts, hybrid) |
 | visible-snippet answer | SQuAD v2: 0.816 top-1 answer in snippet (50 contexts, hybrid) |

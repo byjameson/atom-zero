@@ -10,7 +10,7 @@ Endpoints:
   GET  /v1/models
   GET  /v1/documents
   GET  /v1/documents/evidence?source=...&page=...&section=...
-  GET  /v1/documents/summary?source=...&sentences=5
+  GET  /v1/documents/summary?source=...&source_prefix=...&sentences=8
   POST /v1/documents
   POST /v1/documents/upload?source=...&title=...
   POST /v1/documents/search
@@ -1655,13 +1655,23 @@ class Handler(BaseHTTPRequestHandler):
                     "error": "no document memory configured"})
             params = urllib.parse.parse_qs(
                 urllib.parse.urlparse(self.path).query)
-            source = params.get("source", [""])[0]
-            if not source:
-                return self._json(400, {"error": "source is required"})
+            source = params.get("source", [""])[0].strip()
+            prefix = params.get("source_prefix", [""])[0].strip()
+            kind = params.get("kind", [""])[0].strip()
+            if not source and not prefix and not kind:
+                return self._json(400, {
+                    "error": "source or source_prefix is required"})
             try:
-                result = docs.summarize_source(
-                    source,
-                    max_sentences=int(params.get("sentences", ["5"])[0]))
+                if source:
+                    result = docs.summarize_source(
+                        source,
+                        max_sentences=int(
+                            params.get("sentences", ["5"])[0]))
+                else:
+                    result = docs.summarize_collection(
+                        source_prefix=prefix, kind=kind,
+                        max_sentences=int(
+                            params.get("sentences", ["8"])[0]))
             except SourceNotFound as exc:
                 return self._json(404, {"error": str(exc)})
             except (TypeError, ValueError) as exc:

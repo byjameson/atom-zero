@@ -4,7 +4,8 @@ import pytest
 
 from atomzero.doc_memory import (
     DocMemory, SourceNotFound, _chunks, ann_topk, best_snippet, diverse_hits,
-    embed_text, extractive_summary, main, retrieval_confidence)
+    embed_text, extractive_summary, extractive_summary_units, main,
+    retrieval_confidence)
 
 
 def test_doc_memory_indexes_and_searches_with_source(tmp_path):
@@ -572,3 +573,51 @@ def test_cli_export_import_roundtrip(tmp_path, capsys):
     imported = json.loads(capsys.readouterr().out)
     assert imported["sources"] == 1
     assert imported["failed"] == 0
+
+
+def test_extractive_summary_units_preserves_locators():
+    units = [
+        {"text": "Launch code is L-7781. Visitors need a badge.",
+         "source": "notes/a.txt", "page": 1, "section": "Launch"},
+        {"text": "The warranty period is 24 months.",
+         "source": "notes/b.md", "page": None, "section": "Warranty"},
+    ]
+    result = extractive_summary_units(units, max_sentences=3)
+    assert result["method"] == "extractive"
+    assert result["candidates"] == 3
+    assert {item["source"] for item in result["sentences"]} == {
+        "notes/a.txt", "notes/b.md"}
+    assert {"source": "notes/b.md", "page": None, "section": "Warranty"} in (
+        result["citations"])
+    assert "L-7781" in result["text"]
+    assert "24 months" in result["text"]
+
+
+def test_summarize_collection_and_cli(tmp_path, capsys):
+    mem = DocMemory(tmp_path / "docs.db")
+    mem.add_text("notes/a.txt", "The launch code is L-7781.",
+                 title="Launch")
+    mem.add_text("notes/b.md", "The warranty period is 24 months.",
+                 title="Warranty")
+    result = mem.summarize_collection("notes/", max_sentences=4)
+    assert result["sources"] == 2
+    assert result["chunks"] == 2
+    assert "L-7781" in result["text"]
+    assert "24 months" in result["text"]
+    assert {item["source"] for item in result["sentences"]} == {
+        "notes/a.txt", "notes/b.md"}
+    with pytest.raises(ValueError):
+        mem.summarize_collection()
+    with pytest.raises(SourceNotFound):
+        mem.summarize_collection(source_prefix="missing/")
+    mem.close()
+
+    db = tmp_path / "cli.db"
+    mem = DocMemory(db)
+    mem.add_text("notes/a.txt", "The launch code is L-7781.")
+    mem.close()
+    main(["summary-collection", "--prefix", "notes/", "--sentences", "2",
+          "--db", str(db)])
+    output = json.loads(capsys.readouterr().out)
+    assert "L-7781" in output["text"]
+    assert output["source_prefix"] == "notes/"

@@ -87,6 +87,8 @@ atomzero-docs search "warranty" --db data/docs.db --source policy.docx
 atomzero-docs answer "what is the warranty period?" --source policy.docx `
   --db data/docs.db
 atomzero-docs summary manual.pdf --sentences 5 --db data/docs.db
+atomzero-docs summary-collection --prefix notes/ --sentences 8 `
+  --db data/docs.db
 atomzero-docs evidence policy.docx --section Warranty --db data/docs.db
 atomzero-docs export --out backup.jsonl --db data/docs.db
 atomzero-docs import backup.jsonl --db data/docs.db
@@ -119,8 +121,10 @@ when the index is not clean.
 `answer` runs the same grounded-answer path as the HTTP endpoint and returns
 the note text, evidence and confidence. `summary` returns an **extractive**
 summary of one source: it selects and orders existing sentences and keeps the
-page/section locators; it does not generate new prose. All commands print
-JSON, so they can be piped into other local tools.
+page/section locators; it does not generate new prose.
+`summary-collection` does the same across a source prefix and/or kind, with a
+locator on every selected sentence. All commands print JSON, so they can be
+piped into other local tools.
 `python -m atomzero.doc_memory ...` is the same CLI.
 
 `export` writes one JSONL record per source with its title, teacher/provenance
@@ -184,12 +188,14 @@ inventing a fact.
 
 ```text
 GET /v1/documents/summary?source=manual.pdf&sentences=5
+GET /v1/documents/summary?source_prefix=notes/&kind=document&sentences=8
 ```
 
 The response contains the selected sentences in source order, the combined
 `text`, `method: "extractive"`, candidate/chunk counts and page/section
-citations. It scores existing sentences for content-word frequency, position
-and length; it does not call a model or add facts.
+citations. Collection mode also returns each sentence's source and locator. It
+scores existing sentences for content-word frequency, position and length; it
+does not call a model or add facts.
 
 Re-adding the same `source` replaces its chunks, page/section metadata and
 cached vectors. Directory sync with `--skip-unchanged` avoids that work when
