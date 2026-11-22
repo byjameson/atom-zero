@@ -506,3 +506,69 @@ def test_summarize_source_and_cli_summary(tmp_path, capsys):
     output = json.loads(capsys.readouterr().out)
     assert "launch" in output["text"].lower()
     assert output["method"] == "extractive"
+
+
+def test_export_import_roundtrip_preserves_provenance(tmp_path):
+    mem = DocMemory(tmp_path / "source.db")
+    mem.add_blocks(
+        "manual.pdf",
+        [{"text": "The launch code is L-7781.", "page": 4,
+          "section": "Launch"}],
+        title="Manual")
+    mem.add_text(
+        "teacher://chatgpt/1", "The warranty period is 36 months.",
+        title="Teacher",
+        meta={"kind": "teacher", "verified": False,
+              "source_url": "https://example.com/chat"})
+    backup = tmp_path / "backup.jsonl"
+    exported = mem.export_jsonl(backup)
+    assert exported["sources"] == 2
+    assert exported["chunks"] == 2
+    mem.close()
+
+    restored = DocMemory(tmp_path / "restored.db")
+    imported = restored.import_jsonl(backup)
+    assert imported["sources"] == 2
+    assert imported["chunks"] == 2
+    assert imported["failed"] == 0
+    listed = {item["source"]: item for item in restored.sources()}
+    assert listed["manual.pdf"]["page_start"] == 4
+    assert listed["teacher://chatgpt/1"]["verified"] is False
+    assert listed["teacher://chatgpt/1"]["source_url"] == (
+        "https://example.com/chat")
+    evidence = restored.source_evidence("manual.pdf", page=4)
+    assert "L-7781" in evidence["data"][0]["chunk"]
+    assert restored.search("warranty period")[0]["kind"] == "teacher"
+    restored.close()
+
+
+def test_import_jsonl_reports_bad_lines(tmp_path):
+    mem = DocMemory(tmp_path / "docs.db")
+    backup = tmp_path / "partial.jsonl"
+    backup.write_text(
+        "not json\n"
+        '{"source": "ok.txt", "blocks": [{"text": "hello world"}]}\n',
+        encoding="utf-8")
+    result = mem.import_jsonl(backup)
+    assert result["sources"] == 1
+    assert result["failed"] == 1
+    assert result["errors"][0]["line"] == 1
+    assert mem.search("hello")[0]["source"] == "ok.txt"
+    mem.close()
+
+
+def test_cli_export_import_roundtrip(tmp_path, capsys):
+    note = tmp_path / "note.txt"
+    note.write_text("The launch code is L-7781.", encoding="utf-8")
+    source = tmp_path / "source.db"
+    target = tmp_path / "target.db"
+    backup = tmp_path / "index.jsonl"
+    main(["add", str(note), "--db", str(source)])
+    capsys.readouterr()
+    main(["export", "--out", str(backup), "--db", str(source)])
+    exported = json.loads(capsys.readouterr().out)
+    assert exported["sources"] == 1
+    main(["import", str(backup), "--db", str(target)])
+    imported = json.loads(capsys.readouterr().out)
+    assert imported["sources"] == 1
+    assert imported["failed"] == 0

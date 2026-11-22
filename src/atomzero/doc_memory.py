@@ -910,6 +910,82 @@ class DocMemory:
             "details": details,
         }
 
+    def export_jsonl(self, path: str | Path, source_prefix: str = "",
+                     kind: str = "") -> dict:
+        """Export sources as one JSONL record each, preserving provenance."""
+        p = Path(path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        items = [
+            item for item in self.sources()
+            if (not source_prefix
+                or item["source"].startswith(str(source_prefix)))
+            and (not kind or item.get("kind") == kind)]
+        chunks = 0
+        with p.open("w", encoding="utf-8", newline="\n") as handle:
+            for item in items:
+                with self._lock:
+                    rows = self.con.execute(
+                        "SELECT d.chunk, d.title, m.page, m.section "
+                        "FROM docs d LEFT JOIN doc_chunk_meta m "
+                        "ON m.doc_rowid = d.rowid "
+                        "WHERE d.source = ? ORDER BY d.rowid",
+                        (item["source"],)).fetchall()
+                if not rows:
+                    continue
+                record = {
+                    "source": item["source"],
+                    "title": item.get("title", ""),
+                    "meta": {
+                        key: item.get(key)
+                        for key in ("kind", "source_url", "teacher", "model",
+                                    "verified", "created", "reviewer",
+                                    "verified_at")
+                    },
+                    "blocks": [
+                        {"text": row[0], "page": row[2],
+                         "section": row[3] or ""}
+                        for row in rows
+                    ],
+                }
+                handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+                chunks += len(rows)
+        return {"out": str(p), "sources": len(items), "chunks": chunks,
+                "bytes": p.stat().st_size}
+
+    def import_jsonl(self, path: str | Path,
+                     replace: bool = True) -> dict:
+        """Import JSONL records produced by :meth:`export_jsonl`."""
+        p = Path(path)
+        sources = chunks = failed = 0
+        errors = []
+        with p.open("r", encoding="utf-8") as handle:
+            for line_number, line in enumerate(handle, 1):
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    record = json.loads(line)
+                    if not isinstance(record, dict):
+                        raise ValueError("record must be an object")
+                    source = str(record.get("source", "")).strip()
+                    if not source:
+                        raise ValueError("source is required")
+                    blocks = record.get("blocks")
+                    if not isinstance(blocks, list) or not blocks:
+                        raise ValueError("blocks must be a non-empty list")
+                    result = self.add_blocks_result(
+                        source, blocks,
+                        title=str(record.get("title", "")),
+                        replace=replace,
+                        meta=record.get("meta") or {})
+                    sources += 1
+                    chunks += int(result["chunks"])
+                except Exception as exc:
+                    failed += 1
+                    errors.append({"line": line_number, "error": str(exc)})
+        return {"in": str(p), "sources": sources, "chunks": chunks,
+                "failed": failed, "errors": errors}
+
     def find_by_content_sha(self, sha: str, exclude_source: str = "") -> list[dict]:
         """Find indexed sources with the same extracted-content hash."""
         sha = str(sha or "").strip()
@@ -1733,12 +1809,21 @@ def main(argv=None):
         "summary", help="extractive summary of one indexed source")
     summary.add_argument("source")
     summary.add_argument("--sentences", type=int, default=5)
+    export = sub.add_parser(
+        "export", help="export the index to portable JSONL")
+    export.add_argument("--out", default="atomzero-index.jsonl")
+    export.add_argument("--source-prefix", default="")
+    export.add_argument("--kind", default="")
+    import_cmd = sub.add_parser(
+        "import", help="import sources from an export JSONL file")
+    import_cmd.add_argument("path")
+    import_cmd.add_argument("--no-replace", action="store_true")
     forget = sub.add_parser("forget", help="delete one source or everything")
     forget.add_argument("source", nargs="?")
     forget.add_argument("--all", action="store_true")
     # Accept --db on either side of the subcommand; the docs use both forms.
     for parser in (add, search, answer, sync, status, doctor, list_db,
-                   stats_db, evidence, summary, forget):
+                   stats_db, evidence, summary, export, import_cmd, forget):
         parser.add_argument("--db", dest="db_after", default=None)
     args = ap.parse_args(argv)
     mem = DocMemory(args.db_after or args.db or "data/docs.db")
@@ -1812,6 +1897,16 @@ def main(argv=None):
                 print(json.dumps({"error": str(exc)}))
                 return 1
             print(json.dumps(result, indent=2, ensure_ascii=False))
+        elif args.cmd == "export":
+            result = mem.export_jsonl(
+                args.out, source_prefix=args.source_prefix, kind=args.kind)
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+        elif args.cmd == "import":
+            result = mem.import_jsonl(
+                args.path, replace=not args.no_replace)
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+            if result["failed"]:
+                return 1
         elif args.cmd == "forget":
             try:
                 result = (mem.forget_all() if args.all

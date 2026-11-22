@@ -14,6 +14,8 @@
   citations; no model generation and no new facts.
 - Chat replies now use the shared grounded-answer core and expose
   `evidence`/`confidence`; the UI shows the match label.
+- Added JSONL index export/import with titles, teacher/provenance metadata and
+  page/section locators preserved.
 - Added source, source-prefix and kind filters to document search.
 - Added `POST /v1/documents/answer` and `atomzero-docs answer`: cited answer,
   evidence list and a transparent heuristic match-confidence score from one

@@ -88,6 +88,8 @@ atomzero-docs answer "what is the warranty period?" --source policy.docx `
   --db data/docs.db
 atomzero-docs summary manual.pdf --sentences 5 --db data/docs.db
 atomzero-docs evidence policy.docx --section Warranty --db data/docs.db
+atomzero-docs export --out backup.jsonl --db data/docs.db
+atomzero-docs import backup.jsonl --db data/docs.db
 atomzero-docs list --db data/docs.db
 atomzero-docs forget policy.docx --db data/docs.db
 ```
@@ -120,6 +122,11 @@ summary of one source: it selects and orders existing sentences and keeps the
 page/section locators; it does not generate new prose. All commands print
 JSON, so they can be piped into other local tools.
 `python -m atomzero.doc_memory ...` is the same CLI.
+
+`export` writes one JSONL record per source with its title, teacher/provenance
+metadata and blocks (page/section preserved). `import` restores those records,
+replacing the same sources by default; `--no-replace` appends instead. The
+backup contains your documents and notes, so keep it private.
 
 ### HTTP
 
