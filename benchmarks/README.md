@@ -38,6 +38,20 @@ python benchmarks/skills_flow_regression.py
 Latest result: **9/9 checks pass**. Raw result:
 [`results/skills_flow_regression.json`](results/skills_flow_regression.json).
 
+## Named skill-recipe regression
+
+`benchmarks/skills_recipe_regression.py` loads a recipe from
+`data/skills/chains`, lists it over HTTP, runs it by name/query, checks
+provider -> template hand-off, sources, no-carry override and the unknown
+recipe 404.
+
+```powershell
+python benchmarks/skills_recipe_regression.py
+```
+
+Latest result: **6/6 checks pass**. Raw result:
+[`results/skills_recipe_regression.json`](results/skills_recipe_regression.json).
+
 ## Skill-chain UI regression
 
 `benchmarks/skills_chain_ui_regression.py` fetches the served page, checks the

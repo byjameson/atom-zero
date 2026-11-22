@@ -5,7 +5,8 @@ import pytest
 from atomzero.agent_runtime import AgentSession
 from atomzero.doc_memory import DocMemory
 from atomzero.skills import (
-    SkillError, SkillRegistry, execute_skill, main, render_skill)
+    ChainRecipeRegistry, SkillError, SkillRegistry, execute_chain_recipe,
+    execute_skill, main, render_skill)
 
 
 def write_skill(folder, name, **overrides):
@@ -22,6 +23,72 @@ def write_skill(folder, name, **overrides):
     path = folder / f"{name}.json"
     path.write_text(json.dumps(data), encoding="utf-8")
     return path
+
+
+def write_recipe(folder, name, steps, carry_context=True):
+    chain_dir = folder / "chains"
+    chain_dir.mkdir(exist_ok=True)
+    path = chain_dir / f"{name}.json"
+    path.write_text(json.dumps({
+        "name": name,
+        "description": "test recipe",
+        "steps": steps,
+        "carry_context": carry_context,
+    }), encoding="utf-8")
+    return path
+
+
+def test_chain_recipe_registry_and_execution(tmp_path):
+    write_skill(tmp_path, "first", provider=False, triggers=["first"],
+                prompt="A: {context}")
+    write_skill(tmp_path, "second", provider=False, triggers=["second"],
+                prompt="B previous: {previous}")
+    write_recipe(tmp_path, "recipe-1", ["first", "second"])
+    skills = SkillRegistry.from_dir(tmp_path)
+    chains = ChainRecipeRegistry.from_skills_dir(tmp_path)
+    assert chains.list()[0]["name"] == "recipe-1"
+    recipe = chains.get("recipe-1")
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("notes/launch.txt", "The launch code is L-7781.")
+    result = execute_chain_recipe(
+        recipe, "launch code", skills, docs)
+    assert result["recipe"] == "recipe-1"
+    assert "B previous: A:" in result["reply"]
+    no_carry = execute_chain_recipe(
+        recipe, "launch code", skills, docs, carry_context=False)
+    assert "L-7781" not in no_carry["reply"]
+    with pytest.raises(SkillError):
+        chains.get("missing")
+    docs.close()
+
+
+def test_chain_recipe_validation(tmp_path):
+    chain_dir = tmp_path / "chains"
+    chain_dir.mkdir()
+    (chain_dir / "bad.json").write_text(
+        json.dumps({"name": "bad", "steps": []}), encoding="utf-8")
+    with pytest.raises(SkillError):
+        ChainRecipeRegistry.from_skills_dir(tmp_path)
+
+
+def test_cli_recipes_and_recipe_run(tmp_path, capsys):
+    write_skill(tmp_path, "first", provider=False, triggers=["first"],
+                prompt="A: {context}")
+    write_skill(tmp_path, "second", provider=False, triggers=["second"],
+                prompt="B previous: {previous}")
+    write_recipe(tmp_path, "recipe-1", ["first", "second"])
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("notes/launch.txt", "The launch code is L-7781.")
+    docs.close()
+    assert main(["--dir", str(tmp_path), "recipes"]) == 0
+    recipes = json.loads(capsys.readouterr().out)
+    assert recipes[0]["name"] == "recipe-1"
+    assert main([
+        "--dir", str(tmp_path), "recipe", "recipe-1", "launch code",
+        "--docs", str(tmp_path / "docs.db")]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["recipe"] == "recipe-1"
+    assert "B previous: A:" in result["reply"]
 
 
 def test_skill_registry_loads_matches_and_renders(tmp_path):

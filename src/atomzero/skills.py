@@ -294,6 +294,85 @@ def execute_chain(registry, steps, query: str, docs=None, generator=None,
     }
 
 
+def _validate_recipe(data, path: Path) -> dict:
+    if not isinstance(data, dict):
+        raise SkillError(f"{path.name}: recipe must be a JSON object")
+    name = str(data.get("name", "")).strip()
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", name):
+        raise SkillError(
+            f"{path.name}: recipe name must match [A-Za-z0-9_-]{{1,64}}")
+    steps = _normalize_chain_steps(data.get("steps"))
+    return {
+        "name": name,
+        "description": str(data.get("description") or "")[:300],
+        "steps": steps,
+        "carry_context": bool(data.get("carry_context", True)),
+        "path": str(path),
+    }
+
+
+class ChainRecipeRegistry:
+    """Named chain recipes stored under ``<skills>/chains``."""
+
+    def __init__(self, recipes: list[dict] | None = None,
+                 directory: str = ""):
+        self.recipes = recipes or []
+        self.directory = str(directory)
+
+    @classmethod
+    def from_skills_dir(cls, skills_dir: str | Path) -> "ChainRecipeRegistry":
+        folder = Path(skills_dir).expanduser() / "chains"
+        if not folder.exists():
+            return cls([], str(folder))
+        if not folder.is_dir():
+            raise SkillError(f"chains path is not a directory: {folder}")
+        recipes = []
+        names = set()
+        for path in sorted(folder.glob("*.json")):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                raise SkillError(f"{path.name}: {exc}") from exc
+            recipe = _validate_recipe(data, path)
+            if recipe["name"] in names:
+                raise SkillError(f"duplicate recipe name: {recipe['name']}")
+            names.add(recipe["name"])
+            recipes.append(recipe)
+        return cls(recipes, str(folder))
+
+    def list(self) -> list[dict]:
+        return [{
+            "name": recipe["name"],
+            "description": recipe["description"],
+            "steps": recipe["steps"],
+            "carry_context": recipe["carry_context"],
+            "path": recipe["path"],
+        } for recipe in self.recipes]
+
+    def get(self, name: str) -> dict:
+        name = str(name or "").strip()
+        for recipe in self.recipes:
+            if recipe["name"] == name:
+                return recipe
+        raise SkillError(f"recipe not found: {name}")
+
+
+def execute_chain_recipe(recipe: dict, query: str, skill_registry,
+                         docs=None, generator=None,
+                         carry_context: bool | None = None) -> dict:
+    if not isinstance(recipe, dict):
+        raise SkillError("recipe is required")
+    carry = (recipe.get("carry_context", True)
+             if carry_context is None else bool(carry_context))
+    result = execute_chain(
+        skill_registry, recipe.get("steps", []), query, docs, generator,
+        carry_context=carry)
+    result["recipe"] = recipe.get("name", "")
+    result["recipe_description"] = recipe.get("description", "")
+    result["carry_context"] = carry
+    return result
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
         prog="atomzero-skills",
@@ -325,6 +404,16 @@ def main(argv=None) -> int:
     chain.add_argument("--provider-model", default="")
     chain.add_argument("--provider-label", default="openai-compatible")
     chain.add_argument("--provider-timeout", type=int, default=60)
+    recipes = sub.add_parser("recipes", help="list named chain recipes")
+    recipe = sub.add_parser("recipe", help="run a named chain recipe")
+    recipe.add_argument("name")
+    recipe.add_argument("query")
+    recipe.add_argument("--docs", default="data/atomzero_demo.db")
+    recipe.add_argument("--no-carry-context", action="store_true")
+    recipe.add_argument("--provider-url", default="")
+    recipe.add_argument("--provider-model", default="")
+    recipe.add_argument("--provider-label", default="openai-compatible")
+    recipe.add_argument("--provider-timeout", type=int, default=60)
     args = parser.parse_args(argv)
     try:
         registry = SkillRegistry.from_dir(args.dir)
@@ -345,6 +434,49 @@ def main(argv=None) -> int:
                 return 0
         print(json.dumps({"ok": False, "error": "skill not found"}, indent=2))
         return 1
+    if args.cmd == "recipes":
+        try:
+            chains = ChainRecipeRegistry.from_skills_dir(args.dir)
+        except SkillError as exc:
+            print(json.dumps({"ok": False, "error": str(exc)}, indent=2))
+            return 1
+        print(json.dumps(chains.list(), indent=2, ensure_ascii=False))
+        return 0
+    if args.cmd == "recipe":
+        try:
+            chains = ChainRecipeRegistry.from_skills_dir(args.dir)
+            recipe = chains.get(args.name)
+        except SkillError as exc:
+            print(json.dumps({"ok": False, "error": str(exc)}, indent=2))
+            return 1
+        docs = None
+        try:
+            if Path(args.docs).exists():
+                from atomzero.doc_memory import DocMemory
+                docs = DocMemory(args.docs)
+            generator = None
+            if args.provider_url and args.provider_model:
+                from atomzero.teacher_provider import TeacherProvider
+                provider = TeacherProvider(
+                    args.provider_url, args.provider_model,
+                    timeout=args.provider_timeout,
+                    label=args.provider_label)
+                generator = lambda prompt: provider.ask(
+                    prompt, max_tokens=512)
+            try:
+                result = execute_chain_recipe(
+                    recipe, args.query, registry, docs, generator,
+                    carry_context=(False if args.no_carry_context else None))
+            except SkillError as exc:
+                print(json.dumps({"ok": False, "error": str(exc)},
+                                 indent=2))
+                return 1
+            print(json.dumps({"ok": True, **result}, indent=2,
+                             ensure_ascii=False))
+            return 0
+        finally:
+            if docs is not None:
+                docs.close()
     if args.cmd == "chain":
         names = [item.strip() for item in args.skills.split(",")
                  if item.strip()]

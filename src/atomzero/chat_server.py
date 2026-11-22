@@ -14,8 +14,10 @@ Endpoints:
   GET  /v1/graph?limit_chunks=...&min_edge=...&max_entities=...
   GET  /v1/graph/entity?name=...&limit=...
   GET  /v1/skills
+  GET  /v1/skills/chains
   POST /v1/skills/run
   POST /v1/skills/chain
+  POST /v1/skills/chains/run
   POST /v1/documents
   POST /v1/documents/upload?source=...&title=...
   POST /v1/documents/search
@@ -389,6 +391,8 @@ Atom Zero after adding files.</p>
 <div id="skillresult"></div>
 <div class="row"><input id="skillchain" placeholder="Chain skills, e.g. study-tutor,brainstorm">
 <button id="skillchainrun">Run chain</button></div>
+<div class="row"><select id="chainrecipe"><option value="">named recipe</option></select>
+<button id="chainreciperun">Run recipe</button></div>
 <div id="chainresult"></div>
 <script>
 function getSessionId() {
@@ -1107,6 +1111,30 @@ async function refreshSkills() {
       card.appendChild(detail);
       box.appendChild(card);
     });
+    try {
+      const cr = await fetch('/v1/skills/chains');
+      const cj = await cr.json();
+      const select = document.getElementById('chainrecipe');
+      const current = select.value;
+      select.textContent = '';
+      const empty = document.createElement('option');
+      empty.value = '';
+      empty.textContent = 'named recipe';
+      select.appendChild(empty);
+      (cj.data || []).forEach(recipe => {
+        const option = document.createElement('option');
+        option.value = recipe.name;
+        option.textContent = recipe.name + ' (' + (recipe.steps || []).length +
+          ' step)';
+        select.appendChild(option);
+      });
+      if ([...select.options].some(option => option.value === current)) {
+        select.value = current;
+      }
+      if ((cj.data || []).length) {
+        msg.textContent += ' | ' + cj.data.length + ' recipe(s)';
+      }
+    } catch (e) {}
   } catch (e) {
     msg.textContent = 'skills error: ' + e;
   }
@@ -1214,6 +1242,55 @@ async function runSkillChain() {
     msg.textContent = 'chain error: ' + e;
   }
 }
+async function runRecipe() {
+  const name = document.getElementById('chainrecipe').value;
+  const query = document.getElementById('skillquery').value.trim();
+  const msg = document.getElementById('skmsg');
+  const box = document.getElementById('chainresult');
+  box.textContent = '';
+  if (!name || !query) {
+    msg.textContent = 'choose a recipe and enter a query';
+    return;
+  }
+  msg.textContent = 'running recipe...';
+  try {
+    const r = await fetch('/v1/skills/chains/run', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name, query})});
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'recipe error: ' + (j.error || r.status);
+      return;
+    }
+    msg.textContent = 'recipe: ' + j.recipe + ' | provider calls: ' +
+      j.provider_calls;
+    const finalCard = document.createElement('div');
+    finalCard.className = 'qitem';
+    finalCard.textContent = 'Final: ' + (j.reply || '');
+    box.appendChild(finalCard);
+    (j.steps || []).forEach(step => {
+      const card = document.createElement('div');
+      card.className = 'qitem';
+      card.textContent = step.skill + ': ' + step.reply;
+      box.appendChild(card);
+    });
+    (j.evidence || []).forEach(item => {
+      const evidence = document.createElement('div');
+      evidence.className = 'qitem';
+      const title = document.createElement('div');
+      title.textContent = (item.title || item.source) + ' | ' + item.source;
+      evidence.appendChild(title);
+      const snippet = document.createElement('div');
+      snippet.className = 'src';
+      snippet.textContent = item.snippet || '';
+      evidence.appendChild(snippet);
+      box.appendChild(evidence);
+    });
+  } catch (e) {
+    msg.textContent = 'recipe error: ' + e;
+  }
+}
+document.getElementById('chainreciperun').onclick = () => runRecipe();
 document.getElementById('skillchainrun').onclick = () => runSkillChain();
 document.getElementById('skillchain').addEventListener('keydown', event => {
   if (event.key === 'Enter') runSkillChain();
@@ -2147,6 +2224,12 @@ class Handler(BaseHTTPRequestHandler):
                 "dir": _state.get("skills_dir", ""),
                 "data": registry.list() if registry else [],
             })
+        elif self.path == "/v1/skills/chains":
+            chains = _state.get("chains")
+            self._json(200, {
+                "dir": _state.get("chains_dir", ""),
+                "data": chains.list() if chains else [],
+            })
         elif (self.path == "/v1/graph"
               or self.path.startswith("/v1/graph?")):
             docs = _state.get("docs")
@@ -2332,6 +2415,7 @@ class Handler(BaseHTTPRequestHandler):
                          "/v1/learning/gaps/dismiss",
                          "/v1/curiosity/propose", "/v1/hungry/run",
                          "/v1/skills/run", "/v1/skills/chain",
+                         "/v1/skills/chains/run",
                          "/v1/briefing", "/v1/goals/plan",
                          "/v1/learn_url", "/v1/research",
                          "/v1/research/queue",
@@ -2393,6 +2477,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._skills_run(req)
             if route == "/v1/skills/chain":
                 return self._skills_chain(req)
+            if route == "/v1/skills/chains/run":
+                return self._skills_recipe_run(req)
             if route == "/v1/briefing":
                 return self._briefing(req)
             if route == "/v1/goals/plan":
@@ -2795,6 +2881,45 @@ class Handler(BaseHTTPRequestHandler):
                 registry, steps, query, _state.get("docs"),
                 _state.get("generator"),
                 carry_context=bool(req.get("carry_context", True)))
+        except ValueError as exc:
+            return self._json(400, {"error": str(exc)})
+        if safety is not None:
+            safe, verdict = safety.filter_reply(result.get("reply", ""))
+            if verdict is not None:
+                result = {**result, "reply": safe, "safety": verdict}
+        return self._json(200, result)
+
+    def _skills_recipe_run(self, req: dict):
+        chains = _state.get("chains")
+        skills = _state.get("skills")
+        if chains is None or skills is None:
+            return self._json(400, {
+                "error": "skills and chain recipes are required"})
+        name = str(req.get("name", "")).strip()
+        query = str(req.get("query", "")).strip()
+        if not name or not query:
+            return self._json(400, {"error": "name and query are required"})
+        from atomzero.skills import SkillError, execute_chain_recipe
+
+        try:
+            recipe = chains.get(name)
+        except SkillError as exc:
+            return self._json(404, {"error": str(exc)})
+        safety = _state.get("safety")
+        if safety is not None:
+            verdict = safety.check(query)
+            if verdict is not None:
+                return self._json(400, {
+                    "error": safety.refusal(verdict["category"]),
+                    "safety": verdict,
+                })
+        try:
+            carry = req.get("carry_context", None)
+            if carry is not None:
+                carry = bool(carry)
+            result = execute_chain_recipe(
+                recipe, query, skills, _state.get("docs"),
+                _state.get("generator"), carry_context=carry)
         except ValueError as exc:
             return self._json(400, {"error": str(exc)})
         if safety is not None:
@@ -3261,6 +3386,16 @@ def serve(model_path: str, tokenizer_path: str, host: str = "127.0.0.1",
                   f"{skills.directory}", flush=True)
     except Exception as exc:
         print(f"warning: skills disabled: {exc}", flush=True)
+    chains = None
+    try:
+        from atomzero.skills import ChainRecipeRegistry
+
+        chains = ChainRecipeRegistry.from_skills_dir(skills_dir)
+        if chains.recipes:
+            print(f"chain recipes: {len(chains.recipes)} loaded from "
+                  f"{chains.directory}", flush=True)
+    except Exception as exc:
+        print(f"warning: chain recipes disabled: {exc}", flush=True)
     teacher = None
     if teacher_url or teacher_model:
         try:
@@ -3311,6 +3446,8 @@ def serve(model_path: str, tokenizer_path: str, host: str = "127.0.0.1",
         "hungry_ledger_path": hungry_ledger_path,
         "skills": skills,
         "skills_dir": skills_dir,
+        "chains": chains,
+        "chains_dir": chains.directory if chains else "",
         "adapter_history_path": "data/adapter_history.jsonl",
         "active_adapter_file": active_adapter_file,
         "safety": safety,

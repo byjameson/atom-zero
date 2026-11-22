@@ -818,13 +818,16 @@ def test_ui_collection_scope_contract():
     assert "/v1/skills" in page
     assert "/v1/skills/run" in page
     assert "/v1/skills/chain" in page
+    assert "/v1/skills/chains" in page
     assert "Custom skills" in page
     assert 'id="skrefresh"' in page
     assert 'id="skillrun"' in page
     assert 'id="skillchainrun"' in page
+    assert 'id="chainreciperun"' in page
     assert "refreshSkills" in page
     assert "runSkill" in page
     assert "runSkillChain" in page
+    assert "runRecipe" in page
     assert "/v1/briefing" in page
     assert "/v1/goals/plan" in page
     assert "Daily brief" in page
@@ -1019,7 +1022,16 @@ def test_http_skills_endpoint(tmp_path):
         json.dumps(provider_skill), encoding="utf-8")
     (skills_dir / "chain.json").write_text(
         json.dumps(chain_skill), encoding="utf-8")
+    chain_dir = skills_dir / "chains"
+    chain_dir.mkdir()
+    (chain_dir / "demo-recipe.json").write_text(json.dumps({
+        "name": "demo-recipe",
+        "steps": ["demo-skill", "chain-skill"],
+        "carry_context": True,
+    }), encoding="utf-8")
     registry = SkillRegistry.from_dir(skills_dir)
+    from atomzero.skills import ChainRecipeRegistry
+    chains = ChainRecipeRegistry.from_skills_dir(skills_dir)
     docs = DocMemory(tmp_path / "docs.db")
     docs.add_text("notes/launch.txt", "The launch code is L-7781.")
     calls = []
@@ -1031,6 +1043,7 @@ def test_http_skills_endpoint(tmp_path):
     old = dict(chat_server._state)
     chat_server._state.update({
         "skills": registry, "skills_dir": str(skills_dir),
+        "chains": chains, "chains_dir": chains.directory,
         "docs": docs, "generator": generator,
     })
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
@@ -1043,6 +1056,15 @@ def test_http_skills_endpoint(tmp_path):
         assert data["dir"] == str(skills_dir)
         assert {item["name"] for item in data["data"]} == {
             "demo-skill", "provider-skill", "chain-skill"}
+        recipes = json.loads(urllib.request.urlopen(
+            base + "/v1/skills/chains", timeout=10).read().decode("utf-8"))
+        assert recipes["data"][0]["name"] == "demo-recipe"
+        recipe_run = _post(base + "/v1/skills/chains/run", {
+            "name": "demo-recipe", "query": "launch code"})
+        assert recipe_run["recipe"] == "demo-recipe"
+        assert recipe_run["reply"].startswith("Chain previous:")
+        assert "Demo:" in recipe_run["reply"]
+        assert recipe_run["provider_calls"] == 0
         template = _post(base + "/v1/skills/run", {
             "name": "demo-skill", "query": "launch code"})
         assert template["reply"].startswith("Demo:")

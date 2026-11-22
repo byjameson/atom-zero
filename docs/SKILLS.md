@@ -113,6 +113,45 @@ Semantics:
 
 The UI **Custom skills** panel has a chain field and **Run chain** button.
 
+## Named chain recipes
+
+Persist a chain under `data/skills/chains/<name>.json`:
+
+```json
+{
+  "name": "research-brief",
+  "description": "tutor then brainstorm",
+  "steps": [
+    "study-tutor",
+    {"name": "brainstorm", "query": "improve this explanation: {previous}"}
+  ],
+  "carry_context": true
+}
+```
+
+Each step can be a skill name or `{ "name": ..., "query": ... }`. The recipe
+stores the default `carry_context`; a caller can override it.
+
+CLI:
+
+```powershell
+atomzero-skills --dir data\skills recipes
+atomzero-skills --dir data\skills recipe research-brief "warranty policy" `
+  --docs data\atomzero_demo.db
+```
+
+HTTP:
+
+```text
+GET  /v1/skills/chains
+POST /v1/skills/chains/run
+{"name": "research-brief", "query": "warranty policy"}
+```
+
+The UI **Custom skills** panel loads named recipes into a select and has a
+**Run recipe** button. The response includes `recipe`, every step, merged
+sources/evidence and `provider_calls`.
+
 ## UI and API
 
 - `GET /v1/skills` lists enabled skills and the skills directory.

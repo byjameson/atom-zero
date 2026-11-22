@@ -46,6 +46,10 @@ work stays on `main`; see `docs/RELEASING.md`.
 - Added `benchmarks/skills_chain_regression.py` (6/6 checks).
 - Added `benchmarks/skills_chain_ui_regression.py` (6/6 checks): UI contract +
   the exact chain request through the real handler.
+- Added named chain recipes under `data/skills/chains`: `atomzero-skills
+  recipes` / `recipe`, `GET /v1/skills/chains`,
+  `POST /v1/skills/chains/run` and a UI recipe select/run control.
+- Added `benchmarks/skills_recipe_regression.py` (6/6 checks).
 
 ## atomzero 0.4.2 - UI collection scope (2026-11-22)
 
