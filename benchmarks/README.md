@@ -36,6 +36,16 @@ python benchmarks/weekly_review_regression.py
 Latest result: **6/6 checks pass**. Raw result:
 [`results/weekly_review_regression.json`](results/weekly_review_regression.json).
 
+`benchmarks/weekly_chat_regression.py` checks the chat intent, task counts,
+text sections, sources, graph and the 14-day Turkish window.
+
+```powershell
+python benchmarks/weekly_chat_regression.py
+```
+
+Latest result: **6/6 checks pass**. Raw result:
+[`results/weekly_chat_regression.json`](results/weekly_chat_regression.json).
+
 ## Graph-path regression
 
 `benchmarks/graph_path_regression.py` checks the UI path controls, the

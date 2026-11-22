@@ -214,16 +214,20 @@ def build_weekly_review(session_data: dict | None, gaps, docs,
         next_week.append(
             f"Explore the graph around {nodes[0].get('name', '')}")
     next_week.append("Run a skill or named recipe for a recurring task")
+    period_label = ("this week" if days == 7
+                    else f"in the last {days} days")
+    completed_label = ("Completed this week:" if days == 7
+                       else f"Completed in the last {days} days:")
     lines = [
         f"Weekly review - {stamp} (last {days} days)",
         f"Tasks: {len(open_tasks)} open | {len(completed_recent)} "
-        f"completed this week",
+        f"completed {period_label}",
         "Open:",
     ]
     lines.extend(f"- {task.get('id')}: {task.get('text', '')}"
                  for task in open_tasks[:8])
     if completed_recent:
-        lines.append("Completed this week:")
+        lines.append(completed_label)
         lines.extend(f"- {task.get('id')}: {task.get('text', '')}"
                      for task in completed_recent[:8])
     if completed_undated:

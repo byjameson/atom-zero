@@ -7,7 +7,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from atomzero.briefing import build_briefing, plan_goal
+from atomzero.briefing import build_briefing, build_weekly_review, plan_goal
 from atomzero.contradictions import compare_sources
 from atomzero.doc_memory import format_citation, grounded_answer
 from atomzero.knowledge_gaps import KnowledgeGapError
@@ -326,6 +326,31 @@ class AgentSession:
             "weights_changed": False,
         }
 
+    def _weekly_review(self, days: int = 7) -> dict:
+        review = build_weekly_review(
+            self.human.data, self.gap_store, self.docs, days=days)
+        sources = []
+        for item in review.get("recent_sources", []):
+            source = {
+                "source": item.get("source", ""),
+                "title": (item.get("title") or item.get("source", "")),
+                "kind": item.get("kind", "document"),
+                "source_url": item.get("source_url", ""),
+                "verified": bool(item.get("verified", False)),
+            }
+            if source not in sources:
+                sources.append(source)
+        return {
+            "reply": review["text"],
+            "tool_calls": [{
+                "name": "weekly_review",
+                "days": review.get("period_days", days),
+            }],
+            "sources": sources,
+            "review": review,
+            "weights_changed": False,
+        }
+
     def _plan_goal(self, goal: str, confirm: bool = False) -> dict:
         if confirm:
             if self.pending_plan is None:
@@ -417,10 +442,11 @@ class AgentSession:
         if low in ("what can you do", "what can you do?", "help"):
             return {
                 "reply": ("I can keep short personal notes, manage tasks, "
-                          "search your local documents, look up Wikipedia "
-                          "with sources, calculate simple arithmetic, and "
-                          "tell the time. I am a small local model, so I am "
-                          "not a general reasoning or coding assistant."),
+                          "build daily briefs and weekly reviews, search "
+                          "your local documents, look up Wikipedia with "
+                          "sources, calculate simple arithmetic, and tell "
+                          "the time. I am a small local model, so I am not "
+                          "a general reasoning or coding assistant."),
                 "tool_calls": [{"name": "help"}], "sources": [],
             }
         expression = math_query(text)
@@ -492,6 +518,22 @@ class AgentSession:
         if low in ("brief me", "brief me?", "daily brief", "daily brief?",
                    "what should i do today", "what should i do today?"):
             return self._briefing()
+        weekly_match = re.match(
+            r"^(?:(?:weekly|week)\s+(?:review|summary)|"
+            r"haftal[ıi]k\s+(?:özet|rapor|değerlendirme))"
+            r"(?:\s+(?:for|last|son)?\s*(?P<days>\d+)\s*"
+            r"(?:days?|gün))?\??$",
+            text, re.IGNORECASE)
+        if not weekly_match:
+            weekly_match = re.match(
+                r"^son\s+(?P<days>\d+)\s+gün(?:ün)?\s+özeti\??$",
+                text, re.IGNORECASE)
+        if not weekly_match:
+            weekly_match = re.match(
+                r"^bu\s+haftan[ıi]n\s+özeti\??$", text, re.IGNORECASE)
+        if weekly_match:
+            days_raw = weekly_match.groupdict().get("days")
+            return self._weekly_review(int(days_raw) if days_raw else 7)
         plan_match = re.match(
             r"^(?:plan goal|goal plan)\s*:?\s*(.+)$", text, re.IGNORECASE)
         if plan_match:

@@ -166,6 +166,42 @@ def test_agent_brief_me_returns_local_brief(tmp_path):
     docs.close()
 
 
+def test_agent_weekly_review_intent(tmp_path):
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("notes/launch.txt", "The launch code is L-7781.",
+                  title="Launch")
+    gaps = KnowledgeGapStore(tmp_path / "gaps.json")
+    gaps.add("What is the warranty claim deadline?")
+    agent = AgentSession(
+        "s-weekly", tmp_path / "memory.json", docs=docs, gap_store=gaps)
+    agent.chat("add task buy milk")
+    agent.chat("add task write report")
+    agent.chat("complete task 1")
+    result = agent.chat("weekly review")
+    assert "Weekly review" in result["reply"]
+    assert "1 open | 1 completed this week" in result["reply"]
+    assert "write report" in result["reply"]
+    assert "buy milk" in result["reply"]
+    assert "What is the warranty claim deadline?" in result["reply"]
+    assert "L-7781" in {node["name"]
+                        for node in result["review"]["graph"]["entities"]}
+    assert result["tool_calls"][0] == {"name": "weekly_review", "days": 7}
+    assert result["review"]["task_counts"]["completed_recent"] == 1
+    assert result["review"]["pending_gap_count"] == 1
+    assert result["review"]["recent_source_count"] == 1
+    assert result["sources"][0]["source"] == "notes/launch.txt"
+    assert result["weights_changed"] is False
+
+    turkish = agent.chat("haftalık özet 14 gün")
+    assert turkish["tool_calls"][0] == {"name": "weekly_review", "days": 14}
+    assert "last 14 days" in turkish["reply"]
+    assert "completed in the last 14 days" in turkish["reply"]
+    assert "Completed in the last 14 days:" in turkish["reply"]
+    son = agent.chat("son 14 günün özeti")
+    assert son["review"]["period_days"] == 14
+    docs.close()
+
+
 def test_agent_plan_goal_requires_confirmation(tmp_path):
     docs = DocMemory(tmp_path / "docs.db")
     docs.add_text("notes/warranty.txt",

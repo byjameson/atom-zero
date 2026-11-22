@@ -1299,6 +1299,60 @@ def test_http_weekly_review(tmp_path):
         docs.close()
 
 
+def test_http_chat_weekly_review(tmp_path):
+    try:
+        docs = DocMemory(tmp_path / "docs.db")
+    except Exception as exc:
+        pytest.skip(f"sqlite fts5 unavailable: {exc}")
+    docs.add_text("notes/launch.txt", "The launch code is L-7781.",
+                  title="Launch")
+    gaps = KnowledgeGapStore(tmp_path / "gaps.json")
+    gaps.add("What is the warranty claim deadline?")
+    old = dict(chat_server._state)
+    chat_server._state.update({
+        "model": None, "tok": None, "docs": docs, "adapter": "",
+        "name": "tiny-test", "params": 1, "config": {}, "step": 0,
+        "api_key": "", "metrics": {"requests": 0, "generated_tokens": 0},
+        "safety": None, "wiki_lang": "en", "gaps": gaps,
+        "session_dir": str(tmp_path / "sessions"), "sessions": {},
+        "generator": None, "allow_general_chat": False, "skills": None,
+    })
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        _post(base + "/v1/agent/chat", {
+            "session_id": "week-chat", "message": "add task buy milk"})
+        _post(base + "/v1/agent/chat", {
+            "session_id": "week-chat", "message": "add task write report"})
+        _post(base + "/v1/agent/chat", {
+            "session_id": "week-chat", "message": "complete task 1"})
+        result = _post(base + "/v1/agent/chat", {
+            "session_id": "week-chat", "message": "weekly review"})
+        assert result["tool_calls"][0] == {
+            "name": "weekly_review", "days": 7}
+        assert result["review"]["task_counts"] == {
+            "open": 1, "completed_recent": 1, "completed_total": 1}
+        assert result["review"]["pending_gap_count"] == 1
+        assert result["review"]["recent_source_count"] == 1
+        assert "Weekly review" in result["reply"]
+        assert "write report" in result["reply"]
+        assert "buy milk" in result["reply"]
+        assert result["sources"][0]["source"] == "notes/launch.txt"
+        assert result["weights_changed"] is False
+        turkish = _post(base + "/v1/agent/chat", {
+            "session_id": "week-chat", "message": "haftalık özet 14 gün"})
+        assert turkish["tool_calls"][0]["days"] == 14
+        assert "last 14 days" in turkish["reply"]
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
+        docs.close()
+
+
 def test_http_briefing_and_goal_plan(tmp_path):
     try:
         docs = DocMemory(tmp_path / "docs.db")

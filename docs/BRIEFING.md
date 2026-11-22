@@ -47,11 +47,27 @@ Completions carry `completed` timestamps when tasks are finished through
 `ChatHuman`; older undated completions are listed separately rather than
 silently dropped. The UI **Weekly review** button uses the same endpoint.
 
+Chat also runs the review directly:
+
+```text
+weekly review
+weekly review for 14 days
+haftalık özet
+haftalık özet 14 gün
+son 14 günün özeti
+```
+
+The reply contains the same review text and exposes the full `review` payload
+(tasks, gaps, sources, graph, highlights and next actions) to clients.
+
 ## Chat flow
 
 ```text
 brief me
 -> daily brief in the chat: open tasks, pending gaps, index and graph
+
+weekly review
+-> weekly review; optionally "for 14 days" or "14 gün"
 
 plan goal prepare the warranty page
 -> cited plan skeleton, no task creation

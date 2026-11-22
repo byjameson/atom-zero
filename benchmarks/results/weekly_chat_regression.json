@@ -1,0 +1,39 @@
+{
+  "benchmark": "atomzero-weekly-chat-regression",
+  "generated": "2026-11-22T22:41:49",
+  "checks": [
+    {
+      "name": "chat_weekly_tool",
+      "ok": true,
+      "detail": "[{'name': 'weekly_review', 'days': 7}]"
+    },
+    {
+      "name": "chat_weekly_tasks",
+      "ok": true,
+      "detail": "{'open': 1, 'completed_recent': 1, 'completed_total': 1}"
+    },
+    {
+      "name": "chat_weekly_sections",
+      "ok": true,
+      "detail": "Weekly review - 2026-11-22 22:41 (last 7 days)\nTasks: 1 open | 1 completed this week\nOpen:\n- 2: write report\nCompleted this week:\n- 1: buy milk\nGaps: 1 pending\n- What is the warranty claim deadline?\nRecent sources: 1\n- L"
+    },
+    {
+      "name": "chat_weekly_sources",
+      "ok": true,
+      "detail": "[{'source': 'notes/launch.txt', 'title': 'Launch', 'kind': 'document', 'source_url': '', 'verified': True}]"
+    },
+    {
+      "name": "chat_weekly_honest",
+      "ok": true,
+      "detail": "{'entities': [{'id': 'l-7781', 'name': 'L-7781', 'mentions': 1, 'sources': 1}], 'connections': []}"
+    },
+    {
+      "name": "chat_weekly_days",
+      "ok": true,
+      "detail": "Weekly review - 2026-11-22 22:41 (last 14 days)\nTasks: 1 open | 1 completed in the last 14 days\nOpen:\n- 2: write report\nCompleted in the last 14 days:\n- 1: buy "
+    }
+  ],
+  "passed": 6,
+  "failed": 0,
+  "ok": true
+}
