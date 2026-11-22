@@ -33,7 +33,7 @@ this repository.
 teacher. Pass `-NoTeacher` to run without it. The direct command is:
 
 ```bash
-python -m streamft.chat_server \
+python -m atomzero.chat_server \
   --model checkpoints/transformer_behavior_50m_long \
   --adapter auto --docs data/docs.db \
   --teacher-url http://127.0.0.1:11434/v1 \
@@ -60,7 +60,7 @@ whole research run.
 ## Test
 
 ```python
-from streamft.teacher_provider import TeacherProvider
+from atomzero.teacher_provider import TeacherProvider
 teacher = TeacherProvider(
     "http://127.0.0.1:11434/v1", "llama3.2:3b", "", 60, "ollama")
 print(teacher.ask("Say hello in one short sentence.", max_tokens=32))
@@ -93,7 +93,7 @@ The same local Ollama endpoint can serve free-form chat while RAG and tools stay
 local. This is not the default backend; the 49.2M model remains the default.
 
 ```powershell
-python -m streamft.chat_server `
+python -m atomzero.chat_server `
   --model checkpoints/transformer_behavior_50m_scaled `
   --tokenizer data/chat_en_bpe8k.json `
   --docs data/docs.db `

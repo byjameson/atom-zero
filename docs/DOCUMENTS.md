@@ -77,10 +77,25 @@ browser.
 ### CLI
 
 ```powershell
-python -m streamft.doc_memory add manual.pdf --db data/docs.db
-python -m streamft.doc_memory add policy.docx --db data/docs.db
-python -m streamft.doc_memory --db data/docs.db search "warranty code"
+atomzero-docs add manual.pdf --db data/docs.db
+atomzero-docs add .\notes --db data/docs.db --skip-unchanged
+atomzero-docs search "warranty code" --db data/docs.db
+atomzero-docs search "warranty" --db data/docs.db --source policy.docx
+atomzero-docs evidence policy.docx --section Warranty --db data/docs.db
+atomzero-docs list --db data/docs.db
+atomzero-docs forget policy.docx --db data/docs.db
 ```
+
+`add` accepts a file or a directory. Directory mode is recursive by default,
+uses the supported suffix list above, and reports per-file chunks, hashes,
+skips and failures. With `--skip-unchanged`, a file whose extracted content
+hash matches the stored hash is not deleted or re-embedded. With `--dedupe`,
+a file whose extracted content hash already exists under another source is
+skipped and reported as `duplicate_of` instead of being indexed twice.
+
+`search` accepts `--source` (exact), `--source-prefix`, `--kind` (`document`
+or `teacher`) and `--no-rerank`. It prints JSON, so it can be piped into other
+local tools. `python -m atomzero.doc_memory ...` is the same CLI.
 
 ### HTTP
 
@@ -98,8 +113,41 @@ POST /v1/documents
 {"source": "notes.md", "title": "Notes", "text": "# Warranty\n..."}
 ```
 
+`POST /v1/documents/search` also accepts an optional exact `source` field:
+
+```text
+{"query": "warranty code", "k": 5, "source": "policy.docx"}
+```
+
+### Grounded answer API
+
+```text
+POST /v1/documents/answer
+{"query": "what is the warranty period?", "source": "policy.docx"}
+```
+
+The response contains the cited note text, the source map, per-hit evidence and
+a match-confidence object:
+
+```json
+{
+  "text": "I found these notes: ...",
+  "sources": [{"source": "policy.docx", "title": "Warranty"}],
+  "evidence": [{"source": "policy.docx", "snippet": "...", "score": 0.71}],
+  "confidence": {"score": 0.62, "label": "medium",
+                 "coverage": 0.75, "margin": 0.12}
+}
+```
+
+The confidence score is a transparent heuristic over the rerank score, query
+term coverage and the runner-up margin. It is **not** a calibrated probability
+and it does not replace reading the cited source. When nothing matches, the
+endpoint returns the no-source answer with an empty source list rather than
+inventing a fact.
+
 Re-adding the same `source` replaces its chunks, page/section metadata and
-cached vectors.
+cached vectors. Directory sync with `--skip-unchanged` avoids that work when
+the extracted content hash is identical.
 
 ## Limits
 

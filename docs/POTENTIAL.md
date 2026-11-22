@@ -53,7 +53,7 @@ The server can route free-form chat to any OpenAI-compatible local endpoint
 while keeping RAG, tools and memory local. The default remains the 50M model.
 
 ```powershell
-python -m streamft.chat_server `
+python -m atomzero.chat_server `
   --model checkpoints/transformer_behavior_50m_scaled `
   --tokenizer data/chat_en_bpe8k.json `
   --docs data/docs.db `

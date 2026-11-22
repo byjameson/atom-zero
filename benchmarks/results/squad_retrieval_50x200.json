@@ -17,17 +17,25 @@
       "top5_context": 1.0,
       "top1_answer": 0.9223300970873787,
       "top5_answer": 1.0,
+      "top1_answer_snippet": 0.7864077669902912,
+      "top5_answer_snippet": 0.8737864077669902,
       "mrr": 0.9736666666666666
     },
     "hybrid": {
       "questions": 200,
       "answerable": 103,
       "no_answer": 97,
-      "top1_context": 0.97,
+      "top1_context": 0.975,
       "top5_context": 1.0,
-      "top1_answer": 0.9514563106796117,
+      "top1_answer": 0.9611650485436893,
       "top5_answer": 1.0,
-      "mrr": 0.9799166666666665
+      "top1_answer_snippet": 0.8252427184466019,
+      "top5_answer_snippet": 0.8737864077669902,
+      "mrr": 0.9841666666666667,
+      "mean_confidence_answerable": 0.5853495145631067,
+      "mean_confidence_no_answer": 0.5833917525773197,
+      "low_confidence_rate_answerable": 0.0,
+      "low_confidence_rate_no_answer": 0.010309278350515464
     }
   }
 }

@@ -9,7 +9,7 @@ complete moderation system.
 ## Enable it
 
 ```bash
-python -m streamft.chat_server \
+python -m atomzero.chat_server \
   --model checkpoints/transformer_behavior_50m_long \
   --adapter auto --docs data/docs.db \
   --safety-filter
@@ -65,7 +65,7 @@ The v0.3 ML layer is intentionally small and local:
 - frozen `sentence-transformers/all-MiniLM-L6-v2` embeddings (already used by
   the neural reranker);
 - a 384-dimensional linear harm gate plus an 8-way category head, stored in
-  `streamft/moderation_head.json` (about 58 KB);
+  `atomzero/moderation_head.json` (about 58 KB);
 - trained on 349 generated examples (`research/moderation_data.jsonl`), with
   the authored red-team and semantic holdout excluded;
 - input threshold 0.495, output threshold 0.90;

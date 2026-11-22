@@ -4,6 +4,8 @@ This measures retrieval, not generation:
 
 - top-1 / top-5 context accuracy
 - top-1 / top-5 answer-in-retrieved-chunk
+- top-1 / top-5 answer-in-visible-snippet
+- retrieval confidence on answerable vs no-answer questions
 - MRR of the gold context
 
 The benchmark uses `rajpurkar/squad_v2` validation contexts. Each context is
@@ -18,7 +20,8 @@ import re
 import tempfile
 from pathlib import Path
 
-from atomzero.doc_memory import DocMemory
+from atomzero.doc_memory import (
+    DocMemory, best_snippet, retrieval_confidence)
 
 
 def normalize(text: str) -> str:
@@ -30,6 +33,15 @@ def answer_in_chunks(answer: str, hits: list[dict]) -> bool:
     if not needle:
         return False
     return any(needle in normalize(hit.get("chunk", "")) for hit in hits)
+
+
+def answer_in_snippets(question: str, answer: str, hits: list[dict]) -> bool:
+    """Check the answer in the sentence the product would actually show."""
+    needle = normalize(answer)
+    if not needle:
+        return False
+    return any(needle in normalize(best_snippet(question, hit.get("chunk", "")))
+               for hit in hits)
 
 
 def reciprocal_rank(source: str, hits: list[dict]) -> float:
@@ -77,28 +89,48 @@ def run(max_contexts: int, max_questions: int, per_context: int, seed: int,
             results = {}
             for mode in ("fts", "hybrid"):
                 top1 = top5 = answer1 = answer5 = 0
+                snippet1 = snippet5 = 0
                 rr = 0.0
                 answerable = 0
                 no_answer = 0
+                conf_answerable = conf_no_answer = 0.0
+                low_answerable = low_no_answer = 0
                 for row in rows:
                     gold = contexts[row["context"]]
-                    hits = docs.search(row["question"], k=5, rerank=(mode == "hybrid"))
+                    hits = docs.search(
+                        row["question"], k=5, rerank=(mode == "hybrid"))
                     if hits and hits[0].get("source") == gold:
                         top1 += 1
                     if any(hit.get("source") == gold for hit in hits):
                         top5 += 1
                     rr += reciprocal_rank(gold, hits)
+                    confidence = (retrieval_confidence(row["question"], hits)
+                                  if mode == "hybrid" else None)
                     answers = row["answers"]["text"]
                     if answers:
                         answerable += 1
+                        if confidence is not None:
+                            conf_answerable += confidence["score"]
+                            if confidence["label"] == "low":
+                                low_answerable += 1
                         if hits and answer_in_chunks(answers[0], hits[:1]):
                             answer1 += 1
                         if answer_in_chunks(answers[0], hits):
                             answer5 += 1
+                        if hits and answer_in_snippets(
+                                row["question"], answers[0], hits[:1]):
+                            snippet1 += 1
+                        if answer_in_snippets(
+                                row["question"], answers[0], hits):
+                            snippet5 += 1
                     else:
                         no_answer += 1
+                        if confidence is not None:
+                            conf_no_answer += confidence["score"]
+                            if confidence["label"] == "low":
+                                low_no_answer += 1
                 n = len(rows)
-                results[mode] = {
+                result = {
                     "questions": n,
                     "answerable": answerable,
                     "no_answer": no_answer,
@@ -106,8 +138,22 @@ def run(max_contexts: int, max_questions: int, per_context: int, seed: int,
                     "top5_context": top5 / max(1, n),
                     "top1_answer": answer1 / max(1, answerable),
                     "top5_answer": answer5 / max(1, answerable),
+                    "top1_answer_snippet": snippet1 / max(1, answerable),
+                    "top5_answer_snippet": snippet5 / max(1, answerable),
                     "mrr": rr / max(1, n),
                 }
+                if mode == "hybrid":
+                    result.update({
+                        "mean_confidence_answerable":
+                            conf_answerable / max(1, answerable),
+                        "mean_confidence_no_answer":
+                            conf_no_answer / max(1, no_answer),
+                        "low_confidence_rate_answerable":
+                            low_answerable / max(1, answerable),
+                        "low_confidence_rate_no_answer":
+                            low_no_answer / max(1, no_answer),
+                    })
+                results[mode] = result
         finally:
             docs.close()
 

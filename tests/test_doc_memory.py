@@ -3,8 +3,8 @@ import json
 import pytest
 
 from atomzero.doc_memory import (
-    DocMemory, SourceNotFound, _chunks, ann_topk, best_snippet, embed_text,
-    main)
+    DocMemory, SourceNotFound, _chunks, ann_topk, best_snippet, diverse_hits,
+    embed_text, main, retrieval_confidence)
 
 
 def test_doc_memory_indexes_and_searches_with_source(tmp_path):
@@ -236,3 +236,127 @@ def test_cli_accepts_db_after_subcommand(tmp_path, capsys):
     main(["--db", str(db), "search", "codename"])
     hits = json.loads(capsys.readouterr().out)
     assert "Blue Lantern" in hits[0]["chunk"]
+
+
+def test_search_filters_by_source_prefix_and_kind(tmp_path):
+    mem = DocMemory(tmp_path / "docs.db")
+    mem.add_text("launch.txt", "The launch code is L-7781.", title="Launch")
+    mem.add_text("warranty.txt", "The warranty code is W-9000.",
+                 title="Warranty")
+    mem.add_text("teacher://chatgpt/1", "The teacher code is T-42.",
+                 title="Teacher", meta={"kind": "teacher"})
+    hits = mem.search("code", source="launch.txt")
+    assert [hit["source"] for hit in hits] == ["launch.txt"]
+    assert mem.search("code", source="missing.txt") == []
+    assert [hit["source"] for hit in mem.search(
+        "code", source_prefix="launch")] == ["launch.txt"]
+    assert [hit["source"] for hit in mem.search(
+        "code", kind="teacher")] == ["teacher://chatgpt/1"]
+    with pytest.raises(ValueError):
+        mem.search("code", source="bad\nsource")
+    mem.close()
+
+
+def test_add_file_result_skips_unchanged_content(tmp_path):
+    note = tmp_path / "note.txt"
+    note.write_text("The project codename is Blue Lantern.", encoding="utf-8")
+    mem = DocMemory(tmp_path / "docs.db")
+    first = mem.add_file_result(note)
+    assert first["chunks"] == 1
+    assert first["skipped"] is False
+    assert len(first["content_sha256"]) == 64
+    assert len(first["file_sha256"]) == 64
+    second = mem.add_file_result(note, skip_if_unchanged=True)
+    assert second["chunks"] == 0
+    assert second["skipped"] is True
+    assert mem.stats()["sources"] == 1
+    note.write_text("The project codename is Red Lantern.", encoding="utf-8")
+    third = mem.add_file_result(note, skip_if_unchanged=True)
+    assert third["skipped"] is False
+    assert third["chunks"] == 1
+    assert mem.search("Red Lantern")[0]["source"] == str(note)
+    mem.close()
+
+
+def test_add_directory_ingests_supported_files_and_skips_unchanged(tmp_path):
+    source = tmp_path / "corpus"
+    source.mkdir()
+    (source / "launch.txt").write_text(
+        "The launch code is L-7781.", encoding="utf-8")
+    (source / "warranty.md").write_text(
+        "# Warranty\n\nThe warranty period is 24 months.", encoding="utf-8")
+    (source / "ignore.bin").write_bytes(b"\x00\x01")
+    mem = DocMemory(tmp_path / "docs.db")
+    first = mem.add_directory(source, skip_if_unchanged=True)
+    assert first["files"] == 2
+    assert first["chunks"] == 2
+    assert first["failed"] == 0
+    assert first["skipped"] == 0
+    second = mem.add_directory(source, skip_if_unchanged=True)
+    assert second["files"] == 2
+    assert second["chunks"] == 0
+    assert second["skipped"] == 2
+    assert mem.stats()["sources"] == 2
+    mem.close()
+
+
+def test_cli_directory_ingest_and_source_filter(tmp_path, capsys):
+    source = tmp_path / "corpus"
+    source.mkdir()
+    note = source / "launch.txt"
+    note.write_text("The launch code is L-7781.", encoding="utf-8")
+    db = tmp_path / "docs.db"
+    main(["add", str(source), "--db", str(db)])
+    added = json.loads(capsys.readouterr().out)
+    assert added["files"] == 1
+    assert added["added"] == 1
+    main(["search", "launch code", "--db", str(db),
+          "--source", str(note)])
+    hits = json.loads(capsys.readouterr().out)
+    assert len(hits) == 1
+    assert hits[0]["source"] == str(note)
+    main(["stats", "--db", str(db)])
+    stats = json.loads(capsys.readouterr().out)
+    assert stats["sources"] == 1
+
+
+def test_diverse_hits_and_retrieval_confidence():
+    hits = [
+        {"source": "a", "chunk": "The launch code is L-7781.",
+         "title": "Launch", "rerank_score": 0.9},
+        {"source": "a", "chunk": "The launch code is L-7781.",
+         "title": "Launch", "rerank_score": 0.8},
+        {"source": "a", "chunk": "Another launch note.",
+         "title": "Launch", "rerank_score": 0.7},
+        {"source": "b", "chunk": "The warranty code is W-9000.",
+         "title": "Warranty", "rerank_score": 0.5},
+    ]
+    selected = diverse_hits(hits, limit=3, per_source=2)
+    assert [hit["source"] for hit in selected] == ["a", "a", "b"]
+    confidence = retrieval_confidence("what is the launch code?", selected)
+    assert 0.0 <= confidence["score"] <= 1.0
+    assert confidence["label"] in {"low", "medium", "high"}
+    assert retrieval_confidence("launch", [])["label"] == "none"
+
+
+def test_directory_dedupe_skips_same_content_under_another_name(tmp_path):
+    source = tmp_path / "corpus"
+    source.mkdir()
+    (source / "a.txt").write_text(
+        "The launch code is L-7781.", encoding="utf-8")
+    (source / "copy.txt").write_text(
+        "The launch code is L-7781.", encoding="utf-8")
+    mem = DocMemory(tmp_path / "docs.db")
+    result = mem.add_directory(source, dedupe_across_sources=True)
+    assert result["files"] == 2
+    assert result["chunks"] == 1
+    assert result["duplicates"] == 1
+    duplicate = next(item for item in result["results"]
+                     if item.get("duplicate_of"))
+    assert duplicate["duplicate_of"][0]["source"] == str(source / "a.txt")
+    assert mem.stats()["sources"] == 1
+    assert mem.find_by_content_sha(duplicate["content_sha256"])[0][
+        "source"] == str(source / "a.txt")
+    with pytest.raises(ValueError):
+        mem.find_by_content_sha("not-a-sha")
+    mem.close()

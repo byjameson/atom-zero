@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased - document workflow and grounded answers
+
+- Added `atomzero-docs`, a headless CLI for add/list/search/evidence/forget.
+- Added recursive directory ingestion with per-file reports,
+  `--skip-unchanged` and `--dedupe` content-hash deduplication.
+- Added source, source-prefix and kind filters to document search.
+- Added `POST /v1/documents/answer`: cited answer, evidence list and a
+  transparent heuristic match-confidence score.
+- Improved lexical reranking with a small morphology allowance
+  (`claim`/`claims`, `submit`/`submitted`).
+- Added a "Grounded answer" control, an indexed-source picker, per-document
+  "Ask", and "Copy citation" actions to the local document UI.
+- Added answer-in-visible-snippet and confidence metrics to the public SQuAD
+  retrieval benchmark.
+- Added tests for all of the above.
+
 ## atomzero 0.2.0 - public benchmark and demo UI (2026-11-22)
 
 - Added a public SQuAD v2 retrieval benchmark (`benchmarks/squad_retrieval.py`)

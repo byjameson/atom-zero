@@ -3,8 +3,8 @@
 ## What this is
 
 **Atom Zero** is a tiny transformer language model trained from scratch for
-short English daily-assistant turns. The Python package and CLI remain
-`streamft`; Atom Zero is the product name.
+short English daily-assistant turns. The standalone package and CLI are
+`atomzero`; the low-VRAM trainer remains the separate `streamft` package.
 
 License: Apache-2.0 for code and model weights; training-data attribution is in
 [`NOTICE`](../NOTICE). The source text remains under its original dataset
@@ -173,7 +173,7 @@ obligations; legal/provenance review is required before redistribution.
 ## Runtime
 
 ```bash
-python -m streamft.chat_server \
+python -m atomzero.chat_server \
   --model checkpoints/transformer_behavior_50m_long \
   --adapter checkpoints/adapters_50m/v0001 \
   --docs data/docs.db \
@@ -365,7 +365,7 @@ POSTs `/v1/teacher/ask`:
 ollama serve
 ollama pull llama3.2:3b
 
-python -m streamft.chat_server \
+python -m atomzero.chat_server \
   --model checkpoints/transformer_behavior_50m_long \
   --docs data/docs.db \
   --teacher-url http://127.0.0.1:11434/v1 \
@@ -443,7 +443,7 @@ want a generalization estimate.
 Start the server with:
 
 ```bash
-python -m streamft.chat_server \
+python -m atomzero.chat_server \
   --model checkpoints/transformer_behavior_50m_long \
   --adapter auto \
   --active-adapter-file data/active_adapter.json \
@@ -581,7 +581,7 @@ topics; pending/rejected items never touch the network.
 
 ```cron
 # Linux/macOS cron: daily at 09:00
-0 9 * * * cd /path/to/stream-finetune && python research/research_queue.py --queue data/research_queue.json run --db data/docs.db --limit 1
+0 9 * * * cd /path/to/atom-zero && python research/research_queue.py --queue data/research_queue.json run --db data/docs.db --limit 1
 ```
 
 Add `-TeacherUrl http://127.0.0.1:11434/v1 -TeacherModel llama3.2:3b` to the
@@ -622,7 +622,7 @@ python research/chat_human.py --arch transformer \
 Add your own facts/documents (RAG, no weight update):
 
 ```bash
-python -m streamft.doc_memory add data/notes.txt --db data/docs.db
+atomzero-docs add data/notes.txt --db data/docs.db
 python research/chat_human.py --arch transformer \
   --model checkpoints/transformer_behavior_50m_long \
   --docs data/docs.db
@@ -632,7 +632,7 @@ See [`PERSONALIZE.md`](PERSONALIZE.md) for the bring-your-own-data workflow.
 
 ### LoRA adapters
 
-`streamft/lora.py` supports small MLP adapters on the frozen base. A gated
+`atomzero/lora.py` supports small MLP adapters on the frozen base. A gated
 adapter has **368,640 trainable parameters** (~0.74% of 49.2M) and is ~1.5 MB:
 
 - queue-target gain **+38.2%**;
@@ -647,7 +647,7 @@ accepted again with **+38.19%** target gain, clean bpb **+0.079%**, assistant
 (`research/results/gated_lora_recheck.json`). This is a reproducibility check,
 not a new capability claim.
 
-Load one with `--adapter` in `streamft.chat_server`, `research/chat_human.py`,
+Load one with `--adapter` in `atomzero.chat_server`, `research/chat_human.py`,
 `research/eval_transformer_chat.py`, `research/behavior_eval.py` or
 `research/eval_chat_human.py`. Train with `research/train_lora.py` or the gated
 adapter command in [`PERSONALIZE.md`](PERSONALIZE.md).

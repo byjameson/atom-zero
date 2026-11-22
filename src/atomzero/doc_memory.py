@@ -107,6 +107,30 @@ def _query_terms(text: str) -> set[str]:
             if len(word) > 2 and word not in STOPWORDS}
 
 
+def _term_coverage(terms: set[str], text: str) -> float:
+    """Fraction of query terms present, with a small morphology allowance.
+
+    Exact token overlap misses ``claim``/``claims`` and
+    ``submit``/``submitted``. Requiring both tokens to be at least four
+    characters keeps this from turning into an aggressive fuzzy match.
+    """
+    if not terms:
+        return 0.0
+    words = _query_terms(text)
+    matched = 0
+    for term in terms:
+        if term in words:
+            matched += 1
+            continue
+        if len(term) < 4:
+            continue
+        if any(len(word) >= 4 and
+               (word.startswith(term) or term.startswith(word))
+               for word in words):
+            matched += 1
+    return matched / len(terms)
+
+
 def _pack_vector(values) -> bytes:
     return array.array("f", (float(value) for value in values)).tobytes()
 
@@ -206,10 +230,9 @@ def rerank_hits(query: str, hits: list[dict], k: int = 5) -> list[dict]:
         title = str(hit.get("title", "")).lower()
         section = str(hit.get("section", "")).strip().lower()
         searchable = f"{title} {section} {chunk}"
-        words = _query_terms(searchable)
-        coverage = len(terms & words) / len(terms)
-        title_hits = len(terms & _query_terms(f"{title} {section}")) / len(terms)
-        section_hits = (len(terms & _query_terms(section)) / len(terms)
+        coverage = _term_coverage(terms, searchable)
+        title_hits = _term_coverage(terms, f"{title} {section}")
+        section_hits = (_term_coverage(terms, section)
                         if section else 0.0)
         exact = 1.0 if len(terms) >= 2 and phrase in searchable else 0.0
         if raw[index] is not None and span:
@@ -256,6 +279,71 @@ def best_snippet(query: str, chunk: str, max_chars: int = 500) -> str:
         snippet = parts[min(range(len(parts)),
                             key=lambda i: (-scores[i], i))]
     return snippet[:max_chars]
+
+
+def diverse_hits(hits: list[dict], limit: int = 3,
+                 per_source: int = 2) -> list[dict]:
+    """Keep the best hits while avoiding one source or duplicate chunks.
+
+    A repeated source is a poor citation list: it hides other evidence and
+    makes the answer look more supported than it is. This is deliberately
+    simple and deterministic.
+    """
+    selected = []
+    counts: dict[str, int] = {}
+    seen: set[str] = set()
+    for hit in hits:
+        source = str(hit.get("source", ""))
+        if counts.get(source, 0) >= per_source:
+            continue
+        key = re.sub(r"\s+", " ", str(hit.get("chunk", ""))).strip().lower()
+        if key and key in seen:
+            continue
+        selected.append(hit)
+        counts[source] = counts.get(source, 0) + 1
+        if key:
+            seen.add(key)
+        if len(selected) >= limit:
+            break
+    return selected
+
+
+def retrieval_confidence(query: str, hits: list[dict]) -> dict:
+    """Return a transparent 0..1 retrieval match score and a label.
+
+    This is a heuristic, not a calibrated probability. It combines the top
+    rerank score, query-term coverage in the winning chunk and the margin over
+    the runner-up, so a weak or ambiguous match is visible in the product.
+    """
+    if not hits:
+        return {"score": 0.0, "label": "none", "coverage": 0.0,
+                "margin": 0.0}
+    top = hits[0]
+    try:
+        top_score = float(top.get("rerank_score") or 0.0)
+    except (TypeError, ValueError):
+        top_score = 0.0
+    terms = _query_terms(query)
+    coverage = _term_coverage(
+        terms, f"{top.get('title', '')} {top.get('section', '')} "
+                f"{top.get('chunk', '')}")
+    second = 0.0
+    if len(hits) > 1:
+        try:
+            second = float(hits[1].get("rerank_score") or 0.0)
+        except (TypeError, ValueError):
+            second = 0.0
+    margin = max(0.0, min(1.0, top_score - second))
+    score = max(0.0, min(
+        1.0, 0.65 * top_score + 0.25 * coverage + 0.10 * margin))
+    if score >= 0.55:
+        label = "high"
+    elif score >= 0.32:
+        label = "medium"
+    else:
+        label = "low"
+    return {"score": round(score, 3), "label": label,
+            "coverage": round(coverage, 3), "margin": round(margin, 3)}
 
 
 def format_citation(hit: dict) -> str:
@@ -376,6 +464,19 @@ class DocMemory:
         resulting chunks inherit the block's provenance and a character range
         inside that block.
         """
+        return self.add_blocks_result(
+            source, blocks, title=title, replace=replace, meta=meta)["chunks"]
+
+    def add_blocks_result(self, source: str, blocks: list[dict],
+                          title: str = "", replace: bool = True,
+                          meta: dict | None = None,
+                          skip_if_unchanged: bool = False) -> dict:
+        """Index blocks and return a small ingestion report.
+
+        ``skip_if_unchanged`` makes repeated directory syncs cheap: when the
+        extracted content hash matches the stored hash for the same source,
+        nothing is deleted or re-embedded.
+        """
         source = str(source)
         title = str(title or Path(source).stem)
         meta = meta or {}
@@ -391,6 +492,13 @@ class DocMemory:
         sha = hashlib.sha256(
             "\n\n".join(block_texts).encode("utf-8")).hexdigest()
         with self._lock:
+            if skip_if_unchanged:
+                existing = self.con.execute(
+                    "SELECT MAX(sha) FROM docs WHERE source = ?",
+                    (source,)).fetchone()
+                if existing and existing[0] == sha:
+                    return {"source": source, "title": title, "chunks": 0,
+                            "skipped": True, "content_sha256": sha}
             if replace:
                 self.con.execute("DELETE FROM docs WHERE source = ?",
                                  (source,))
@@ -440,17 +548,94 @@ class DocMemory:
                 self._drop_stale_chunk_meta()
             self._vector_index = None
             self.con.commit()
-        return added
+        return {"source": source, "title": title, "chunks": added,
+                "skipped": False, "content_sha256": sha}
 
     def add_file(self, path: str | Path, title: str = "",
                  meta: dict | None = None) -> int:
+        return self.add_file_result(path, title=title, meta=meta)["chunks"]
+
+    def add_file_result(self, path: str | Path, title: str = "",
+                        meta: dict | None = None,
+                        skip_if_unchanged: bool = False,
+                        dedupe_across_sources: bool = False) -> dict:
+        """Extract and index one file, returning hashes and a skip flag."""
         from atomzero.doc_ingest import extract_file
 
         p = Path(path)
         extracted = extract_file(p, title=title)
-        return self.add_blocks(
+        content_sha = hashlib.sha256(
+            "\n\n".join(str(block.get("text", ""))
+                        for block in extracted["blocks"]).encode("utf-8")
+        ).hexdigest()
+        file_sha = hashlib.sha256(p.read_bytes()).hexdigest()
+        if dedupe_across_sources:
+            duplicates = self.find_by_content_sha(
+                content_sha, exclude_source=str(p))
+            if duplicates:
+                return {
+                    "source": str(p),
+                    "title": extracted["title"],
+                    "chunks": 0,
+                    "skipped": True,
+                    "duplicate_of": duplicates,
+                    "content_sha256": content_sha,
+                    "file_sha256": file_sha,
+                    "format": extracted.get("format", ""),
+                }
+        result = self.add_blocks_result(
             str(p), extracted["blocks"], title=extracted["title"],
-            meta=meta)
+            meta=meta, skip_if_unchanged=skip_if_unchanged)
+        result["format"] = extracted.get("format", "")
+        result["file_sha256"] = file_sha
+        return result
+
+    def add_directory(self, path: str | Path, recursive: bool = True,
+                      skip_if_unchanged: bool = False,
+                      dedupe_across_sources: bool = False) -> dict:
+        """Index every supported file in a directory in deterministic order."""
+        from atomzero.doc_ingest import SUPPORTED_SUFFIXES
+
+        root = Path(path)
+        if not root.is_dir():
+            raise ValueError(f"not a directory: {root}")
+        pattern = "**/*" if recursive else "*"
+        files = sorted(
+            item for item in root.glob(pattern)
+            if item.is_file() and item.suffix.lower() in SUPPORTED_SUFFIXES)
+        results = []
+        for item in files:
+            try:
+                results.append(self.add_file_result(
+                    item, skip_if_unchanged=skip_if_unchanged,
+                    dedupe_across_sources=dedupe_across_sources))
+            except Exception as exc:  # keep one bad file from aborting a sync
+                results.append({"source": str(item), "chunks": 0,
+                                "skipped": False, "error": str(exc)})
+        return {
+            "root": str(root),
+            "files": len(files),
+            "chunks": sum(int(item.get("chunks", 0)) for item in results),
+            "skipped": sum(1 for item in results if item.get("skipped")),
+            "duplicates": sum(1 for item in results
+                              if item.get("duplicate_of")),
+            "failed": sum(1 for item in results if "error" in item),
+            "results": results,
+        }
+
+    def find_by_content_sha(self, sha: str, exclude_source: str = "") -> list[dict]:
+        """Find indexed sources with the same extracted-content hash."""
+        sha = str(sha or "").strip()
+        if len(sha) != 64:
+            raise ValueError("sha must be a 64-character hex digest")
+        with self._lock:
+            rows = self.con.execute(
+                "SELECT source, title, COUNT(*) FROM docs "
+                "WHERE sha = ? AND source != ? "
+                "GROUP BY source, title ORDER BY source",
+                (sha, str(exclude_source))).fetchall()
+        return [{"source": row[0], "title": row[1], "chunks": row[2]}
+                for row in rows]
 
     def _drop_stale_vectors(self) -> None:
         self.con.execute(
@@ -788,7 +973,18 @@ class DocMemory:
 
     def search(self, query: str, k: int = 5,
                rerank: bool = True,
-               reranker=None) -> list[dict]:
+               reranker=None, source: str = "",
+               source_prefix: str = "", kind: str = "") -> list[dict]:
+        """Search the local index, optionally scoped to a source or kind."""
+        source = str(source or "").strip()
+        source_prefix = str(source_prefix or "").strip()
+        kind = str(kind or "").strip()
+        for label, value in (("source", source),
+                             ("source_prefix", source_prefix)):
+            if len(value) > 512:
+                raise ValueError(f"{label} is too long (max 512 chars)")
+            if any(ord(ch) < 32 for ch in value):
+                raise ValueError(f"{label} contains control characters")
         words = re.findall(r"[\wçğıöşüÇĞİÖŞÜ]+", query)
         words = [w for w in words if len(w) > 1]
         meaningful = [w for w in words if w.lower() not in STOPWORDS]
@@ -800,11 +996,23 @@ class DocMemory:
         candidates = max(k * 4, 12) if rerank else k
         active = reranker if reranker is not None else self.reranker
         neural = self._vector_model_key(active).startswith("neural:")
+        clauses = ["docs MATCH ?"]
+        params: list = [match]
+        if source:
+            clauses.append("source = ?")
+            params.append(source)
+        if source_prefix:
+            clauses.append("substr(source, 1, ?) = ?")
+            params.extend([len(source_prefix), source_prefix])
+        if kind:
+            clauses.append(
+                "source IN (SELECT source FROM doc_meta WHERE kind = ?)")
+            params.append(kind)
+        sql = ("SELECT rowid, chunk, source, title, bm25(docs) AS score "
+               "FROM docs WHERE " + " AND ".join(clauses) +
+               " ORDER BY score LIMIT ?")
         with self._lock:
-            rows = self.con.execute(
-                "SELECT rowid, chunk, source, title, bm25(docs) AS score "
-                "FROM docs WHERE docs MATCH ? ORDER BY score LIMIT ?",
-                (match, candidates)).fetchall()
+            rows = self.con.execute(sql, (*params, candidates)).fetchall()
             embedding_hits, embedding_scores = ([], {})
             # Hashed n-grams are a fallback reranker, not a semantic retriever:
             # do not answer from hash-only candidates when FTS found nothing.
@@ -817,6 +1025,20 @@ class DocMemory:
             sources = {row[2] for row in rows} | {
                 hit["source"] for hit in embedding_hits}
             metas = self._meta_map(sources)
+            if source or source_prefix or kind:
+                def allowed(hit: dict) -> bool:
+                    value = str(hit.get("source", ""))
+                    if source and value != source:
+                        return False
+                    if source_prefix and not value.startswith(source_prefix):
+                        return False
+                    if kind and metas.get(value, {}).get(
+                            "kind", "document") != kind:
+                        return False
+                    return True
+
+                embedding_hits = [hit for hit in embedding_hits
+                                  if allowed(hit)]
             chunk_metas = self._chunk_meta_map(
                 {row[0] for row in rows}
                 | {hit.get("_rowid") for hit in embedding_hits})
@@ -1067,44 +1289,90 @@ class DocMemory:
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--db", default=None)
+    from atomzero import __version__
+
+    ap = argparse.ArgumentParser(
+        prog="atomzero-docs",
+        description="Index and search documents for Atom Zero.")
+    ap.add_argument("--db", default=None,
+                    help="SQLite index path (default: data/docs.db)")
+    ap.add_argument("--version", action="version",
+                    version=f"atomzero-docs {__version__}")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    add = sub.add_parser("add")
+    add = sub.add_parser("add", help="index a file or a whole directory")
     add.add_argument("path")
     add.add_argument("--title", default="")
-    search = sub.add_parser("search")
+    add.add_argument("--recursive", action=argparse.BooleanOptionalAction,
+                     default=True)
+    add.add_argument("--skip-unchanged", action="store_true")
+    add.add_argument("--dedupe", action="store_true",
+                     help="skip files whose extracted content hash already "
+                          "exists under another source")
+    search = sub.add_parser("search", help="search the local index")
     search.add_argument("query")
     search.add_argument("-k", type=int, default=5)
-    list_db = sub.add_parser("list")
-    stats_db = sub.add_parser("stats")
-    forget = sub.add_parser("forget")
+    search.add_argument("--source", default="")
+    search.add_argument("--source-prefix", default="")
+    search.add_argument("--kind", default="")
+    search.add_argument("--no-rerank", action="store_true")
+    list_db = sub.add_parser("list", help="list indexed sources")
+    stats_db = sub.add_parser("stats", help="show index statistics")
+    evidence = sub.add_parser("evidence", help="show chunks for a source")
+    evidence.add_argument("source")
+    evidence.add_argument("--page", type=int, default=None)
+    evidence.add_argument("--section", default="")
+    forget = sub.add_parser("forget", help="delete one source or everything")
     forget.add_argument("source", nargs="?")
     forget.add_argument("--all", action="store_true")
     # Accept --db on either side of the subcommand; the docs use both forms.
-    for parser in (add, search, list_db, stats_db, forget):
+    for parser in (add, search, list_db, stats_db, evidence, forget):
         parser.add_argument("--db", dest="db_after", default=None)
     args = ap.parse_args(argv)
     mem = DocMemory(args.db_after or args.db or "data/docs.db")
-    if args.cmd == "add":
-        print(json.dumps({"added": mem.add_file(args.path, args.title)}))
-    elif args.cmd == "search":
-        print(json.dumps(mem.search(args.query, args.k), indent=2,
-                         ensure_ascii=False))
-    elif args.cmd == "list":
-        print(json.dumps(mem.sources(), indent=2, ensure_ascii=False))
-    elif args.cmd == "forget":
-        try:
-            result = (mem.forget_all() if args.all
-                      else mem.forget(args.source or ""))
-        except (ValueError, SourceNotFound) as exc:
-            print(json.dumps({"error": str(exc)}))
-            mem.close()
-            return 1
-        print(json.dumps(result, ensure_ascii=False))
-    else:
-        print(json.dumps(mem.stats(), indent=2))
-    mem.close()
+    try:
+        if args.cmd == "add":
+            path = Path(args.path)
+            if path.is_dir():
+                result = mem.add_directory(
+                    path, recursive=args.recursive,
+                    skip_if_unchanged=args.skip_unchanged,
+                    dedupe_across_sources=args.dedupe)
+                result["added"] = result["chunks"]
+            else:
+                result = mem.add_file_result(
+                    path, title=args.title,
+                    skip_if_unchanged=args.skip_unchanged,
+                    dedupe_across_sources=args.dedupe)
+                result["added"] = result["chunks"]
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+        elif args.cmd == "search":
+            hits = mem.search(
+                args.query, k=args.k, rerank=not args.no_rerank,
+                source=args.source, source_prefix=args.source_prefix,
+                kind=args.kind)
+            print(json.dumps(hits, indent=2, ensure_ascii=False))
+        elif args.cmd == "list":
+            print(json.dumps(mem.sources(), indent=2, ensure_ascii=False))
+        elif args.cmd == "evidence":
+            try:
+                result = mem.source_evidence(
+                    args.source, page=args.page, section=args.section)
+            except (ValueError, SourceNotFound) as exc:
+                print(json.dumps({"error": str(exc)}))
+                return 1
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+        elif args.cmd == "forget":
+            try:
+                result = (mem.forget_all() if args.all
+                          else mem.forget(args.source or ""))
+            except (ValueError, SourceNotFound) as exc:
+                print(json.dumps({"error": str(exc)}))
+                return 1
+            print(json.dumps(result, ensure_ascii=False))
+        else:
+            print(json.dumps(mem.stats(), indent=2))
+    finally:
+        mem.close()
     return 0
 
 

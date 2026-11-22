@@ -13,6 +13,7 @@ Endpoints:
   POST /v1/documents
   POST /v1/documents/upload?source=...&title=...
   POST /v1/documents/search
+  POST /v1/documents/answer
   GET  /v1/teacher/notes
   POST /v1/teacher/notes
   POST /v1/teacher/notes/verify
@@ -46,7 +47,8 @@ import torch
 
 from atomzero import __version__
 from atomzero.doc_memory import (
-    SourceNotFound, add_citation_source, best_snippet, format_citation)
+    SourceNotFound, add_citation_source, best_snippet, diverse_hits,
+    format_citation, retrieval_confidence)
 from atomzero.curiosity import (
     CuriosityError, curiosity_items, propose_from_gaps)
 from atomzero.feedback import (
@@ -239,8 +241,11 @@ weights.</p>
 <h3>Indexed documents</h3>
 <div id="docs"></div>
 <div class="row"><input id="docq" placeholder="Search indexed documents...">
-<button id="docsearch">Search</button></div>
+<select id="docsrc"><option value="">all sources</option></select>
+<button id="docsearch">Search</button>
+<button id="docanswerbtn">Answer</button></div>
 <p id="docmsg" class="hint"></p>
+<div id="docanswer"></div>
 <div id="docresults"></div>
 <div id="evidence"></div>
 <hr>
@@ -546,6 +551,24 @@ async function refreshDocs() {
       return;
     }
     const data = j.data || [];
+    const select = document.getElementById('docsrc');
+    if (select) {
+      const current = select.value;
+      select.textContent = '';
+      const all = document.createElement('option');
+      all.value = '';
+      all.textContent = 'all sources';
+      select.appendChild(all);
+      data.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item.source;
+        option.textContent = item.title || item.source;
+        select.appendChild(option);
+      });
+      if ([...select.options].some(option => option.value === current)) {
+        select.value = current;
+      }
+    }
     if (!data.length) {
       const empty = document.createElement('div');
       empty.className = 'hint';
@@ -569,7 +592,14 @@ async function refreshDocs() {
       card.appendChild(source);
       const actions = document.createElement('div');
       actions.className = 'actions';
+      actions.appendChild(qbutton('Ask', () => {
+        const select = document.getElementById('docsrc');
+        if (select) select.value = item.source;
+        document.getElementById('docq').focus();
+      }));
       actions.appendChild(qbutton('Evidence', () => showEvidence(item.source)));
+      actions.appendChild(qbutton('Copy citation', () =>
+        copyCitation(item.source)));
       actions.appendChild(qbutton('Forget', () => forgetSource(item.source)));
       card.appendChild(actions);
       box.appendChild(card);
@@ -580,6 +610,7 @@ async function refreshDocs() {
 }
 async function searchDocs() {
   const query = document.getElementById('docq').value.trim();
+  const source = document.getElementById('docsrc').value.trim();
   const msg = document.getElementById('docmsg');
   const box = document.getElementById('docresults');
   box.textContent = '';
@@ -589,11 +620,12 @@ async function searchDocs() {
   try {
     const r = await fetch('/v1/documents/search', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({query, k: 5})});
+      body: JSON.stringify({query, k: 5, source})});
     const j = await r.json();
     if (!r.ok) { msg.textContent = 'error: ' + (j.error || r.status); return; }
     const hits = j.data || [];
-    msg.textContent = hits.length + ' hit(s)';
+    msg.textContent = hits.length + ' hit(s)' +
+      (source ? ' | source: ' + source : '');
     hits.forEach(hit => {
       const card = document.createElement('div');
       card.className = 'qitem';
@@ -611,10 +643,65 @@ async function searchDocs() {
       actions.className = 'actions';
       actions.appendChild(qbutton('Evidence', () =>
         showEvidence(hit.source, hit.page, hit.section)));
+      actions.appendChild(qbutton('Copy citation', () =>
+        copyCitation(hit.source, hit.page, hit.section)));
       card.appendChild(actions);
       box.appendChild(card);
     });
   } catch (e) { msg.textContent = 'error: ' + e; }
+}
+async function answerDocs() {
+  const query = document.getElementById('docq').value.trim();
+  const source = document.getElementById('docsrc').value.trim();
+  const msg = document.getElementById('docmsg');
+  const box = document.getElementById('docanswer');
+  box.textContent = '';
+  if (!query) { msg.textContent = 'enter a question'; return; }
+  msg.textContent = 'retrieving evidence...';
+  try {
+    const r = await fetch('/v1/documents/answer', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({query, source})});
+    const j = await r.json();
+    if (!r.ok) { msg.textContent = 'error: ' + (j.error || r.status); return; }
+    const conf = j.confidence || {};
+    msg.textContent = 'grounded answer | confidence: ' +
+      (conf.label || 'none') + ' (' + (conf.score ?? 0) + ')' +
+      (source ? ' | source: ' + source : '');
+    const answer = document.createElement('div');
+    answer.className = 'qitem';
+    answer.textContent = j.text || '';
+    box.appendChild(answer);
+    (j.evidence || []).forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'qitem';
+      const title = document.createElement('div');
+      title.textContent = (item.title || item.source) + ' | ' + item.source +
+        (item.page ? ' | p. ' + item.page : '') +
+        (item.section ? ' | ' + item.section : '') +
+        ' | score ' + (item.score ?? 0);
+      card.appendChild(title);
+      const snippet = document.createElement('div');
+      snippet.className = 'src';
+      snippet.textContent = item.snippet || '';
+      card.appendChild(snippet);
+      const actions = document.createElement('div');
+      actions.className = 'actions';
+      actions.appendChild(qbutton('Evidence', () =>
+        showEvidence(item.source, item.page, item.section)));
+      actions.appendChild(qbutton('Copy citation', () =>
+        copyCitation(item.source, item.page, item.section)));
+      card.appendChild(actions);
+      box.appendChild(card);
+    });
+  } catch (e) { msg.textContent = 'error: ' + e; }
+}
+function copyCitation(source, page, section) {
+  const text = source + (page ? ' (p. ' + page + ')' : '') +
+               (section ? ' [' + section + ']' : '');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).catch(() => {});
+  }
 }
 async function showEvidence(source, page, section) {
   const box = document.getElementById('evidence');
@@ -653,7 +740,16 @@ async function showEvidence(source, page, section) {
   } catch (e) { box.textContent = 'evidence error: ' + e; }
 }
 document.getElementById('docsearch').onclick = () => searchDocs();
+document.getElementById('docanswerbtn').onclick = () => answerDocs();
 document.getElementById('docq').addEventListener('keydown', event => {
+  if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+    event.preventDefault();
+    answerDocs();
+  } else if (event.key === 'Enter') {
+    searchDocs();
+  }
+});
+document.getElementById('docsrc').addEventListener('keydown', event => {
   if (event.key === 'Enter') searchDocs();
 });
 async function forgetSource(source) {
@@ -1386,17 +1482,23 @@ refreshAdapters();
 </script>"""
 
 
-def doc_answer(text: str, docs) -> dict | None:
-    """Return grounded notes with sources, or None if nothing matches."""
+def doc_answer(text: str, docs, source: str = "") -> dict | None:
+    """Return grounded notes with sources, evidence and match confidence."""
     if docs is None:
         return None
-    hits = docs.search(text, k=3)
+    query = str(text or "").strip()
+    if not query:
+        return None
+    hits = docs.search(query, k=6, source=source)
     if not hits:
         return None
+    hits = diverse_hits(hits, limit=3)
+    confidence = retrieval_confidence(query, hits)
     notes = []
+    evidence = []
     source_map = {}
     unverified = False
-    for hit in hits[:3]:
+    for hit in hits:
         teacher = hit.get("kind") == "teacher"
         verified = bool(hit.get("verified", True))
         if teacher and not verified:
@@ -1407,17 +1509,37 @@ def doc_answer(text: str, docs) -> dict | None:
                      if reviewer else "teacher note, verified")
         else:
             label = "source"
+        snippet = best_snippet(query, hit["chunk"])
         location = format_citation(hit)
-        notes.append(f"- {best_snippet(text, hit['chunk'])} "
-                     f"({label}: {location})")
+        notes.append(f"- {snippet} ({label}: {location})")
+        try:
+            score = round(float(hit.get("rerank_score") or 0.0), 3)
+        except (TypeError, ValueError):
+            score = 0.0
+        evidence.append({
+            "source": hit.get("source", ""),
+            "title": hit.get("title", ""),
+            "page": hit.get("page"),
+            "section": hit.get("section", ""),
+            "snippet": snippet,
+            "chunk": hit.get("chunk", ""),
+            "score": score,
+            "kind": hit.get("kind", "document"),
+            "verified": verified,
+            "source_url": hit.get("source_url", ""),
+        })
         add_citation_source(source_map, hit)
         if not verified:
             unverified = True
-    text = (f"I found these notes:\n" + "\n".join(notes) + "\n\n"
-            "This is a local note, not professional advice.")
+    answer = (f"I found these notes:\n" + "\n".join(notes) + "\n\n"
+              "This is a local note, not professional advice.")
+    if confidence["label"] == "low":
+        answer += ("\n\nMatch confidence is low; check the source before "
+                   "relying on this answer.")
     if unverified:
-        text += "\n\nThis includes an unverified teacher-derived note."
-    return {"text": text, "sources": list(source_map.values())}
+        answer += "\n\nThis includes an unverified teacher-derived note."
+    return {"text": answer, "sources": list(source_map.values()),
+            "evidence": evidence, "confidence": confidence}
 
 
 def chat_prompt(messages) -> str:
@@ -1616,6 +1738,7 @@ class Handler(BaseHTTPRequestHandler):
         route = parsed.path
         if route not in ("/generate", "/v1/chat/completions",
                          "/v1/documents", "/v1/documents/search",
+                         "/v1/documents/answer",
                          "/v1/documents/upload", "/v1/documents/forget",
                          "/v1/memory/forget", "/v1/memory/history",
                          "/v1/memory/export", "/v1/memory/import",
@@ -1705,9 +1828,39 @@ class Handler(BaseHTTPRequestHandler):
             if self.path == "/v1/documents/search":
                 docs = _state.get("docs")
                 query = str(req.get("query", ""))
-                k = int(req.get("k", 5))
-                hits = docs.search(query, k=k) if docs else []
+                try:
+                    k = int(req.get("k", 5))
+                except (TypeError, ValueError):
+                    return self._json(400, {"error": "k must be an integer"})
+                source = str(req.get("source", "") or "").strip()
+                try:
+                    hits = (docs.search(query, k=k, source=source)
+                            if docs else [])
+                except ValueError as exc:
+                    return self._json(400, {"error": str(exc)})
                 return self._json(200, {"data": hits})
+            if self.path == "/v1/documents/answer":
+                docs = _state.get("docs")
+                if docs is None:
+                    return self._json(400, {
+                        "error": "no document memory"})
+                query = str(req.get("query", "") or "").strip()
+                if not query:
+                    return self._json(400, {"error": "empty query"})
+                source = str(req.get("source", "") or "").strip()
+                try:
+                    answer = doc_answer(query, docs, source=source)
+                except ValueError as exc:
+                    return self._json(400, {"error": str(exc)})
+                if answer is None:
+                    return self._json(200, {
+                        "text": "I do not have a source for that yet.",
+                        "sources": [],
+                        "evidence": [],
+                        "confidence": {"score": 0.0, "label": "none",
+                                       "coverage": 0.0, "margin": 0.0},
+                    })
+                return self._json(200, answer)
             if self.path == "/v1/teach":
                 return self._teach(req)
             if self.path == "/v1/learn_url":

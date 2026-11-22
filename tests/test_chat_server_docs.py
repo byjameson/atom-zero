@@ -57,6 +57,11 @@ def test_demo_page_uses_daily_agent_endpoint():
     assert "adapter versions" in page
     assert "/v1/documents/forget" in page
     assert "/v1/documents/evidence" in page
+    assert "/v1/documents/answer" in page
+    assert "grounded answer" in page
+    assert 'id="docsrc"' in page
+    assert "all sources" in page
+    assert "copy citation" in page
     assert "evidence" in page
     assert "/v1/memory/history" in page
     assert "/v1/memory/export" in page
@@ -772,6 +777,83 @@ def test_http_research_queue_requires_approval_and_cites(tmp_path, monkeypatch):
         with pytest.raises(urllib.error.HTTPError) as missing:
             _post(base + "/v1/research/queue/approve", {"id": "r9999"})
         assert missing.value.code == 404
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
+        docs.close()
+
+
+def test_doc_answer_returns_evidence_confidence_and_source_scope(tmp_path):
+    try:
+        docs = DocMemory(tmp_path / "docs.db")
+    except Exception as exc:
+        pytest.skip(f"sqlite fts5 unavailable: {exc}")
+    docs.add_text("launch.txt", "The launch code is L-7781.",
+                  title="Launch")
+    docs.add_text("warranty.txt", "The warranty period is 24 months.",
+                  title="Warranty")
+    answer = chat_server.doc_answer("what is the launch code?", docs)
+    assert answer is not None
+    assert "L-7781" in answer["text"]
+    assert answer["sources"][0]["source"] == "launch.txt"
+    assert answer["evidence"][0]["source"] == "launch.txt"
+    assert "L-7781" in answer["evidence"][0]["snippet"]
+    assert 0.0 <= answer["confidence"]["score"] <= 1.0
+    assert answer["confidence"]["label"] in {"low", "medium", "high"}
+    scoped = chat_server.doc_answer(
+        "warranty period", docs, source="warranty.txt")
+    assert scoped is not None
+    assert all(item["source"] == "warranty.txt"
+               for item in scoped["evidence"])
+    assert "24 months" in scoped["text"]
+    assert chat_server.doc_answer("population of Paris", docs) is None
+    docs.close()
+
+
+def test_http_document_answer_and_scoped_search(tmp_path):
+    try:
+        docs = DocMemory(tmp_path / "docs.db")
+    except Exception as exc:
+        pytest.skip(f"sqlite fts5 unavailable: {exc}")
+    docs.add_text("launch.txt", "The launch code is L-7781.",
+                  title="Launch")
+    docs.add_text("warranty.txt", "The warranty period is 24 months.",
+                  title="Warranty")
+    old = dict(chat_server._state)
+    chat_server._state.update({
+        "model": None, "tok": None, "docs": docs, "adapter": "",
+        "name": "tiny-test", "params": 1, "config": {}, "step": 0,
+        "api_key": "", "metrics": {"requests": 0, "generated_tokens": 0},
+        "safety": None, "wiki_lang": "en",
+        "session_dir": str(tmp_path / "sessions"), "sessions": {},
+    })
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        answer = _post(base + "/v1/documents/answer",
+                       {"query": "what is the launch code?"})
+        assert "L-7781" in answer["text"]
+        assert answer["confidence"]["label"] in {"low", "medium", "high"}
+        assert answer["evidence"][0]["source"] == "launch.txt"
+        scoped = _post(base + "/v1/documents/answer", {
+            "query": "warranty period", "source": "warranty.txt"})
+        assert "24 months" in scoped["text"]
+        assert all(item["source"] == "warranty.txt"
+                   for item in scoped["evidence"])
+        filtered = _post(base + "/v1/documents/search", {
+            "query": "launch code", "source": "warranty.txt"})
+        assert filtered["data"] == []
+        missing = _post(base + "/v1/documents/answer",
+                        {"query": "population of Paris"})
+        assert missing["sources"] == []
+        assert missing["confidence"]["label"] == "none"
+        with pytest.raises(urllib.error.HTTPError) as empty:
+            _post(base + "/v1/documents/answer", {"query": "  "})
+        assert empty.value.code == 400
     finally:
         httpd.shutdown()
         httpd.server_close()

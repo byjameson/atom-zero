@@ -123,6 +123,17 @@ Pipeline:
 5. The top snippets are quoted with `source`, `title`, sha256 and, when
    available, `page` or `section`.
 
+Search can be scoped to an exact source, a source prefix or a kind
+(`document`/`teacher`). The reranker uses a small morphology allowance so
+`claim` matches `claims` and `submit` matches `submitted`. The grounded-answer
+API returns a diverse evidence list plus a transparent confidence heuristic
+(rerank score, query coverage and runner-up margin); it is a warning signal,
+not a calibrated probability.
+
+The same index is available without the UI through `atomzero-docs`:
+`add`, `search`, `list`, `evidence` and `forget`. Directory sync is recursive,
+deterministic and can skip files whose extracted content hash is unchanged.
+
 Two reranker paths:
 
 - **hashed character n-grams** — deterministic, dependency-free fallback;
@@ -265,8 +276,9 @@ whether to enable it.
 | behavior checks | **16/16** |
 | source-cited retrieval top-1 | **1.000** (FTS 0.850) |
 | document benchmark (100 authored questions) | **80/80 answerable, 20/20 no-answer** |
+| public SQuAD v2 retrieval (50 contexts) | **hybrid 0.975 top-1; 0.825 answer in snippet** |
 | safety-enabled product | **26/26** |
-| test suite | **215 passed** |
+| test suite | **224 passed** |
 
 The product benchmark is narrow and authored: tools, memory, tasks, retrieval,
 teacher-note review, missing-source detection and one short generation. It is

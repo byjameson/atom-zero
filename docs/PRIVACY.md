@@ -16,7 +16,7 @@ curl -X POST http://127.0.0.1:8013/v1/documents/forget \
 CLI:
 
 ```bash
-python -m streamft.doc_memory --db data/docs.db forget my-note.txt
+atomzero-docs --db data/docs.db forget my-note.txt
 ```
 
 The response reports `chunks_deleted`, `meta_deleted` and `vacuumed`. The row is

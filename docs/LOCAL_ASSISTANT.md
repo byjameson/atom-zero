@@ -5,7 +5,10 @@ verified retrieval prototype; it is **not** the target model and it is not on
 the product path. The active product is the from-scratch 49.2M transformer daily
 assistant in [`TINY_TRANSFORMER_CHAT.md`](TINY_TRANSFORMER_CHAT.md). The
 Qwen comparison is retained only as evidence that retrieval alone does not make
-a tiny model a general assistant.
+a tiny model a general assistant. The commands below refer to the old
+`streamft assistant` prototype and are **not** part of the current `atomzero`
+package; the current equivalents are `atomzero`, `atomzero-quickstart` and
+`atomzero-docs`.
 
 ## Why this path
 

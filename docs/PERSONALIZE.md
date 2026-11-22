@@ -4,7 +4,7 @@ Two different jobs, two different paths:
 
 | what you have | where it goes | command |
 |---|---|---|
-| facts, policies, legal notes, manuals | local document index (RAG) | `python -m streamft.doc_memory add ...` |
+| facts, policies, legal notes, manuals | local document index (RAG) | `atomzero-docs add ...` |
 | style, format, task behaviour | model weights (fine-tune) | `research/train_transformer_chat.py` / gated update |
 
 Never put a large, changing knowledge base into the weights. Use documents.
@@ -12,10 +12,10 @@ Never put a large, changing knowledge base into the weights. Use documents.
 ## 1. Add documents (facts, policies, notes)
 
 ```bash
-python -m streamft.doc_memory add data/notes.txt --db data/docs.db
-python -m streamft.doc_memory add data/legal/kira.txt --db data/docs.db --title "Kira notları"
-python -m streamft.doc_memory search "kira" --db data/docs.db
-python -m streamft.doc_memory list --db data/docs.db
+atomzero-docs add data/notes.txt --db data/docs.db
+atomzero-docs add data/legal/kira.txt --db data/docs.db --title "Kira notları"
+atomzero-docs search "kira" --db data/docs.db
+atomzero-docs list --db data/docs.db
 ```
 
 Each chunk keeps its **source path**, title and hash. Re-adding a source
@@ -82,7 +82,7 @@ configured model instead, the provider is opt-in and off by default:
 ollama serve
 ollama pull llama3.2:3b
 
-python -m streamft.chat_server \
+python -m atomzero.chat_server \
   --model checkpoints/transformer_behavior_50m_long \
   --docs data/docs.db \
   --teacher-url http://127.0.0.1:11434/v1 \
@@ -112,7 +112,7 @@ python research/chat_human.py \
 Or over HTTP:
 
 ```bash
-python -m streamft.chat_server \
+python -m atomzero.chat_server \
   --model checkpoints/transformer_behavior_50m_long \
   --docs data/docs.db \
   --adapter checkpoints/adapters_50m/v0001 \
@@ -208,14 +208,14 @@ powershell -ExecutionPolicy Bypass -File scripts/run_research.ps1 `
 Windows Task Scheduler:
 
 ```powershell
-schtasks /Create /SC DAILY /ST 09:00 /TN "streamft research" `
-  /TR "powershell -ExecutionPolicy Bypass -File C:\path\to\stream-finetune\scripts\run_research.ps1 -Limit 1"
+schtasks /Create /SC DAILY /ST 09:00 /TN "atomzero research" `
+  /TR "powershell -ExecutionPolicy Bypass -File C:\path\to\atom-zero\scripts\run_research.ps1 -Limit 1"
 ```
 
 Linux/macOS cron:
 
 ```cron
-0 9 * * * cd /path/to/stream-finetune && python research/research_queue.py --queue data/research_queue.json run --db data/docs.db --limit 1
+0 9 * * * cd /path/to/atom-zero && python research/research_queue.py --queue data/research_queue.json run --db data/docs.db --limit 1
 ```
 
 The queue does not generate its own topics and does not crawl the open web.

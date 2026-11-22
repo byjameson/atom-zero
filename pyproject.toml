@@ -31,6 +31,7 @@ neural = ["transformers>=4.40"]
 atomzero = "atomzero.chat_server:main"
 atomzero-quickstart = "atomzero.quickstart:main"
 atomzero-doctor = "atomzero.doctor:main"
+atomzero-docs = "atomzero.doc_memory:main"
 
 [project.urls]
 Homepage = "https://github.com/byjameson/atom-zero"

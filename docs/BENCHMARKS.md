@@ -23,24 +23,47 @@ reviewed gate. See the [model card](MODEL_CARD.md) for the full distinction.
 ## Public retrieval benchmark: SQuAD v2
 
 `benchmarks/squad_retrieval.py` runs a public retrieval check on
-`rajpurkar/squad_v2` validation: 20 contexts, 100 questions (50 answerable,
-50 no-answer), up to 5 questions per context.
+`rajpurkar/squad_v2` validation. It reports context recall, answer recall and
+whether the answer survives in the snippet the product actually shows.
 
-| mode | top-1 context | top-5 context | top-1 answer in chunk | top-5 answer in chunk | MRR |
+Small subset (20 contexts, 100 questions: 50 answerable, 50 no-answer):
+
+| mode | top-1 context | top-5 context | top-1 answer in chunk | top-1 answer in snippet | MRR |
 |---|---:|---:|---:|---:|---:|
-| FTS | 0.98 | 1.00 | 0.96 | 1.00 | 0.99 |
-| hybrid | 0.98 | 1.00 | 0.96 | 1.00 | 0.99 |
+| FTS | **0.98** | 1.00 | 0.96 | 0.84 | **0.990** |
+| hybrid | 0.96 | 1.00 | 0.96 | 0.84 | 0.978 |
 
-A larger subset (50 contexts, 200 questions: 103 answerable, 97 no-answer):
+Larger subset (50 contexts, 200 questions: 103 answerable, 97 no-answer):
 
-| mode | top-1 context | top-5 context | top-1 answer in chunk | top-5 answer in chunk | MRR |
+| mode | top-1 context | top-5 context | top-1 answer in chunk | top-1 answer in snippet | MRR |
 |---|---:|---:|---:|---:|---:|
-| FTS | 0.960 | 1.000 | 0.922 | 1.000 | 0.974 |
-| hybrid | **0.970** | 1.000 | **0.951** | 1.000 | **0.980** |
+| FTS | 0.960 | 1.000 | 0.922 | 0.786 | 0.974 |
+| hybrid | **0.975** | 1.000 | **0.961** | **0.825** | **0.984** |
 
 This is **retrieval**, not generation. SQuAD questions share vocabulary with
 their contexts, so the result is a public sanity check, not a hard semantic
-benchmark. The hybrid path gives a small gain on the 50-context subset. Reproduce with:
+benchmark. The hybrid path wins on the larger subset but ties or loses on the
+smaller one; the difference is within the noise of a 100-question sample.
+
+### Confidence is not answerability
+
+The hybrid path also returns a heuristic confidence score. On the 50-context
+subset:
+
+| group | mean confidence | low-confidence rate |
+|---|---:|---:|
+| answerable questions | 0.585 | 0.0% |
+| no-answer questions | 0.583 | 1.0% |
+
+The score does **not** separate answerable from unanswerable questions here,
+because SQuAD no-answer questions share vocabulary with the same paragraph.
+It is a match-strength signal, not an answerability classifier; the product
+uses it only to warn that a match is weak. A real answerability gate needs a
+different model or a different benchmark. Raw results:
+[`results/squad_retrieval.json`](results/squad_retrieval.json) and
+[`results/squad_retrieval_50x200.json`](results/squad_retrieval_50x200.json).
+
+Reproduce with:
 
 ```powershell
 pip install datasets
