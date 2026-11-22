@@ -505,23 +505,109 @@ class ChatHuman:
                         reply = (f"Set task {task['id']} priority to "
                                  f"{task['priority']}.")
         elif "list tasks" in low:
+            match = re.search(r"list\s+tasks\b", text, re.IGNORECASE)
+            tail = text[match.end():] if match else ""
+            tokens = tail.split()
+            status = "open"
+            due = "all"
+            priority = "all"
             sort = "default"
-            sort_match = re.search(
-                r"\s+(?:sort\s+|sort\s+by\s+|sorted\s+by\s+)?"
-                r"(?P<sort>priority|default)\??$", low)
-            if sort_match:
-                sort = sort_match.group("sort")
-            open_tasks = [task for task in self.data["tasks"]
-                          if task["status"] == "open"]
+            status_words = {"open", "done", "all"}
+            due_words = {"overdue", "today", "week", "none"}
+            priority_words = {"low", "normal", "high"}
+            sort_words = {"default", "priority"}
+            while tokens:
+                last = tokens[-1].lower().strip("?!.")
+                if (len(tokens) >= 3 and tokens[-3].lower() == "sorted"
+                        and tokens[-2].lower() == "by"
+                        and last in sort_words):
+                    sort = last
+                    tokens = tokens[:-3]
+                    continue
+                if (len(tokens) >= 2 and tokens[-2].lower() == "sort"
+                        and last in sort_words):
+                    sort = last
+                    tokens = tokens[:-2]
+                    continue
+                if (len(tokens) >= 2 and tokens[-2].lower() == "status"
+                        and last in status_words):
+                    status = last
+                    tokens = tokens[:-2]
+                    continue
+                if (len(tokens) >= 2 and tokens[-2].lower() == "due"
+                        and last in due_words):
+                    due = last
+                    tokens = tokens[:-2]
+                    continue
+                if (len(tokens) >= 2 and tokens[-2].lower() == "priority"
+                        and last in priority_words):
+                    priority = last
+                    tokens = tokens[:-2]
+                    continue
+                if last in status_words:
+                    status = last
+                    tokens.pop()
+                    continue
+                if last in due_words:
+                    due = last
+                    tokens.pop()
+                    continue
+                if last in priority_words:
+                    priority = last
+                    tokens.pop()
+                    continue
+                if last in sort_words:
+                    sort = last
+                    tokens.pop()
+                    continue
+                break
+            today = date.today()
+            today_s = today.isoformat()
+            week_end = (today + timedelta(days=7)).isoformat()
+            tasks = list(self.data["tasks"])
+            if status != "all":
+                tasks = [task for task in tasks
+                         if str(task.get("status", "open")) == status]
+            if due == "overdue":
+                tasks = [task for task in tasks
+                         if task.get("status") == "open"
+                         and str(task.get("due", "") or "").strip()
+                         and str(task["due"]) < today_s]
+            elif due == "today":
+                tasks = [task for task in tasks
+                         if str(task.get("due", "") or "").strip() == today_s]
+            elif due == "week":
+                tasks = [task for task in tasks
+                         if str(task.get("due", "") or "").strip()
+                         and today_s <= str(task["due"]) <= week_end]
+            elif due == "none":
+                tasks = [task for task in tasks
+                         if not str(task.get("due", "") or "").strip()]
+            if priority != "all":
+                tasks = [task for task in tasks
+                         if str(task.get("priority", "normal")
+                                or "normal").lower() == priority]
             if sort == "priority":
                 from atomzero.briefing import sort_tasks
 
-                open_tasks = sort_tasks(open_tasks, "priority")
-            heading = ("Open tasks (priority first): "
-                       if sort == "priority" else "Open tasks: ")
+                tasks = sort_tasks(tasks, "priority")
+            base = {"open": "Open tasks", "done": "Done tasks",
+                    "all": "All tasks"}[status]
+            descriptors = []
+            if due != "all":
+                descriptors.append(f"due {due}")
+            if priority != "all":
+                descriptors.append(f"priority {priority}")
+            if sort != "default":
+                descriptors.append("priority first")
+            heading = base + (f" ({', '.join(descriptors)})"
+                              if descriptors else "") + ": "
+            filtered = (status != "open" or due != "all"
+                        or priority != "all" or sort != "default")
             reply = (heading + "; ".join(
-                _task_label(task) for task in open_tasks)
-                if open_tasks else "There are no open tasks.")
+                _task_label(task) for task in tasks)
+                if tasks else ("No tasks match." if filtered
+                               else "There are no open tasks."))
         elif "complete task" in low:
             match = re.search(r"complete task\s*(\d+)", low)
             if match and self.complete_task(int(match.group(1))):

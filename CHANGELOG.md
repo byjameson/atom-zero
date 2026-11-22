@@ -112,6 +112,9 @@
   expose the selected sort.
 - Added `list tasks priority` (and `sort priority` / `sorted by priority`)
   using the same priority, due-date and id ordering as the other task views.
+- Added status/due/priority filters to chat `list tasks` (`done`, `all`,
+  `due week|overdue|today|none`, `priority low|normal|high`), including
+  combined filters and query-free views.
 - Fixed `add task` priority parsing so task text ending in "priority task" is
   not interpreted as a second priority clause.
 - Added `benchmarks/weekly_export_regression.py` (29/29 checks: CLI, HTTP, UI,

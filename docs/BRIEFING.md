@@ -42,6 +42,12 @@ overdue items and tags non-normal priorities as `[low]` or `[high]`.
 `list tasks sorted by priority`) orders open tasks high before normal before
 low, then earliest due date, then task id.
 
+`list tasks` also accepts filters: `done`, `all`, `due week`, `due overdue`,
+`due today`, `due none`, and `priority high|normal|low`. Filters can be
+combined, for example `list tasks done`, `list tasks due week priority high`
+or `list tasks all due none priority high`. Status defaults to open; due
+filters match the task-search semantics.
+
 Priority can also be updated outside chat:
 
 ```powershell

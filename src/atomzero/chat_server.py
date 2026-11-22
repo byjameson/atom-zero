@@ -251,6 +251,8 @@ hr{border:0;border-top:1px solid #ddd;margin:22px 0}
 <button data-q="add task buy milk">add task</button>
 <button data-q="list tasks">list tasks</button>
 <button data-q="list tasks priority">priority list</button>
+<button data-q="list tasks done">done list</button>
+<button data-q="list tasks due week priority high">filtered list</button>
 <button data-q="my name is Alex">remember my name</button>
 <button data-q="what do you remember?">recall</button>
 <button data-q="what is 12 * 7?">calculate</button>
