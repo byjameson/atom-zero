@@ -38,6 +38,19 @@ python benchmarks/skills_flow_regression.py
 Latest result: **9/9 checks pass**. Raw result:
 [`results/skills_flow_regression.json`](results/skills_flow_regression.json).
 
+## Explicit skill-run regression
+
+`benchmarks/skills_run_regression.py` calls `POST /v1/skills/run` by explicit
+name/query and verifies provider mode, template mode, no-provider fallback and
+the unknown-skill 404 path.
+
+```powershell
+python benchmarks/skills_run_regression.py
+```
+
+Latest result: **9/9 checks pass**. Raw result:
+[`results/skills_run_regression.json`](results/skills_run_regression.json).
+
 ## `brief me` end-to-end regression
 
 `benchmarks/brief_me_flow_regression.py` starts the real HTTP chat handler,

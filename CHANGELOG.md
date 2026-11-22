@@ -36,6 +36,10 @@ work stays on `main`; see `docs/RELEASING.md`.
   HTTP chat test for tasks, gaps, index, graph and briefing sources.
 - Added `benchmarks/skills_flow_regression.py` (9/9 checks), an end-to-end
   HTTP chat test for provider, template and no-provider skill modes.
+- Added explicit skill execution by name/query: `atomzero-skills run`,
+  `POST /v1/skills/run` and UI Run skill controls, sharing `execute_skill`.
+- Added `benchmarks/skills_run_regression.py` (9/9 checks) for explicit
+  provider, template, fallback and unknown-skill paths.
 
 ## atomzero 0.4.2 - UI collection scope (2026-11-22)
 

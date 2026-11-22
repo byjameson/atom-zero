@@ -16,6 +16,11 @@ copy examples\skills\*.json data\skills\
 atomzero-skills --dir data\skills list
 atomzero-skills --dir data\skills validate
 atomzero-skills --dir data\skills show daily-brief
+atomzero-skills --dir data\skills run daily-brief "launch code" `
+  --docs data\atomzero_demo.db
+atomzero-skills --dir data\skills run daily-brief "launch code" `
+  --docs data\atomzero_demo.db `
+  --provider-url http://127.0.0.1:11434/v1 --provider-model llama3.2:3b
 ```
 
 Restart the server after adding or changing files.
@@ -62,6 +67,24 @@ The longest matching trigger wins. Trigger matching is case-insensitive.
 
 If a provider skill is used without a configured provider, Atom Zero returns a
 clear “needs a local provider” message and still shows the retrieved sources.
+
+## Explicit name/query execution
+
+Skills can run without a trigger:
+
+```powershell
+atomzero-skills run daily-brief "launch code" --docs data\atomzero_demo.db
+```
+
+```text
+POST /v1/skills/run
+{"name": "daily-brief", "query": "launch code"}
+```
+
+The UI **Custom skills** panel also has name/query fields and a **Run skill**
+button. Responses include `provider_called`, `sources`, `evidence` and the
+rendered `prompt`. Provider, template and no-provider fallback all use the same
+`execute_skill` core.
 
 ## UI and API
 

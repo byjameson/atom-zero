@@ -1,0 +1,54 @@
+{
+  "benchmark": "atomzero-skills-run-regression",
+  "generated": "2026-11-22T22:00:58",
+  "checks": [
+    {
+      "name": "provider_reply",
+      "ok": true,
+      "detail": "Provider answer."
+    },
+    {
+      "name": "provider_context",
+      "ok": true,
+      "detail": "Provider: - The launch code is L-7781. (source: notes/launch.txt) launch code"
+    },
+    {
+      "name": "provider_sources",
+      "ok": true,
+      "detail": "[{'source': 'notes/launch.txt', 'title': 'Launch', 'kind': 'document', 'verified': True}]"
+    },
+    {
+      "name": "template_reply",
+      "ok": true,
+      "detail": "Template: - The launch code is L-7781. (source: notes/launch.txt)"
+    },
+    {
+      "name": "template_no_provider",
+      "ok": true,
+      "detail": "1 provider call(s)"
+    },
+    {
+      "name": "fallback_reply",
+      "ok": true,
+      "detail": "Skill 'provider-skill' needs a local provider. Start Atom Zero with --provider or configure an OpenAI-compatible endpoint."
+    },
+    {
+      "name": "fallback_sources",
+      "ok": true,
+      "detail": "[{'source': 'notes/launch.txt', 'title': 'Launch', 'kind': 'document', 'verified': True}]"
+    },
+    {
+      "name": "fallback_no_provider",
+      "ok": true,
+      "detail": "1 provider call(s)"
+    },
+    {
+      "name": "unknown_name_is_404",
+      "ok": true,
+      "detail": "HTTP 404"
+    }
+  ],
+  "passed": 9,
+  "failed": 0,
+  "ok": true
+}

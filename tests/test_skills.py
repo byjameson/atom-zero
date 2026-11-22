@@ -4,7 +4,8 @@ import pytest
 
 from atomzero.agent_runtime import AgentSession
 from atomzero.doc_memory import DocMemory
-from atomzero.skills import SkillError, SkillRegistry, main, render_skill
+from atomzero.skills import (
+    SkillError, SkillRegistry, execute_skill, main, render_skill)
 
 
 def write_skill(folder, name, **overrides):
@@ -100,6 +101,63 @@ def test_agent_skill_without_provider_and_template_mode(tmp_path):
     assert template["reply"].startswith("Template:")
     assert "L-7781" in template["reply"]
     docs.close()
+
+
+def test_execute_skill_provider_template_and_fallback(tmp_path):
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("notes/launch.txt", "The launch code is L-7781.",
+                  title="Launch")
+    provider_skill = {
+        "name": "provider", "prompt": "Provider: {context} {query}",
+        "use_context": True, "max_chunks": 2, "provider": True,
+    }
+    calls = []
+
+    def generator(prompt):
+        calls.append(prompt)
+        return "Provider answer."
+
+    result = execute_skill(provider_skill, "launch code", docs, generator)
+    assert result["reply"] == "Provider answer."
+    assert result["provider_called"] is True
+    assert result["sources"][0]["source"] == "notes/launch.txt"
+    assert "L-7781" in calls[0]
+
+    def must_not_call(prompt):
+        raise AssertionError("template mode called the provider")
+
+    template_skill = {
+        "name": "template", "prompt": "Template: {context}",
+        "use_context": True, "max_chunks": 2, "provider": False,
+    }
+    template = execute_skill(
+        template_skill, "launch code", docs, must_not_call)
+    assert template["reply"].startswith("Template:")
+    assert "L-7781" in template["reply"]
+    assert template["provider_called"] is False
+
+    fallback = execute_skill(
+        provider_skill, "launch code", docs, None)
+    assert "needs a local provider" in fallback["reply"]
+    assert fallback["provider_called"] is False
+    assert fallback["sources"][0]["source"] == "notes/launch.txt"
+    docs.close()
+
+
+def test_skills_cli_run_template(tmp_path, capsys):
+    write_skill(tmp_path, "template", provider=False,
+                triggers=["template"], prompt="CLI template: {context}")
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("notes/launch.txt", "The launch code is L-7781.")
+    docs.close()
+    code = main([
+        "--dir", str(tmp_path), "run", "template", "launch code",
+        "--docs", str(tmp_path / "docs.db")])
+    assert code == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["ok"] is True
+    assert result["provider_called"] is False
+    assert "L-7781" in result["reply"]
 
 
 def test_skills_cli_list_and_validate(tmp_path, capsys):

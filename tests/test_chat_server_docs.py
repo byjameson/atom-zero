@@ -816,9 +816,12 @@ def test_ui_collection_scope_contract():
     assert 'id="graphrefresh"' in page
     assert "showEntity" in page
     assert "/v1/skills" in page
+    assert "/v1/skills/run" in page
     assert "Custom skills" in page
     assert 'id="skrefresh"' in page
+    assert 'id="skillrun"' in page
     assert "refreshSkills" in page
+    assert "runSkill" in page
     assert "/v1/briefing" in page
     assert "/v1/goals/plan" in page
     assert "Daily brief" in page
@@ -990,17 +993,34 @@ def test_http_skills_endpoint(tmp_path):
     skill = {
         "name": "demo-skill",
         "triggers": ["demo skill"],
-        "prompt": "Demo: {query}",
+        "prompt": "Demo: {context}",
         "provider": False,
+    }
+    provider_skill = {
+        "name": "provider-skill",
+        "triggers": ["provider skill"],
+        "prompt": "Provider: {context}",
+        "provider": True,
     }
     skills_dir = tmp_path / "skills"
     skills_dir.mkdir()
     (skills_dir / "demo.json").write_text(
         json.dumps(skill), encoding="utf-8")
+    (skills_dir / "provider.json").write_text(
+        json.dumps(provider_skill), encoding="utf-8")
     registry = SkillRegistry.from_dir(skills_dir)
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("notes/launch.txt", "The launch code is L-7781.")
+    calls = []
+
+    def generator(prompt):
+        calls.append(prompt)
+        return "Provider answer."
+
     old = dict(chat_server._state)
     chat_server._state.update({
         "skills": registry, "skills_dir": str(skills_dir),
+        "docs": docs, "generator": generator,
     })
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
@@ -1010,12 +1030,30 @@ def test_http_skills_endpoint(tmp_path):
         data = json.loads(urllib.request.urlopen(
             base + "/v1/skills", timeout=10).read().decode("utf-8"))
         assert data["dir"] == str(skills_dir)
-        assert data["data"][0]["name"] == "demo-skill"
+        assert {item["name"] for item in data["data"]} == {
+            "demo-skill", "provider-skill"}
+        template = _post(base + "/v1/skills/run", {
+            "name": "demo-skill", "query": "launch code"})
+        assert template["reply"].startswith("Demo:")
+        assert "L-7781" in template["reply"]
+        assert template["provider_called"] is False
+        provider = _post(base + "/v1/skills/run", {
+            "name": "provider-skill", "query": "launch code"})
+        assert provider["reply"] == "Provider answer."
+        assert provider["provider_called"] is True
+        assert provider["sources"][0]["source"] == "notes/launch.txt"
+        chat_server._state["generator"] = None
+        fallback = _post(base + "/v1/skills/run", {
+            "name": "provider-skill", "query": "launch code"})
+        assert "needs a local provider" in fallback["reply"]
+        assert fallback["provider_called"] is False
+        assert fallback["sources"][0]["source"] == "notes/launch.txt"
     finally:
         httpd.shutdown()
         httpd.server_close()
         chat_server._state.clear()
         chat_server._state.update(old)
+        docs.close()
 
 
 def test_http_graph_and_entity(tmp_path):

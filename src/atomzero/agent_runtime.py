@@ -8,11 +8,10 @@ from datetime import datetime
 from pathlib import Path
 
 from atomzero.briefing import build_briefing, plan_goal
-from atomzero.doc_memory import (
-    best_snippet, format_citation, grounded_answer)
+from atomzero.doc_memory import format_citation, grounded_answer
 from atomzero.knowledge_gaps import KnowledgeGapError
 from atomzero.knowledge_graph import entity_sources
-from atomzero.skills import render_skill
+from atomzero.skills import execute_skill
 from atomzero.web_research import wikipedia_research
 
 from atomzero.chat_human import ChatHuman
@@ -263,56 +262,13 @@ class AgentSession:
         }
 
     def _run_skill(self, skill: dict, text: str) -> dict:
-        hits = []
-        if skill.get("use_context", True) and self.docs is not None:
-            hits = self.docs.search(
-                text, k=int(skill.get("max_chunks", 4)), diverse=True)
-        prompt = render_skill(skill, text, hits)
-        system = str(skill.get("system") or "").strip()
-        if system:
-            prompt = f"{system}\n\n{prompt}"
-        sources = []
-        evidence = []
-        for hit in hits:
-            source = {
-                "source": hit.get("source", ""),
-                "title": hit.get("title", ""),
-                "kind": hit.get("kind", "document"),
-                "verified": bool(hit.get("verified", True)),
-            }
-            if source not in sources:
-                sources.append(source)
-            evidence.append({
-                "source": hit.get("source", ""),
-                "title": hit.get("title", ""),
-                "page": hit.get("page"),
-                "section": hit.get("section", ""),
-                "snippet": best_snippet(text, hit.get("chunk", "")),
-            })
-        base = {
-            "tool_calls": [{"name": "skill", "skill": skill["name"]}],
-            "sources": sources,
-            "evidence": evidence,
-            "skill": skill["name"],
-        }
-        if not skill.get("provider", True):
-            return {"reply": prompt, **base}
-        generator = getattr(self.human, "generator", None)
-        if generator is None:
-            return {
-                "reply": (f"Skill '{skill['name']}' needs a local provider. "
-                          "Start Atom Zero with --provider or configure an "
-                          "OpenAI-compatible endpoint."),
-                **base,
-            }
         try:
-            answer = generator(prompt)
-        except Exception as exc:
-            return {"reply": f"Skill provider failed: {exc}", **base}
-        if not answer:
-            return {"reply": f"Skill '{skill['name']}' returned no answer.",
-                    **base}
-        return {"reply": str(answer), **base}
+            return execute_skill(
+                skill, text, self.docs,
+                getattr(self.human, "generator", None))
+        except ValueError as exc:
+            return {"reply": str(exc), "tool_calls": [],
+                    "sources": [], "evidence": []}
 
     def chat(self, text: str) -> dict:
         if self.safety is not None:

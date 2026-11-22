@@ -136,7 +136,7 @@ LoRA adapters.
 | document benchmark, 100 authored questions | **80/80 answerable, 20/20 no-answer** |
 | public SQuAD v2 retrieval (20 contexts) | **0.98 top-1 context (FTS), 1.00 top-5** |
 | public SQuAD v2 retrieval (50 contexts) | **hybrid 0.975 top-1; 0.816 answer in visible snippet** |
-| test suite | **273 passed** |
+| test suite | **276 passed** |
 
 The raw-model probe asks ten simple general questions with no documents, no
 calculator and no agent. The 49.2M model gets **2/10**. The product gets
@@ -168,7 +168,8 @@ short generation. It is **not MMLU, GSM8K or HumanEval**.
 - **Custom skills:** drop JSON skills into `data/skills` to add trigger phrases,
   local-context prompts, provider workflows or deterministic templates;
   `atomzero-skills list/validate/show`. Skills are declarative, not arbitrary
-  code. An end-to-end benchmark covers provider, template and no-provider modes.
+  code. Run by name/query through `atomzero-skills run`, `POST /v1/skills/run`
+  or the UI; end-to-end benchmarks cover provider, template and fallback modes.
 - **Daily brief + goal planner:** local tasks, pending gaps, index stats and
   graph entities in one brief; `atomzero-brief` and `/v1/goals/plan` produce a
   cited plan skeleton. Chat supports `brief me` for the daily brief and
