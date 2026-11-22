@@ -873,6 +873,12 @@ def test_ui_collection_scope_contract():
     assert 'id="rescheduletaskbtn"' in page
     assert 'id="reschedulemsg"' in page
     assert "rescheduleTask" in page
+    assert 'id="taskpriorityid"' in page
+    assert 'id="taskprioritylevel"' in page
+    assert 'id="taskprioritybtn"' in page
+    assert 'id="taskprioritymsg"' in page
+    assert "setTaskPriority" in page
+    assert "/v1/tasks/priority" in page
     assert 'id="deletetaskid"' in page
     assert 'id="deletetaskconfirm"' in page
     assert 'id="deletetaskbtn"' in page
@@ -1975,6 +1981,58 @@ def test_http_search_tasks(tmp_path):
                 base + "/v1/tasks/search?session_id=task-search-http",
                 timeout=10)
         assert missing_query.value.code == 400
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
+
+
+def test_http_update_task_priority(tmp_path):
+    old = dict(chat_server._state)
+    chat_server._state.update({
+        "model": None, "tok": None, "docs": None, "adapter": "",
+        "name": "tiny-test", "params": 1, "config": {}, "step": 0,
+        "api_key": "", "metrics": {"requests": 0, "generated_tokens": 0},
+        "safety": None, "wiki_lang": "en",
+        "session_dir": str(tmp_path / "sessions"), "sessions": {},
+        "generator": None, "allow_general_chat": False, "skills": None,
+    })
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        _post(base + "/v1/agent/chat", {
+            "session_id": "priority-http",
+            "message": "add task submit report priority low"})
+        updated = _post(base + "/v1/tasks/priority", {
+            "session_id": "priority-http", "id": 1, "priority": "high"})
+        assert updated["session_id"] == "priority-http"
+        assert updated["task"]["id"] == 1
+        assert updated["task"]["priority"] == "high"
+        search = json.loads(urllib.request.urlopen(
+            base + "/v1/tasks/search?session_id=priority-http&q=submit"
+                   "&priority=high", timeout=10).read().decode("utf-8"))
+        assert search["count"] == 1
+        assert search["tasks"][0]["priority"] == "high"
+        listed = _post(base + "/v1/agent/chat", {
+            "session_id": "priority-http", "message": "list tasks"})
+        assert "1 [high] submit report" in listed["reply"]
+        with pytest.raises(urllib.error.HTTPError) as invalid:
+            _post(base + "/v1/tasks/priority", {
+                "session_id": "priority-http", "id": 1,
+                "priority": "urgent"})
+        assert invalid.value.code == 400
+        with pytest.raises(urllib.error.HTTPError) as empty:
+            _post(base + "/v1/tasks/priority", {
+                "session_id": "priority-http", "id": 1})
+        assert empty.value.code == 400
+        with pytest.raises(urllib.error.HTTPError) as missing:
+            _post(base + "/v1/tasks/priority", {
+                "session_id": "priority-http", "id": 99,
+                "priority": "high"})
+        assert missing.value.code == 404
     finally:
         httpd.shutdown()
         httpd.server_close()

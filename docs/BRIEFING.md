@@ -39,6 +39,18 @@ Priority is `low`, `normal` or `high`; the default is `normal`. Existing tasks
 without the field are treated as normal. `list tasks` shows due dates, marks
 overdue items and tags non-normal priorities as `[low]` or `[high]`.
 
+Priority can also be updated outside chat:
+
+```powershell
+atomzero-brief --session data/sessions/default.json `
+  --set-task-priority 1 high
+```
+
+The HTTP form is `POST /v1/tasks/priority` with
+`{"session_id": "default", "id": 1, "priority": "high"}`, and the UI has a
+task ID / priority selector with a **Set priority** button. Invalid priorities
+return `400`; missing tasks return `404`.
+
 Tasks can be rescheduled with `reschedule task 1 due 2026-12-10`; the HTTP
 endpoint is `POST /v1/tasks/reschedule` and the UI has a task ID/date form.
 Tasks can be deleted only after explicit confirmation: chat previews

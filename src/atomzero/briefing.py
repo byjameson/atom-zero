@@ -26,7 +26,8 @@ from atomzero.weekly_reports import (
 
 TASK_SEARCH_STATUSES = ("all", "open", "done")
 TASK_SEARCH_DUE_FILTERS = ("all", "overdue", "today", "week", "none")
-TASK_SEARCH_PRIORITIES = ("all", "low", "normal", "high")
+TASK_PRIORITIES = ("low", "normal", "high")
+TASK_SEARCH_PRIORITIES = ("all",) + TASK_PRIORITIES
 
 
 def _normalize_search_filters(status="all", due="all",
@@ -77,6 +78,34 @@ def _task_due_label(task: dict, today: str) -> str:
 def _task_priority_label(task: dict) -> str:
     priority = str(task.get("priority", "normal") or "normal").lower()
     return f" [{priority}]" if priority != "normal" else ""
+
+
+def set_task_priority(session_data: dict | None, tid, priority) -> dict:
+    """Update one task's priority in a session dict."""
+    try:
+        tid = int(tid)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("task ID must be an integer") from exc
+    priority = str(priority or "").strip().lower()
+    if priority not in TASK_PRIORITIES:
+        raise ValueError(
+            "priority must be one of: " + ", ".join(TASK_PRIORITIES))
+    data = session_data if isinstance(session_data, dict) else {}
+    tasks = data.get("tasks", [])
+    if not isinstance(tasks, list):
+        raise ValueError("session tasks must be a list")
+    for task in tasks:
+        if not isinstance(task, dict):
+            continue
+        try:
+            task_id = int(task.get("id", 0))
+        except (TypeError, ValueError):
+            continue
+        if task_id == tid:
+            task["priority"] = priority
+            task["prioritized"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+            return task
+    raise ValueError(f"task {tid} not found")
 
 
 def _overdue_tasks(session_data: dict | None,
@@ -802,7 +831,7 @@ def render_weekly_report_preview(entries: list[dict], keep: int) -> str:
     return "\n".join(lines)
 
 
-def write_markdown_atomic(path: str | Path, markdown: str) -> Path:
+def write_text_atomic(path: str | Path, text: str) -> Path:
     """Write a sibling temp file, then replace the target atomically."""
     target = Path(path).expanduser()
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -812,7 +841,7 @@ def write_markdown_atomic(path: str | Path, markdown: str) -> Path:
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
             fd = -1
-            handle.write(markdown)
+            handle.write(text)
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(temp, target)
@@ -827,6 +856,10 @@ def write_markdown_atomic(path: str | Path, markdown: str) -> Path:
         except OSError:
             pass
     return target
+
+
+def write_markdown_atomic(path: str | Path, markdown: str) -> Path:
+    return write_text_atomic(path, markdown)
 
 
 def render_weekly_markdown(review: dict) -> str:
@@ -993,6 +1026,9 @@ def main(argv=None) -> int:
     parser.add_argument("--search-priority", choices=TASK_SEARCH_PRIORITIES,
                         default="all",
                         help="filter task search by priority")
+    parser.add_argument("--set-task-priority", nargs=2,
+                        metavar=("ID", "LEVEL"), default=None,
+                        help="set one task priority to low, normal or high")
     parser.add_argument("--days", type=int, default=7)
     parser.add_argument("--max-steps", type=int, default=3)
     parser.add_argument("--json", action="store_true")
@@ -1044,6 +1080,20 @@ def main(argv=None) -> int:
         parser.error("--due-days requires --due-soon")
     if args.due_days is not None and args.due_days < 1:
         parser.error("--due-days must be at least 1")
+    if args.set_task_priority is not None:
+        raw_id, raw_priority = args.set_task_priority
+        try:
+            int(raw_id)
+        except ValueError:
+            parser.error("--set-task-priority ID must be an integer")
+        if raw_priority.strip().lower() not in TASK_PRIORITIES:
+            parser.error(
+                "--set-task-priority level must be low, normal or high")
+        if (args.weekly or args.goal or args.reports or args.markdown
+                or args.out or args.overdue or args.due_soon
+                or args.search_tasks is not None):
+            parser.error(
+                "--set-task-priority cannot be combined with other views")
     if args.search_tasks is None and (
             args.search_status != "all" or args.search_due != "all"
             or args.search_priority != "all"):
@@ -1219,6 +1269,28 @@ def main(argv=None) -> int:
         return 0
     session_path = Path(args.session) if args.session else (
         Path(args.sessions_dir) / f"{args.session_id}.json")
+    if args.set_task_priority is not None:
+        raw_id, raw_priority = args.set_task_priority
+        try:
+            session = load_session(session_path)
+            if not session:
+                raise ValueError(f"cannot read session: {session_path}")
+            task = set_task_priority(session, raw_id, raw_priority)
+            write_text_atomic(
+                session_path,
+                json.dumps(session, indent=2, ensure_ascii=False) + "\n")
+        except (ValueError, OSError) as exc:
+            if args.json:
+                print(json.dumps({"ok": False, "error": str(exc)},
+                                 indent=2, ensure_ascii=False))
+            else:
+                print(f"briefing error: {exc}")
+            return 1
+        if args.json:
+            print(json.dumps({"task": task}, indent=2, ensure_ascii=False))
+        else:
+            print(f"Task {task['id']} priority set to {task['priority']}.")
+        return 0
     docs = None
     try:
         session = load_session(session_path)

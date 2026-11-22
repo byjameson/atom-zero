@@ -267,6 +267,21 @@ def test_cli_search_tasks(tmp_path, capsys):
     undated = json.loads(capsys.readouterr().out)
     assert [task["id"] for task in undated["tasks"]] == [3]
 
+    assert main(common + [
+        "--set-task-priority", "3", "high", "--json"]) == 0
+    updated = json.loads(capsys.readouterr().out)
+    assert updated["task"]["id"] == 3
+    assert updated["task"]["priority"] == "high"
+    assert main(common + [
+        "--search-tasks", "launch", "--search-priority", "high",
+        "--json"]) == 0
+    persisted = json.loads(capsys.readouterr().out)
+    assert [task["id"] for task in persisted["tasks"]] == [3]
+    assert main(common + ["--set-task-priority", "3", "normal"]) == 0
+    assert "Task 3 priority set to normal." in capsys.readouterr().out
+    assert main(common + ["--set-task-priority", "99", "high"]) == 1
+    assert "task 99 not found" in capsys.readouterr().out
+
     assert main(common + ["--search-tasks", "missing", "--json"]) == 0
     empty = json.loads(capsys.readouterr().out)
     assert empty["count"] == 0
@@ -292,6 +307,12 @@ def test_cli_search_tasks(tmp_path, capsys):
     assert exc.value.code == 2
     with pytest.raises(SystemExit) as exc:
         main(common + ["--search-priority", "high"])
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--set-task-priority", "1", "urgent"])
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--set-task-priority", "1", "high", "--weekly"])
     assert exc.value.code == 2
 
 

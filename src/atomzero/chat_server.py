@@ -32,6 +32,7 @@ Endpoints:
   GET  /v1/tasks/due-soon?session_id=default&days=7
   GET  /v1/tasks/search?session_id=default&q=report&status=open&due=week&priority=high
   POST /v1/tasks/reschedule
+  POST /v1/tasks/priority
   POST /v1/tasks/delete
   GET  /v1/weekly-review/reports?limit=10
   GET  /v1/weekly-review/reports?id=w0001
@@ -303,6 +304,14 @@ and suggested next actions.</p>
        style="width:5em">
 <input id="rescheduledue" placeholder="new due date" style="width:9em">
 <button id="rescheduletaskbtn">Reschedule</button>
+<input id="taskpriorityid" type="number" min="1" placeholder="task ID"
+       style="width:5em">
+<select id="taskprioritylevel" title="New task priority">
+<option value="low">Low</option>
+<option value="normal" selected>Normal</option>
+<option value="high">High</option>
+</select>
+<button id="taskprioritybtn">Set priority</button>
 <input id="deletetaskid" type="number" min="1" placeholder="task ID"
        style="width:5em">
 <label class="hint"><input id="deletetaskconfirm" type="checkbox">
@@ -317,6 +326,7 @@ Confirm delete</label>
 <div id="tasksearchres"></div>
 <p id="tasksearchmsg" class="hint"></p>
 <p id="reschedulemsg" class="hint"></p>
+<p id="taskprioritymsg" class="hint"></p>
 <p id="deletetaskmsg" class="hint"></p>
 <div class="row"><input id="weeklyreportsearch" placeholder="Search reports...">
 <button id="weeklyreportssearch">Search</button>
@@ -798,6 +808,31 @@ async function rescheduleTask() {
     msg.textContent = 'task ' + j.task.id + ' rescheduled to ' + j.task.due;
   } catch (e) {
     msg.textContent = 'reschedule error: ' + e;
+  }
+}
+async function setTaskPriority() {
+  const msg = document.getElementById('taskprioritymsg');
+  const taskId = parseInt(document.getElementById('taskpriorityid').value, 10);
+  const priority = document.getElementById('taskprioritylevel').value;
+  if (!Number.isInteger(taskId) || taskId < 1) {
+    msg.textContent = 'enter a task id';
+    return;
+  }
+  msg.textContent = 'updating task priority...';
+  try {
+    const r = await fetch('/v1/tasks/priority', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({session_id: sessionId, id: taskId,
+                            priority: priority})});
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'priority error: ' + (j.error || r.status);
+      return;
+    }
+    msg.textContent = 'task ' + j.task.id + ' priority set to ' +
+      j.task.priority;
+  } catch (e) {
+    msg.textContent = 'priority error: ' + e;
   }
 }
 async function deleteTask() {
@@ -1324,6 +1359,7 @@ document.getElementById('overduebtn').onclick = () => getOverdueTasks();
 document.getElementById('duesoonbtn').onclick = () => getDueSoonTasks();
 document.getElementById('tasksearchbtn').onclick = () => searchTasks();
 document.getElementById('rescheduletaskbtn').onclick = () => rescheduleTask();
+document.getElementById('taskprioritybtn').onclick = () => setTaskPriority();
 document.getElementById('deletetaskbtn').onclick = () => deleteTask();
 document.getElementById('weeklymd').onclick = () => downloadWeeklyMarkdown();
 document.getElementById('weeklyreportssearch').onclick =
@@ -3502,7 +3538,8 @@ class Handler(BaseHTTPRequestHandler):
                          "/v1/skills/run", "/v1/skills/chain",
                          "/v1/skills/chains/run",
                          "/v1/briefing", "/v1/weekly-review",
-                         "/v1/tasks/reschedule", "/v1/tasks/delete",
+                         "/v1/tasks/reschedule", "/v1/tasks/priority",
+                         "/v1/tasks/delete",
                          "/v1/weekly-review/reports/prune",
                          "/v1/weekly-review/reports/keep",
                          "/v1/weekly-review/reports/delete",
@@ -3584,6 +3621,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._weekly_reports_repair()
             if route == "/v1/tasks/reschedule":
                 return self._tasks_reschedule(req)
+            if route == "/v1/tasks/priority":
+                return self._tasks_priority(req)
             if route == "/v1/tasks/delete":
                 return self._tasks_delete(req)
             if route == "/v1/goals/plan":
@@ -4078,6 +4117,26 @@ class Handler(BaseHTTPRequestHandler):
         return self._json(200, {
             "session_id": session_id,
             "deleted": deleted,
+        })
+
+    def _tasks_priority(self, req: dict):
+        session_id = str(req.get("session_id", "default")).strip() or "default"
+        priority = str(req.get("priority", "") or "").strip().lower()
+        if not priority:
+            return self._json(400, {"error": "priority is required"})
+        try:
+            task_id = int(req.get("id"))
+            session = self._session(session_id)
+            task = session.human.set_task_priority(task_id, priority)
+        except (TypeError, ValueError) as exc:
+            return self._json(400, {"error": str(exc)})
+        except Exception as exc:
+            return self._json(400, {"error": str(exc)})
+        if task is None:
+            return self._json(404, {"error": "task not found"})
+        return self._json(200, {
+            "session_id": session_id,
+            "task": task,
         })
 
     def _tasks_reschedule(self, req: dict):
