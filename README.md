@@ -152,6 +152,9 @@ The raw-model probe asks ten simple general questions with no documents, no
 calculator and no agent. The 49.2M model gets **2/10**. The product gets
 **21/21** because the runtime does the work.
 
+The raw `pytest -v` run for the tested commit, together with the AISC suite
+run, is recorded in [`TEST_RESULTS.md`](TEST_RESULTS.md).
+
 The product benchmark is narrow and authored: tools, memory, tasks,
 source-cited retrieval, teacher-note review, missing-source detection and one
 short generation. It is **not MMLU, GSM8K or HumanEval**.
