@@ -159,9 +159,44 @@ def test_cli_weekly_markdown_out_file(tmp_path, capsys):
     markdown = payload.decode("utf-8")
     assert markdown.startswith("# Weekly review - ")
     assert "- [ ] **#1** raporu yaz" in markdown
+    assert not list(out.parent.glob(f".{out.name}.*.tmp"))
     with pytest.raises(SystemExit) as exc:
         main(["--out", str(tmp_path / "invalid.md")])
     assert exc.value.code == 2
+
+
+def test_cli_weekly_markdown_out_rejects_file_parent(tmp_path, capsys):
+    blocker = tmp_path / "blocking-file"
+    blocker.write_text("not a directory", encoding="utf-8")
+    target = blocker / "weekly.md"
+    assert main([
+        "--session", str(tmp_path / "missing.json"),
+        "--docs", str(tmp_path / "missing.db"),
+        "--gaps", str(tmp_path / "missing-gaps.json"),
+        "--weekly", "--markdown", "--out", str(target)]) == 1
+    captured = capsys.readouterr()
+    assert "briefing error:" in captured.out
+    assert not target.exists()
+
+
+def test_cli_weekly_markdown_out_atomic_replace_failure(
+        tmp_path, capsys, monkeypatch):
+    target = tmp_path / "weekly.md"
+    target.write_text("original report", encoding="utf-8")
+
+    def fail_replace(source, destination):
+        raise OSError("simulated replace failure")
+
+    monkeypatch.setattr("atomzero.briefing.os.replace", fail_replace)
+    assert main([
+        "--session", str(tmp_path / "missing.json"),
+        "--docs", str(tmp_path / "missing.db"),
+        "--gaps", str(tmp_path / "missing-gaps.json"),
+        "--weekly", "--markdown", "--out", str(target)]) == 1
+    captured = capsys.readouterr()
+    assert "simulated replace failure" in captured.out
+    assert target.read_text(encoding="utf-8") == "original report"
+    assert not list(tmp_path.glob(f".{target.name}.*.tmp"))
 
 
 def test_plan_goal_adds_cited_context_and_suggestions(tmp_path):

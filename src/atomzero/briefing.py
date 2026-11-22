@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
+import tempfile
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -357,6 +359,33 @@ def render_plan(plan: dict) -> str:
     return "\n".join(lines)
 
 
+def write_markdown_atomic(path: str | Path, markdown: str) -> Path:
+    """Write a sibling temp file, then replace the target atomically."""
+    target = Path(path).expanduser()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    fd, temp_name = tempfile.mkstemp(
+        prefix=f".{target.name}.", suffix=".tmp", dir=str(target.parent))
+    temp = Path(temp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            fd = -1
+            handle.write(markdown)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp, target)
+    finally:
+        if fd != -1:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+        try:
+            temp.unlink()
+        except OSError:
+            pass
+    return target
+
+
 def render_weekly_markdown(review: dict) -> str:
     """Render a weekly review as a portable Markdown report."""
     days = review.get("period_days", 7)
@@ -534,10 +563,8 @@ def main(argv=None) -> int:
     elif args.markdown:
         markdown = render_weekly_markdown(result)
         if args.out:
-            target = Path(args.out).expanduser()
             try:
-                target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_text(markdown, encoding="utf-8")
+                target = write_markdown_atomic(args.out, markdown)
             except OSError as exc:
                 print(f"briefing error: {exc}")
                 return 1

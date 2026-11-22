@@ -73,8 +73,10 @@ atomzero-brief --session data/sessions/default.json `
 ```
 
 Without `--out` the report goes to stdout. With `--out` the CLI creates parent
-directories, writes UTF-8 Markdown and prints a short confirmation. `--out`
-requires both `--weekly` and `--markdown`.
+directories, writes UTF-8 Markdown through a sibling temporary file and
+atomically replaces the target, then prints a short confirmation. If the write
+or replace fails, the previous report is left intact and the temporary file is
+removed. `--out` requires both `--weekly` and `--markdown`.
 
 ```text
 GET /v1/weekly-review/export?session_id=default&days=7

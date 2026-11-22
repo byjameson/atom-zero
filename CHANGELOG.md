@@ -23,6 +23,8 @@
   actions.
 - Added `atomzero-brief --weekly --markdown --out PATH` to write the report
   directly to a file and create parent directories.
+- `--out` now writes via a sibling temp file and atomic replace, preserving an
+  existing report when the write or replace fails.
 - Added `benchmarks/weekly_export_regression.py` (8/8 checks: CLI, HTTP and
   UI).
 - Fixed BOM-sensitive session loading: `atomzero-brief` and `ChatHuman` now
