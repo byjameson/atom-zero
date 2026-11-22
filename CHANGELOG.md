@@ -1,5 +1,16 @@
 # Changelog
 
+## atomzero 0.2.0 - public benchmark and demo UI (2026-11-22)
+
+- Added a public SQuAD v2 retrieval benchmark (`benchmarks/squad_retrieval.py`)
+  with 20x100 and 50x200 results.
+- Added one-click RAG demo chips to the UI: launch code, warranty, visitor
+  badge and a no-source Paris question.
+- Kept the 0.1.8 doctor, 0.1.9 reset-demo/version flags/troubleshooting and
+  donation addresses.
+- No model/runtime weights changed; weights remain `0.8.0`.
+- Release notes: [`docs/RELEASE_ATOMZERO_0.2.0.md`](docs/RELEASE_ATOMZERO_0.2.0.md).
+
 ## atomzero 0.1.9 - support and onboarding polish (2026-11-22)
 
 - Added EVM, Solana and Bitcoin donation addresses to the README, PyPI

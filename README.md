@@ -13,7 +13,7 @@ ModelScope.
 ## Install
 
 ```powershell
-pip install atomzero==0.1.9
+pip install atomzero==0.2.0
 ```
 
 Optional local MiniLM reranker:
@@ -133,7 +133,9 @@ LoRA adapters.
 | behavior checks | **16/16** |
 | source-cited retrieval top-1 | **1.000** (FTS 0.850) |
 | document benchmark, 100 authored questions | **80/80 answerable, 20/20 no-answer** |
-| test suite | **412 passed** |
+| public SQuAD v2 retrieval (20 contexts) | **0.98 top-1 context, 1.00 top-5** |
+| public SQuAD v2 retrieval (50 contexts) | **FTS 0.960, hybrid 0.970 top-1** |
+| test suite | **215 passed** |
 
 The raw-model probe asks ten simple general questions with no documents, no
 calculator and no agent. The 49.2M model gets **2/10**. The product gets
@@ -240,9 +242,9 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 
 ## Links
 
-- PyPI: <https://pypi.org/project/atomzero/0.1.9/>
+- PyPI: <https://pypi.org/project/atomzero/0.2.0/>
 - GitHub source: <https://github.com/byjameson/atom-zero>
-- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v0.1.9>
+- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v0.2.0>
 - Quickstart: <https://github.com/byjameson/atom-zero/blob/main/docs/QUICKSTART_ATOMZERO.md>
 - Model card: <https://github.com/byjameson/atom-zero/blob/main/docs/MODEL_CARD.md>
 - Full project map: <https://github.com/byjameson/atom-zero/blob/main/docs/PROJECT_OVERVIEW.md>
