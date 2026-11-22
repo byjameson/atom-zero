@@ -220,6 +220,19 @@ class ChatHuman:
         self.save()
         return tid
 
+    def reschedule_task(self, tid: int, due: str) -> dict | None:
+        normalized = _parse_due(due)
+        if not normalized:
+            raise ValueError(
+                "due date must be YYYY-MM-DD, today, tomorrow or in N days")
+        for task in self.data["tasks"]:
+            if int(task["id"]) == int(tid):
+                task["due"] = normalized
+                task["rescheduled"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+                self.save()
+                return task
+        return None
+
     def complete_task(self, tid: int) -> bool:
         for task in self.data["tasks"]:
             if int(task["id"]) == int(tid):
@@ -387,6 +400,26 @@ class ChatHuman:
                 reply = f"Added task {tid}: {task}{suffix}"
             else:
                 reply = "Tell me the task after 'add task'."
+        elif low.startswith("reschedule task"):
+            match = re.match(
+                r"reschedule task\s*(\d+)\s+(?:due|to)\s+(.+)$",
+                text, re.IGNORECASE)
+            if not match:
+                reply = ("Use 'reschedule task ID due YYYY-MM-DD' "
+                         "or 'reschedule task ID due tomorrow'.")
+            else:
+                try:
+                    task = self.reschedule_task(
+                        int(match.group(1)), match.group(2).strip())
+                except ValueError as exc:
+                    task = None
+                    reply = str(exc)
+                else:
+                    if task is None:
+                        reply = "I could not find that task."
+                    else:
+                        reply = (f"Rescheduled task {task['id']} to "
+                                 f"{task['due']}.")
         elif "list tasks" in low:
             open_tasks = [task for task in self.data["tasks"]
                           if task["status"] == "open"]

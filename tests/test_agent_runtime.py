@@ -175,6 +175,13 @@ def test_agent_task_due_dates_and_overdue_brief(tmp_path):
     assert "Overdue: 1" in review["reply"]
     assert "Due soon: 1 (next 7 days)" in review["reply"]
     assert f"submit report (due {overdue} [overdue])" in review["reply"]
+    rescheduled = agent.chat(f"reschedule task 3 due {soon}")
+    assert f"Rescheduled task 3 to {soon}." in rescheduled["reply"]
+    assert agent.human.data["tasks"][2]["due"] == soon
+    missing_task = agent.chat(f"reschedule task 99 due {soon}")
+    assert "could not find that task" in missing_task["reply"]
+    invalid_due = agent.chat("reschedule task 1 due next week")
+    assert "due date must be" in invalid_due["reply"]
 
 
 def test_agent_brief_me_returns_local_brief(tmp_path):

@@ -34,7 +34,7 @@ python -m build
 python -m twine check dist/*
 ```
 
-Expected for the next batch: `349 passed` or more.
+Expected for the next batch: `350 passed` or more.
 
 ## 2. PyPI
 

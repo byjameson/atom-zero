@@ -30,6 +30,7 @@ Endpoints:
   GET  /v1/weekly-review/export?session_id=...&days=7
   GET  /v1/tasks/overdue?session_id=default
   GET  /v1/tasks/due-soon?session_id=default&days=7
+  POST /v1/tasks/reschedule
   GET  /v1/weekly-review/reports?limit=10
   GET  /v1/weekly-review/reports?id=w0001
   GET  /v1/weekly-review/reports/compare?left=w0001&right=w0002
@@ -275,12 +276,17 @@ and suggested next actions.</p>
        title="Due-soon window in days" style="width:4em">
 <button id="duesoonbtn">Due soon</button>
 <button id="weeklymd">Download .md</button>
+<input id="rescheduletaskid" type="number" min="1" placeholder="task ID"
+       style="width:5em">
+<input id="rescheduledue" placeholder="new due date" style="width:9em">
+<button id="rescheduletaskbtn">Reschedule</button>
 <input id="goalinput" placeholder="Optional goal, e.g. prepare the warranty page">
 <button id="goalplan">Plan goal</button></div>
 <p id="briefmsg" class="hint"></p>
 <div id="briefres"></div>
 <div id="overdueres"></div>
 <div id="dueres"></div>
+<p id="reschedulemsg" class="hint"></p>
 <div class="row"><input id="weeklyreportsearch" placeholder="Search reports...">
 <button id="weeklyreportssearch">Search</button>
 <select id="weeklyreportsort" title="Report order">
@@ -682,6 +688,29 @@ async function getDueSoonTasks() {
     });
   } catch (e) {
     msg.textContent = 'due-soon error: ' + e;
+  }
+}
+async function rescheduleTask() {
+  const msg = document.getElementById('reschedulemsg');
+  const taskId = parseInt(document.getElementById('rescheduletaskid').value, 10);
+  const due = document.getElementById('rescheduledue').value.trim();
+  if (!Number.isInteger(taskId) || taskId < 1 || !due) {
+    msg.textContent = 'enter a task id and a new due date';
+    return;
+  }
+  msg.textContent = 'rescheduling task...';
+  try {
+    const r = await fetch('/v1/tasks/reschedule', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({session_id: sessionId, id: taskId, due})});
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'reschedule error: ' + (j.error || r.status);
+      return;
+    }
+    msg.textContent = 'task ' + j.task.id + ' rescheduled to ' + j.task.due;
+  } catch (e) {
+    msg.textContent = 'reschedule error: ' + e;
   }
 }
 async function getWeeklyReview() {
@@ -1178,6 +1207,7 @@ document.getElementById('briefrefresh').onclick = () => getBriefing();
 document.getElementById('briefweekly').onclick = () => getWeeklyReview();
 document.getElementById('overduebtn').onclick = () => getOverdueTasks();
 document.getElementById('duesoonbtn').onclick = () => getDueSoonTasks();
+document.getElementById('rescheduletaskbtn').onclick = () => rescheduleTask();
 document.getElementById('weeklymd').onclick = () => downloadWeeklyMarkdown();
 document.getElementById('weeklyreportssearch').onclick =
   () => refreshWeeklyReports();
@@ -3331,6 +3361,7 @@ class Handler(BaseHTTPRequestHandler):
                          "/v1/skills/run", "/v1/skills/chain",
                          "/v1/skills/chains/run",
                          "/v1/briefing", "/v1/weekly-review",
+                         "/v1/tasks/reschedule",
                          "/v1/weekly-review/reports/prune",
                          "/v1/weekly-review/reports/keep",
                          "/v1/weekly-review/reports/delete",
@@ -3410,6 +3441,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._weekly_reports_delete(req)
             if route == "/v1/weekly-review/reports/repair":
                 return self._weekly_reports_repair()
+            if route == "/v1/tasks/reschedule":
+                return self._tasks_reschedule(req)
             if route == "/v1/goals/plan":
                 return self._goal_plan(req)
             if route == "/v1/research/queue":
@@ -3880,6 +3913,24 @@ class Handler(BaseHTTPRequestHandler):
             "removed": removed,
             "remaining": remaining,
             "index": str(archive.path),
+        })
+
+    def _tasks_reschedule(self, req: dict):
+        session_id = str(req.get("session_id", "default")).strip() or "default"
+        try:
+            task_id = int(req.get("id"))
+            due = str(req.get("due", "") or "").strip()
+            session = self._session(session_id)
+            task = session.human.reschedule_task(task_id, due)
+        except (TypeError, ValueError) as exc:
+            return self._json(400, {"error": str(exc)})
+        except Exception as exc:
+            return self._json(400, {"error": str(exc)})
+        if task is None:
+            return self._json(404, {"error": "task not found"})
+        return self._json(200, {
+            "session_id": session_id,
+            "task": task,
         })
 
     def _weekly_reports_repair(self):

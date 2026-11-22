@@ -849,6 +849,11 @@ def test_ui_collection_scope_contract():
     assert 'id="duesoonbtn"' in page
     assert 'id="duedays"' in page
     assert 'data-q="due soon"' in page
+    assert 'id="rescheduletaskid"' in page
+    assert 'id="rescheduledue"' in page
+    assert 'id="rescheduletaskbtn"' in page
+    assert 'id="reschedulemsg"' in page
+    assert "rescheduleTask" in page
     assert 'id="dueres"' in page
     assert "getOverdueTasks" in page
     assert "getDueSoonTasks" in page
@@ -1848,6 +1853,52 @@ def test_http_due_soon_tasks(tmp_path):
                 base + "/v1/tasks/due-soon?session_id=due-soon-http&days=0",
                 timeout=10)
         assert invalid_days.value.code == 400
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
+
+
+def test_http_reschedule_task(tmp_path):
+    overdue = (date.today() - timedelta(days=1)).isoformat()
+    future = (date.today() + timedelta(days=3)).isoformat()
+    old = dict(chat_server._state)
+    chat_server._state.update({
+        "model": None, "tok": None, "docs": None, "adapter": "",
+        "name": "tiny-test", "params": 1, "config": {}, "step": 0,
+        "api_key": "", "metrics": {"requests": 0, "generated_tokens": 0},
+        "safety": None, "wiki_lang": "en",
+        "session_dir": str(tmp_path / "sessions"), "sessions": {},
+        "generator": None, "allow_general_chat": False, "skills": None,
+    })
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        _post(base + "/v1/agent/chat", {
+            "session_id": "resched",
+            "message": f"add task submit report due {overdue}"})
+        before = json.loads(urllib.request.urlopen(
+            base + "/v1/tasks/overdue?session_id=resched",
+            timeout=10).read().decode("utf-8"))
+        assert before["overdue_task_count"] == 1
+        result = _post(base + "/v1/tasks/reschedule", {
+            "session_id": "resched", "id": 1, "due": future})
+        assert result["task"]["due"] == future
+        after = json.loads(urllib.request.urlopen(
+            base + "/v1/tasks/overdue?session_id=resched",
+            timeout=10).read().decode("utf-8"))
+        assert after["overdue_task_count"] == 0
+        with pytest.raises(urllib.error.HTTPError) as invalid:
+            _post(base + "/v1/tasks/reschedule", {
+                "session_id": "resched", "id": 1, "due": "next week"})
+        assert invalid.value.code == 400
+        with pytest.raises(urllib.error.HTTPError) as missing:
+            _post(base + "/v1/tasks/reschedule", {
+                "session_id": "resched", "id": 99, "due": future})
+        assert missing.value.code == 404
     finally:
         httpd.shutdown()
         httpd.server_close()
