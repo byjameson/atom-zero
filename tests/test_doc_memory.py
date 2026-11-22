@@ -403,3 +403,62 @@ def test_sync_directory_is_portable_and_prunes_removed_files(tmp_path):
         "notes/sub/b.md"]
     assert {item["source"] for item in mem.sources()} == {"notes/a.txt"}
     mem.close()
+
+
+def test_directory_status_reports_changes_without_writing(tmp_path):
+    root = tmp_path / "notes"
+    (root / "sub").mkdir(parents=True)
+    (root / "a.txt").write_text("The launch code is L-7781.",
+                                encoding="utf-8")
+    (root / "sub" / "b.md").write_text(
+        "The warranty period is 24 months.", encoding="utf-8")
+    mem = DocMemory(tmp_path / "docs.db")
+    mem.sync_directory(root, prefix="notes")
+    clean = mem.directory_status(root, prefix="notes")
+    assert clean["added"] == 0
+    assert clean["changed"] == 0
+    assert clean["unchanged"] == 2
+    assert clean["missing"] == []
+    (root / "a.txt").write_text("The launch code is L-9900.",
+                                encoding="utf-8")
+    (root / "sub" / "b.md").unlink()
+    (root / "c.txt").write_text("The visitor badge is VB-42.",
+                                encoding="utf-8")
+    status = mem.directory_status(root, prefix="notes")
+    assert status["added"] == 1
+    assert status["changed"] == 1
+    assert status["missing"] == ["notes/sub/b.md"]
+    assert {item["status"] for item in status["details"]} == {
+        "added", "changed"}
+    assert mem.stats()["sources"] == 2
+    mem.close()
+
+
+def test_integrity_reports_clean_index_and_orphans(tmp_path):
+    mem = DocMemory(tmp_path / "docs.db")
+    mem.add_text("a.txt", "The launch code is L-7781.")
+    clean = mem.integrity()
+    assert clean["ok"] is True
+    assert clean["issues"] == []
+    assert clean["chunks"] == 1
+    assert clean["sources"] == 1
+    mem.con.execute("DELETE FROM doc_meta WHERE source = 'a.txt'")
+    mem.con.execute(
+        "INSERT INTO doc_meta(source, kind, source_url, teacher, model, "
+        "verified, created, reviewer, verified_at) "
+        "VALUES ('ghost.txt', 'document', '', '', '', 1, '', '', '')")
+    mem.con.execute(
+        "INSERT INTO doc_vectors(doc_rowid, model, dim, vec) "
+        "VALUES (9999, 'x', 1, ?)", (b"\x00",))
+    mem.con.execute(
+        "INSERT INTO doc_chunk_meta(doc_rowid, page, section) "
+        "VALUES (9999, NULL, '')")
+    mem.con.commit()
+    broken = mem.integrity()
+    assert broken["ok"] is False
+    assert broken["missing_meta"] == 1
+    assert broken["orphan_meta"] == 1
+    assert broken["orphan_vectors"] == 1
+    assert broken["orphan_chunk_meta"] == 1
+    assert len(broken["issues"]) >= 4
+    mem.close()

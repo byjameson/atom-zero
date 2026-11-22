@@ -503,6 +503,17 @@ def _chunks(text: str) -> list[str]:
     return out
 
 
+def _clean_collection_prefix(prefix: str) -> str:
+    value = str(prefix or "").strip().strip("/\\")
+    if not value:
+        raise ValueError("prefix cannot be empty")
+    if len(value) > 200:
+        raise ValueError("prefix is too long (max 200 chars)")
+    if any(ord(ch) < 32 for ch in value):
+        raise ValueError("prefix contains control characters")
+    return value
+
+
 class DocMemory:
     def __init__(self, path: str | Path = "data/docs.db"):
         self.path = Path(path)
@@ -743,13 +754,7 @@ class DocMemory:
         root = Path(path)
         if not root.is_dir():
             raise ValueError(f"not a directory: {root}")
-        prefix = str(prefix or root.name).strip().strip("/\\")
-        if not prefix:
-            raise ValueError("prefix cannot be empty")
-        if len(prefix) > 200:
-            raise ValueError("prefix is too long (max 200 chars)")
-        if any(ord(ch) < 32 for ch in prefix):
-            raise ValueError("prefix contains control characters")
+        prefix = _clean_collection_prefix(prefix or root.name)
         pattern = "**/*" if recursive else "*"
         files = sorted(
             item for item in root.glob(pattern)
@@ -789,6 +794,63 @@ class DocMemory:
             "pruned": pruned,
             "failed": sum(1 for item in results if "error" in item),
             "results": results,
+        }
+
+    def directory_status(self, path: str | Path, prefix: str = "",
+                         recursive: bool = True) -> dict:
+        """Compare a directory with the index without changing anything."""
+        from atomzero.doc_ingest import SUPPORTED_SUFFIXES, extract_file
+
+        root = Path(path)
+        if not root.is_dir():
+            raise ValueError(f"not a directory: {root}")
+        prefix = _clean_collection_prefix(prefix or root.name)
+        pattern = "**/*" if recursive else "*"
+        files = sorted(
+            item for item in root.glob(pattern)
+            if item.is_file() and item.suffix.lower() in SUPPORTED_SUFFIXES)
+        existing = {
+            item["source"]: item.get("content_sha256", "")
+            for item in self.sources()
+            if item["source"].startswith(f"{prefix}/")}
+        current = set()
+        details = []
+        added = changed = unchanged = failed = 0
+        for item in files:
+            relative = item.relative_to(root).as_posix()
+            source = f"{prefix}/{relative}"
+            current.add(source)
+            if source not in existing:
+                added += 1
+                details.append({"source": source, "status": "added"})
+                continue
+            try:
+                extracted = extract_file(item)
+                content_sha = hashlib.sha256(
+                    "\n\n".join(str(block.get("text", ""))
+                                for block in extracted["blocks"])
+                    .encode("utf-8")).hexdigest()
+            except Exception as exc:
+                failed += 1
+                details.append({"source": source, "status": "error",
+                                "error": str(exc)})
+                continue
+            if content_sha != existing[source]:
+                changed += 1
+                details.append({"source": source, "status": "changed"})
+            else:
+                unchanged += 1
+        missing = sorted(set(existing) - current)
+        return {
+            "root": str(root),
+            "prefix": prefix,
+            "files": len(files),
+            "added": added,
+            "changed": changed,
+            "unchanged": unchanged,
+            "failed": failed,
+            "missing": missing,
+            "details": details,
         }
 
     def find_by_content_sha(self, sha: str, exclude_source: str = "") -> list[dict]:
@@ -1451,6 +1513,82 @@ class DocMemory:
         return {"path": str(self.path), "chunks": count,
                 "sources": len(self.sources())}
 
+    def integrity(self) -> dict:
+        """Check the index for orphan rows and FTS corruption."""
+        with self._lock:
+            chunks = self.con.execute(
+                "SELECT COUNT(*) FROM docs").fetchone()[0]
+            sources = self.con.execute(
+                "SELECT COUNT(DISTINCT source) FROM docs").fetchone()[0]
+            meta = self.con.execute(
+                "SELECT COUNT(*) FROM doc_meta").fetchone()[0]
+            vectors = self.con.execute(
+                "SELECT COUNT(*) FROM doc_vectors").fetchone()[0]
+            chunk_meta = self.con.execute(
+                "SELECT COUNT(*) FROM doc_chunk_meta").fetchone()[0]
+            orphan_vectors = self.con.execute(
+                "SELECT COUNT(*) FROM doc_vectors v "
+                "LEFT JOIN docs d ON d.rowid = v.doc_rowid "
+                "WHERE d.rowid IS NULL").fetchone()[0]
+            orphan_chunk_meta = self.con.execute(
+                "SELECT COUNT(*) FROM doc_chunk_meta m "
+                "LEFT JOIN docs d ON d.rowid = m.doc_rowid "
+                "WHERE d.rowid IS NULL").fetchone()[0]
+            orphan_meta = self.con.execute(
+                "SELECT COUNT(*) FROM doc_meta "
+                "WHERE source NOT IN (SELECT source FROM docs)"
+            ).fetchone()[0]
+            missing_meta = self.con.execute(
+                "SELECT COUNT(*) FROM (SELECT DISTINCT source FROM docs) d "
+                "WHERE d.source NOT IN (SELECT source FROM doc_meta)"
+            ).fetchone()[0]
+            empty_chunks = self.con.execute(
+                "SELECT COUNT(*) FROM docs WHERE trim(chunk) = ''"
+            ).fetchone()[0]
+            teachers = self.con.execute(
+                "SELECT COUNT(*) FROM doc_meta WHERE kind = 'teacher'"
+            ).fetchone()[0]
+            unverified = self.con.execute(
+                "SELECT COUNT(*) FROM doc_meta "
+                "WHERE kind = 'teacher' AND verified = 0").fetchone()[0]
+            fts_error = ""
+            try:
+                self.con.execute(
+                    "INSERT INTO docs(docs) VALUES('integrity-check')")
+            except sqlite3.DatabaseError as exc:
+                fts_error = str(exc)
+        issues = []
+        if orphan_vectors:
+            issues.append(f"{orphan_vectors} orphan vector row(s)")
+        if orphan_chunk_meta:
+            issues.append(f"{orphan_chunk_meta} orphan chunk-meta row(s)")
+        if orphan_meta:
+            issues.append(f"{orphan_meta} orphan source-meta row(s)")
+        if missing_meta:
+            issues.append(f"{missing_meta} source(s) without metadata")
+        if empty_chunks:
+            issues.append(f"{empty_chunks} empty chunk(s)")
+        if fts_error:
+            issues.append(f"FTS integrity check failed: {fts_error}")
+        return {
+            "ok": not issues,
+            "issues": issues,
+            "path": str(self.path),
+            "chunks": int(chunks),
+            "sources": int(sources),
+            "meta": int(meta),
+            "vectors": int(vectors),
+            "chunk_meta": int(chunk_meta),
+            "teacher_notes": int(teachers),
+            "unverified_teacher_notes": int(unverified),
+            "orphan_vectors": int(orphan_vectors),
+            "orphan_chunk_meta": int(orphan_chunk_meta),
+            "orphan_meta": int(orphan_meta),
+            "missing_meta": int(missing_meta),
+            "empty_chunks": int(empty_chunks),
+            "vector_index_built": self._vector_index is not None,
+        }
+
     def close(self):
         with self._lock:
             self.con.close()
@@ -1498,6 +1636,14 @@ def main(argv=None):
                       default=True)
     sync.add_argument("--no-prune", action="store_true")
     sync.add_argument("--no-dedupe", action="store_true")
+    status = sub.add_parser(
+        "status", help="compare a directory with the index without writing")
+    status.add_argument("path")
+    status.add_argument("--prefix", default="")
+    status.add_argument("--recursive", action=argparse.BooleanOptionalAction,
+                        default=True)
+    doctor = sub.add_parser(
+        "doctor", help="check the index for orphan rows and FTS corruption")
     list_db = sub.add_parser("list", help="list indexed sources")
     stats_db = sub.add_parser("stats", help="show index statistics")
     evidence = sub.add_parser("evidence", help="show chunks for a source")
@@ -1508,8 +1654,8 @@ def main(argv=None):
     forget.add_argument("source", nargs="?")
     forget.add_argument("--all", action="store_true")
     # Accept --db on either side of the subcommand; the docs use both forms.
-    for parser in (add, search, answer, sync, list_db, stats_db,
-                   evidence, forget):
+    for parser in (add, search, answer, sync, status, doctor, list_db,
+                   stats_db, evidence, forget):
         parser.add_argument("--db", dest="db_after", default=None)
     args = ap.parse_args(argv)
     mem = DocMemory(args.db_after or args.db or "data/docs.db")
@@ -1556,6 +1702,15 @@ def main(argv=None):
                 dedupe_across_sources=not args.no_dedupe)
             result["added"] = result["chunks"]
             print(json.dumps(result, indent=2, ensure_ascii=False))
+        elif args.cmd == "status":
+            result = mem.directory_status(
+                args.path, prefix=args.prefix, recursive=args.recursive)
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+        elif args.cmd == "doctor":
+            result = mem.integrity()
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+            if not result["ok"]:
+                return 1
         elif args.cmd == "list":
             print(json.dumps(mem.sources(), indent=2, ensure_ascii=False))
         elif args.cmd == "evidence":

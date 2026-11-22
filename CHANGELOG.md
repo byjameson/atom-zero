@@ -7,6 +7,8 @@
   `--skip-unchanged` and `--dedupe` content-hash deduplication.
 - Added `atomzero-docs sync`: portable relative-path collections, unchanged
   file skips, duplicate detection and pruning of deleted files.
+- Added `atomzero-docs status` (dry-run directory diff) and
+  `atomzero-docs doctor` (orphan-row and FTS integrity check).
 - Added source, source-prefix and kind filters to document search.
 - Added `POST /v1/documents/answer` and `atomzero-docs answer`: cited answer,
   evidence list and a transparent heuristic match-confidence score from one

@@ -80,6 +80,8 @@ browser.
 atomzero-docs add manual.pdf --db data/docs.db
 atomzero-docs add .\notes --db data/docs.db --skip-unchanged
 atomzero-docs sync .\notes --db data/docs.db
+atomzero-docs status .\notes --db data/docs.db
+atomzero-docs doctor --db data/docs.db
 atomzero-docs search "warranty code" --db data/docs.db
 atomzero-docs search "warranty" --db data/docs.db --source policy.docx
 atomzero-docs answer "what is the warranty period?" --source policy.docx `
@@ -102,6 +104,12 @@ skips unchanged files and duplicate content, and prunes sources whose files
 disappeared. Use `--no-prune`, `--no-dedupe` or `--prefix NAME` to change that
 behavior. This keeps the index portable when the folder moves to another
 machine.
+
+`status` performs the same comparison without writing: it reports
+`added`/`changed`/`unchanged` files and `missing` indexed sources. `doctor`
+checks for orphan vectors, orphan chunk metadata, orphan source metadata,
+sources without metadata, empty chunks and FTS5 corruption; it exits non-zero
+when the index is not clean.
 
 `search` and `answer` accept `--source` (exact), `--source-prefix` and
 `--kind` (`document` or `teacher`); `search` also accepts `--no-rerank`.
