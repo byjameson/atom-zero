@@ -29,8 +29,8 @@ after `0.5.0`.
   overdue and due-soon views.
 - Task priorities (`low`, `normal`, `high`), priority updates and priority
   labels in lists, briefs, reviews and exports.
-- Task tags (up to five per task), `tag task` updates, tag filters and tags in
-  CSV/Markdown task exports.
+- Task tags (up to five per task), `tag task` updates, tag filters in task
+  lists/search and tags in CSV/Markdown task exports.
 - Rescheduling and confirmed deletion.
 - Task text search plus status/due/priority filters.
 - Priority-first sorting in search, overdue, due-soon, list, brief and review

@@ -82,13 +82,14 @@ def math_query(text: str) -> str | None:
     return candidate
 
 
-def parse_task_search_filters(raw: str) -> tuple[str, str, str, str, str]:
+def parse_task_search_filters(raw: str) -> tuple[str, str, str, str, str, str]:
     """Split trailing task-search filters from the text query."""
     tokens = str(raw or "").strip().split()
     status = "all"
     due = "all"
     priority = "all"
     sort = "default"
+    tag = "all"
     status_words = {"open", "done"}
     due_words = {"overdue", "today", "week", "none"}
     priority_words = {"low", "normal", "high"}
@@ -108,6 +109,10 @@ def parse_task_search_filters(raw: str) -> tuple[str, str, str, str, str]:
         if (len(tokens) >= 2 and tokens[-2].lower() == "priority"
                 and last in priority_words):
             priority = last
+            tokens = tokens[:-2]
+            continue
+        if (len(tokens) >= 2 and tokens[-2].lower() in {"tag", "tags"}):
+            tag = last.lstrip("#")
             tokens = tokens[:-2]
             continue
         if (len(tokens) >= 2 and tokens[-2].lower() == "status"
@@ -132,8 +137,12 @@ def parse_task_search_filters(raw: str) -> tuple[str, str, str, str, str]:
             due = last
             tokens.pop()
             continue
+        if last.startswith("#") and len(last) > 1:
+            tag = last[1:]
+            tokens.pop()
+            continue
         break
-    return " ".join(tokens).strip(), status, due, priority, sort
+    return " ".join(tokens).strip(), status, due, priority, sort, tag
 
 
 class AgentSession:
@@ -985,8 +994,8 @@ class AgentSession:
         }
 
     def _search_tasks(self, raw_query: str) -> dict:
-        query, status, due, priority, sort = parse_task_search_filters(
-            raw_query)
+        query, status, due, priority, sort, tag = (
+            parse_task_search_filters(raw_query))
         if not query:
             return {
                 "reply": ("Tell me task text to search, for example "
@@ -995,7 +1004,7 @@ class AgentSession:
             }
         view = task_search_view(
             self.human.data, query, status=status, due=due,
-            priority=priority, sort=sort)
+            priority=priority, sort=sort, tag=tag)
         return {
             "reply": render_task_search_view(view),
             "tool_calls": [{"name": "search_tasks",
@@ -1003,6 +1012,7 @@ class AgentSession:
                             "status": view["status"],
                             "due": view["due"],
                             "priority": view["priority"],
+                            "tag": view["tag"],
                             "sort": view["sort"],
                             "matches": view["count"]}],
             "sources": [],

@@ -856,6 +856,7 @@ def test_ui_collection_scope_contract():
     assert 'id="tasksearchstatus"' in page
     assert 'id="tasksearchdue"' in page
     assert 'id="tasksearchpriority"' in page
+    assert 'id="tasksearchtag"' in page
     assert 'id="tasksort"' in page
     assert 'id="tasksearchbtn"' in page
     assert 'id="tasksearchres"' in page
@@ -1943,13 +1944,15 @@ def test_http_search_tasks(tmp_path):
     week = (today + timedelta(days=3)).isoformat()
     overdue = (today - timedelta(days=1)).isoformat()
     try:
-        for text, due, priority in (
-                ("submit quarterly report", week, "high"),
-                ("submit expenses", overdue, "low"),
-                ("plan launch", "", "normal"),
-                ("submit archived report", "", "high"),
-                ("submit today report", today.isoformat(), "low")):
-            message = f"add task {text} priority {priority}"
+        for text, due, priority, tags in (
+                ("submit quarterly report", week, "high", "work"),
+                ("submit expenses", overdue, "low", "finance"),
+                ("plan launch", "", "normal", "work"),
+                ("submit archived report", "", "high", "work"),
+                ("submit today report", today.isoformat(), "low",
+                 "finance")):
+            message = (f"add task {text} priority {priority} "
+                       f"tags {tags}")
             if due:
                 message += f" due {due}"
             _post(base + "/v1/agent/chat", {
@@ -1973,6 +1976,7 @@ def test_http_search_tasks(tmp_path):
         assert result["status"] == "all"
         assert result["due"] == "all"
         assert result["priority"] == "all"
+        assert result["tag"] == "all"
         assert result["count"] == 3
         assert [task["id"] for task in result["tasks"]] == [1, 4, 5]
         assert result["open_task_count"] == 4
@@ -2001,6 +2005,14 @@ def test_http_search_tasks(tmp_path):
         normal = search(q="plan", priority="normal")
         assert [task["id"] for task in normal["tasks"]] == [3]
         combined = search(status="open", due="week", priority="high")
+        assert [task["id"] for task in combined["tasks"]] == [1]
+        work_tag = search(tag="work")
+        assert work_tag["tag"] == "work"
+        assert [task["id"] for task in work_tag["tasks"]] == [1, 4]
+        finance_tag = search(tag="finance")
+        assert [task["id"] for task in finance_tag["tasks"]] == [2, 5]
+        combined = search(
+            status="open", due="week", priority="high", tag="work")
         assert [task["id"] for task in combined["tasks"]] == [1]
         empty = search(q="missing")
         assert empty["count"] == 0

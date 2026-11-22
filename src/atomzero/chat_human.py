@@ -540,7 +540,9 @@ class ChatHuman:
             while task:
                 if not tags_seen:
                     tags_match = re.search(
-                        r"\s+tags?\s+(.+)$", task, re.IGNORECASE)
+                        r"\s+tags?\s+((?:[a-z0-9][a-z0-9_-]{0,23}"
+                        r"\s*,\s*)*[a-z0-9][a-z0-9_-]{0,23})\s*$",
+                        task, re.IGNORECASE)
                     if tags_match:
                         try:
                             tags = _normalize_tags(tags_match.group(1))
@@ -550,6 +552,16 @@ class ChatHuman:
                         task = task[:tags_match.start()].strip(" :")
                         tags_seen = True
                         continue
+                    invalid_tags = re.search(
+                        r"\s+tags?\s+(.+)$", task, re.IGNORECASE)
+                    if (invalid_tags and not re.search(
+                            r"\s+(?:due|priority)\s+",
+                            invalid_tags.group(1), re.IGNORECASE)):
+                        try:
+                            _normalize_tags(invalid_tags.group(1))
+                        except ValueError as exc:
+                            tags_error = str(exc)
+                            break
                 if not priority_seen:
                     priority_match = re.search(
                         r"\s+priority\s+(\S+)\s*$", task, re.IGNORECASE)

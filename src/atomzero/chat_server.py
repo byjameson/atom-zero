@@ -309,6 +309,7 @@ and suggested next actions.</p>
 <option value="normal">Normal</option>
 <option value="high">High</option>
 </select>
+<input id="tasksearchtag" placeholder="tag" style="width:7em">
 <select id="tasksort" title="Task order">
 <option value="default" selected>Session order</option>
 <option value="priority">Priority first</option>
@@ -789,6 +790,7 @@ async function searchTasks() {
   const status = document.getElementById('tasksearchstatus').value;
   const due = document.getElementById('tasksearchdue').value;
   const priority = document.getElementById('tasksearchpriority').value;
+  const tag = document.getElementById('tasksearchtag').value.trim();
   const sort = document.getElementById('tasksort').value;
   if (!query) {
     msg.textContent = 'enter text to search tasks';
@@ -799,6 +801,7 @@ async function searchTasks() {
   try {
     const params = new URLSearchParams({
       session_id: sessionId, q: query, status, due, priority, sort});
+    if (tag) params.set('tag', tag);
     const r = await fetch('/v1/tasks/search?' + params.toString());
     const j = await r.json();
     if (!r.ok) {
@@ -814,6 +817,9 @@ async function searchTasks() {
     }
     if ((j.priority || priority) !== 'all') {
       filters.push('priority=' + (j.priority || priority));
+    }
+    if (j.tag && j.tag !== 'all') {
+      filters.push('tag=' + j.tag);
     }
     if ((j.sort || sort) !== 'default') {
       filters.push('sort=' + (j.sort || sort));
@@ -3348,6 +3354,7 @@ class Handler(BaseHTTPRequestHandler):
             due = str(params.get("due", ["all"])[0] or "all").strip()
             priority = str(
                 params.get("priority", ["all"])[0] or "all").strip()
+            tag = str(params.get("tag", ["all"])[0] or "all").strip()
             sort = str(params.get("sort", ["default"])[0] or "default").strip()
             if not query:
                 return self._json(400, {"error": "q is required"})
@@ -3357,7 +3364,7 @@ class Handler(BaseHTTPRequestHandler):
 
                 result = task_search_view(
                     session.human.data, query, status=status, due=due,
-                    priority=priority, sort=sort,
+                    priority=priority, sort=sort, tag=tag,
                     now=params.get("today", [None])[0])
             except Exception as exc:
                 return self._json(400, {"error": str(exc)})

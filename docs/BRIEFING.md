@@ -104,18 +104,21 @@ Task text is searchable with `search tasks report`, `find task report` or
 to appear in the task text; completed tasks are included with their status.
 
 Filters are appended after the query: `search tasks report open`,
-`search tasks report due week`, `search tasks report priority high` or
-`search tasks report high open due overdue`. Status filters are `open` and
-`done`; due filters are `overdue`, `today`, `week` and `none`; priority
-filters are `low`, `normal` and `high`. `week` means today through the next
-seven days, and `overdue` applies to open tasks only.
+`search tasks report due week`, `search tasks report priority high`,
+`search tasks report tag work` or
+`search tasks report high open due overdue #work`. Status filters are `open`
+and `done`; due filters are `overdue`, `today`, `week` and `none`; priority
+filters are `low`, `normal` and `high`; tag filters use `tag work` or `#work`.
+`week` means today through the next seven days, and `overdue` applies to open
+tasks only.
 
 The HTTP endpoint is
-`GET /v1/tasks/search?q=report&status=open&due=week&priority=high&sort=priority`,
+`GET /v1/tasks/search?q=report&status=open&due=week&priority=high&tag=work&sort=priority`,
 the CLI form is `atomzero-brief --session ... --search-tasks report
 --search-status open --search-due week --search-priority high
---task-sort priority [--json]` and the UI has a **Search tasks** field with
-status, due, priority and task-order selectors. `priority` sorting places
+--search-tag work --task-sort priority [--json]` and the UI has a
+**Search tasks** field with status, due, priority, tag and task-order
+selectors. `priority` sorting places
 high before normal before low, then earliest due date, then task id; the
 default keeps session order. Chat uses the same option with
 `search tasks report sort priority`, including combinations such as

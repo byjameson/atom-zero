@@ -211,9 +211,11 @@ def test_agent_searches_task_text(tmp_path):
     overdue = (today - timedelta(days=1)).isoformat()
     agent = AgentSession("s-search-tasks", tmp_path / "memory.json")
     agent.chat(
-        f"add task submit quarterly report priority high due {soon}")
-    agent.chat(f"add task submit expenses due {overdue} priority low")
-    agent.chat("add task plan launch")
+        f"add task submit quarterly report priority high due {soon} "
+        "tags work")
+    agent.chat(
+        f"add task submit expenses due {overdue} priority low tags finance")
+    agent.chat("add task plan launch tags work")
     found = agent.chat("search tasks report")
     assert found["tool_calls"][0]["name"] == "search_tasks"
     assert found["task_search"]["count"] == 1
@@ -249,6 +251,16 @@ def test_agent_searches_task_text(tmp_path):
     assert low["task_search"]["priority"] == "low"
     assert low["task_search"]["count"] == 1
     assert low["task_search"]["tasks"][0]["id"] == 2
+    tagged = agent.chat("search tasks submit tag work")
+    assert tagged["tool_calls"][0]["tag"] == "work"
+    assert tagged["task_search"]["tag"] == "work"
+    assert tagged["task_search"]["count"] == 1
+    assert tagged["task_search"]["tasks"][0]["id"] == 1
+    assert "tag=work" in tagged["reply"]
+    hash_tag = agent.chat("search tasks launch #work")
+    assert hash_tag["task_search"]["tag"] == "work"
+    assert hash_tag["task_search"]["count"] == 1
+    assert hash_tag["task_search"]["tasks"][0]["id"] == 3
     overdue_only = agent.chat("search tasks submit overdue")
     assert overdue_only["task_search"]["due"] == "overdue"
     assert overdue_only["task_search"]["tasks"][0]["text"] == "submit expenses"

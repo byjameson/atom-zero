@@ -84,6 +84,11 @@ def _task_priority_label(task: dict) -> str:
     return f" [{priority}]" if priority != "normal" else ""
 
 
+def _task_tag_label(task: dict) -> str:
+    tags = _task_tags(task)
+    return f" [tags: {', '.join(tags)}]" if tags else ""
+
+
 def _task_tags(task: dict) -> list[str]:
     values = task.get("tags", [])
     if isinstance(values, str):
@@ -414,12 +419,14 @@ def render_due_soon_view(view: dict) -> str:
 
 def search_tasks(session_data: dict | None, query: str,
                  status: str = "all", due: str = "all",
-                 priority: str = "all", today=None) -> list[dict]:
+                 priority: str = "all", tag: str = "all",
+                 today=None) -> list[dict]:
     tokens = [token for token in str(query or "").strip().lower().split()
               if token]
     if not tokens:
         return []
     status, due, priority = _normalize_search_filters(status, due, priority)
+    tag = str(tag or "all").strip().lower().lstrip("#")
     today = _today_from_now(today)
     week_end = (date.fromisoformat(today) + timedelta(days=7)).isoformat()
     data = session_data if isinstance(session_data, dict) else {}
@@ -453,6 +460,8 @@ def search_tasks(session_data: dict | None, query: str,
             task.get("priority", "normal") or "normal").lower()
         if priority != "all" and task_priority != priority:
             continue
+        if tag != "all" and tag not in _task_tags(task):
+            continue
         matches.append(task)
     return matches
 
@@ -460,15 +469,16 @@ def search_tasks(session_data: dict | None, query: str,
 def task_search_view(session_data: dict | None, query: str,
                      status: str = "all", due: str = "all",
                      priority: str = "all", sort="default",
-                     now=None) -> dict:
+                     tag: str = "all", now=None) -> dict:
     query = str(query or "").strip()
     status, due, priority = _normalize_search_filters(
         status, due, priority)
+    tag = str(tag or "all").strip().lower().lstrip("#")
     sort = _normalize_task_sort(sort)
     today = _today_from_now(now)
     matches = sort_tasks(search_tasks(
         session_data, query, status=status, due=due,
-        priority=priority, today=today), sort)
+        priority=priority, tag=tag, today=today), sort)
     return {
         "generated": (now.strftime("%Y-%m-%d %H:%M")
                       if isinstance(now, datetime)
@@ -478,6 +488,7 @@ def task_search_view(session_data: dict | None, query: str,
         "status": status,
         "due": due,
         "priority": priority,
+        "tag": tag,
         "sort": sort,
         "count": len(matches),
         "tasks": matches,
@@ -496,6 +507,8 @@ def render_task_search_view(view: dict) -> str:
         filters.append(f"due={view['due']}")
     if view.get("priority", "all") != "all":
         filters.append(f"priority={view['priority']}")
+    if view.get("tag", "all") != "all":
+        filters.append(f"tag={view['tag']}")
     if view.get("sort", "default") != "default":
         filters.append(f"sort={view['sort']}")
     if filters:
@@ -510,6 +523,7 @@ def render_task_search_view(view: dict) -> str:
         lines.append(
             f"- {task.get('id')} [{task.get('status', '?')}] "
             f"{task.get('text', '')}{_task_priority_label(task)}"
+            f"{_task_tag_label(task)}"
             f"{_task_due_label(task, today)}")
     return "\n".join(lines)
 
@@ -1253,6 +1267,8 @@ def main(argv=None) -> int:
     parser.add_argument("--search-priority", choices=TASK_SEARCH_PRIORITIES,
                         default="all",
                         help="filter task search by priority")
+    parser.add_argument("--search-tag", default=None,
+                        help="filter task search by tag")
     parser.add_argument("--set-task-priority", nargs=2,
                         metavar=("ID", "LEVEL"), default=None,
                         help="set one task priority to low, normal or high")
@@ -1359,9 +1375,10 @@ def main(argv=None) -> int:
                 "--set-task-priority cannot be combined with other views")
     if args.search_tasks is None and (
             args.search_status != "all" or args.search_due != "all"
-            or args.search_priority != "all"):
+            or args.search_priority != "all"
+            or args.search_tag is not None):
         parser.error(
-            "--search-status/--search-due/--search-priority "
+            "--search-status/--search-due/--search-priority/--search-tag "
             "require --search-tasks")
     if args.search_tasks is not None:
         if not args.search_tasks.strip():
@@ -1593,7 +1610,8 @@ def main(argv=None) -> int:
             result = task_search_view(
                 session, args.search_tasks,
                 status=args.search_status, due=args.search_due,
-                priority=args.search_priority, sort=args.task_sort)
+                priority=args.search_priority, sort=args.task_sort,
+                tag=args.search_tag or "all")
         elif args.overdue:
             result = overdue_view(session, sort=args.task_sort)
         elif args.due_soon:

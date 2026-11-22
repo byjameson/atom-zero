@@ -124,6 +124,8 @@
 - Added task tags: `tags work,finance` on `add task`, `tag task ID ...`,
   `list tasks tag work` / `#work`, CLI `--task-tag`, HTTP/UI `tag` filters and
   `tags` columns in CSV/Markdown exports.
+- Added tag filters to task text search: chat `search tasks ... tag work` /
+  `#work`, CLI `--search-tag`, HTTP `tag` and a UI search tag field.
 - Added optional AISC architecture specs for the critical read and
   task-action paths, plus `scripts/aisc_audit.py` for external AISC checks.
 - Fixed `add task` priority parsing so task text ending in "priority task" is

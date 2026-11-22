@@ -183,16 +183,17 @@ def test_cli_search_tasks(tmp_path, capsys):
     session_path.write_text(json.dumps({"tasks": [
         {"id": 1, "text": "Submit quarterly report", "status": "open",
          "created": "2026-11-01T09:00:00", "completed": "",
-         "due": soon, "priority": "high"},
+         "due": soon, "priority": "high", "tags": ["work"]},
         {"id": 2, "text": "submit expenses", "status": "done",
          "created": "2026-11-01T09:00:00", "completed": "2026-11-02",
-         "due": "2000-01-01", "priority": "normal"},
+         "due": "2000-01-01", "priority": "normal",
+         "tags": ["finance"]},
         {"id": 3, "text": "plan launch", "status": "open",
          "created": "2026-11-01T09:00:00", "completed": "",
-         "priority": "low"},
+         "priority": "low", "tags": ["work"]},
         {"id": 4, "text": "submit late report", "status": "open",
          "created": "2026-11-01T09:00:00", "completed": "",
-         "due": overdue, "priority": "high"},
+         "due": overdue, "priority": "high", "tags": ["work"]},
     ]}), encoding="utf-8")
     common = [
         "--session", str(session_path),
@@ -204,6 +205,7 @@ def test_cli_search_tasks(tmp_path, capsys):
     assert payload["status"] == "all"
     assert payload["due"] == "all"
     assert payload["priority"] == "all"
+    assert payload["tag"] == "all"
     assert payload["count"] == 3
     assert [task["id"] for task in payload["tasks"]] == [1, 2, 4]
     assert payload["open_task_count"] == 3
@@ -211,10 +213,11 @@ def test_cli_search_tasks(tmp_path, capsys):
     assert main(common + ["--search-tasks", "submit"]) == 0
     output = capsys.readouterr().out
     assert 'Task search "submit" (3 match(es))' in output
-    assert (f"- 1 [open] Submit quarterly report [high] "
+    assert (f"- 1 [open] Submit quarterly report [high] [tags: work] "
             f"(due {soon})") in output
-    assert "- 2 [done] submit expenses (due 2000-01-01)" in output
-    assert (f"- 4 [open] submit late report [high] "
+    assert ("- 2 [done] submit expenses [tags: finance] "
+            "(due 2000-01-01)") in output
+    assert (f"- 4 [open] submit late report [high] [tags: work] "
             f"(due {overdue} [overdue])") in output
     assert "plan launch" not in output
 
@@ -253,6 +256,18 @@ def test_cli_search_tasks(tmp_path, capsys):
     combined = json.loads(capsys.readouterr().out)
     assert combined["priority"] == "high"
     assert [task["id"] for task in combined["tasks"]] == [1]
+    assert main(common + [
+        "--search-tasks", "submit", "--search-tag", "work",
+        "--json"]) == 0
+    tagged = json.loads(capsys.readouterr().out)
+    assert tagged["tag"] == "work"
+    assert [task["id"] for task in tagged["tasks"]] == [1, 4]
+    assert main(common + [
+        "--search-tasks", "submit", "--search-status", "open",
+        "--search-due", "week", "--search-priority", "high",
+        "--search-tag", "work", "--json"]) == 0
+    fully_filtered = json.loads(capsys.readouterr().out)
+    assert [task["id"] for task in fully_filtered["tasks"]] == [1]
     assert main(common + [
         "--search-tasks", "submit", "--search-priority", "high",
         "--json"]) == 0
@@ -321,6 +336,9 @@ def test_cli_search_tasks(tmp_path, capsys):
     assert exc.value.code == 2
     with pytest.raises(SystemExit) as exc:
         main(common + ["--search-priority", "high"])
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--search-tag", "work"])
     assert exc.value.code == 2
     with pytest.raises(SystemExit) as exc:
         main(common + ["--set-task-priority", "1", "urgent"])

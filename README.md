@@ -73,9 +73,10 @@ More fixes are in [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
   (`brief me priority`, `weekly review priority`, `list tasks priority`,
   filtered `list tasks` status/due/priority/tag views with structured tool
   calls, task tags, matching `/v1/tasks/list` + UI panel and CSV/Markdown
-  export via `/v1/tasks/export`, `search tasks report sort priority`,
-  `overdue tasks priority`, `due soon priority`), notes, arithmetic, time,
-  optional AISC architecture audit and source-cited document lookup.
+  export via `/v1/tasks/export`, tag-aware `search tasks report sort
+  priority`, `overdue tasks priority`, `due soon priority`), notes,
+  arithmetic, time, optional AISC architecture audit and source-cited
+  document lookup.
 - **A source-cited RAG system** over your own text, Markdown, HTML, PDF and DOCX
   files.
 - **A deterministic tool runtime:** arithmetic, time, tasks, name/likes memory and
