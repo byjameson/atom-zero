@@ -211,6 +211,10 @@ hr{border:0;border-top:1px solid #ddd;margin:22px 0}
 <button data-q="my name is Alex">remember my name</button>
 <button data-q="what do you remember?">recall</button>
 <button data-q="what is 12 * 7?">calculate</button>
+<button data-q="what is the launch code?">launch code</button>
+<button data-q="how long do I have to submit a warranty claim?">warranty</button>
+<button data-q="what is the visitor badge code?">visitor badge</button>
+<button data-q="what is the population of Paris?">no-source demo</button>
 </div>
 <hr>
 <h3>Teach a fact</h3>

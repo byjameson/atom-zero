@@ -3,7 +3,7 @@ import sys
 import pytest
 
 from atomzero import __version__
-from atomzero.chat_server import chat_prompt, main
+from atomzero.chat_server import PAGE, chat_prompt, main
 
 
 def test_chat_prompt_uses_training_format():
@@ -28,3 +28,9 @@ def test_version_exits_zero(monkeypatch, capsys):
         main()
     assert exc.value.code == 0
     assert __version__ in capsys.readouterr().out
+
+
+def test_demo_rag_chips_are_present():
+    assert 'data-q="what is the launch code?"' in PAGE
+    assert 'data-q="how long do I have to submit a warranty claim?"' in PAGE
+    assert "no-source demo" in PAGE
