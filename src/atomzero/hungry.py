@@ -176,10 +176,16 @@ def run_hungry(docs, gaps, teacher=None, *, topics=None,
         if value:
             seed_topics.append(value)
     if docs is not None:
-        for item in docs.sources()[:8]:
+        for item in docs.sources():
+            if item.get("kind") != "document":
+                continue
+            if str(item.get("source", "")).startswith("teacher://"):
+                continue
             value = str(item.get("title") or item.get("source") or "").strip()
             if value:
                 seed_topics.append(value)
+            if len(seed_topics) >= 8:
+                break
     seed_topics = list(dict.fromkeys(seed_topics))
 
     provider_calls = 0
