@@ -846,8 +846,13 @@ def test_ui_collection_scope_contract():
     assert 'id="briefweekly"' in page
     assert 'id="overduebtn"' in page
     assert 'id="overdueres"' in page
+    assert 'id="duesoonbtn"' in page
+    assert 'id="duedays"' in page
+    assert 'id="dueres"' in page
     assert "getOverdueTasks" in page
+    assert "getDueSoonTasks" in page
     assert "/v1/tasks/overdue" in page
+    assert "/v1/tasks/due-soon" in page
     assert 'id="weeklymd"' in page
     assert 'id="weeklyreportsrefresh"' in page
     assert 'id="weeklyreportsprune"' in page
@@ -1783,6 +1788,53 @@ def test_http_overdue_tasks(tmp_path):
             timeout=10).read().decode("utf-8"))
         assert empty["open_task_count"] == 0
         assert empty["overdue_tasks"] == []
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
+
+
+def test_http_due_soon_tasks(tmp_path):
+    today = date.today()
+    due_soon = (today + timedelta(days=2)).isoformat()
+    later = (today + timedelta(days=10)).isoformat()
+    overdue = (today - timedelta(days=1)).isoformat()
+    old = dict(chat_server._state)
+    chat_server._state.update({
+        "model": None, "tok": None, "docs": None, "adapter": "",
+        "name": "tiny-test", "params": 1, "config": {}, "step": 0,
+        "api_key": "", "metrics": {"requests": 0, "generated_tokens": 0},
+        "safety": None, "wiki_lang": "en",
+        "session_dir": str(tmp_path / "sessions"), "sessions": {},
+        "generator": None, "allow_general_chat": False, "skills": None,
+    })
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        for text, due in (("submit report", due_soon),
+                          ("plan launch", later),
+                          ("late task", overdue)):
+            _post(base + "/v1/agent/chat", {
+                "session_id": "due-soon-http",
+                "message": f"add task {text} due {due}"})
+        result = json.loads(urllib.request.urlopen(
+            base + "/v1/tasks/due-soon?session_id=due-soon-http&days=7"
+                   f"&today={today.isoformat()}",
+            timeout=10).read().decode("utf-8"))
+        assert result["days"] == 7
+        assert result["open_task_count"] == 3
+        assert result["due_soon_count"] == 1
+        assert result["due_soon_tasks"][0]["text"] == "submit report"
+        assert result["window_end"] == (
+            today + timedelta(days=7)).isoformat()
+        with pytest.raises(urllib.error.HTTPError) as invalid_days:
+            urllib.request.urlopen(
+                base + "/v1/tasks/due-soon?session_id=due-soon-http&days=0",
+                timeout=10)
+        assert invalid_days.value.code == 400
     finally:
         httpd.shutdown()
         httpd.server_close()

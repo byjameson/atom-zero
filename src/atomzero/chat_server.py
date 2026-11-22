@@ -29,6 +29,7 @@ Endpoints:
   POST /v1/weekly-review
   GET  /v1/weekly-review/export?session_id=...&days=7
   GET  /v1/tasks/overdue?session_id=default
+  GET  /v1/tasks/due-soon?session_id=default&days=7
   GET  /v1/weekly-review/reports?limit=10
   GET  /v1/weekly-review/reports?id=w0001
   GET  /v1/weekly-review/reports/compare?left=w0001&right=w0002
@@ -269,12 +270,16 @@ and suggested next actions.</p>
 <div class="row"><button id="briefrefresh">Get daily brief</button>
 <button id="briefweekly">Weekly review</button>
 <button id="overduebtn">Overdue tasks</button>
+<input id="duedays" type="number" min="1" max="90" value="7"
+       title="Due-soon window in days" style="width:4em">
+<button id="duesoonbtn">Due soon</button>
 <button id="weeklymd">Download .md</button>
 <input id="goalinput" placeholder="Optional goal, e.g. prepare the warranty page">
 <button id="goalplan">Plan goal</button></div>
 <p id="briefmsg" class="hint"></p>
 <div id="briefres"></div>
 <div id="overdueres"></div>
+<div id="dueres"></div>
 <div class="row"><input id="weeklyreportsearch" placeholder="Search reports...">
 <button id="weeklyreportssearch">Search</button>
 <select id="weeklyreportsort" title="Report order">
@@ -636,6 +641,46 @@ async function getOverdueTasks() {
     });
   } catch (e) {
     msg.textContent = 'overdue error: ' + e;
+  }
+}
+async function getDueSoonTasks() {
+  const msg = document.getElementById('briefmsg');
+  const box = document.getElementById('dueres');
+  const days = parseInt(document.getElementById('duedays').value, 10);
+  if (!Number.isInteger(days) || days < 1) {
+    msg.textContent = 'enter a due-soon window of at least 1 day';
+    return;
+  }
+  msg.textContent = 'loading due-soon tasks...';
+  box.textContent = '';
+  try {
+    const r = await fetch('/v1/tasks/due-soon?session_id=' +
+      encodeURIComponent(sessionId) + '&days=' + days);
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'due-soon error: ' + (j.error || r.status);
+      return;
+    }
+    msg.textContent = 'due soon | ' + (j.due_soon_count || 0) +
+      ' of ' + (j.open_task_count || 0) + ' open | next ' +
+      (j.days || days) + ' days';
+    const tasks = j.due_soon_tasks || [];
+    if (!tasks.length) {
+      const none = document.createElement('div');
+      none.className = 'hint';
+      none.textContent = 'No tasks due soon.';
+      box.appendChild(none);
+      return;
+    }
+    tasks.forEach(task => {
+      const card = document.createElement('div');
+      card.className = 'qitem';
+      card.textContent = '#' + task.id + ' ' + (task.text || '') +
+        ' | due ' + (task.due || '');
+      box.appendChild(card);
+    });
+  } catch (e) {
+    msg.textContent = 'due-soon error: ' + e;
   }
 }
 async function getWeeklyReview() {
@@ -1131,6 +1176,7 @@ async function planGoal(confirmCreate) {
 document.getElementById('briefrefresh').onclick = () => getBriefing();
 document.getElementById('briefweekly').onclick = () => getWeeklyReview();
 document.getElementById('overduebtn').onclick = () => getOverdueTasks();
+document.getElementById('duesoonbtn').onclick = () => getDueSoonTasks();
 document.getElementById('weeklymd').onclick = () => downloadWeeklyMarkdown();
 document.getElementById('weeklyreportssearch').onclick =
   () => refreshWeeklyReports();
@@ -2886,6 +2932,27 @@ class Handler(BaseHTTPRequestHandler):
             }]})
         elif self.path == "/metrics":
             self._json(200, _state["metrics"])
+        elif (self.path == "/v1/tasks/due-soon"
+              or self.path.startswith("/v1/tasks/due-soon?")):
+            params = urllib.parse.parse_qs(
+                urllib.parse.urlparse(self.path).query)
+            session_id = (params.get("session_id", ["default"])[0]
+                          or "default")
+            try:
+                days = int(params.get("days", ["7"])[0])
+                if days < 1:
+                    raise ValueError("days must be at least 1")
+                session = self._session(session_id)
+                from atomzero.briefing import due_soon_view
+
+                result = due_soon_view(
+                    session.human.data, days=days,
+                    now=params.get("today", [None])[0])
+            except (TypeError, ValueError) as exc:
+                return self._json(400, {"error": str(exc)})
+            except Exception as exc:
+                return self._json(400, {"error": str(exc)})
+            return self._json(200, result)
         elif (self.path == "/v1/tasks/overdue"
               or self.path.startswith("/v1/tasks/overdue?")):
             params = urllib.parse.parse_qs(

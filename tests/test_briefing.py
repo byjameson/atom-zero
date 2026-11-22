@@ -134,6 +134,45 @@ def test_cli_overdue_tasks(tmp_path, capsys):
     assert exc.value.code == 2
 
 
+def test_cli_due_soon_tasks(tmp_path, capsys):
+    session_path = tmp_path / "session.json"
+    today = date.today()
+    due_soon = (today + timedelta(days=2)).isoformat()
+    later = (today + timedelta(days=10)).isoformat()
+    overdue = (today - timedelta(days=1)).isoformat()
+    session_path.write_text(json.dumps({"tasks": [
+        {"id": 1, "text": "submit report", "status": "open",
+         "created": "2026-11-01T09:00:00", "completed": "",
+         "due": due_soon},
+        {"id": 2, "text": "plan launch", "status": "open",
+         "created": "2026-11-01T09:00:00", "completed": "",
+         "due": later},
+        {"id": 3, "text": "late task", "status": "open",
+         "created": "2026-11-01T09:00:00", "completed": "",
+         "due": overdue},
+    ]}), encoding="utf-8")
+    common = [
+        "--session", str(session_path),
+        "--docs", str(tmp_path / "missing.db"),
+        "--gaps", str(tmp_path / "missing-gaps.json"),
+        "--due-soon", "--due-days", "7"]
+    assert main(common + ["--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["days"] == 7
+    assert payload["open_task_count"] == 3
+    assert payload["due_soon_count"] == 1
+    assert payload["due_soon_tasks"][0]["text"] == "submit report"
+    assert main(common) == 0
+    output = capsys.readouterr().out
+    assert "Due soon (1 of 3 open, next 7 days)" in output
+    assert "submit report | due" in output
+    assert "plan launch" not in output
+    assert "late task" not in output
+    with pytest.raises(SystemExit) as exc:
+        main(["--due-soon", "--due-days", "0"])
+    assert exc.value.code == 2
+
+
 def test_cli_weekly_markdown_export(tmp_path, capsys):
     session_path = tmp_path / "session.json"
     now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")

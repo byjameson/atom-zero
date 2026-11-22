@@ -92,6 +92,62 @@ def render_overdue_view(view: dict) -> str:
     return "\n".join(lines)
 
 
+def due_soon_tasks(session_data: dict | None, days: int = 7,
+                   today: str | None = None) -> list[dict]:
+    try:
+        days = max(1, min(int(days), 90))
+    except (TypeError, ValueError):
+        days = 7
+    today = today or date.today().isoformat()
+    end = (date.fromisoformat(today) + timedelta(days=days)).isoformat()
+    return [task for task in _open_tasks(session_data)
+            if str(task.get("due", "") or "").strip()
+            and today <= str(task["due"]) <= end]
+
+
+def due_soon_view(session_data: dict | None, days: int = 7,
+                  now=None) -> dict:
+    try:
+        days = max(1, min(int(days), 90))
+    except (TypeError, ValueError):
+        days = 7
+    today = _today_from_now(now)
+    end = (date.fromisoformat(today) + timedelta(days=days)).isoformat()
+    tasks = _open_tasks(session_data)
+    due = due_soon_tasks(session_data, days=days, today=today)
+    return {
+        "generated": (now.strftime("%Y-%m-%d %H:%M")
+                      if isinstance(now, datetime)
+                      else str(now or time.strftime("%Y-%m-%d %H:%M"))),
+        "today": today,
+        "window_end": end,
+        "days": days,
+        "open_task_count": len(tasks),
+        "due_soon_count": len(due),
+        "open_tasks": tasks,
+        "due_soon_tasks": due,
+        "weights_changed": False,
+    }
+
+
+def render_due_soon_view(view: dict) -> str:
+    lines = [
+        f"Due soon ({view.get('due_soon_count', 0)} of "
+        f"{view.get('open_task_count', 0)} open, next "
+        f"{view.get('days', 7)} days) - {view.get('today', '')} "
+        f"to {view.get('window_end', '')}"
+    ]
+    tasks = view.get("due_soon_tasks", [])
+    if not tasks:
+        lines.append("- None")
+        return "\n".join(lines)
+    for task in tasks:
+        lines.append(
+            f"- {task.get('id')}: {task.get('text', '')} | "
+            f"due {task.get('due', '')}")
+    return "\n".join(lines)
+
+
 def _pending_gaps(gaps) -> list[dict]:
     if gaps is None:
         return []
@@ -764,6 +820,10 @@ def main(argv=None) -> int:
                         help="build a weekly review instead of a daily brief")
     parser.add_argument("--overdue", action="store_true",
                         help="list overdue tasks from the session")
+    parser.add_argument("--due-soon", action="store_true",
+                        help="list tasks due in the next N days")
+    parser.add_argument("--due-days", type=int, default=None,
+                        help="due-soon window in days (default 7)")
     parser.add_argument("--days", type=int, default=7)
     parser.add_argument("--max-steps", type=int, default=3)
     parser.add_argument("--json", action="store_true")
@@ -808,6 +868,13 @@ def main(argv=None) -> int:
     if args.overdue and (args.weekly or args.goal or args.reports
                          or args.markdown or args.out):
         parser.error("--overdue cannot be combined with other views")
+    if args.due_soon and (args.weekly or args.goal or args.reports
+                          or args.markdown or args.out or args.overdue):
+        parser.error("--due-soon cannot be combined with other views")
+    if args.due_days is not None and not args.due_soon:
+        parser.error("--due-days requires --due-soon")
+    if args.due_days is not None and args.due_days < 1:
+        parser.error("--due-days must be at least 1")
     if args.reports and (
             args.weekly or (args.markdown and not args.compare)
             or args.out or args.goal):
@@ -982,6 +1049,9 @@ def main(argv=None) -> int:
             gaps = KnowledgeGapStore(args.gaps)
         if args.overdue:
             result = overdue_view(session)
+        elif args.due_soon:
+            result = due_soon_view(
+                session, days=args.due_days or 7)
         elif args.weekly:
             result = build_weekly_review(
                 session, gaps, docs, days=args.days)
@@ -1003,6 +1073,8 @@ def main(argv=None) -> int:
         print(json.dumps(result, indent=2, ensure_ascii=False))
     elif args.overdue:
         print(render_overdue_view(result))
+    elif args.due_soon:
+        print(render_due_soon_view(result))
     elif args.markdown:
         markdown = render_weekly_markdown(result)
         if args.out:

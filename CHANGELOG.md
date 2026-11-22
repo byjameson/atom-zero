@@ -80,6 +80,8 @@
   Markdown export.
 - Added an overdue-task view: `atomzero-brief --overdue`,
   `GET /v1/tasks/overdue` and a UI **Overdue tasks** button.
+- Added a due-soon view: `atomzero-brief --due-soon --due-days N`,
+  `GET /v1/tasks/due-soon?days=N` and a UI **Due soon** button.
 - Added `benchmarks/weekly_export_regression.py` (29/29 checks: CLI, HTTP, UI,
   the report archive, pruning, retention, dry-run preview, deletion, query
   filtering, chat search/list/maintenance, chat/HTTP sorting, report viewing,

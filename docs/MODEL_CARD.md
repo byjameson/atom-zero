@@ -43,7 +43,7 @@ benchmarks and release — is
 | privacy | localhost, no telemetry, SSRF guard, upload caps, deletion |
 | UI | chat, documents, gaps, research queue, teacher notes, adapters, health |
 | packaging | standalone `atomzero` package (assistant deps only), `atomzero`/`atomzero-quickstart` entry points, GitHub release, HF/ModelScope weights |
-| tests | 347 passed; product 21/21; behavior 16/16; retrieval 1.000 |
+| tests | 349 passed; product 21/21; behavior 16/16; retrieval 1.000 |
 | document benchmark | 100 authored questions: 80/80 answerable, 20/20 no-answer |
 | public retrieval benchmark | SQuAD v2: 0.975 top-1, 1.000 top-5 (50 contexts, hybrid) |
 | visible-snippet answer | SQuAD v2: 0.816 top-1 answer in snippet (50 contexts, hybrid) |
