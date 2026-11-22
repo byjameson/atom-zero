@@ -52,13 +52,14 @@ actions, the 14-day window, invalid day input,
 `atomzero-brief --markdown --out PATH` file output, the archive
 listing/download flow, pruning, retention, dry-run preview, deletion, query
 filtering, chat search/list/maintenance, chat/HTTP sorting, report viewing,
-integrity verification, all/single-entry metadata repair and report comparison.
+integrity verification, all/single-entry metadata repair, comparison and
+comparison Markdown export.
 
 ```powershell
 python benchmarks/weekly_export_regression.py
 ```
 
-Latest result: **28/28 checks pass**. Raw result:
+Latest result: **29/29 checks pass**. Raw result:
 [`results/weekly_export_regression.json`](results/weekly_export_regression.json).
 
 ## Graph-path regression

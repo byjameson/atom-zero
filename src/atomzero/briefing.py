@@ -453,6 +453,52 @@ def render_weekly_report_comparison(result: dict) -> str:
     return "\n".join(lines)
 
 
+def render_weekly_report_comparison_markdown(result: dict) -> str:
+    left = result.get("left", {})
+    right = result.get("right", {})
+    left_id = left.get("id", "?")
+    right_id = right.get("id", "?")
+    lines = [
+        f"# Report comparison: {left_id} -> {right_id}",
+        "",
+        "| Report | Exported | Path |",
+        "| --- | --- | --- |",
+        f"| {left_id} | {left.get('exported_at', '')} | "
+        f"`{left.get('path', '')}` |",
+        f"| {right_id} | {right.get('exported_at', '')} | "
+        f"`{right.get('path', '')}` |",
+        "",
+        "## Metrics",
+        "",
+        "| Metric | Left | Right | Delta |",
+        "| --- | ---: | ---: | ---: |",
+    ]
+    for metric in result.get("metrics", []):
+        delta = metric.get("delta", 0)
+        sign = f"{delta:+d}" if isinstance(delta, int) else str(delta)
+        lines.append(
+            f"| {metric.get('label', metric.get('key', '?'))} | "
+            f"{metric.get('left', 0)} | {metric.get('right', 0)} | "
+            f"{sign} |")
+    lines.extend([
+        "",
+        "## Content hash",
+        "",
+    ])
+    if result.get("hash_available"):
+        lines.append(
+            "- Equal: " + ("yes" if result.get("hash_equal") else "no"))
+        lines.append(f"- {left_id}: `{left.get('sha256', '')}`")
+        lines.append(f"- {right_id}: `{right.get('sha256', '')}`")
+    else:
+        lines.append("- SHA-256 metadata is unavailable.")
+    lines.extend([
+        "",
+        "Generated locally by Atom Zero. No model weights were changed.",
+    ])
+    return "\n".join(lines) + "\n"
+
+
 def render_weekly_report_preview(entries: list[dict], keep: int) -> str:
     lines = [
         f"Dry run: would remove {len(entries)} older report(s) to keep "
@@ -656,13 +702,16 @@ def main(argv=None) -> int:
     parser.add_argument("--limit", type=int, default=10,
                         help="number of archived reports to list")
     args = parser.parse_args(argv)
-    if args.markdown and not args.weekly:
-        parser.error("--markdown requires --weekly")
+    if (args.markdown and not args.weekly
+            and not (args.reports and args.compare)):
+        parser.error("--markdown requires --weekly or --reports --compare")
     if args.markdown and args.json:
         parser.error("--markdown cannot be combined with --json")
     if args.out and not (args.weekly and args.markdown):
         parser.error("--out requires --weekly --markdown")
-    if args.reports and (args.weekly or args.markdown or args.out or args.goal):
+    if args.reports and (
+            args.weekly or (args.markdown and not args.compare)
+            or args.out or args.goal):
         parser.error("--reports cannot be combined with brief/plan options")
     if args.prune and not args.reports:
         parser.error("--prune requires --reports")
@@ -718,7 +767,10 @@ def main(argv=None) -> int:
             if args.compare:
                 comparison = archive.compare(
                     args.compare[0], args.compare[1])
-                if args.json:
+                if args.markdown:
+                    print(render_weekly_report_comparison_markdown(
+                        comparison), end="")
+                elif args.json:
                     print(json.dumps({
                         **comparison,
                         "index": str(archive.path),

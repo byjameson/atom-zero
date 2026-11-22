@@ -314,6 +314,13 @@ def test_cli_reports_compare(tmp_path, capsys):
     assert "Report comparison: w0001 -> w0002" in output
     assert "- open tasks: 1 -> 2 (+1)" in output
     assert "SHA-256: different" in output
+    assert main(["--reports", "--compare", "w0001", "w0002", "--markdown",
+                 "--reports-index", str(index_path)]) == 0
+    markdown = capsys.readouterr().out
+    assert markdown.startswith("# Report comparison: w0001 -> w0002")
+    assert "| open tasks | 1 | 2 | +1 |" in markdown
+    assert "## Content hash" in markdown
+    assert "- Equal: no" in markdown
     with pytest.raises(SystemExit) as exc:
         main(["--compare", "w0001", "w0002"])
     assert exc.value.code == 2

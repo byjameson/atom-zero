@@ -197,7 +197,8 @@ short generation. It is **not MMLU, GSM8K or HumanEval**.
   newest/oldest/largest sort), `show report w0001`,
   `verify report archive` / `verify report w0001`,
   `repair report archive` / `repair report w0001` with `confirm reports`,
-  `compare reports w0001 w0002`, archive `prune/keep/delete` previews,
+  `compare reports w0001 w0002` with Markdown export, archive
+  `prune/keep/delete` previews,
   `weekly review` (optionally `for 14 days` / `haftalık özet 14 gün`) and
   `plan goal ...` → `confirm plan` with explicit task creation only after
   confirmation.

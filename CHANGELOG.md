@@ -73,11 +73,13 @@
   `GET /v1/weekly-review/reports/compare` and
   `compare reports w0001 w0002` showing task, gap, source, size and SHA-256
   deltas.
-- Added `benchmarks/weekly_export_regression.py` (28/28 checks: CLI, HTTP, UI,
+- Added comparison Markdown export: `--compare ... --markdown`,
+  `GET /v1/weekly-review/reports/compare/export` and UI Download/Copy actions.
+- Added `benchmarks/weekly_export_regression.py` (29/29 checks: CLI, HTTP, UI,
   the report archive, pruning, retention, dry-run preview, deletion, query
   filtering, chat search/list/maintenance, chat/HTTP sorting, report viewing,
-  integrity verification, all/single-entry metadata repair and report
-  comparison).
+  integrity verification, all/single-entry metadata repair, comparison and
+  comparison Markdown export).
 - Fixed BOM-sensitive session loading: `atomzero-brief` and `ChatHuman` now
   accept PowerShell-written UTF-8 session files with a BOM.
 - Extended BOM-tolerant reads to feedback, knowledge-gap, research-queue,

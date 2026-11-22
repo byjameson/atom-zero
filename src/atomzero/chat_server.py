@@ -31,6 +31,7 @@ Endpoints:
   GET  /v1/weekly-review/reports?limit=10
   GET  /v1/weekly-review/reports?id=w0001
   GET  /v1/weekly-review/reports/compare?left=w0001&right=w0002
+  GET  /v1/weekly-review/reports/compare/export?left=w0001&right=w0002
   GET  /v1/weekly-review/reports/verify
   POST /v1/weekly-review/reports/repair
   POST /v1/weekly-review/reports/prune
@@ -290,6 +291,10 @@ and suggested next actions.</p>
 <div id="weeklyreports"></div>
 <div id="weeklyreportspreview"></div>
 <div id="weeklyreportscheck"></div>
+<div class="row"><input id="weeklycompareleft" placeholder="left ID, e.g. w0001">
+<input id="weeklycompareright" placeholder="right ID, e.g. w0002">
+<button id="weeklyreportscompare">Compare reports</button></div>
+<div id="weeklyreportscompareout"></div>
 <p class="hint">Chat: <code>show report w0001</code> opens an archived report;
 <code>compare reports w0001 w0002</code> shows metadata deltas;
 <code>repair report w0001</code> repairs its metadata.</p>
@@ -770,6 +775,113 @@ async function keepWeeklyReports() {
     msg.textContent = 'report retention error: ' + e;
   }
 }
+async function compareWeeklyReports() {
+  const msg = document.getElementById('weeklyreportsmsg');
+  const box = document.getElementById('weeklyreportscompareout');
+  const left = document.getElementById('weeklycompareleft').value.trim();
+  const right = document.getElementById('weeklycompareright').value.trim();
+  if (!left || !right) {
+    msg.textContent = 'enter two report ids to compare';
+    return;
+  }
+  msg.textContent = 'comparing reports...';
+  box.textContent = '';
+  try {
+    const r = await fetch('/v1/weekly-review/reports/compare?left=' +
+      encodeURIComponent(left) + '&right=' + encodeURIComponent(right));
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'report compare error: ' + (j.error || r.status);
+      return;
+    }
+    msg.textContent = 'report comparison | ' + left + ' -> ' + right;
+    const head = document.createElement('div');
+    head.className = 'hint';
+    head.textContent = 'SHA-256: ' +
+      (j.hash_equal ? 'equal' : 'different');
+    box.appendChild(head);
+    (j.metrics || []).forEach(metric => {
+      const row = document.createElement('div');
+      row.className = 'qitem';
+      const delta = metric.delta > 0 ? '+' + metric.delta : metric.delta;
+      row.textContent = metric.label + ': ' + metric.left + ' -> ' +
+        metric.right + ' (' + delta + ')';
+      box.appendChild(row);
+    });
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+    actions.appendChild(qbutton('Download .md', () =>
+      downloadComparisonMarkdown(left, right)));
+    actions.appendChild(qbutton('Copy Markdown', () =>
+      copyComparisonMarkdown(left, right)));
+    box.appendChild(actions);
+  } catch (e) {
+    msg.textContent = 'report compare error: ' + e;
+  }
+}
+async function comparisonMarkdown(left, right) {
+  const r = await fetch('/v1/weekly-review/reports/compare/export?left=' +
+    encodeURIComponent(left) + '&right=' + encodeURIComponent(right));
+  if (!r.ok) throw new Error(String(r.status));
+  return await r.text();
+}
+async function downloadComparisonMarkdown(left, right) {
+  const msg = document.getElementById('weeklyreportsmsg');
+  try {
+    const text = await comparisonMarkdown(left, right);
+    const blob = new Blob([text], {type: 'text/markdown;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'atomzero-report-comparison-' + left + '-' + right + '.md';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    msg.textContent = 'comparison markdown downloaded | ' + link.download;
+  } catch (e) {
+    msg.textContent = 'comparison export error: ' + e;
+  }
+}
+async function copyComparisonMarkdown(left, right) {
+  const msg = document.getElementById('weeklyreportsmsg');
+  try {
+    const text = await comparisonMarkdown(left, right);
+    let copied = false;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        copied = true;
+      }
+    } catch (e) {}
+    if (!copied) {
+      const area = document.createElement('textarea');
+      area.value = text;
+      area.setAttribute('readonly', '');
+      area.style.position = 'fixed';
+      area.style.opacity = '0';
+      document.body.appendChild(area);
+      area.select();
+      copied = document.execCommand('copy');
+      area.remove();
+    }
+    if (copied) {
+      msg.textContent = 'comparison markdown copied | ' +
+        left + ' -> ' + right;
+      return;
+    }
+    const box = document.getElementById('weeklyreportscompareout');
+    const area = document.createElement('textarea');
+    area.value = text;
+    area.className = 'src';
+    area.style.width = '100%';
+    area.style.minHeight = '8em';
+    box.appendChild(area);
+    msg.textContent = 'clipboard unavailable; select the text or use Download .md';
+  } catch (e) {
+    msg.textContent = 'comparison copy error: ' + e;
+  }
+}
 async function verifyWeeklyReports() {
   const msg = document.getElementById('weeklyreportsmsg');
   const box = document.getElementById('weeklyreportscheck');
@@ -995,6 +1107,8 @@ document.getElementById('weeklyreportsrefresh').onclick = () => {
 };
 document.getElementById('weeklyreportsprune').onclick =
   () => pruneWeeklyReports();
+document.getElementById('weeklyreportscompare').onclick =
+  () => compareWeeklyReports();
 document.getElementById('weeklyreportsverify').onclick =
   () => verifyWeeklyReports();
 document.getElementById('weeklyreportsrepair').onclick =
@@ -2733,6 +2847,34 @@ class Handler(BaseHTTPRequestHandler):
             }]})
         elif self.path == "/metrics":
             self._json(200, _state["metrics"])
+        elif (self.path == "/v1/weekly-review/reports/compare/export"
+              or self.path.startswith(
+                  "/v1/weekly-review/reports/compare/export?")):
+            params = urllib.parse.parse_qs(
+                urllib.parse.urlparse(self.path).query)
+            left = str(params.get("left", [""])[0] or "").strip()
+            right = str(params.get("right", [""])[0] or "").strip()
+            try:
+                archive = _weekly_reports_archive()
+                comparison = archive.compare(left, right)
+                from atomzero.briefing import (
+                    render_weekly_report_comparison_markdown)
+                markdown = render_weekly_report_comparison_markdown(
+                    comparison)
+            except WeeklyReportError as exc:
+                code = 404 if "not found" in str(exc) else 400
+                return self._json(code, {"error": str(exc)})
+            except OSError as exc:
+                return self._json(400, {"error": str(exc)})
+            filename = (f"atomzero-report-comparison-{left}-{right}.md")
+            filename = "".join(
+                ch for ch in filename
+                if ch.isascii() and (ch.isalnum() or ch in "._-"))
+            return self._send(
+                200, markdown.encode("utf-8"),
+                "text/markdown; charset=utf-8",
+                {"Content-Disposition":
+                 f'attachment; filename="{filename}"'})
         elif (self.path == "/v1/weekly-review/reports/compare"
               or self.path.startswith(
                   "/v1/weekly-review/reports/compare?")):

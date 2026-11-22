@@ -21,7 +21,8 @@ Checks:
   verification commands;
 - repairing changed report metadata atomically, including confirmed all-report
   and single-report chat repair flows;
-- comparing metadata between two archived reports through HTTP and chat.
+- comparing metadata between two archived reports through HTTP and chat;
+- exporting a comparison as Markdown through HTTP/UI.
 
 Run:
 
@@ -133,6 +134,12 @@ def run(output: str | Path | None = None) -> dict:
                 and 'data-q="repair report archive"' in page
                 and 'data-q="keep reports 2 dry-run"' in page
                 and "compare reports w0001 w0002" in page
+                and 'id="weeklycompareleft"' in page
+                and 'id="weeklycompareright"' in page
+                and 'id="weeklyreportscompare"' in page
+                and "downloadComparisonMarkdown" in page
+                and "copyComparisonMarkdown" in page
+                and "/v1/weekly-review/reports/compare/export" in page
                 and "refreshWeeklyReports" in page
                 and "pruneWeeklyReports" in page
                 and "keepWeeklyReports" in page
@@ -448,6 +455,23 @@ def run(output: str | Path | None = None) -> dict:
                 and chat_compare.get("comparison", {}).get(
                     "right", {}).get("id") == "w0002",
                 chat_compare.get("reply", "")[:200])
+            with urllib.request.urlopen(
+                    base + "/v1/weekly-review/reports/compare/export"
+                           "?left=w0001&right=w0002",
+                    timeout=15) as export_response:
+                comparison_markdown = export_response.read().decode("utf-8")
+                export_type = export_response.headers.get_content_type()
+                export_disposition = export_response.headers[
+                    "Content-Disposition"]
+            check(
+                "comparison_export",
+                export_type == "text/markdown"
+                and "attachment" in export_disposition
+                and comparison_markdown.startswith(
+                    "# Report comparison: w0001 -> w0002")
+                and "| open tasks |" in comparison_markdown
+                and "## Content hash" in comparison_markdown,
+                comparison_markdown[:160])
             chat_oldest = _post(base, "/v1/agent/chat", {
                 "session_id": "sort-chat",
                 "message": "list reports oldest"})

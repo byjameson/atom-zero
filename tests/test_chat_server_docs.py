@@ -849,6 +849,14 @@ def test_ui_collection_scope_contract():
     assert 'id="weeklyreportsverify"' in page
     assert 'id="weeklyreportsrepair"' in page
     assert 'id="weeklyreportscheck"' in page
+    assert 'id="weeklycompareleft"' in page
+    assert 'id="weeklycompareright"' in page
+    assert 'id="weeklyreportscompare"' in page
+    assert 'id="weeklyreportscompareout"' in page
+    assert "compareWeeklyReports" in page
+    assert "downloadComparisonMarkdown" in page
+    assert "copyComparisonMarkdown" in page
+    assert "/v1/weekly-review/reports/compare/export" in page
     assert "/v1/weekly-review/reports/verify" in page
     assert "/v1/weekly-review/reports/repair" in page
     assert "verifyWeeklyReports" in page
@@ -1480,6 +1488,19 @@ def test_http_weekly_reports_archive(tmp_path):
                 base + "/v1/weekly-review/reports/compare"
                        "?left=w0001&right=w9999", timeout=10)
         assert missing_compare.value.code == 404
+        with urllib.request.urlopen(
+                base + "/v1/weekly-review/reports/compare/export"
+                       f"?left={entry['id']}&right={missing_entry['id']}",
+                timeout=10) as export_response:
+            assert export_response.headers.get_content_type() == (
+                "text/markdown")
+            assert "attachment" in export_response.headers[
+                "Content-Disposition"]
+            comparison_markdown = export_response.read().decode("utf-8")
+        assert comparison_markdown.startswith(
+            f"# Report comparison: {entry['id']} -> {missing_entry['id']}")
+        assert "| Metric | Left | Right | Delta |" in comparison_markdown
+        assert "## Content hash" in comparison_markdown
         chat_verify = _post(base + "/v1/agent/chat", {
             "session_id": "report-chat",
             "message": "verify report archive"})

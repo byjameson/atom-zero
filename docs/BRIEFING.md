@@ -111,6 +111,7 @@ atomzero-brief --reports --repair
 atomzero-brief --reports --repair --json
 atomzero-brief --reports --compare w0001 w0002
 atomzero-brief --reports --compare w0001 w0002 --json
+atomzero-brief --reports --compare w0001 w0002 --markdown
 atomzero-brief --reports --reports-index reports\weekly_reports.json --limit 5
 ```
 
@@ -139,6 +140,7 @@ GET  /v1/weekly-review/reports?limit=10&sort=newest
 GET  /v1/weekly-review/reports?query=weekly&sort=oldest
 GET  /v1/weekly-review/reports?id=w0001
 GET  /v1/weekly-review/reports/compare?left=w0001&right=w0002
+GET  /v1/weekly-review/reports/compare/export?left=w0001&right=w0002
 GET  /v1/weekly-review/reports/verify
 POST /v1/weekly-review/reports/repair
 POST /v1/weekly-review/reports/prune
@@ -153,7 +155,8 @@ The UI **Recent reports** panel has a search box and a
 newest/oldest/largest sort selector, lists the archive, downloads an indexed
 Markdown file, exposes **Delete** for one entry, **Prune missing** for deleted
 files, **Verify files** for size/SHA-256 checks, **Repair metadata** for changed
-files and a **Keep newest** retention control with **Preview only**. A dry-run response includes `would_remove`
+files, a **Compare reports** form with **Download .md** / **Copy Markdown** and
+a **Keep newest** retention control with **Preview only**. A dry-run response includes `would_remove`
 entries and leaves the archive unchanged. Keep `--reports-index` pointed at
 the same file for CLI and the server; both default to
 `data/weekly_reports.json`. `quickstart` and `chat_server` accept
