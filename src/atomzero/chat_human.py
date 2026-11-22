@@ -505,9 +505,21 @@ class ChatHuman:
                         reply = (f"Set task {task['id']} priority to "
                                  f"{task['priority']}.")
         elif "list tasks" in low:
+            sort = "default"
+            sort_match = re.search(
+                r"\s+(?:sort\s+|sort\s+by\s+|sorted\s+by\s+)?"
+                r"(?P<sort>priority|default)\??$", low)
+            if sort_match:
+                sort = sort_match.group("sort")
             open_tasks = [task for task in self.data["tasks"]
                           if task["status"] == "open"]
-            reply = ("Open tasks: " + "; ".join(
+            if sort == "priority":
+                from atomzero.briefing import sort_tasks
+
+                open_tasks = sort_tasks(open_tasks, "priority")
+            heading = ("Open tasks (priority first): "
+                       if sort == "priority" else "Open tasks: ")
+            reply = (heading + "; ".join(
                 _task_label(task) for task in open_tasks)
                 if open_tasks else "There are no open tasks.")
         elif "complete task" in low:

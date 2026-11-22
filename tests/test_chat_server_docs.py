@@ -949,6 +949,7 @@ def test_ui_collection_scope_contract():
     assert 'data-q="plan goal prepare the warranty page"' in page
     assert 'data-q="brief me"' in page
     assert 'data-q="brief me priority"' in page
+    assert 'data-q="list tasks priority"' in page
     assert 'data-q="weekly review priority"' in page
     assert 'data-q="due soon priority"' in page
     assert 'data-q="overdue tasks priority"' in page

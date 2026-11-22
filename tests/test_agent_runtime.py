@@ -297,6 +297,19 @@ def test_agent_priority_sort_task_views(tmp_path):
     assert filtered["tool_calls"][0]["priority"] == "high"
     assert filtered["tool_calls"][0]["sort"] == "priority"
     assert [task["id"] for task in filtered["task_search"]["tasks"]] == [2, 4]
+    default_list = agent.chat("list tasks")["reply"]
+    assert default_list.startswith("Open tasks: ")
+    assert (default_list.index("low overdue task")
+            < default_list.index("high overdue task"))
+    priority_list = agent.chat("list tasks priority")["reply"]
+    assert priority_list.startswith("Open tasks (priority first): ")
+    assert (priority_list.index("high overdue task")
+            < priority_list.index("high soon task")
+            < priority_list.index("normal soon task")
+            < priority_list.index("low overdue task"))
+    assert agent.chat("list tasks sort priority")["reply"] == priority_list
+    assert (agent.chat("list tasks sorted by priority")["reply"]
+            == priority_list)
     default_overdue = agent.chat("overdue tasks")
     assert default_overdue["tool_calls"][0] == {
         "name": "overdue", "sort": "default", "count": 2}

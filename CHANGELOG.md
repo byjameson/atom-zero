@@ -110,6 +110,8 @@
 - Added priority sorting to chat task views: `search tasks ... sort priority`,
   new `overdue tasks [priority]` commands and `due soon priority`. Tool calls
   expose the selected sort.
+- Added `list tasks priority` (and `sort priority` / `sorted by priority`)
+  using the same priority, due-date and id ordering as the other task views.
 - Fixed `add task` priority parsing so task text ending in "priority task" is
   not interpreted as a second priority clause.
 - Added `benchmarks/weekly_export_regression.py` (29/29 checks: CLI, HTTP, UI,

@@ -38,6 +38,9 @@ set task 1 priority normal
 Priority is `low`, `normal` or `high`; the default is `normal`. Existing tasks
 without the field are treated as normal. `list tasks` shows due dates, marks
 overdue items and tags non-normal priorities as `[low]` or `[high]`.
+`list tasks priority` (also `list tasks sort priority` or
+`list tasks sorted by priority`) orders open tasks high before normal before
+low, then earliest due date, then task id.
 
 Priority can also be updated outside chat:
 
