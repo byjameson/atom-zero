@@ -194,6 +194,46 @@ def test_archive_repair_single_report(tmp_path):
         archive.repair("w9999")
 
 
+def test_archive_compare_reports_metrics(tmp_path):
+    index_path = tmp_path / "weekly_reports.json"
+    archive = WeeklyReportArchive(index_path)
+    left = tmp_path / "left.md"
+    left.write_text("a" * 10, encoding="utf-8")
+    right = tmp_path / "right.md"
+    right.write_text("b" * 20, encoding="utf-8")
+    archive.record(left, {
+        "generated": "2026-11-21 09:00", "period_days": 7,
+        "task_counts": {"open": 1, "completed_recent": 0,
+                        "completed_total": 1},
+        "pending_gap_count": 0, "recent_source_count": 1,
+        "graph": {"entities": [], "connections": []},
+    }, exported_at="2026-11-21T09:00:00")
+    archive.record(right, {
+        "generated": "2026-11-22 09:00", "period_days": 14,
+        "task_counts": {"open": 3, "completed_recent": 2,
+                        "completed_total": 4},
+        "pending_gap_count": 2, "recent_source_count": 3,
+        "graph": {"entities": [], "connections": []},
+    }, exported_at="2026-11-22T09:00:00")
+
+    comparison = archive.compare("w0001", "w0002")
+    metrics = {item["key"]: item for item in comparison["metrics"]}
+    assert metrics["open"]["delta"] == 2
+    assert metrics["completed_recent"]["delta"] == 2
+    assert metrics["completed_total"]["delta"] == 3
+    assert metrics["pending_gap_count"]["delta"] == 2
+    assert metrics["recent_source_count"]["delta"] == 2
+    assert metrics["size_bytes"]["delta"] == 10
+    assert metrics["period_days"]["delta"] == 7
+    assert comparison["hash_equal"] is False
+    same = archive.compare("w0001", "w0001")
+    assert same["same_report"] is True
+    assert same["hash_equal"] is True
+    assert all(item["delta"] == 0 for item in same["metrics"])
+    with pytest.raises(WeeklyReportError):
+        archive.compare("w0001", "w9999")
+
+
 def test_archive_delete_removes_one_entry_only(tmp_path):
     index_path = tmp_path / "weekly_reports.json"
     archive = WeeklyReportArchive(index_path)

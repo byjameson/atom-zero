@@ -7,7 +7,9 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from atomzero.briefing import build_briefing, build_weekly_review, plan_goal
+from atomzero.briefing import (
+    build_briefing, build_weekly_review, plan_goal,
+    render_weekly_report_comparison)
 from atomzero.contradictions import compare_sources
 from atomzero.doc_memory import format_citation, grounded_answer
 from atomzero.knowledge_gaps import KnowledgeGapError
@@ -443,6 +445,24 @@ class AgentSession:
             "limit": limit,
             "total": total,
             "sort": order,
+        }
+
+    def _compare_weekly_reports(self, left_id: str, right_id: str) -> dict:
+        tool = [{"name": "compare_weekly_reports",
+                 "left": left_id, "right": right_id}]
+        try:
+            archive = WeeklyReportArchive(self.weekly_reports_path)
+            comparison = archive.compare(left_id, right_id)
+        except (WeeklyReportError, OSError) as exc:
+            return {"reply": str(exc), "tool_calls": tool,
+                    "sources": [], "evidence": [], "comparison": None}
+        tool[0]["hash_equal"] = comparison["hash_equal"]
+        return {
+            "reply": render_weekly_report_comparison(comparison),
+            "tool_calls": tool,
+            "sources": [],
+            "evidence": [],
+            "comparison": comparison,
         }
 
     def _show_weekly_report(self, report_id: str) -> dict:
@@ -995,6 +1015,13 @@ class AgentSession:
             query = re.sub(r"^search (docs|my notes|documents)\s*:?\s*", "",
                            text, flags=re.IGNORECASE)
             return self._search_docs(query)
+        compare_reports = re.match(
+            r"^(?:compare|diff)\s+(?:the\s+)?reports?\s+"
+            r"(w\d+)\s+(?:and|to|with|vs\.?|versus)?\s*"
+            r"(w\d+)\??$", text, re.IGNORECASE)
+        if compare_reports:
+            return self._compare_weekly_reports(
+                compare_reports.group(1), compare_reports.group(2))
         verify_match = re.match(
             r"^(?:verify|check)\s+(?:the\s+)?"
             r"(?:report\s+archive|reports?|report\s+integrity)"

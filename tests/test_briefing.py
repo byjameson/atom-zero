@@ -283,6 +283,42 @@ def test_cli_reports_repair_metadata(tmp_path, capsys):
     assert exc.value.code == 2
 
 
+def test_cli_reports_compare(tmp_path, capsys):
+    index_path = tmp_path / "weekly_reports.json"
+    archive = WeeklyReportArchive(index_path)
+    for number, name in enumerate(("left", "right"), start=1):
+        report = tmp_path / f"{name}.md"
+        report.write_text(name * (10 * number), encoding="utf-8")
+        archive.record(report, {
+            "generated": f"2026-11-2{number} 09:00",
+            "period_days": 7 * number,
+            "task_counts": {"open": number,
+                            "completed_recent": number - 1,
+                            "completed_total": number},
+            "pending_gap_count": number - 1,
+            "recent_source_count": number,
+            "graph": {"entities": [], "connections": []},
+        }, exported_at=f"2026-11-2{number}T09:00:00")
+
+    assert main(["--reports", "--compare", "w0001", "w0002", "--json",
+                 "--reports-index", str(index_path)]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    metrics = {item["key"]: item for item in payload["metrics"]}
+    assert metrics["open"]["delta"] == 1
+    assert metrics["recent_source_count"]["delta"] == 1
+    assert metrics["size_bytes"]["delta"] == 60
+    assert payload["hash_equal"] is False
+    assert main(["--reports", "--compare", "w0001", "w0002",
+                 "--reports-index", str(index_path)]) == 0
+    output = capsys.readouterr().out
+    assert "Report comparison: w0001 -> w0002" in output
+    assert "- open tasks: 1 -> 2 (+1)" in output
+    assert "SHA-256: different" in output
+    with pytest.raises(SystemExit) as exc:
+        main(["--compare", "w0001", "w0002"])
+    assert exc.value.code == 2
+
+
 def test_cli_reports_sort_orders(tmp_path, capsys):
     index_path = tmp_path / "weekly_reports.json"
     archive = WeeklyReportArchive(index_path)

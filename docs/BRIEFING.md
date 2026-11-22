@@ -109,6 +109,8 @@ atomzero-brief --reports --verify
 atomzero-brief --reports --verify --json
 atomzero-brief --reports --repair
 atomzero-brief --reports --repair --json
+atomzero-brief --reports --compare w0001 w0002
+atomzero-brief --reports --compare w0001 w0002 --json
 atomzero-brief --reports --reports-index reports\weekly_reports.json --limit 5
 ```
 
@@ -129,12 +131,14 @@ on disk. `--query TEXT` filters entries by ID, title, filename, path or date.
 stored size and SHA-256 with the report file and reports
 `ok`/`missing`/`size_mismatch`/`hash_mismatch`. `--repair` recomputes metadata
 for existing changed files and writes the index atomically; missing files are
-reported but not silently dropped.
+reported but not silently dropped. `--compare LEFT RIGHT` reports task, gap,
+source, size and SHA-256 deltas.
 
 ```text
 GET  /v1/weekly-review/reports?limit=10&sort=newest
 GET  /v1/weekly-review/reports?query=weekly&sort=oldest
 GET  /v1/weekly-review/reports?id=w0001
+GET  /v1/weekly-review/reports/compare?left=w0001&right=w0002
 GET  /v1/weekly-review/reports/verify
 POST /v1/weekly-review/reports/repair
 POST /v1/weekly-review/reports/prune
@@ -190,6 +194,9 @@ repair report w0001
 -> single-id form only touches that entry
 -> requires "confirm reports"; Turkish: "rapor arşivini onar",
    "rapor w0001 onar"
+
+compare reports w0001 w0002
+-> task, gap, source, size and SHA-256 deltas
 
 prune report archive
 keep reports 2

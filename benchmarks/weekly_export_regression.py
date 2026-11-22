@@ -20,7 +20,8 @@ Checks:
 - verifying stored size and SHA-256 against archived files, including chat
   verification commands;
 - repairing changed report metadata atomically, including confirmed all-report
-  and single-report chat repair flows.
+  and single-report chat repair flows;
+- comparing metadata between two archived reports through HTTP and chat.
 
 Run:
 
@@ -131,6 +132,7 @@ def run(output: str | Path | None = None) -> dict:
                 and 'data-q="verify report archive"' in page
                 and 'data-q="repair report archive"' in page
                 and 'data-q="keep reports 2 dry-run"' in page
+                and "compare reports w0001 w0002" in page
                 and "refreshWeeklyReports" in page
                 and "pruneWeeklyReports" in page
                 and "keepWeeklyReports" in page
@@ -421,6 +423,31 @@ def run(output: str | Path | None = None) -> dict:
                 == entry.get("id"),
                 f"oldest={oldest.get('data', [{}])[0].get('id')} "
                 f"newest={newest.get('data', [{}])[0].get('id')}")
+            comparison = json.loads(urllib.request.urlopen(
+                base + "/v1/weekly-review/reports/compare"
+                       "?left=w0001&right=w0002",
+                timeout=15).read().decode("utf-8"))
+            comparison_metrics = {
+                item["key"]: item for item in comparison.get("metrics", [])}
+            chat_compare = _post(base, "/v1/agent/chat", {
+                "session_id": "compare-chat",
+                "message": "compare reports w0001 w0002"})
+            check(
+                "archive_compare",
+                comparison.get("left", {}).get("id") == "w0001"
+                and comparison.get("right", {}).get("id") == "w0002"
+                and comparison_metrics.get("open", {}).get("delta") == -1
+                and comparison.get("hash_equal") is False,
+                "Report comparison: w0001 -> w0002")
+            check(
+                "chat_report_compare",
+                (chat_compare.get("tool_calls") or [{}])[0].get("name")
+                == "compare_weekly_reports"
+                and chat_compare.get("comparison", {}).get(
+                    "left", {}).get("id") == "w0001"
+                and chat_compare.get("comparison", {}).get(
+                    "right", {}).get("id") == "w0002",
+                chat_compare.get("reply", "")[:200])
             chat_oldest = _post(base, "/v1/agent/chat", {
                 "session_id": "sort-chat",
                 "message": "list reports oldest"})

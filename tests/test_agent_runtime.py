@@ -221,6 +221,15 @@ def test_agent_searches_weekly_report_archive(tmp_path):
     assert "exported" in shown["reply"]
     missing_show = agent.chat("show report w9999")
     assert "not found" in missing_show["reply"]
+    compared = agent.chat("compare reports w0001 w0002")
+    assert compared["tool_calls"][0]["name"] == "compare_weekly_reports"
+    metrics = {item["key"]: item
+               for item in compared["comparison"]["metrics"]}
+    assert metrics["open"]["delta"] == 1
+    assert compared["comparison"]["hash_equal"] is False
+    assert "Report comparison: w0001 -> w0002" in compared["reply"]
+    missing_compare = agent.chat("compare reports w0001 w9999")
+    assert "not found" in missing_compare["reply"]
 
 
 def test_agent_verifies_report_archive_integrity(tmp_path):

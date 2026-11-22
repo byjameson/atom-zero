@@ -30,6 +30,7 @@ Endpoints:
   GET  /v1/weekly-review/export?session_id=...&days=7
   GET  /v1/weekly-review/reports?limit=10
   GET  /v1/weekly-review/reports?id=w0001
+  GET  /v1/weekly-review/reports/compare?left=w0001&right=w0002
   GET  /v1/weekly-review/reports/verify
   POST /v1/weekly-review/reports/repair
   POST /v1/weekly-review/reports/prune
@@ -290,6 +291,7 @@ and suggested next actions.</p>
 <div id="weeklyreportspreview"></div>
 <div id="weeklyreportscheck"></div>
 <p class="hint">Chat: <code>show report w0001</code> opens an archived report;
+<code>compare reports w0001 w0002</code> shows metadata deltas;
 <code>repair report w0001</code> repairs its metadata.</p>
 <hr>
 <h3>Teach a fact</h3>
@@ -2731,6 +2733,22 @@ class Handler(BaseHTTPRequestHandler):
             }]})
         elif self.path == "/metrics":
             self._json(200, _state["metrics"])
+        elif (self.path == "/v1/weekly-review/reports/compare"
+              or self.path.startswith(
+                  "/v1/weekly-review/reports/compare?")):
+            params = urllib.parse.parse_qs(
+                urllib.parse.urlparse(self.path).query)
+            left = str(params.get("left", [""])[0] or "").strip()
+            right = str(params.get("right", [""])[0] or "").strip()
+            try:
+                archive = _weekly_reports_archive()
+                result = archive.compare(left, right)
+            except WeeklyReportError as exc:
+                code = 404 if "not found" in str(exc) else 400
+                return self._json(code, {"error": str(exc)})
+            except OSError as exc:
+                return self._json(400, {"error": str(exc)})
+            return self._json(200, result)
         elif self.path == "/v1/weekly-review/reports/verify":
             try:
                 archive = _weekly_reports_archive()

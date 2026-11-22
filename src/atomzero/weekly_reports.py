@@ -415,6 +415,59 @@ class WeeklyReportArchive:
             self._save()
             return deleted
 
+    def compare(self, left_id: str, right_id: str) -> dict:
+        """Compare metadata from two indexed reports."""
+        left = self.get(left_id)
+        right = self.get(right_id)
+        left_counts = left.get("task_counts", {})
+        right_counts = right.get("task_counts", {})
+        if not isinstance(left_counts, dict):
+            left_counts = {}
+        if not isinstance(right_counts, dict):
+            right_counts = {}
+
+        def number(entry: dict, key: str) -> int:
+            try:
+                return int(entry.get(key, 0) or 0)
+            except (TypeError, ValueError):
+                return 0
+
+        metrics = []
+        for key, label in (("open", "open tasks"),
+                           ("completed_recent", "completed (window)"),
+                           ("completed_total", "completed total")):
+            left_value = number(left_counts, key)
+            right_value = number(right_counts, key)
+            metrics.append({
+                "key": key, "label": label,
+                "left": left_value, "right": right_value,
+                "delta": right_value - left_value,
+            })
+        for key, label in (("pending_gap_count", "pending gaps"),
+                           ("recent_source_count", "recent sources"),
+                           ("size_bytes", "size (bytes)"),
+                           ("period_days", "period (days)")):
+            left_value = number(left, key)
+            right_value = number(right, key)
+            metrics.append({
+                "key": key, "label": label,
+                "left": left_value, "right": right_value,
+                "delta": right_value - left_value,
+            })
+        left_hash = str(left.get("sha256", "") or "")
+        right_hash = str(right.get("sha256", "") or "")
+        return {
+            "left": left,
+            "right": right,
+            "metrics": metrics,
+            "hash_equal": bool(left_hash and right_hash
+                               and left_hash == right_hash),
+            "hash_available": bool(left_hash and right_hash),
+            "same_report": str(left.get("id", "")) == str(
+                right.get("id", "")),
+            "index": str(self.path),
+        }
+
     def markdown(self, report_id: str) -> tuple[dict, str]:
         entry = self.get(report_id)
         path = Path(str(entry.get("path", "")))

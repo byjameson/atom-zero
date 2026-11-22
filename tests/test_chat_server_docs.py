@@ -871,6 +871,7 @@ def test_ui_collection_scope_contract():
     assert 'data-q="repair report archive"' in page
     assert 'data-q="keep reports 2 dry-run"' in page
     assert "show report w0001" in page
+    assert "compare reports w0001 w0002" in page
     assert "repair report w0001" in page
     assert "getWeeklyReview" in page
     assert "downloadWeeklyMarkdown" in page
@@ -1463,6 +1464,22 @@ def test_http_weekly_reports_archive(tmp_path):
             item["id"]: item for item in verification["entries"]}
         assert verified_by_id[entry["id"]]["status"] == "ok"
         assert verified_by_id[missing_entry["id"]]["status"] == "missing"
+        comparison = json.loads(urllib.request.urlopen(
+            base + "/v1/weekly-review/reports/compare"
+                   f"?left={entry['id']}&right={missing_entry['id']}",
+            timeout=10).read().decode("utf-8"))
+        comparison_metrics = {
+            item["key"]: item for item in comparison["metrics"]}
+        assert comparison["left"]["id"] == entry["id"]
+        assert comparison["right"]["id"] == missing_entry["id"]
+        assert comparison["hash_equal"] is False
+        assert comparison_metrics["recent_source_count"]["delta"] == -1
+        assert comparison_metrics["size_bytes"]["delta"] != 0
+        with pytest.raises(urllib.error.HTTPError) as missing_compare:
+            urllib.request.urlopen(
+                base + "/v1/weekly-review/reports/compare"
+                       "?left=w0001&right=w9999", timeout=10)
+        assert missing_compare.value.code == 404
         chat_verify = _post(base + "/v1/agent/chat", {
             "session_id": "report-chat",
             "message": "verify report archive"})

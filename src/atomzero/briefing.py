@@ -433,6 +433,26 @@ def render_weekly_report_repair(result: dict) -> str:
     return "\n".join(lines)
 
 
+def render_weekly_report_comparison(result: dict) -> str:
+    left_id = result.get("left", {}).get("id", "?")
+    right_id = result.get("right", {}).get("id", "?")
+    lines = [f"Report comparison: {left_id} -> {right_id}"]
+    for metric in result.get("metrics", []):
+        delta = metric.get("delta", 0)
+        sign = f"{delta:+d}" if isinstance(delta, int) else str(delta)
+        lines.append(
+            f"- {metric.get('label', metric.get('key', '?'))}: "
+            f"{metric.get('left', 0)} -> {metric.get('right', 0)} "
+            f"({sign})")
+    if result.get("hash_available"):
+        lines.append(
+            "- SHA-256: " + ("equal" if result.get("hash_equal")
+                             else "different"))
+    else:
+        lines.append("- SHA-256: unavailable")
+    return "\n".join(lines)
+
+
 def render_weekly_report_preview(entries: list[dict], keep: int) -> str:
     lines = [
         f"Dry run: would remove {len(entries)} older report(s) to keep "
@@ -628,6 +648,9 @@ def main(argv=None) -> int:
                         help="verify archived report sizes and SHA-256 values")
     parser.add_argument("--repair", action="store_true",
                         help="recompute changed archived report metadata")
+    parser.add_argument("--compare", nargs=2, metavar=("LEFT", "RIGHT"),
+                        default=None,
+                        help="compare metadata from two archived reports")
     parser.add_argument("--reports-index", default=DEFAULT_REPORTS_PATH,
                         help="weekly report archive JSON path")
     parser.add_argument("--limit", type=int, default=10,
@@ -676,6 +699,12 @@ def main(argv=None) -> int:
                         or args.delete is not None or args.dry_run
                         or args.verify):
         parser.error("--repair cannot be combined with other report actions")
+    if args.compare and not args.reports:
+        parser.error("--compare requires --reports")
+    if args.compare and (args.query or args.sort or args.prune
+                         or args.keep is not None or args.delete is not None
+                         or args.dry_run or args.verify or args.repair):
+        parser.error("--compare cannot be combined with other report actions")
     if args.reports:
         index_path = args.reports_index or DEFAULT_REPORTS_PATH
         query = str(args.query or "").strip()
@@ -686,6 +715,17 @@ def main(argv=None) -> int:
         deleted = None
         try:
             archive = WeeklyReportArchive(index_path)
+            if args.compare:
+                comparison = archive.compare(
+                    args.compare[0], args.compare[1])
+                if args.json:
+                    print(json.dumps({
+                        **comparison,
+                        "index": str(archive.path),
+                    }, indent=2, ensure_ascii=False))
+                else:
+                    print(render_weekly_report_comparison(comparison))
+                return 0
             if args.verify:
                 verification = archive.verify()
                 if args.json:
