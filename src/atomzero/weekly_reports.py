@@ -242,6 +242,73 @@ class WeeklyReportArchive:
             return sum(1 for entry in self.reports
                        if self._matches(entry, needle))
 
+    def verify(self) -> dict:
+        """Compare stored size/SHA-256 values with the report files."""
+        with self._lock:
+            self._reload()
+            entries = []
+            counts = {"ok": 0, "missing": 0, "size_mismatch": 0,
+                      "hash_mismatch": 0}
+            for entry in self.reports:
+                raw = str(entry.get("path", "") or "")
+                stored_size = entry.get("size_bytes")
+                try:
+                    stored_size = int(stored_size)
+                except (TypeError, ValueError):
+                    stored_size = -1
+                stored_sha = str(entry.get("sha256", "") or "")
+                actual_size = None
+                actual_sha = ""
+                problems = []
+                if not raw or not Path(raw).is_file():
+                    problems.append("missing")
+                else:
+                    try:
+                        data = Path(raw).read_bytes()
+                    except OSError:
+                        problems.append("missing")
+                    else:
+                        actual_size = len(data)
+                        actual_sha = hashlib.sha256(data).hexdigest()
+                        if actual_size != stored_size:
+                            problems.append("size_mismatch")
+                        if stored_sha and actual_sha != stored_sha:
+                            problems.append("hash_mismatch")
+                if not problems:
+                    status = "ok"
+                elif "missing" in problems:
+                    status = "missing"
+                else:
+                    status = "failed"
+                for problem in problems:
+                    counts[problem] = counts.get(problem, 0) + 1
+                if status == "ok":
+                    counts["ok"] += 1
+                item = dict(entry)
+                item.update({
+                    "status": status,
+                    "problems": problems,
+                    "actual_size_bytes": actual_size,
+                    "actual_sha256": actual_sha,
+                })
+                entries.append(item)
+            total = len(entries)
+            summary = {
+                "total": total,
+                "ok": counts["ok"],
+                "failed": total - counts["ok"],
+                "missing": counts["missing"],
+                "size_mismatch": counts["size_mismatch"],
+                "hash_mismatch": counts["hash_mismatch"],
+            }
+            return {
+                "verified_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                "index": str(self.path),
+                "summary": summary,
+                "entries": entries,
+                "ok": summary["failed"] == 0,
+            }
+
     def get(self, report_id: str) -> dict:
         report_id = str(report_id or "").strip()
         if not report_id:

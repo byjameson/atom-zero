@@ -30,6 +30,7 @@ Endpoints:
   GET  /v1/weekly-review/export?session_id=...&days=7
   GET  /v1/weekly-review/reports?limit=10
   GET  /v1/weekly-review/reports?id=w0001
+  GET  /v1/weekly-review/reports/verify
   POST /v1/weekly-review/reports/prune
   POST /v1/weekly-review/reports/keep
   POST /v1/weekly-review/reports/delete
@@ -275,6 +276,7 @@ and suggested next actions.</p>
 </select>
 <button id="weeklyreportsrefresh">Recent reports</button>
 <button id="weeklyreportsprune">Prune missing</button>
+<button id="weeklyreportsverify">Verify files</button>
 <input id="weeklykeep" type="number" min="1" max="500" value="5"
        title="Keep newest N reports" style="width:5em">
 <label class="hint"><input id="weeklykeepdry" type="checkbox"> Preview only</label>
@@ -282,6 +284,7 @@ and suggested next actions.</p>
 <p id="weeklyreportsmsg" class="hint"></p>
 <div id="weeklyreports"></div>
 <div id="weeklyreportspreview"></div>
+<div id="weeklyreportscheck"></div>
 <p class="hint">Chat: <code>show report w0001</code> opens an archived report.</p>
 <hr>
 <h3>Teach a fact</h3>
@@ -648,9 +651,11 @@ async function refreshWeeklyReports() {
   const msg = document.getElementById('weeklyreportsmsg');
   const box = document.getElementById('weeklyreports');
   const previewBox = document.getElementById('weeklyreportspreview');
+  const checkBox = document.getElementById('weeklyreportscheck');
   msg.textContent = 'loading archived reports...';
   box.textContent = '';
   if (previewBox) previewBox.textContent = '';
+  if (checkBox) checkBox.textContent = '';
   const query = (document.getElementById('weeklyreportsearch').value || '')
     .trim();
   const sort = document.getElementById('weeklyreportsort').value || 'newest';
@@ -756,6 +761,42 @@ async function keepWeeklyReports() {
       ' newest report(s) | removed ' + trimmed + ' older';
   } catch (e) {
     msg.textContent = 'report retention error: ' + e;
+  }
+}
+async function verifyWeeklyReports() {
+  const msg = document.getElementById('weeklyreportsmsg');
+  const box = document.getElementById('weeklyreportscheck');
+  msg.textContent = 'verifying archived report files...';
+  box.textContent = '';
+  try {
+    const r = await fetch('/v1/weekly-review/reports/verify');
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'report verify error: ' + (j.error || r.status);
+      return;
+    }
+    const summary = j.summary || {};
+    msg.textContent = 'integrity: ' + (summary.ok || 0) + ' ok | ' +
+      (summary.failed || 0) + ' failed | ' +
+      (summary.missing || 0) + ' missing';
+    const failures = (j.entries || []).filter(item => item.status !== 'ok');
+    if (!failures.length) {
+      const ok = document.createElement('div');
+      ok.className = 'hint';
+      ok.textContent = 'All reports match stored size and SHA-256.';
+      box.appendChild(ok);
+      return;
+    }
+    failures.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'qitem';
+      card.textContent = (item.id || '?') + ' | ' + (item.status || '?') +
+        ' | ' + (item.path || '') + ' | ' +
+        (item.problems || []).join(', ');
+      box.appendChild(card);
+    });
+  } catch (e) {
+    msg.textContent = 'report verify error: ' + e;
   }
 }
 async function pruneWeeklyReports() {
@@ -913,6 +954,8 @@ document.getElementById('weeklyreportsrefresh').onclick = () => {
 };
 document.getElementById('weeklyreportsprune').onclick =
   () => pruneWeeklyReports();
+document.getElementById('weeklyreportsverify').onclick =
+  () => verifyWeeklyReports();
 document.getElementById('weeklyreportskeep').onclick =
   () => keepWeeklyReports();
 document.getElementById('goalplan').onclick = () => planGoal(false);
@@ -2647,6 +2690,13 @@ class Handler(BaseHTTPRequestHandler):
             }]})
         elif self.path == "/metrics":
             self._json(200, _state["metrics"])
+        elif self.path == "/v1/weekly-review/reports/verify":
+            try:
+                archive = _weekly_reports_archive()
+                result = archive.verify()
+            except (WeeklyReportError, OSError) as exc:
+                return self._json(400, {"error": str(exc)})
+            return self._json(200, result)
         elif (self.path == "/v1/weekly-review/reports"
               or self.path.startswith("/v1/weekly-review/reports?")):
             params = urllib.parse.parse_qs(

@@ -104,6 +104,35 @@ def test_archive_query_filters_entries(tmp_path):
     assert len(archive.list(query="WEEKLY")) == 2
 
 
+def test_archive_verify_detects_changed_and_missing_files(tmp_path):
+    index_path = tmp_path / "weekly_reports.json"
+    archive = WeeklyReportArchive(index_path)
+    unchanged = tmp_path / "unchanged.md"
+    unchanged.write_text("# Unchanged\n", encoding="utf-8")
+    changed = tmp_path / "changed.md"
+    changed.write_text("# Alpha\n", encoding="utf-8")
+    missing = tmp_path / "missing.md"
+    missing.write_text("# Missing\n", encoding="utf-8")
+    for number, path in enumerate((unchanged, changed, missing), start=1):
+        archive.record(
+            path, _review(),
+            exported_at=f"2026-11-2{number}T09:00:00")
+    changed.write_text("# Bravo\n", encoding="utf-8")
+    missing.unlink()
+
+    result = archive.verify()
+    assert result["ok"] is False
+    assert result["summary"] == {
+        "total": 3, "ok": 1, "failed": 2, "missing": 1,
+        "size_mismatch": 0, "hash_mismatch": 1,
+    }
+    by_name = {item["name"]: item for item in result["entries"]}
+    assert by_name["unchanged.md"]["status"] == "ok"
+    assert by_name["changed.md"]["status"] == "failed"
+    assert "hash_mismatch" in by_name["changed.md"]["problems"]
+    assert by_name["missing.md"]["status"] == "missing"
+
+
 def test_archive_delete_removes_one_entry_only(tmp_path):
     index_path = tmp_path / "weekly_reports.json"
     archive = WeeklyReportArchive(index_path)

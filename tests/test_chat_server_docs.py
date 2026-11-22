@@ -846,6 +846,10 @@ def test_ui_collection_scope_contract():
     assert 'id="weeklymd"' in page
     assert 'id="weeklyreportsrefresh"' in page
     assert 'id="weeklyreportsprune"' in page
+    assert 'id="weeklyreportsverify"' in page
+    assert 'id="weeklyreportscheck"' in page
+    assert "/v1/weekly-review/reports/verify" in page
+    assert "verifyWeeklyReports" in page
     assert 'id="weeklyreportskeep"' in page
     assert 'id="weeklykeep"' in page
     assert 'id="weeklykeepdry"' in page
@@ -1443,6 +1447,16 @@ def test_http_weekly_reports_archive(tmp_path):
         assert shown["tool_calls"][0]["name"] == "show_weekly_report"
         assert "archived task" in shown["report_markdown"]
         assert shown["report_id"] == entry["id"]
+        verification = json.loads(urllib.request.urlopen(
+            base + "/v1/weekly-review/reports/verify",
+            timeout=10).read().decode("utf-8"))
+        assert verification["summary"]["total"] == 2
+        assert verification["summary"]["ok"] == 1
+        assert verification["summary"]["missing"] == 1
+        verified_by_id = {
+            item["id"]: item for item in verification["entries"]}
+        assert verified_by_id[entry["id"]]["status"] == "ok"
+        assert verified_by_id[missing_entry["id"]]["status"] == "missing"
         pruned = _post(base + "/v1/weekly-review/reports/prune", {})
         assert pruned["removed"] == 1
         assert pruned["remaining"] == 1

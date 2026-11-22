@@ -393,6 +393,23 @@ def render_weekly_report_index(entries: list[dict],
     return "\n".join(lines)
 
 
+def render_weekly_report_verification(result: dict) -> str:
+    summary = result.get("summary", {})
+    lines = [
+        f"Report integrity: {summary.get('ok', 0)} ok, "
+        f"{summary.get('failed', 0)} failed, "
+        f"{summary.get('missing', 0)} missing "
+        f"({summary.get('total', 0)} total)"
+    ]
+    for item in result.get("entries", []):
+        problems = ",".join(item.get("problems", []))
+        suffix = f" [{problems}]" if problems else ""
+        lines.append(
+            f"- {item.get('id', '?')} | {item.get('status', '?')} | "
+            f"{item.get('path', '')}{suffix}")
+    return "\n".join(lines)
+
+
 def render_weekly_report_preview(entries: list[dict], keep: int) -> str:
     lines = [
         f"Dry run: would remove {len(entries)} older report(s) to keep "
@@ -584,6 +601,8 @@ def main(argv=None) -> int:
     parser.add_argument("--sort", choices=("newest", "oldest", "largest"),
                         default=None,
                         help="sort archived reports")
+    parser.add_argument("--verify", action="store_true",
+                        help="verify archived report sizes and SHA-256 values")
     parser.add_argument("--reports-index", default=DEFAULT_REPORTS_PATH,
                         help="weekly report archive JSON path")
     parser.add_argument("--limit", type=int, default=10,
@@ -619,6 +638,12 @@ def main(argv=None) -> int:
         parser.error("--query cannot be combined with maintenance options")
     if args.sort and not args.reports:
         parser.error("--sort requires --reports")
+    if args.verify and not args.reports:
+        parser.error("--verify requires --reports")
+    if args.verify and (args.query or args.sort or args.prune
+                        or args.keep is not None
+                        or args.delete is not None or args.dry_run):
+        parser.error("--verify cannot be combined with other report actions")
     if args.reports:
         index_path = args.reports_index or DEFAULT_REPORTS_PATH
         query = str(args.query or "").strip()
@@ -629,6 +654,21 @@ def main(argv=None) -> int:
         deleted = None
         try:
             archive = WeeklyReportArchive(index_path)
+            if args.verify:
+                verification = archive.verify()
+                if args.json:
+                    print(json.dumps({
+                        "data": verification["entries"],
+                        "count": len(verification["entries"]),
+                        "total": verification["summary"]["total"],
+                        "index": str(archive.path),
+                        "verified_at": verification["verified_at"],
+                        "verified": verification["ok"],
+                        "verification": verification["summary"],
+                    }, indent=2, ensure_ascii=False))
+                else:
+                    print(render_weekly_report_verification(verification))
+                return 0
             if args.delete is not None:
                 deleted = archive.delete(args.delete)
             if args.prune:

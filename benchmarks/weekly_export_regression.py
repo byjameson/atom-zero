@@ -16,7 +16,8 @@ Checks:
 - searching, listing and maintaining the archive from chat with confirmation;
 - sorting archive entries by newest, oldest and largest, including chat sort
   commands;
-- opening an archived report by id from chat.
+- opening an archived report by id from chat;
+- verifying stored size and SHA-256 against archived files.
 
 Run:
 
@@ -112,6 +113,10 @@ def run(output: str | Path | None = None) -> dict:
                 and 'id="weeklyreportsearch"' in page
                 and 'id="weeklyreportssearch"' in page
                 and 'id="weeklyreportsort"' in page
+                and 'id="weeklyreportsverify"' in page
+                and 'id="weeklyreportscheck"' in page
+                and "/v1/weekly-review/reports/verify" in page
+                and "verifyWeeklyReports" in page
                 and 'value="oldest"' in page
                 and 'value="largest"' in page
                 and 'data-q="find report weekly"' in page
@@ -300,6 +305,16 @@ def run(output: str | Path | None = None) -> dict:
                 "graph": {"entities": [], "connections": []},
             })
             missing_path.unlink()
+            verification = json.loads(urllib.request.urlopen(
+                base + "/v1/weekly-review/reports/verify",
+                timeout=15).read().decode("utf-8"))
+            check(
+                "archive_verify",
+                verification.get("summary", {}).get("total") == 2
+                and verification.get("summary", {}).get("ok") == 1
+                and verification.get("summary", {}).get("missing") == 1
+                and verification.get("ok") is False,
+                str(verification.get("summary")))
             pruned = _post(base, "/v1/weekly-review/reports/prune", {})
             after_prune = json.loads(urllib.request.urlopen(
                 base + "/v1/weekly-review/reports?limit=5",

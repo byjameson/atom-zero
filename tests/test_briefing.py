@@ -218,6 +218,42 @@ def test_cli_reports_prune_missing_files(tmp_path, capsys):
     assert exc.value.code == 2
 
 
+def test_cli_reports_verify_integrity(tmp_path, capsys):
+    index_path = tmp_path / "weekly_reports.json"
+    archive = WeeklyReportArchive(index_path)
+    good = tmp_path / "good.md"
+    good.write_text("# Good\n", encoding="utf-8")
+    changed = tmp_path / "changed.md"
+    changed.write_text("# Alpha\n", encoding="utf-8")
+    archive.record(good, {
+        "generated": "2026-11-21 09:00", "period_days": 7,
+        "task_counts": {}, "recent_source_count": 0,
+        "graph": {"entities": [], "connections": []},
+    }, exported_at="2026-11-21T09:00:00")
+    archive.record(changed, {
+        "generated": "2026-11-22 09:00", "period_days": 7,
+        "task_counts": {}, "recent_source_count": 0,
+        "graph": {"entities": [], "connections": []},
+    }, exported_at="2026-11-22T09:00:00")
+    changed.write_text("# Bravo\n", encoding="utf-8")
+
+    assert main(["--reports", "--verify", "--json",
+                 "--reports-index", str(index_path)]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["verified"] is False
+    assert payload["verification"]["total"] == 2
+    assert payload["verification"]["ok"] == 1
+    assert payload["verification"]["hash_mismatch"] == 1
+    assert main(["--reports", "--verify", "--reports-index",
+                 str(index_path)]) == 0
+    output = capsys.readouterr().out
+    assert "Report integrity:" in output
+    assert "hash_mismatch" in output
+    with pytest.raises(SystemExit) as exc:
+        main(["--reports", "--verify", "--keep", "1"])
+    assert exc.value.code == 2
+
+
 def test_cli_reports_sort_orders(tmp_path, capsys):
     index_path = tmp_path / "weekly_reports.json"
     archive = WeeklyReportArchive(index_path)
