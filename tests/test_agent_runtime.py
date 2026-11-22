@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from atomzero.agent_runtime import (
@@ -194,6 +196,67 @@ def test_agent_searches_weekly_report_archive(tmp_path):
     turkish = agent.chat("rapor ara beta")
     assert turkish["matched"] == 1
     assert turkish["reports"][0]["name"] == "beta-report.md"
+
+
+def test_agent_report_archive_maintenance_flow(tmp_path):
+    index_path = tmp_path / "weekly_reports.json"
+    archive = WeeklyReportArchive(index_path)
+
+    missing = tmp_path / "missing.md"
+    missing.write_text("# Missing\n", encoding="utf-8")
+    archive.record(missing, {
+        "generated": "2026-11-20 09:00", "period_days": 7,
+        "task_counts": {}, "recent_source_count": 0,
+        "graph": {"entities": [], "connections": []},
+    }, exported_at="2026-11-20T09:00:00")
+    missing.unlink()
+    for number in range(1, 5):
+        report = tmp_path / f"report-{number}.md"
+        report.write_text(f"# Report {number}\n", encoding="utf-8")
+        archive.record(report, {
+            "generated": f"2026-11-2{number} 09:00", "period_days": 7,
+            "task_counts": {"open": number}, "recent_source_count": 1,
+            "graph": {"entities": [], "connections": []},
+        }, exported_at=f"2026-11-2{number}T09:00:00")
+
+    agent = AgentSession(
+        "s-report-maint", tmp_path / "memory.json",
+        weekly_reports_path=str(index_path))
+    preview = agent.chat("prune report archive")
+    assert 'Reply "confirm reports"' in preview["reply"]
+    assert WeeklyReportArchive(index_path).count() == 5
+    applied = agent.chat("confirm reports")
+    assert "Pruned 1 missing report(s)." in applied["reply"]
+    assert applied["tool_calls"][0]["name"] == "prune_weekly_reports"
+    assert WeeklyReportArchive(index_path).count() == 4
+
+    keep_preview = agent.chat("keep reports 2")
+    assert 'Reply "confirm reports"' in keep_preview["reply"]
+    assert WeeklyReportArchive(index_path).count() == 4
+    kept = agent.chat("confirm reports")
+    assert "Kept the newest 2 report(s); removed 2 older entry(ies)." in (
+        kept["reply"])
+    assert kept["tool_calls"][0]["name"] == "keep_weekly_reports"
+    assert WeeklyReportArchive(index_path).count() == 2
+
+    dry_run = agent.chat("keep reports 1 dry-run")
+    assert dry_run["dry_run"] is True
+    assert dry_run["would_remove_count"] == 1
+    assert WeeklyReportArchive(index_path).count() == 2
+    no_pending = agent.chat("confirm reports")
+    assert "no pending report action" in no_pending["reply"].lower()
+
+    target = WeeklyReportArchive(index_path).list()[0]
+    delete_preview = agent.chat(f"delete report {target['id']}")
+    assert 'Reply "confirm reports"' in delete_preview["reply"]
+    assert WeeklyReportArchive(index_path).count() == 2
+    deleted = agent.chat("confirm reports")
+    assert f"Deleted archive entry {target['id']}." in deleted["reply"]
+    assert "report file was left on disk" in deleted["reply"]
+    assert WeeklyReportArchive(index_path).count() == 1
+    assert Path(target["path"]).exists()
+    cancelled = agent.chat("cancel reports")
+    assert "no pending report action" in cancelled["reply"].lower()
 
 
 def test_agent_weekly_review_intent(tmp_path):

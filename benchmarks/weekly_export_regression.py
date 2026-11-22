@@ -13,7 +13,7 @@ Checks:
   flow;
 - deleting one archive entry while leaving its report file on disk;
 - filtering the archive with a text query;
-- searching the archive from chat.
+- searching and maintaining the archive from chat with confirmation.
 
 Run:
 
@@ -109,6 +109,7 @@ def run(output: str | Path | None = None) -> dict:
                 and 'id="weeklyreportsearch"' in page
                 and 'id="weeklyreportssearch"' in page
                 and 'data-q="find report weekly"' in page
+                and 'data-q="keep reports 2 dry-run"' in page
                 and "refreshWeeklyReports" in page
                 and "pruneWeeklyReports" in page
                 and "keepWeeklyReports" in page
@@ -233,6 +234,31 @@ def run(output: str | Path | None = None) -> dict:
                 and (chat.get("reports") or [{}])[0].get("name")
                 == "weekly.md",
                 chat.get("reply", "")[:240])
+            missing_chat = Path(folder) / "chat-missing.md"
+            missing_chat.write_text("# Chat missing\n", encoding="utf-8")
+            chat_archive = (chat_server._state.get("weekly_reports")
+                            or WeeklyReportArchive(report_index))
+            chat_archive.record(missing_chat, {
+                "generated": "2026-11-20 09:00", "period_days": 7,
+                "task_counts": {"open": 0}, "pending_gap_count": 0,
+                "recent_source_count": 0,
+                "graph": {"entities": [], "connections": []},
+            }, exported_at="2026-11-20T09:00:00")
+            missing_chat.unlink()
+            chat_preview = _post(base, "/v1/agent/chat", {
+                "session_id": "maint-chat",
+                "message": "prune report archive"})
+            chat_apply = _post(base, "/v1/agent/chat", {
+                "session_id": "maint-chat",
+                "message": "confirm reports"})
+            check(
+                "chat_report_maintenance",
+                'Reply "confirm reports"' in chat_preview.get("reply", "")
+                and "Pruned 1 missing report(s)." in chat_apply.get(
+                    "reply", "")
+                and (chat_apply.get("tool_calls") or [{}])[0].get("name")
+                == "prune_weekly_reports",
+                chat_apply.get("reply", "")[:200])
             with urllib.request.urlopen(
                     base + f"/v1/weekly-review/reports?id={entry.get('id')}",
                     timeout=15) as response:

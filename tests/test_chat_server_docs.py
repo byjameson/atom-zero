@@ -855,6 +855,7 @@ def test_ui_collection_scope_contract():
     assert 'id="weeklyreportsearch"' in page
     assert 'id="weeklyreportssearch"' in page
     assert 'data-q="find report weekly"' in page
+    assert 'data-q="keep reports 2 dry-run"' in page
     assert "getWeeklyReview" in page
     assert "downloadWeeklyMarkdown" in page
     assert "refreshWeeklyReports" in page
@@ -1463,6 +1464,89 @@ def test_http_weekly_reports_archive(tmp_path):
             urllib.request.urlopen(
                 base + "/v1/weekly-review/reports?id=w9999", timeout=10)
         assert missing.value.code == 404
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
+
+
+def test_http_chat_report_maintenance_flow(tmp_path):
+    from atomzero.weekly_reports import WeeklyReportArchive
+
+    index_path = tmp_path / "weekly_reports.json"
+    archive = WeeklyReportArchive(index_path)
+    missing = tmp_path / "missing.md"
+    missing.write_text("# Missing\n", encoding="utf-8")
+    archive.record(missing, {
+        "generated": "2026-11-20 09:00", "period_days": 7,
+        "task_counts": {}, "recent_source_count": 0,
+        "graph": {"entities": [], "connections": []},
+    }, exported_at="2026-11-20T09:00:00")
+    missing.unlink()
+    for number in range(1, 5):
+        report = tmp_path / f"report-{number}.md"
+        report.write_text(f"# Report {number}\n", encoding="utf-8")
+        archive.record(report, {
+            "generated": f"2026-11-2{number} 09:00", "period_days": 7,
+            "task_counts": {"open": number}, "recent_source_count": 1,
+            "graph": {"entities": [], "connections": []},
+        }, exported_at=f"2026-11-2{number}T09:00:00")
+    old = dict(chat_server._state)
+    chat_server._state.update({
+        "model": None, "tok": None, "docs": None, "adapter": "",
+        "name": "tiny-test", "params": 1, "config": {}, "step": 0,
+        "api_key": "", "metrics": {"requests": 0, "generated_tokens": 0},
+        "safety": None, "wiki_lang": "en",
+        "session_dir": str(tmp_path / "sessions"), "sessions": {},
+        "weekly_reports_path": str(index_path),
+        "weekly_reports": archive,
+    })
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        prune = _post(base + "/v1/agent/chat", {
+            "session_id": "maint-chat",
+            "message": "prune report archive"})
+        assert 'Reply "confirm reports"' in prune["reply"]
+        assert archive.count() == 5
+        applied = _post(base + "/v1/agent/chat", {
+            "session_id": "maint-chat", "message": "confirm reports"})
+        assert "Pruned 1 missing report(s)." in applied["reply"]
+        assert archive.count() == 4
+
+        keep = _post(base + "/v1/agent/chat", {
+            "session_id": "maint-chat", "message": "keep reports 2"})
+        assert 'Reply "confirm reports"' in keep["reply"]
+        assert archive.count() == 4
+        kept = _post(base + "/v1/agent/chat", {
+            "session_id": "maint-chat", "message": "confirm reports"})
+        assert "Kept the newest 2 report(s); removed 2" in kept["reply"]
+        assert archive.count() == 2
+
+        dry_run = _post(base + "/v1/agent/chat", {
+            "session_id": "maint-chat",
+            "message": "keep reports 1 dry-run"})
+        assert dry_run["dry_run"] is True
+        assert dry_run["would_remove_count"] == 1
+        assert archive.count() == 2
+
+        target = archive.list()[0]
+        delete = _post(base + "/v1/agent/chat", {
+            "session_id": "maint-chat",
+            "message": f"delete report {target['id']}"})
+        assert 'Reply "confirm reports"' in delete["reply"]
+        assert archive.count() == 2
+        deleted = _post(base + "/v1/agent/chat", {
+            "session_id": "maint-chat", "message": "confirm reports"})
+        assert f"Deleted archive entry {target['id']}." in deleted["reply"]
+        assert archive.count() == 1
+        assert Path(target["path"]).exists()
+        cancelled = _post(base + "/v1/agent/chat", {
+            "session_id": "maint-chat", "message": "cancel reports"})
+        assert "no pending report action" in cancelled["reply"].lower()
     finally:
         httpd.shutdown()
         httpd.server_close()

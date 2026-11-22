@@ -46,9 +46,12 @@
 - Added chat search for archived reports (`find report weekly`,
   `rapor ara weekly`) with a `search_weekly_reports` tool call, report payload
   and a UI quick prompt.
-- Added `benchmarks/weekly_export_regression.py` (16/16 checks: CLI, HTTP, UI,
+- Added chat maintenance previews for `prune report archive`,
+  `keep reports N`, `keep reports N dry-run` and `delete report ID`; destructive
+  actions require `confirm reports`, cancellation uses `cancel reports`.
+- Added `benchmarks/weekly_export_regression.py` (17/17 checks: CLI, HTTP, UI,
   the report archive, pruning, retention, dry-run preview, deletion, query
-  filtering and chat search).
+  filtering and chat search/maintenance).
 - Fixed BOM-sensitive session loading: `atomzero-brief` and `ChatHuman` now
   accept PowerShell-written UTF-8 session files with a BOM.
 - Extended BOM-tolerant reads to feedback, knowledge-gap, research-queue,

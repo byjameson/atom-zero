@@ -95,6 +95,7 @@ class AgentSession:
         self.weekly_reports_path = str(
             weekly_reports_path or DEFAULT_REPORTS_PATH)
         self.pending_plan = None
+        self.pending_report_action = None
         self.human = ChatHuman(memory_path, model, tokenizer, device,
                                "transformer", docs, on_gap=self._record_gap,
                                generator=generator,
@@ -383,6 +384,181 @@ class AgentSession:
             "total": total,
         }
 
+    @staticmethod
+    def _report_action_lines(entries: list[dict]) -> str:
+        lines = []
+        for item in entries:
+            marker = "" if item.get("exists", True) else " [missing]"
+            lines.append(
+                f"- {item.get('id', '?')} | "
+                f"{item.get('exported_at', '')} | "
+                f"{item.get('path', '')}{marker}")
+        return "\n".join(lines)
+
+    def _preview_prune_reports(self) -> dict:
+        self.pending_report_action = None
+        try:
+            archive = WeeklyReportArchive(self.weekly_reports_path)
+            entries = [item for item in archive.list(limit=100)
+                       if not item.get("exists")]
+        except (WeeklyReportError, OSError) as exc:
+            return {"reply": f"report archive error: {exc}",
+                    "tool_calls": [], "sources": [], "evidence": []}
+        tool = [{"name": "preview_weekly_reports", "action": "prune",
+                 "matches": len(entries)}]
+        if not entries:
+            return {
+                "reply": "No missing report entries to prune.",
+                "tool_calls": tool, "sources": [], "evidence": [],
+            }
+        self.pending_report_action = {"action": "prune"}
+        reply = "\n".join([
+            f"Missing report entries ({len(entries)}):",
+            self._report_action_lines(entries),
+            'Reply "confirm reports" to remove these index entries, or '
+            '"cancel reports".',
+        ])
+        return {
+            "reply": reply,
+            "tool_calls": tool,
+            "sources": [],
+            "evidence": [],
+            "reports": entries,
+        }
+
+    def _preview_keep_reports(self, keep: int, dry_run: bool = False) -> dict:
+        self.pending_report_action = None
+        try:
+            archive = WeeklyReportArchive(self.weekly_reports_path)
+            entries = archive.keep_preview(keep)
+            total = archive.count()
+        except (WeeklyReportError, OSError) as exc:
+            return {"reply": f"report archive error: {exc}",
+                    "tool_calls": [], "sources": [], "evidence": []}
+        tool = [{"name": "preview_weekly_reports", "action": "keep",
+                 "keep": keep, "matches": len(entries)}]
+        if not entries:
+            return {
+                "reply": (f"Nothing would be removed; {total} report(s) "
+                          f"already fit in keep {keep}."),
+                "tool_calls": tool, "sources": [], "evidence": [],
+            }
+        lines = [
+            f"Keeping the newest {keep} report(s) would remove "
+            f"{len(entries)} older entry(ies):",
+            self._report_action_lines(entries),
+        ]
+        if dry_run:
+            lines.append("Dry run: no archive changes were made.")
+            reply = "\n".join(lines)
+            return {
+                "reply": reply,
+                "tool_calls": tool + [{"name": "keep_weekly_reports",
+                                       "keep": keep, "dry_run": True}],
+                "sources": [],
+                "evidence": [],
+                "reports": entries,
+                "would_remove_count": len(entries),
+                "dry_run": True,
+            }
+        self.pending_report_action = {"action": "keep", "keep": keep}
+        lines.append('Reply "confirm reports" to apply, or "cancel reports".')
+        return {
+            "reply": "\n".join(lines),
+            "tool_calls": tool,
+            "sources": [],
+            "evidence": [],
+            "reports": entries,
+        }
+
+    def _preview_delete_report(self, report_id: str) -> dict:
+        self.pending_report_action = None
+        try:
+            archive = WeeklyReportArchive(self.weekly_reports_path)
+            entry = archive.get(report_id)
+        except (WeeklyReportError, OSError) as exc:
+            return {"reply": str(exc), "tool_calls": [],
+                    "sources": [], "evidence": []}
+        self.pending_report_action = {
+            "action": "delete", "id": report_id}
+        reply = "\n".join([
+            f"Delete archive entry {report_id}? "
+            "The report file is left on disk:",
+            self._report_action_lines([entry]),
+            'Reply "confirm reports" to delete the index entry, or '
+            '"cancel reports".',
+        ])
+        return {
+            "reply": reply,
+            "tool_calls": [{"name": "preview_weekly_reports",
+                            "action": "delete", "id": report_id}],
+            "sources": [],
+            "evidence": [],
+            "reports": [entry],
+        }
+
+    def _apply_report_action(self) -> dict:
+        pending = self.pending_report_action
+        self.pending_report_action = None
+        if pending is None:
+            return {
+                "reply": ("There is no pending report action. Use "
+                          "'prune report archive', 'keep reports N' or "
+                          "'delete report ID' first."),
+                "tool_calls": [], "sources": [], "evidence": [],
+            }
+        action = pending.get("action")
+        try:
+            archive = WeeklyReportArchive(self.weekly_reports_path)
+            if action == "prune":
+                removed = archive.prune()
+                remaining = archive.count()
+                reply = (f"Pruned {removed} missing report(s). "
+                         f"Archive now has {remaining} report(s).")
+                tool = {"name": "prune_weekly_reports",
+                        "removed": removed}
+            elif action == "keep":
+                keep = int(pending["keep"])
+                trimmed = archive.keep(keep)
+                remaining = archive.count()
+                reply = (f"Kept the newest {keep} report(s); removed "
+                         f"{trimmed} older entry(ies). "
+                         f"Archive now has {remaining} report(s).")
+                tool = {"name": "keep_weekly_reports", "keep": keep,
+                        "trimmed": trimmed}
+            elif action == "delete":
+                report_id = str(pending["id"])
+                deleted = archive.delete(report_id)
+                remaining = archive.count()
+                reply = (f"Deleted archive entry {report_id}. "
+                         f"The report file was left on disk. "
+                         f"Archive now has {remaining} report(s).")
+                tool = {"name": "delete_weekly_report",
+                        "id": report_id,
+                        "path": deleted.get("path", "")}
+            else:
+                return {"reply": "Unknown report action.",
+                        "tool_calls": [], "sources": [], "evidence": []}
+        except (WeeklyReportError, OSError, TypeError, ValueError) as exc:
+            return {"reply": f"report archive error: {exc}",
+                    "tool_calls": [], "sources": [], "evidence": []}
+        return {
+            "reply": reply,
+            "tool_calls": [tool],
+            "sources": [],
+            "evidence": [],
+            "report_action": {"action": action, "remaining": remaining},
+        }
+
+    def _cancel_report_action(self) -> dict:
+        had_action = self.pending_report_action is not None
+        self.pending_report_action = None
+        return {
+            "reply": ("Report action cancelled." if had_action
+                      else "There is no pending report action."),
+            "tool_calls": [], "sources": [], "evidence": [],
+        }
+
     def _weekly_review(self, days: int = 7) -> dict:
         review = build_weekly_review(
             self.human.data, self.gap_store, self.docs, days=days)
@@ -553,6 +729,44 @@ class AgentSession:
                 r"(.+?)\s+ara\??$", text, re.IGNORECASE)
         if report_query:
             return self._search_weekly_reports(report_query.group(1).strip())
+        if low in ("confirm reports", "confirm report changes", "apply reports",
+                   "yes reports", "raporları onayla"):
+            return self._apply_report_action()
+        if low in ("cancel reports", "cancel report changes",
+                   "discard reports", "rapor işlemini iptal et"):
+            return self._cancel_report_action()
+        prune_match = re.match(
+            r"^(?:prune|clean(?:\s+up)?|remove\s+missing)\s+(?:the\s+)?"
+            r"(?:missing\s+)?reports?(?:\s+archive)?\??$",
+            text, re.IGNORECASE)
+        if prune_match:
+            return self._preview_prune_reports()
+        dry_run = bool(re.search(
+            r"\bdry[- ]?run\??$", text, re.IGNORECASE))
+        keep_text = re.sub(
+            r"\s+dry[- ]?run\??$", "", text,
+            flags=re.IGNORECASE).strip()
+        keep_match = re.match(
+            r"^(?:keep|retain)\s+(?:the\s+)?(?:newest\s+)?"
+            r"(?:reports?|report\s+archive)\s+(?:for\s+)?(\d+)\??$",
+            keep_text, re.IGNORECASE)
+        if not keep_match:
+            keep_match = re.match(
+                r"^(?:keep|retain)\s+(?:the\s+)?(\d+)\s+"
+                r"(?:newest\s+)?reports?\??$", keep_text, re.IGNORECASE)
+        if keep_match:
+            return self._preview_keep_reports(
+                int(keep_match.group(1)), dry_run=dry_run)
+        delete_match = re.match(
+            r"^(?:delete|remove)\s+(?:the\s+)?"
+            r"(?:report|report\s+archive|archive\s+entry)\s+"
+            r"(w\d+)\??$", text, re.IGNORECASE)
+        if not delete_match:
+            delete_match = re.match(
+                r"^(?:delete|remove)\s+(w\d+)\s+"
+                r"(?:report|archive\s+entry)\??$", text, re.IGNORECASE)
+        if delete_match:
+            return self._preview_delete_report(delete_match.group(1))
         graph_query = re.match(
             r"^(?:what is related to|what relates to|connections (?:for|of)|"
             r"graph)\s*:?\s*(.+?)\??$", text, re.IGNORECASE)

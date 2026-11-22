@@ -153,6 +153,15 @@ find report weekly
 -> archived report matches with id, date, path and missing-file marker
 -> Turkish: "rapor ara weekly"
 
+prune report archive
+keep reports 2
+keep reports 1 dry-run
+delete report w0001
+-> previews the entries affected
+-> destructive keep/delete/prune changes require "confirm reports"
+-> "cancel reports" discards the pending action
+-> dry-run never changes the archive
+
 plan goal prepare the warranty page
 -> cited plan skeleton, no task creation
 -> "Reply 'confirm plan' to create these tasks, or 'cancel plan'."
