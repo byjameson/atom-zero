@@ -5,6 +5,7 @@ from atomzero.agent_runtime import (
 from atomzero.doc_memory import DocMemory
 from atomzero.knowledge_gaps import KnowledgeGapStore
 from atomzero.safety import SafetyFilter
+from atomzero.weekly_reports import WeeklyReportArchive
 
 
 def test_agent_session_handles_tools_and_memory(tmp_path):
@@ -164,6 +165,35 @@ def test_agent_brief_me_returns_local_brief(tmp_path):
     assert result["brief"]["pending_gap_count"] == 1
     assert result["sources"]
     docs.close()
+
+
+def test_agent_searches_weekly_report_archive(tmp_path):
+    index_path = tmp_path / "weekly_reports.json"
+    archive = WeeklyReportArchive(index_path)
+    for number, name in enumerate(("alpha-report", "beta-report"), start=1):
+        report = tmp_path / f"{name}.md"
+        report.write_text(f"# {name}\n", encoding="utf-8")
+        archive.record(report, {
+            "generated": f"2026-11-2{number} 09:00", "period_days": 7,
+            "task_counts": {"open": number}, "recent_source_count": 1,
+            "graph": {"entities": [], "connections": []},
+        }, exported_at=f"2026-11-2{number}T09:00:00")
+    agent = AgentSession(
+        "s-reports", tmp_path / "memory.json",
+        weekly_reports_path=str(index_path))
+    result = agent.chat("find report alpha")
+    assert result["tool_calls"][0]["name"] == "search_weekly_reports"
+    assert result["matched"] == 1
+    assert result["total"] == 2
+    assert result["reports"][0]["name"] == "alpha-report.md"
+    assert "alpha-report.md" in result["reply"]
+    assert "beta-report.md" not in result["reply"]
+    missing = agent.chat("find report missing")
+    assert 'No archived weekly reports match "missing"' in missing["reply"]
+    assert missing["reports"] == []
+    turkish = agent.chat("rapor ara beta")
+    assert turkish["matched"] == 1
+    assert turkish["reports"][0]["name"] == "beta-report.md"
 
 
 def test_agent_weekly_review_intent(tmp_path):

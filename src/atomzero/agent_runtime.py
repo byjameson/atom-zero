@@ -13,6 +13,8 @@ from atomzero.doc_memory import format_citation, grounded_answer
 from atomzero.knowledge_gaps import KnowledgeGapError
 from atomzero.knowledge_graph import entity_sources, graph_path
 from atomzero.skills import execute_skill
+from atomzero.weekly_reports import (
+    DEFAULT_REPORTS_PATH, WeeklyReportArchive, WeeklyReportError)
 from atomzero.web_research import wikipedia_research
 
 from atomzero.chat_human import ChatHuman
@@ -80,7 +82,8 @@ class AgentSession:
     def __init__(self, session_id: str, memory_path: str | Path,
                  model=None, tokenizer=None, device=None, docs=None,
                  wiki_lang: str = "en", gap_store=None, safety=None,
-                 generator=None, allow_general_chat=False, skills=None):
+                 generator=None, allow_general_chat=False, skills=None,
+                 weekly_reports_path: str = DEFAULT_REPORTS_PATH):
         if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", session_id):
             raise ValueError("invalid session id")
         self.id = session_id
@@ -89,6 +92,8 @@ class AgentSession:
         self.gap_store = gap_store
         self.safety = safety
         self.skills = skills
+        self.weekly_reports_path = str(
+            weekly_reports_path or DEFAULT_REPORTS_PATH)
         self.pending_plan = None
         self.human = ChatHuman(memory_path, model, tokenizer, device,
                                "transformer", docs, on_gap=self._record_gap,
@@ -326,6 +331,58 @@ class AgentSession:
             "weights_changed": False,
         }
 
+    def _search_weekly_reports(self, query: str) -> dict:
+        query = str(query or "").strip()
+        tool = [{"name": "search_weekly_reports", "query": query}]
+        try:
+            archive = WeeklyReportArchive(self.weekly_reports_path)
+            reports = archive.list(limit=10, query=query)
+            total = archive.count()
+            matched = archive.count(query=query)
+        except (WeeklyReportError, OSError) as exc:
+            return {
+                "reply": f"report archive error: {exc}",
+                "tool_calls": tool,
+                "sources": [],
+                "evidence": [],
+                "reports": [],
+                "query": query,
+            }
+        tool[0]["matches"] = len(reports)
+        if not reports:
+            if total == 0:
+                reply = ("No archived weekly reports yet. Create one with "
+                         "atomzero-brief --weekly --markdown --out PATH.")
+            else:
+                reply = (f'No archived weekly reports match "{query}" '
+                         f"({total} total).")
+        else:
+            lines = [
+                f'Archived weekly reports matching "{query}" '
+                f"({matched} of {total}):"
+            ]
+            for item in reports:
+                marker = "" if item.get("exists", True) else " [missing]"
+                lines.append(
+                    f"- {item.get('id', '?')} | "
+                    f"exported {item.get('exported_at', '')} | "
+                    f"last {item.get('period_days', 7)} days | "
+                    f"{item.get('path', '')}{marker}")
+            lines.append(
+                "Report files stay on your disk; use "
+                "atomzero-brief --reports --delete ID to remove an index entry.")
+            reply = "\n".join(lines)
+        return {
+            "reply": reply,
+            "tool_calls": tool,
+            "sources": [],
+            "evidence": [],
+            "reports": reports,
+            "query": query,
+            "matched": matched,
+            "total": total,
+        }
+
     def _weekly_review(self, days: int = 7) -> dict:
         review = build_weekly_review(
             self.human.data, self.gap_store, self.docs, days=days)
@@ -478,6 +535,24 @@ class AgentSession:
             query = re.sub(r"^search (docs|my notes|documents)\s*:?\s*", "",
                            text, flags=re.IGNORECASE)
             return self._search_docs(query)
+        report_query = re.match(
+            r"^(?:find|search|show)\s+(?:the\s+)?report\s+archive\s+"
+            r"(?:for\s+)?(.+?)\??$", text, re.IGNORECASE)
+        if not report_query:
+            report_query = re.match(
+                r"^(?:find|search|show|list)\s+(?:the\s+)?"
+                r"(?:weekly\s+)?reports?\s+(?:for\s+)?(.+?)\??$",
+                text, re.IGNORECASE)
+        if not report_query:
+            report_query = re.match(
+                r"^(?:rapor|raporlar[ıi])\s+(?:ara|bul)\s+(.+?)\??$",
+                text, re.IGNORECASE)
+        if not report_query:
+            report_query = re.match(
+                r"^(?:haftal[ıi]k\s+)?rapor\s+ar[şs]ivinde\s+"
+                r"(.+?)\s+ara\??$", text, re.IGNORECASE)
+        if report_query:
+            return self._search_weekly_reports(report_query.group(1).strip())
         graph_query = re.match(
             r"^(?:what is related to|what relates to|connections (?:for|of)|"
             r"graph)\s*:?\s*(.+?)\??$", text, re.IGNORECASE)

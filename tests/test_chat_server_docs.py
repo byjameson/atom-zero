@@ -854,6 +854,7 @@ def test_ui_collection_scope_contract():
     assert "/v1/weekly-review/reports/delete" in page
     assert 'id="weeklyreportsearch"' in page
     assert 'id="weeklyreportssearch"' in page
+    assert 'data-q="find report weekly"' in page
     assert "getWeeklyReview" in page
     assert "downloadWeeklyMarkdown" in page
     assert "refreshWeeklyReports" in page
@@ -1390,6 +1391,13 @@ def test_http_weekly_reports_archive(tmp_path):
         by_id = {item["id"]: item for item in listing["data"]}
         assert by_id[entry["id"]]["exists"] is True
         assert by_id[missing_entry["id"]]["exists"] is False
+        chat = _post(base + "/v1/agent/chat", {
+            "session_id": "report-chat",
+            "message": "find report weekly"})
+        assert chat["tool_calls"][0]["name"] == "search_weekly_reports"
+        assert chat["matched"] == 2
+        assert entry["id"] in chat["reply"]
+        assert missing_entry["id"] in chat["reply"]
         pruned = _post(base + "/v1/weekly-review/reports/prune", {})
         assert pruned["removed"] == 1
         assert pruned["remaining"] == 1

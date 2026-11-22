@@ -43,9 +43,12 @@
   archive entry; the report file is left on disk.
 - Added `atomzero-brief --reports --query TEXT`,
   `GET /v1/weekly-review/reports?query=...` and a UI report search box.
-- Added `benchmarks/weekly_export_regression.py` (15/15 checks: CLI, HTTP, UI,
-  the report archive, pruning, retention, dry-run preview, deletion and
-  query filtering).
+- Added chat search for archived reports (`find report weekly`,
+  `rapor ara weekly`) with a `search_weekly_reports` tool call, report payload
+  and a UI quick prompt.
+- Added `benchmarks/weekly_export_regression.py` (16/16 checks: CLI, HTTP, UI,
+  the report archive, pruning, retention, dry-run preview, deletion, query
+  filtering and chat search).
 - Fixed BOM-sensitive session loading: `atomzero-brief` and `ChatHuman` now
   accept PowerShell-written UTF-8 session files with a BOM.
 - Extended BOM-tolerant reads to feedback, knowledge-gap, research-queue,

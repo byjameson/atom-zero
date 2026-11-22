@@ -149,6 +149,10 @@ brief me
 weekly review
 -> weekly review; optionally "for 14 days" or "14 gün"
 
+find report weekly
+-> archived report matches with id, date, path and missing-file marker
+-> Turkish: "rapor ara weekly"
+
 plan goal prepare the warranty page
 -> cited plan skeleton, no task creation
 -> "Reply 'confirm plan' to create these tasks, or 'cancel plan'."

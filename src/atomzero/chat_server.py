@@ -248,6 +248,7 @@ hr{border:0;border-top:1px solid #ddd;margin:22px 0}
 <button data-q="what is the visitor badge code?">visitor badge</button>
 <button data-q="what is the population of Paris?">no-source demo</button>
 <button data-q="brief me">brief me</button>
+<button data-q="find report weekly">find report</button>
 <button data-q="plan goal prepare the warranty page">plan goal</button>
 </div>
 <hr>
@@ -3836,7 +3837,9 @@ class Handler(BaseHTTPRequestHandler):
                 safety=_state.get("safety"),
                 generator=_state.get("generator"),
                 allow_general_chat=_state.get("allow_general_chat", False),
-                skills=_state.get("skills"))
+                skills=_state.get("skills"),
+                weekly_reports_path=_state.get(
+                    "weekly_reports_path", DEFAULT_REPORTS_PATH))
         return sessions[session_id]
 
     def _agent_plan(self, req: dict):

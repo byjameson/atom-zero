@@ -12,7 +12,8 @@ Checks:
 - previewing and retaining only the newest N reports through the HTTP/UI
   flow;
 - deleting one archive entry while leaving its report file on disk;
-- filtering the archive with a text query.
+- filtering the archive with a text query;
+- searching the archive from chat.
 
 Run:
 
@@ -107,6 +108,7 @@ def run(output: str | Path | None = None) -> dict:
                 and "/v1/weekly-review/reports/delete" in page
                 and 'id="weeklyreportsearch"' in page
                 and 'id="weeklyreportssearch"' in page
+                and 'data-q="find report weekly"' in page
                 and "refreshWeeklyReports" in page
                 and "pruneWeeklyReports" in page
                 and "keepWeeklyReports" in page
@@ -219,6 +221,18 @@ def run(output: str | Path | None = None) -> dict:
                 and no_match.get("data") == []
                 and no_match.get("total") == 1,
                 f"matched={filtered.get('matched')}")
+            chat = _post(base, "/v1/agent/chat", {
+                "session_id": "export-chat",
+                "message": "find report weekly"})
+            check(
+                "chat_report_search",
+                (chat.get("tool_calls") or [{}])[0].get("name")
+                == "search_weekly_reports"
+                and chat.get("matched") == 1
+                and "w0001" in chat.get("reply", "")
+                and (chat.get("reports") or [{}])[0].get("name")
+                == "weekly.md",
+                chat.get("reply", "")[:240])
             with urllib.request.urlopen(
                     base + f"/v1/weekly-review/reports?id={entry.get('id')}",
                     timeout=15) as response:
