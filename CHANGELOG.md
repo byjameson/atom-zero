@@ -1,5 +1,13 @@
 # Changelog
 
+## atomzero 0.1.7 - PyPI docs link cleanup (2026-11-22)
+
+- Republished the package description with all documentation links pointing to
+  the `atom-zero` repository.
+- Removed the old `stream-finetune` documentation links from the PyPI page.
+- No model/runtime changes; weights remain `0.8.0`.
+- Release notes: [`docs/RELEASE_ATOMZERO_0.1.7.md`](docs/RELEASE_ATOMZERO_0.1.7.md).
+
 ## atomzero 0.1.6 - LinkedIn and ModelScope restored (2026-11-22)
 
 - Restored LinkedIn and ModelScope as canonical Atom Zero release surfaces.
