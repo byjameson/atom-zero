@@ -91,6 +91,30 @@ The export contains task checkboxes (`[ ]` / `[x]`), pending gaps, recent
 sources, graph entities/connections, highlights and next-week actions. It is
 generated locally and does not change model weights.
 
+### Report archive
+
+Every successful `--out` export is recorded in a local JSON index:
+
+```powershell
+atomzero-brief --reports
+atomzero-brief --reports --json
+atomzero-brief --reports --reports-index reports\weekly_reports.json --limit 5
+```
+
+The index defaults to `data/weekly_reports.json`. Each output path has one
+entry, refreshed on later exports to the same path. Entries store the report
+path, time, period, task/source counts, graph counts, size and SHA-256.
+
+```text
+GET /v1/weekly-review/reports?limit=10
+GET /v1/weekly-review/reports?id=w0001
+```
+
+The UI **Recent reports** panel lists the archive and can download an indexed
+Markdown file. Keep `--reports-index` pointed at the same file for CLI and the
+server; both default to `data/weekly_reports.json`. `quickstart` and
+`chat_server` accept `--reports-index`.
+
 ## Chat flow
 
 ```text

@@ -28,6 +28,8 @@ Endpoints:
   POST /v1/briefing
   POST /v1/weekly-review
   GET  /v1/weekly-review/export?session_id=...&days=7
+  GET  /v1/weekly-review/reports?limit=10
+  GET  /v1/weekly-review/reports?id=w0001
   POST /v1/goals/plan
   GET  /v1/teacher/notes
   POST /v1/teacher/notes
@@ -75,9 +77,21 @@ from atomzero.teacher_notes import TeacherNoteTooLarge, add_teacher_note
 from atomzero.teacher_provider import TeacherProvider, TeacherProviderError
 from atomzero.tool_planner import ToolPlanError, execute_plan
 from atomzero.transformer import TransformerLM, generate
+from atomzero.weekly_reports import (
+    DEFAULT_REPORTS_PATH, WeeklyReportArchive, WeeklyReportError)
 
 _lock = threading.Lock()
 _state: dict = {}
+
+
+def _weekly_reports_archive() -> WeeklyReportArchive:
+    archive = _state.get("weekly_reports")
+    if isinstance(archive, WeeklyReportArchive):
+        return archive
+    archive = WeeklyReportArchive(
+        _state.get("weekly_reports_path", DEFAULT_REPORTS_PATH))
+    _state["weekly_reports"] = archive
+    return archive
 
 MAX_BODY_BYTES = 2_000_000
 MAX_DOC_BYTES = 10_000_000
@@ -245,6 +259,9 @@ and suggested next actions.</p>
 <button id="goalplan">Plan goal</button></div>
 <p id="briefmsg" class="hint"></p>
 <div id="briefres"></div>
+<div class="row"><button id="weeklyreportsrefresh">Recent reports</button></div>
+<p id="weeklyreportsmsg" class="hint"></p>
+<div id="weeklyreports"></div>
 <hr>
 <h3>Teach a fact</h3>
 <p class="hint">Stored in the local document index with a source. Facts do not
@@ -606,6 +623,86 @@ async function downloadWeeklyMarkdown() {
     msg.textContent = 'markdown export error: ' + e;
   }
 }
+async function refreshWeeklyReports() {
+  const msg = document.getElementById('weeklyreportsmsg');
+  const box = document.getElementById('weeklyreports');
+  msg.textContent = 'loading archived reports...';
+  box.textContent = '';
+  try {
+    const r = await fetch('/v1/weekly-review/reports?limit=10');
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'report archive error: ' + (j.error || r.status);
+      return;
+    }
+    const items = j.data || [];
+    msg.textContent = (j.total || items.length) + ' archived report(s)';
+    if (!items.length) {
+      const none = document.createElement('div');
+      none.className = 'hint';
+      none.textContent = 'No archived reports yet. Use atomzero-brief ' +
+        '--weekly --markdown --out PATH.';
+      box.appendChild(none);
+      return;
+    }
+    items.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'qitem';
+      const head = document.createElement('div');
+      head.textContent = item.id + ' | ' + (item.exported_at || '') +
+        ' | last ' + (item.period_days || 7) + ' days' +
+        (item.exists === false ? ' [missing]' : '');
+      card.appendChild(head);
+      const meta = document.createElement('div');
+      meta.className = 'src';
+      meta.textContent = (item.path || '') + ' | ' +
+        ((item.task_counts || {}).open || 0) + ' open | ' +
+        (item.recent_source_count || 0) + ' source(s)';
+      card.appendChild(meta);
+      if (item.exists !== false) {
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+        actions.appendChild(qbutton('Download', () =>
+          downloadArchivedReport(item.id, item.name)));
+        card.appendChild(actions);
+      }
+      box.appendChild(card);
+    });
+  } catch (e) {
+    msg.textContent = 'report archive error: ' + e;
+  }
+}
+async function downloadArchivedReport(reportId, name) {
+  const msg = document.getElementById('weeklyreportsmsg');
+  msg.textContent = 'downloading ' + reportId + '...';
+  try {
+    const r = await fetch('/v1/weekly-review/reports?id=' +
+      encodeURIComponent(reportId));
+    if (!r.ok) {
+      let detail = r.status;
+      try {
+        const j = await r.json();
+        detail = j.error || detail;
+      } catch (e) {}
+      msg.textContent = 'report download error: ' + detail;
+      return;
+    }
+    const text = await r.text();
+    const filename = name || ('weekly-report-' + reportId + '.md');
+    const blob = new Blob([text], {type: 'text/markdown;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    msg.textContent = 'downloaded ' + filename;
+  } catch (e) {
+    msg.textContent = 'report download error: ' + e;
+  }
+}
 async function planGoal(confirmCreate) {
   const goal = document.getElementById('goalinput').value.trim();
   const msg = document.getElementById('briefmsg');
@@ -677,6 +774,8 @@ async function planGoal(confirmCreate) {
 document.getElementById('briefrefresh').onclick = () => getBriefing();
 document.getElementById('briefweekly').onclick = () => getWeeklyReview();
 document.getElementById('weeklymd').onclick = () => downloadWeeklyMarkdown();
+document.getElementById('weeklyreportsrefresh').onclick =
+  () => refreshWeeklyReports();
 document.getElementById('goalplan').onclick = () => planGoal(false);
 document.getElementById('goalinput').addEventListener('keydown', event => {
   if (event.key === 'Enter') planGoal(false);
@@ -2297,6 +2396,7 @@ refreshLearning();
 refreshGaps();
 refreshDocs();
 refreshAdapters();
+refreshWeeklyReports();
 </script>"""
 
 
@@ -2408,6 +2508,44 @@ class Handler(BaseHTTPRequestHandler):
             }]})
         elif self.path == "/metrics":
             self._json(200, _state["metrics"])
+        elif (self.path == "/v1/weekly-review/reports"
+              or self.path.startswith("/v1/weekly-review/reports?")):
+            params = urllib.parse.parse_qs(
+                urllib.parse.urlparse(self.path).query)
+            try:
+                archive = _weekly_reports_archive()
+            except WeeklyReportError as exc:
+                return self._json(400, {"error": str(exc)})
+            report_id = str(params.get("id", [""])[0] or "").strip()
+            if report_id:
+                try:
+                    entry, markdown = archive.markdown(report_id)
+                except WeeklyReportError as exc:
+                    code = (404 if "not found" in str(exc) else 400)
+                    return self._json(code, {"error": str(exc)})
+                filename = (Path(str(entry.get("path", ""))).name
+                            or f"weekly-report-{report_id}.md")
+                filename = "".join(
+                    ch for ch in filename
+                    if ch.isascii() and ch not in '"\\\r\n')
+                filename = filename or f"weekly-report-{report_id}.md"
+                return self._send(
+                    200, markdown.encode("utf-8"),
+                    "text/markdown; charset=utf-8",
+                    {"Content-Disposition":
+                     f'attachment; filename="{filename}"'})
+            try:
+                limit = int(params.get("limit", ["10"])[0])
+                entries = archive.list(limit)
+                total = archive.count()
+            except (TypeError, ValueError, WeeklyReportError) as exc:
+                return self._json(400, {"error": str(exc)})
+            return self._json(200, {
+                "data": entries,
+                "count": len(entries),
+                "total": total,
+                "index": str(archive.path),
+            })
         elif (self.path == "/v1/weekly-review/export"
               or self.path.startswith("/v1/weekly-review/export?")):
             params = urllib.parse.parse_qs(
@@ -3593,7 +3731,8 @@ def serve(model_path: str, tokenizer_path: str, host: str = "127.0.0.1",
           chat_provider_timeout: int = 60,
           chat_provider_label: str = "openai-compatible",
           allow_general_chat: bool = False,
-          skills_dir: str = "data/skills") -> int:
+          skills_dir: str = "data/skills",
+          weekly_reports_path: str = DEFAULT_REPORTS_PATH) -> int:
     adapter = resolve_adapter(adapter, active_adapter_file)
     root = Path(model_path)
     ck = torch.load(root / "model.pt", map_location="cpu", weights_only=False)
@@ -3718,6 +3857,7 @@ def serve(model_path: str, tokenizer_path: str, host: str = "127.0.0.1",
         "skills_dir": skills_dir,
         "chains": chains,
         "chains_dir": chains.directory if chains else "",
+        "weekly_reports_path": weekly_reports_path,
         "adapter_history_path": "data/adapter_history.jsonl",
         "active_adapter_file": active_adapter_file,
         "safety": safety,
@@ -3807,6 +3947,7 @@ def main():
     ap.add_argument("--teacher-timeout", type=int, default=60)
     ap.add_argument("--teacher-label", default="openai-compatible")
     ap.add_argument("--active-adapter-file", default="data/active_adapter.json")
+    ap.add_argument("--reports-index", default=DEFAULT_REPORTS_PATH)
     args = ap.parse_args()
     return serve(args.model, args.tokenizer, args.host, args.port,
                  args.api_key, args.adapter, args.docs, args.queue,
@@ -3821,7 +3962,8 @@ def main():
                  args.chat_provider_url, args.chat_provider_model,
                  args.chat_provider_api_key, args.chat_provider_timeout,
                  args.chat_provider_label, args.allow_general_chat,
-                 skills_dir=args.skills_dir)
+                 skills_dir=args.skills_dir,
+                 weekly_reports_path=args.reports_index)
 
 
 if __name__ == "__main__":

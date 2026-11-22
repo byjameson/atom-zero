@@ -1,0 +1,90 @@
+import json
+
+import pytest
+
+from atomzero.weekly_reports import WeeklyReportArchive, WeeklyReportError
+
+
+BOM = b"\xef\xbb\xbf"
+
+
+def _review(period_days=7, open_tasks=1):
+    return {
+        "generated": "2026-11-22 09:00",
+        "period_days": period_days,
+        "task_counts": {
+            "open": open_tasks,
+            "completed_recent": 1,
+            "completed_total": 2,
+        },
+        "pending_gap_count": 1,
+        "recent_source_count": 2,
+        "graph": {
+            "entities": [{"name": "L-7781"}],
+            "connections": [{"source": "L-7781", "target": "Launch"}],
+        },
+    }
+
+
+def test_archive_records_dedupes_and_reads_bom_index(tmp_path):
+    index_path = tmp_path / "weekly_reports.json"
+    archive = WeeklyReportArchive(index_path)
+    first_report = tmp_path / "first.md"
+    first_report.write_text("# First report\n", encoding="utf-8")
+    first = archive.record(
+        first_report, _review(), exported_at="2026-11-22T09:00:00")
+    assert first["id"] == "w0001"
+    assert first["period_days"] == 7
+    assert first["task_counts"]["open"] == 1
+    assert first["entities"] == 1
+    assert first["connections"] == 1
+    assert first["size_bytes"] == first_report.stat().st_size
+    assert first["sha256"]
+
+    second_report = tmp_path / "second.md"
+    second_report.write_text("# Second report\n", encoding="utf-8")
+    second = archive.record(
+        second_report, _review(period_days=14, open_tasks=3))
+    assert second["id"] == "w0002"
+    assert [item["id"] for item in archive.list()] == ["w0002", "w0001"]
+
+    updated = archive.record(
+        first_report, _review(period_days=30, open_tasks=4),
+        exported_at="2026-11-23T09:00:00")
+    assert updated["id"] == "w0001"
+    entries = archive.list()
+    assert len(entries) == 2
+    assert entries[0]["id"] == "w0001"
+    assert entries[0]["period_days"] == 30
+    assert entries[0]["exists"] is True
+
+    index_path.write_bytes(BOM + index_path.read_bytes())
+    reloaded = WeeklyReportArchive(index_path)
+    assert len(reloaded.list()) == 2
+    assert reloaded.list()[0]["task_counts"]["open"] == 4
+
+
+def test_archive_markdown_download_and_missing_files(tmp_path):
+    index_path = tmp_path / "weekly_reports.json"
+    report = tmp_path / "weekly.md"
+    report.write_text("# Weekly review\n\n- [ ] task\n", encoding="utf-8")
+    archive = WeeklyReportArchive(index_path)
+    entry = archive.record(report, _review())
+
+    loaded, markdown = archive.markdown(entry["id"])
+    assert loaded["path"] == str(report.resolve())
+    assert markdown.startswith("# Weekly review")
+
+    report.unlink()
+    assert archive.list()[0]["exists"] is False
+    with pytest.raises(WeeklyReportError):
+        archive.markdown(entry["id"])
+    with pytest.raises(WeeklyReportError):
+        archive.get("w9999")
+
+
+def test_archive_rejects_bad_index(tmp_path):
+    index_path = tmp_path / "weekly_reports.json"
+    index_path.write_text("not-json", encoding="utf-8")
+    with pytest.raises(WeeklyReportError):
+        WeeklyReportArchive(index_path)

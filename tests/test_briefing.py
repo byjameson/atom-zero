@@ -148,11 +148,14 @@ def test_cli_weekly_markdown_out_file(tmp_path, capsys):
                   title="Launch")
     docs.close()
     out = tmp_path / "reports" / "weekly.md"
+    index_path = tmp_path / "reports" / "index.json"
     assert main([
         "--session", str(session_path), "--docs", str(tmp_path / "docs.db"),
-        "--weekly", "--markdown", "--out", str(out)]) == 0
+        "--weekly", "--markdown", "--out", str(out),
+        "--reports-index", str(index_path)]) == 0
     captured = capsys.readouterr()
     assert "weekly review written to" in captured.out
+    assert "(archived w0001)" in captured.out
     assert out.exists()
     payload = out.read_bytes()
     assert not payload.startswith(b"\xef\xbb\xbf")
@@ -160,6 +163,21 @@ def test_cli_weekly_markdown_out_file(tmp_path, capsys):
     assert markdown.startswith("# Weekly review - ")
     assert "- [ ] **#1** raporu yaz" in markdown
     assert not list(out.parent.glob(f".{out.name}.*.tmp"))
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    assert index["reports"][0]["id"] == "w0001"
+    assert index["reports"][0]["path"] == str(out.resolve())
+    assert index["reports"][0]["period_days"] == 7
+    assert main(["--reports", "--reports-index", str(index_path)]) == 0
+    listing = capsys.readouterr().out
+    assert "Weekly report archive:" in listing
+    assert "w0001" in listing
+    assert "last 7 days" in listing
+    assert "1 open" in listing
+    assert main(["--reports", "--json", "--reports-index",
+                 str(index_path)]) == 0
+    listing = json.loads(capsys.readouterr().out)
+    assert listing["total"] == 1
+    assert listing["data"][0]["exists"] is True
     with pytest.raises(SystemExit) as exc:
         main(["--out", str(tmp_path / "invalid.md")])
     assert exc.value.code == 2
@@ -173,7 +191,8 @@ def test_cli_weekly_markdown_out_rejects_file_parent(tmp_path, capsys):
         "--session", str(tmp_path / "missing.json"),
         "--docs", str(tmp_path / "missing.db"),
         "--gaps", str(tmp_path / "missing-gaps.json"),
-        "--weekly", "--markdown", "--out", str(target)]) == 1
+        "--weekly", "--markdown", "--out", str(target),
+        "--reports-index", str(tmp_path / "index.json")]) == 1
     captured = capsys.readouterr()
     assert "briefing error:" in captured.out
     assert not target.exists()

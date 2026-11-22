@@ -20,6 +20,8 @@ from atomzero import __version__
 from atomzero.doc_memory import (
     DocMemory, best_snippet, format_citation, retrieval_confidence)
 from atomzero.knowledge_graph import build_graph
+from atomzero.weekly_reports import (
+    DEFAULT_REPORTS_PATH, WeeklyReportArchive, WeeklyReportError)
 
 
 def _open_tasks(session_data: dict | None) -> list[dict]:
@@ -359,6 +361,24 @@ def render_plan(plan: dict) -> str:
     return "\n".join(lines)
 
 
+def render_weekly_report_index(entries: list[dict],
+                               index_path: str | Path) -> str:
+    lines = [f"Weekly report archive: {index_path}"]
+    if not entries:
+        lines.append("No archived weekly reports.")
+        return "\n".join(lines)
+    for item in entries:
+        counts = item.get("task_counts", {})
+        marker = "" if item.get("exists", True) else " [missing]"
+        lines.append(
+            f"- {item.get('id', '?')} | {item.get('exported_at', '')} | "
+            f"last {item.get('period_days', 7)} days | "
+            f"{counts.get('open', 0)} open | "
+            f"{item.get('recent_source_count', 0)} source(s) | "
+            f"{item.get('path', '')}{marker}")
+    return "\n".join(lines)
+
+
 def write_markdown_atomic(path: str | Path, markdown: str) -> Path:
     """Write a sibling temp file, then replace the target atomically."""
     target = Path(path).expanduser()
@@ -523,6 +543,12 @@ def main(argv=None) -> int:
                         help="render the weekly review as Markdown")
     parser.add_argument("--out", default="",
                         help="write the Markdown review to PATH")
+    parser.add_argument("--reports", action="store_true",
+                        help="list recent archived weekly reports")
+    parser.add_argument("--reports-index", default=DEFAULT_REPORTS_PATH,
+                        help="weekly report archive JSON path")
+    parser.add_argument("--limit", type=int, default=10,
+                        help="number of archived reports to list")
     args = parser.parse_args(argv)
     if args.markdown and not args.weekly:
         parser.error("--markdown requires --weekly")
@@ -530,6 +556,31 @@ def main(argv=None) -> int:
         parser.error("--markdown cannot be combined with --json")
     if args.out and not (args.weekly and args.markdown):
         parser.error("--out requires --weekly --markdown")
+    if args.reports and (args.weekly or args.markdown or args.out or args.goal):
+        parser.error("--reports cannot be combined with brief/plan options")
+    if args.reports:
+        index_path = args.reports_index or DEFAULT_REPORTS_PATH
+        try:
+            archive = WeeklyReportArchive(index_path)
+            entries = archive.list(args.limit)
+            total = archive.count()
+        except (WeeklyReportError, OSError) as exc:
+            if args.json:
+                print(json.dumps({"ok": False, "error": str(exc)},
+                                 indent=2))
+            else:
+                print(f"briefing error: {exc}")
+            return 1
+        if args.json:
+            print(json.dumps({
+                "data": entries,
+                "count": len(entries),
+                "total": total,
+                "index": str(archive.path),
+            }, indent=2, ensure_ascii=False))
+        else:
+            print(render_weekly_report_index(entries, archive.path))
+        return 0
     session_path = Path(args.session) if args.session else (
         Path(args.sessions_dir) / f"{args.session_id}.json")
     docs = None
@@ -568,7 +619,16 @@ def main(argv=None) -> int:
             except OSError as exc:
                 print(f"briefing error: {exc}")
                 return 1
-            print(f"weekly review written to {target}")
+            try:
+                archive = WeeklyReportArchive(
+                    args.reports_index or DEFAULT_REPORTS_PATH)
+                entry = archive.record(target, result)
+            except (WeeklyReportError, OSError) as exc:
+                print(f"weekly review written to {target}")
+                print(f"weekly report index error: {exc}")
+                return 1
+            print(f"weekly review written to {target} "
+                  f"(archived {entry['id']})")
         else:
             print(markdown, end="")
     elif args.goal:

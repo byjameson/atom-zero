@@ -1,6 +1,6 @@
 {
   "benchmark": "atomzero-weekly-export-regression",
-  "generated": "2026-11-22T22:54:02",
+  "generated": "2026-11-22T23:03:34",
   "checks": [
     {
       "name": "ui_export_controls",
@@ -15,12 +15,12 @@
     {
       "name": "export_tasks",
       "ok": true,
-      "detail": "# Weekly review - 2026-11-22 22:54\n\nPeriod: last 7 days\n\n## Tasks\n\n- Open: 1\n- Completed in the last 7 days: 1\n- Completed total: 1\n\n### Open\n\n- [ ] **#2** write report\n\n### Completed in the last 7 days\n\n- [x] **#1** buy"
+      "detail": "# Weekly review - 2026-11-22 23:03\n\nPeriod: last 7 days\n\n## Tasks\n\n- Open: 1\n- Completed in the last 7 days: 1\n- Completed total: 1\n\n### Open\n\n- [ ] **#2** write report\n\n### Completed in the last 7 days\n\n- [x] **#1** buy"
     },
     {
       "name": "export_context",
       "ok": true,
-      "detail": "# Weekly review - 2026-11-22 22:54\n\nPeriod: last 7 days\n\n## Tasks\n\n- Open: 1\n- Completed in the last 7 days: 1\n- Completed total: 1\n\n### Open\n\n- [ ] **#2** write report\n\n### Completed in the last 7 days\n\n- [x] **#1** buy milk\n\n## Pending gaps (1)\n\n- What is the warranty claim deadline?\n\n## Recent sources (1)\n\n- **Launc"
+      "detail": "# Weekly review - 2026-11-22 23:03\n\nPeriod: last 7 days\n\n## Tasks\n\n- Open: 1\n- Completed in the last 7 days: 1\n- Completed total: 1\n\n### Open\n\n- [ ] **#2** write report\n\n### Completed in the last 7 days\n\n- [x] **#1** buy milk\n\n## Pending gaps (1)\n\n- What is the warranty claim deadline?\n\n## Recent sources (1)\n\n- **Launc"
     },
     {
       "name": "export_next_and_limits",
@@ -30,7 +30,7 @@
     {
       "name": "export_14_day_window",
       "ok": true,
-      "detail": "# Weekly review - 2026-11-22 22:54\n\nPeriod: last 14 days\n\n## Tasks\n\n- Open: 1\n- Completed in the last 14 days: 1\n- Completed total: 1\n\n### Open\n\n- [ ] **#2** write report\n\n### Comp"
+      "detail": "# Weekly review - 2026-11-22 23:03\n\nPeriod: last 14 days\n\n## Tasks\n\n- Open: 1\n- Completed in the last 14 days: 1\n- Completed total: 1\n\n### Open\n\n- [ ] **#2** write report\n\n### Comp"
     },
     {
       "name": "export_invalid_days",
@@ -40,10 +40,20 @@
     {
       "name": "cli_markdown_out",
       "ok": true,
-      "detail": "exit=0 path=C:\\Users\\biris\\AppData\\Local\\Temp\\atomzero-weekly-export-5fwr_jyp\\cli\\reports\\weekly.md"
+      "detail": "exit=0 path=C:\\Users\\biris\\AppData\\Local\\Temp\\atomzero-weekly-export-bv4wig4x\\cli\\reports\\weekly.md"
+    },
+    {
+      "name": "archive_listing",
+      "ok": true,
+      "detail": "{'id': 'w0001', 'title': 'Weekly review - 2026-11-22 23:03', 'path': 'C:\\\\Users\\\\biris\\\\AppData\\\\Local\\\\Temp\\\\atomzero-weekly-export-bv4wig4x\\\\cli\\\\reports\\\\weekly.md', 'name': 'weekly.md', 'generated': '2026-11-22 23:03', 'exported_at': '2026-11-22T23:03:33', 'period_days': 7, 'task_counts': {'open': 1, 'completed_recent': 1, 'completed_total': 1}, 'pending_gap_count': 1, 'recent_source_count': 1, 'entities': 1, 'connections': 0, 'size_bytes': 1007, 'sha256': 'b197e4f62d55729ecfb464e5c9769cafbf56cd8ac575251ea28a11d9de9d659e', 'exists': True}"
+    },
+    {
+      "name": "archive_download",
+      "ok": true,
+      "detail": "# Weekly review - 2026-11-22 23:03\n\nPeriod: last 7 days\n\n## Tasks\n\n- Open: 1\n- Completed in the last 7 days: 1\n- Completed total: 1\n\n### Open\n\n- [ ] **#2** write report\n\n### Comple"
     }
   ],
-  "passed": 8,
+  "passed": 10,
   "failed": 0,
   "ok": true
 }

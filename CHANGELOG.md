@@ -25,8 +25,12 @@
   directly to a file and create parent directories.
 - `--out` now writes via a sibling temp file and atomic replace, preserving an
   existing report when the write or replace fails.
-- Added `benchmarks/weekly_export_regression.py` (8/8 checks: CLI, HTTP and
-  UI).
+- Added a local **weekly report archive**: each successful `--out` export is
+  indexed with its period, task/source/graph counts, size and SHA-256.
+- Added `atomzero-brief --reports [--json]`, `GET /v1/weekly-review/reports`,
+  indexed report download and a UI **Recent reports** panel.
+- Added `benchmarks/weekly_export_regression.py` (10/10 checks: CLI, HTTP, UI
+  and the report archive).
 - Fixed BOM-sensitive session loading: `atomzero-brief` and `ChatHuman` now
   accept PowerShell-written UTF-8 session files with a BOM.
 - Extended BOM-tolerant reads to feedback, knowledge-gap, research-queue,

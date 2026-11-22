@@ -96,6 +96,7 @@ def main(argv=None) -> int:
     parser.add_argument("--cache", default=str(
         Path.home() / ".cache/atomzero/atom-zero-49m"))
     parser.add_argument("--docs", default="data/atomzero_demo.db")
+    parser.add_argument("--reports-index", default="data/weekly_reports.json")
     parser.add_argument("--no-download", action="store_true",
                         help="use already-downloaded files only")
     parser.add_argument("--no-browser", action="store_true")
@@ -137,6 +138,7 @@ def main(argv=None) -> int:
         teacher_model=(args.teacher_model if args.teacher else ""),
         teacher_label=args.teacher_label,
         allow_general_chat=args.provider,
+        weekly_reports_path=args.reports_index,
     )
 
 

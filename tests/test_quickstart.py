@@ -44,9 +44,12 @@ def test_quickstart_passes_teacher_flags(monkeypatch, tmp_path):
         "--no-download", "--no-browser", "--teacher",
         "--docs", str(tmp_path / "docs.db"),
         "--cache", str(tmp_path / "cache"),
+        "--reports-index", str(tmp_path / "reports.json"),
         "--teacher-url", "http://127.0.0.1:9999/v1",
         "--teacher-model", "fake"])
     assert code == 0
     assert captured["kwargs"]["teacher_url"] == "http://127.0.0.1:9999/v1"
     assert captured["kwargs"]["teacher_model"] == "fake"
     assert captured["kwargs"]["teacher_label"] == "ollama"
+    assert captured["kwargs"]["weekly_reports_path"] == str(
+        tmp_path / "reports.json")

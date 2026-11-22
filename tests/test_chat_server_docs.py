@@ -837,13 +837,17 @@ def test_ui_collection_scope_contract():
     assert "/v1/briefing" in page
     assert "/v1/weekly-review" in page
     assert "/v1/weekly-review/export" in page
+    assert "/v1/weekly-review/reports" in page
     assert "/v1/goals/plan" in page
     assert "Daily brief" in page
     assert 'id="briefrefresh"' in page
     assert 'id="briefweekly"' in page
     assert 'id="weeklymd"' in page
+    assert 'id="weeklyreportsrefresh"' in page
     assert "getWeeklyReview" in page
     assert "downloadWeeklyMarkdown" in page
+    assert "refreshWeeklyReports" in page
+    assert "downloadArchivedReport" in page
     assert "planGoal" in page
     assert 'data-q="plan goal prepare the warranty page"' in page
     assert 'data-q="brief me"' in page
@@ -1321,6 +1325,61 @@ def test_http_weekly_review(tmp_path):
         chat_server._state.clear()
         chat_server._state.update(old)
         docs.close()
+
+
+def test_http_weekly_reports_archive(tmp_path):
+    from atomzero.weekly_reports import WeeklyReportArchive
+
+    report = tmp_path / "weekly.md"
+    report.write_text("# Weekly review\n\n- [ ] archived task\n",
+                      encoding="utf-8")
+    index_path = tmp_path / "weekly_reports.json"
+    archive = WeeklyReportArchive(index_path)
+    entry = archive.record(report, {
+        "generated": "2026-11-22 09:00",
+        "period_days": 7,
+        "task_counts": {"open": 1, "completed_recent": 0,
+                        "completed_total": 1},
+        "pending_gap_count": 0,
+        "recent_source_count": 1,
+        "graph": {"entities": [{"name": "L-7781"}], "connections": []},
+    }, exported_at="2026-11-22T09:00:00")
+    old = dict(chat_server._state)
+    chat_server._state.update({
+        "model": None, "tok": None, "docs": None, "adapter": "",
+        "name": "tiny-test", "params": 1, "config": {}, "step": 0,
+        "api_key": "", "metrics": {"requests": 0, "generated_tokens": 0},
+        "safety": None, "wiki_lang": "en",
+        "session_dir": str(tmp_path / "sessions"), "sessions": {},
+        "weekly_reports_path": str(index_path),
+        "weekly_reports": archive,
+    })
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        listing = json.loads(urllib.request.urlopen(
+            base + "/v1/weekly-review/reports?limit=5",
+            timeout=10).read().decode("utf-8"))
+        assert listing["total"] == 1
+        assert listing["data"][0]["id"] == entry["id"]
+        assert listing["data"][0]["exists"] is True
+        response = urllib.request.urlopen(
+            base + f"/v1/weekly-review/reports?id={entry['id']}",
+            timeout=10)
+        assert response.headers.get_content_type() == "text/markdown"
+        assert "weekly.md" in response.headers["Content-Disposition"]
+        assert "archived task" in response.read().decode("utf-8")
+        with pytest.raises(urllib.error.HTTPError) as missing:
+            urllib.request.urlopen(
+                base + "/v1/weekly-review/reports?id=w9999", timeout=10)
+        assert missing.value.code == 404
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
 
 
 def test_http_chat_weekly_review(tmp_path):

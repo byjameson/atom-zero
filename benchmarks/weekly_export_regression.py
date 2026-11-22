@@ -6,7 +6,8 @@ Checks:
 - task checkboxes, gaps, sources, graph and next actions;
 - the 14-day window label;
 - invalid day input returning 400;
-- `atomzero-brief --weekly --markdown --out PATH` writing a file directly.
+- `atomzero-brief --weekly --markdown --out PATH` writing a file directly;
+- the CLI report appearing in the HTTP/UI archive and downloading from it.
 
 Run:
 
@@ -30,6 +31,7 @@ from atomzero import chat_server
 from atomzero.briefing import main as brief_main
 from atomzero.doc_memory import DocMemory
 from atomzero.knowledge_gaps import KnowledgeGapStore
+from atomzero.weekly_reports import WeeklyReportArchive
 
 
 def _post(base: str, route: str, payload: dict) -> dict:
@@ -64,6 +66,7 @@ def run(output: str | Path | None = None) -> dict:
                       title="Launch")
         gaps = KnowledgeGapStore(Path(folder) / "gaps.json")
         gaps.add("What is the warranty claim deadline?")
+        report_index = Path(folder) / "weekly_reports.json"
         old = dict(chat_server._state)
         chat_server._state.update({
             "model": None, "tok": None, "docs": docs, "adapter": "",
@@ -73,6 +76,8 @@ def run(output: str | Path | None = None) -> dict:
             "safety": None, "wiki_lang": "en", "gaps": gaps,
             "session_dir": str(Path(folder) / "sessions"), "sessions": {},
             "generator": None, "allow_general_chat": False, "skills": None,
+            "weekly_reports_path": str(report_index),
+            "weekly_reports": WeeklyReportArchive(report_index),
         })
         httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
         thread = threading.Thread(target=httpd.serve_forever, daemon=True)
@@ -85,7 +90,10 @@ def run(output: str | Path | None = None) -> dict:
                 "ui_export_controls",
                 "/v1/weekly-review/export" in page
                 and 'id="weeklymd"' in page
-                and "downloadWeeklyMarkdown" in page,
+                and "downloadWeeklyMarkdown" in page
+                and "/v1/weekly-review/reports" in page
+                and 'id="weeklyreportsrefresh"' in page
+                and "refreshWeeklyReports" in page,
                 "present")
             for message in ("add task buy milk",
                             "add task write report",
@@ -150,17 +158,42 @@ def run(output: str | Path | None = None) -> dict:
                     "--session", str(session_path),
                     "--docs", str(Path(folder) / "docs.db"),
                     "--gaps", str(Path(folder) / "gaps.json"),
-                    "--weekly", "--markdown", "--out", str(out_path)])
+                    "--weekly", "--markdown", "--out", str(out_path),
+                    "--reports-index", str(report_index)])
             cli_markdown = (out_path.read_text(encoding="utf-8")
                             if out_path.exists() else "")
             check(
                 "cli_markdown_out",
                 cli_code == 0
                 and "weekly review written to" in buffer.getvalue()
+                and "(archived w0001)" in buffer.getvalue()
                 and cli_markdown.startswith("# Weekly review - ")
                 and "- [ ] **#2** write report" in cli_markdown
                 and not out_path.read_bytes().startswith(b"\xef\xbb\xbf"),
                 f"exit={cli_code} path={out_path}")
+            listing = json.loads(urllib.request.urlopen(
+                base + "/v1/weekly-review/reports?limit=5",
+                timeout=15).read().decode("utf-8"))
+            entry = (listing.get("data") or [{}])[0]
+            check(
+                "archive_listing",
+                listing.get("total") == 1
+                and entry.get("id") == "w0001"
+                and entry.get("exists") is True
+                and Path(str(entry.get("path", ""))).resolve()
+                == out_path.resolve(),
+                str(entry))
+            with urllib.request.urlopen(
+                    base + f"/v1/weekly-review/reports?id={entry.get('id')}",
+                    timeout=15) as response:
+                archived = response.read().decode("utf-8")
+                archive_type = response.headers.get_content_type()
+            check(
+                "archive_download",
+                archive_type == "text/markdown"
+                and archived.startswith("# Weekly review - ")
+                and "- [ ] **#2** write report" in archived,
+                archived[:180])
         finally:
             httpd.shutdown()
             httpd.server_close()
