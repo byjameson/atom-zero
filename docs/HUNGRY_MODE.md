@@ -126,6 +126,28 @@ The ledger is append-only JSONL. Each record contains the timestamp, question,
 origin, status, source, confidence score, gap id and, for learned answers, a
 short answer preview. Treat the ledger and notes as private local data.
 
+## Scheduling (optional)
+
+Hungry mode does not install a daemon. If you want it to run continuously,
+schedule the bounded command explicitly and keep each run small:
+
+Windows Task Scheduler:
+
+```powershell
+schtasks /Create /SC HOURLY /TN "Atom Zero Hungry" /TR `
+  "atomzero-hungry --docs C:\path\to\data\docs.db --max-questions 3"
+```
+
+Linux/macOS cron:
+
+```cron
+0 * * * * cd /path/to/atom-zero && atomzero-hungry --docs data/docs.db --max-questions 3 >> data/hungry.log 2>&1
+```
+
+Start with `--dry-run` and a small budget. Review the ledger and teacher notes
+before increasing the schedule. There is no hidden background loop in the chat
+server.
+
 ## Limits
 
 - Hungry mode grows retrieval memory, not the 49.2M weights.
