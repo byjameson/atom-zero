@@ -45,7 +45,7 @@ class FeedbackStore:
         if not self.path.exists():
             return []
         try:
-            data = json.loads(self.path.read_text(encoding="utf-8"))
+            data = json.loads(self.path.read_text(encoding="utf-8-sig"))
         except (OSError, json.JSONDecodeError) as exc:
             raise FeedbackError(f"cannot read feedback store: {exc}") from exc
         if not isinstance(data, list):

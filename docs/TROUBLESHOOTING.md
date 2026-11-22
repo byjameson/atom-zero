@@ -70,6 +70,12 @@ atomzero-quickstart --reset-demo
 This deletes the demo SQLite DB and seeds the four demo documents again. It does
 not touch your own documents if you use a different `--docs` path.
 
+## JSON files written by PowerShell
+
+Local JSON stores are read as UTF-8 with or without a BOM. Files written with
+`Set-Content -Encoding utf8` work for sessions, feedback, knowledge gaps,
+research queues, skills and chain recipes.
+
 ## Where to inspect failures
 
 - `GET /health` on the running server.

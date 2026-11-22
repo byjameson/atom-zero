@@ -98,7 +98,7 @@ class SkillRegistry:
         names = set()
         for path in sorted(folder.glob("*.json")):
             try:
-                data = json.loads(path.read_text(encoding="utf-8"))
+                data = json.loads(path.read_text(encoding="utf-8-sig"))
             except (OSError, json.JSONDecodeError) as exc:
                 raise SkillError(f"{path.name}: {exc}") from exc
             skill = _validate_skill(data, path)
@@ -330,7 +330,7 @@ class ChainRecipeRegistry:
         names = set()
         for path in sorted(folder.glob("*.json")):
             try:
-                data = json.loads(path.read_text(encoding="utf-8"))
+                data = json.loads(path.read_text(encoding="utf-8-sig"))
             except (OSError, json.JSONDecodeError) as exc:
                 raise SkillError(f"{path.name}: {exc}") from exc
             recipe = _validate_recipe(data, path)

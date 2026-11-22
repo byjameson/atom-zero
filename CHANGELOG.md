@@ -24,6 +24,8 @@
 - Added `benchmarks/weekly_export_regression.py` (7/7 checks).
 - Fixed BOM-sensitive session loading: `atomzero-brief` and `ChatHuman` now
   accept PowerShell-written UTF-8 session files with a BOM.
+- Extended BOM-tolerant reads to feedback, knowledge-gap, research-queue,
+  skill and recipe JSON files.
 - Added deterministic **source comparison**: `atomzero-docs compare`,
   `GET /v1/documents/compare` and UI Compare sources, flagging numeric,
   identifier and negation conflicts with both snippets/locators.

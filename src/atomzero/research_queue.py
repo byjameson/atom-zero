@@ -95,7 +95,7 @@ class ResearchQueue:
         if not self.path.exists():
             return []
         try:
-            data = json.loads(self.path.read_text(encoding="utf-8"))
+            data = json.loads(self.path.read_text(encoding="utf-8-sig"))
         except (OSError, json.JSONDecodeError) as exc:
             raise ResearchQueueError(
                 f"cannot read research queue: {exc}") from exc
