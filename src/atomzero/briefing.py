@@ -26,18 +26,24 @@ from atomzero.weekly_reports import (
 
 TASK_SEARCH_STATUSES = ("all", "open", "done")
 TASK_SEARCH_DUE_FILTERS = ("all", "overdue", "today", "week", "none")
+TASK_SEARCH_PRIORITIES = ("all", "low", "normal", "high")
 
 
-def _normalize_search_filters(status="all", due="all") -> tuple[str, str]:
+def _normalize_search_filters(status="all", due="all",
+                              priority="all") -> tuple[str, str, str]:
     status = str(status or "all").strip().lower()
     due = str(due or "all").strip().lower()
+    priority = str(priority or "all").strip().lower()
     if status not in TASK_SEARCH_STATUSES:
         raise ValueError(
             "status must be one of: " + ", ".join(TASK_SEARCH_STATUSES))
     if due not in TASK_SEARCH_DUE_FILTERS:
         raise ValueError(
             "due must be one of: " + ", ".join(TASK_SEARCH_DUE_FILTERS))
-    return status, due
+    if priority not in TASK_SEARCH_PRIORITIES:
+        raise ValueError(
+            "priority must be one of: " + ", ".join(TASK_SEARCH_PRIORITIES))
+    return status, due, priority
 
 
 def _open_tasks(session_data: dict | None) -> list[dict]:
@@ -66,6 +72,11 @@ def _task_due_label(task: dict, today: str) -> str:
     is_open = task.get("status", "open") == "open"
     marker = " [overdue]" if due < today and is_open else ""
     return f" (due {due}{marker})"
+
+
+def _task_priority_label(task: dict) -> str:
+    priority = str(task.get("priority", "normal") or "normal").lower()
+    return f" [{priority}]" if priority != "normal" else ""
 
 
 def _overdue_tasks(session_data: dict | None,
@@ -167,12 +178,12 @@ def render_due_soon_view(view: dict) -> str:
 
 def search_tasks(session_data: dict | None, query: str,
                  status: str = "all", due: str = "all",
-                 today=None) -> list[dict]:
+                 priority: str = "all", today=None) -> list[dict]:
     tokens = [token for token in str(query or "").strip().lower().split()
               if token]
     if not tokens:
         return []
-    status, due = _normalize_search_filters(status, due)
+    status, due, priority = _normalize_search_filters(status, due, priority)
     today = _today_from_now(today)
     week_end = (date.fromisoformat(today) + timedelta(days=7)).isoformat()
     data = session_data if isinstance(session_data, dict) else {}
@@ -202,18 +213,24 @@ def search_tasks(session_data: dict | None, query: str,
         elif due == "none":
             if task_due:
                 continue
+        task_priority = str(
+            task.get("priority", "normal") or "normal").lower()
+        if priority != "all" and task_priority != priority:
+            continue
         matches.append(task)
     return matches
 
 
 def task_search_view(session_data: dict | None, query: str,
                      status: str = "all", due: str = "all",
-                     now=None) -> dict:
+                     priority: str = "all", now=None) -> dict:
     query = str(query or "").strip()
-    status, due = _normalize_search_filters(status, due)
+    status, due, priority = _normalize_search_filters(
+        status, due, priority)
     today = _today_from_now(now)
     matches = search_tasks(
-        session_data, query, status=status, due=due, today=today)
+        session_data, query, status=status, due=due,
+        priority=priority, today=today)
     return {
         "generated": (now.strftime("%Y-%m-%d %H:%M")
                       if isinstance(now, datetime)
@@ -222,6 +239,7 @@ def task_search_view(session_data: dict | None, query: str,
         "query": query,
         "status": status,
         "due": due,
+        "priority": priority,
         "count": len(matches),
         "tasks": matches,
         "open_task_count": len(_open_tasks(session_data)),
@@ -237,6 +255,8 @@ def render_task_search_view(view: dict) -> str:
         filters.append(f"status={view['status']}")
     if view.get("due", "all") != "all":
         filters.append(f"due={view['due']}")
+    if view.get("priority", "all") != "all":
+        filters.append(f"priority={view['priority']}")
     if filters:
         header += " | " + " | ".join(filters)
     lines = [header]
@@ -248,7 +268,8 @@ def render_task_search_view(view: dict) -> str:
     for task in tasks:
         lines.append(
             f"- {task.get('id')} [{task.get('status', '?')}] "
-            f"{task.get('text', '')}{_task_due_label(task, today)}")
+            f"{task.get('text', '')}{_task_priority_label(task)}"
+            f"{_task_due_label(task, today)}")
     return "\n".join(lines)
 
 
@@ -335,6 +356,7 @@ def build_briefing(session_data: dict | None, gaps, docs,
     ]
     lines.extend(
         f"- {task.get('id')}: {task.get('text', '')}"
+        f"{_task_priority_label(task)}"
         f"{_task_due_label(task, today)}"
         for task in tasks[:5])
     lines.append(f"Gaps: {len(pending)} pending")
@@ -492,6 +514,7 @@ def build_weekly_review(session_data: dict | None, gaps, docs,
     lines.append("Open:")
     lines.extend(
         f"- {task.get('id')}: {task.get('text', '')}"
+        f"{_task_priority_label(task)}"
         f"{_task_due_label(task, today)}"
         for task in open_tasks[:8])
     if completed_recent:
@@ -830,6 +853,7 @@ def render_weekly_markdown(review: dict) -> str:
         today = _today_from_now(review.get("generated"))
         lines.extend(
             f"- [ ] **#{task.get('id')}** {task.get('text', '')}"
+            f"{_task_priority_label(task)}"
             f"{_task_due_label(task, today)}"
             for task in open_tasks)
     else:
@@ -966,6 +990,9 @@ def main(argv=None) -> int:
     parser.add_argument("--search-due", choices=TASK_SEARCH_DUE_FILTERS,
                         default="all",
                         help="filter task search by due date")
+    parser.add_argument("--search-priority", choices=TASK_SEARCH_PRIORITIES,
+                        default="all",
+                        help="filter task search by priority")
     parser.add_argument("--days", type=int, default=7)
     parser.add_argument("--max-steps", type=int, default=3)
     parser.add_argument("--json", action="store_true")
@@ -1018,8 +1045,11 @@ def main(argv=None) -> int:
     if args.due_days is not None and args.due_days < 1:
         parser.error("--due-days must be at least 1")
     if args.search_tasks is None and (
-            args.search_status != "all" or args.search_due != "all"):
-        parser.error("--search-status/--search-due require --search-tasks")
+            args.search_status != "all" or args.search_due != "all"
+            or args.search_priority != "all"):
+        parser.error(
+            "--search-status/--search-due/--search-priority "
+            "require --search-tasks")
     if args.search_tasks is not None:
         if not args.search_tasks.strip():
             parser.error("--search-tasks needs a query")
@@ -1201,7 +1231,8 @@ def main(argv=None) -> int:
         if args.search_tasks is not None:
             result = task_search_view(
                 session, args.search_tasks,
-                status=args.search_status, due=args.search_due)
+                status=args.search_status, due=args.search_due,
+                priority=args.search_priority)
         elif args.overdue:
             result = overdue_view(session)
         elif args.due_soon:

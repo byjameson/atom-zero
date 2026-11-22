@@ -81,15 +81,22 @@ def math_query(text: str) -> str | None:
     return candidate
 
 
-def parse_task_search_filters(raw: str) -> tuple[str, str, str]:
+def parse_task_search_filters(raw: str) -> tuple[str, str, str, str]:
     """Split trailing task-search filters from the text query."""
     tokens = str(raw or "").strip().split()
     status = "all"
     due = "all"
+    priority = "all"
     status_words = {"open", "done"}
     due_words = {"overdue", "today", "week", "none"}
+    priority_words = {"low", "normal", "high"}
     while tokens:
         last = tokens[-1].lower()
+        if (len(tokens) >= 2 and tokens[-2].lower() == "priority"
+                and last in priority_words):
+            priority = last
+            tokens = tokens[:-2]
+            continue
         if (len(tokens) >= 2 and tokens[-2].lower() == "status"
                 and last in status_words):
             status = last
@@ -100,6 +107,10 @@ def parse_task_search_filters(raw: str) -> tuple[str, str, str]:
             due = last
             tokens = tokens[:-2]
             continue
+        if last in priority_words and priority == "all":
+            priority = last
+            tokens.pop()
+            continue
         if last in status_words and status == "all":
             status = last
             tokens.pop()
@@ -109,7 +120,7 @@ def parse_task_search_filters(raw: str) -> tuple[str, str, str]:
             tokens.pop()
             continue
         break
-    return " ".join(tokens).strip(), status, due
+    return " ".join(tokens).strip(), status, due, priority
 
 
 class AgentSession:
@@ -943,21 +954,23 @@ class AgentSession:
         }
 
     def _search_tasks(self, raw_query: str) -> dict:
-        query, status, due = parse_task_search_filters(raw_query)
+        query, status, due, priority = parse_task_search_filters(raw_query)
         if not query:
             return {
                 "reply": ("Tell me task text to search, for example "
-                          "'search tasks report open due week'."),
+                          "'search tasks report high open due week'."),
                 "tool_calls": [], "sources": [], "evidence": [],
             }
         view = task_search_view(
-            self.human.data, query, status=status, due=due)
+            self.human.data, query, status=status, due=due,
+            priority=priority)
         return {
             "reply": render_task_search_view(view),
             "tool_calls": [{"name": "search_tasks",
                             "query": view["query"],
                             "status": view["status"],
                             "due": view["due"],
+                            "priority": view["priority"],
                             "matches": view["count"]}],
             "sources": [],
             "evidence": [],

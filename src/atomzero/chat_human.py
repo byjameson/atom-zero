@@ -68,13 +68,26 @@ def _parse_due(value: str) -> str:
         return ""
 
 
+TASK_PRIORITIES = ("low", "normal", "high")
+
+
+def _normalize_priority(value: str) -> str:
+    priority = str(value or "normal").strip().lower()
+    if priority not in TASK_PRIORITIES:
+        raise ValueError(
+            "priority must be one of: " + ", ".join(TASK_PRIORITIES))
+    return priority
+
+
 def _task_label(task: dict) -> str:
     due = str(task.get("due", "") or "").strip()
+    priority = str(task.get("priority", "normal") or "normal").lower()
+    priority_tag = f" [{priority}]" if priority != "normal" else ""
     suffix = ""
     if due:
         overdue = due < date.today().isoformat()
         suffix = f" (due {due}{', overdue' if overdue else ''})"
-    return f"{task['id']} {task['text']}{suffix}"
+    return f"{task['id']}{priority_tag} {task['text']}{suffix}"
 
 
 def looks_like_question(text: str) -> bool:
@@ -209,16 +222,28 @@ class ChatHuman:
         self.data["episodes"] = self.data["episodes"][-200:]
         self.save()
 
-    def add_task(self, text: str, due: str = "") -> int:
+    def add_task(self, text: str, due: str = "",
+                 priority: str = "normal") -> int:
+        priority = _normalize_priority(priority)
         tid = int(self.data.get("next_task", 1))
         self.data["next_task"] = tid + 1
         self.data["tasks"].append({
             "id": tid, "text": text, "status": "open",
             "created": time.strftime("%Y-%m-%dT%H:%M:%S"),
-            "completed": "", "due": due,
+            "completed": "", "due": due, "priority": priority,
         })
         self.save()
         return tid
+
+    def set_task_priority(self, tid: int, priority: str) -> dict | None:
+        normalized = _normalize_priority(priority)
+        for task in self.data["tasks"]:
+            if int(task["id"]) == int(tid):
+                task["priority"] = normalized
+                task["prioritized"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+                self.save()
+                return task
+        return None
 
     def reschedule_task(self, tid: int, due: str) -> dict | None:
         normalized = _parse_due(due)
@@ -390,21 +415,45 @@ class ChatHuman:
         elif low.startswith("add task"):
             task = text.split("add task", 1)[1].strip(" :")
             due = ""
+            priority = "normal"
             due_error = ""
-            due_match = re.search(r"\s+due\s+(.+)$", task, re.IGNORECASE)
-            if due_match:
-                due_value = due_match.group(1).strip()
-                due = _parse_due(due_value)
-                if not due:
-                    due_error = (f"I could not read the due date '{due_value}'. "
-                                 "Use YYYY-MM-DD, today, tomorrow or in N days.")
-                else:
+            priority_error = ""
+            while task:
+                priority_match = re.search(
+                    r"\s+priority\s+(\S+)\s*$", task, re.IGNORECASE)
+                if priority_match:
+                    raw_priority = priority_match.group(1).strip().lower()
+                    if raw_priority not in TASK_PRIORITIES:
+                        priority_error = (
+                            f"I could not read the priority '{raw_priority}'. "
+                            "Use low, normal or high.")
+                        break
+                    priority = raw_priority
+                    task = task[:priority_match.start()].strip(" :")
+                    continue
+                due_match = re.search(
+                    r"\s+due\s+(.+)$", task, re.IGNORECASE)
+                if due_match:
+                    due_value = due_match.group(1).strip()
+                    parsed_due = _parse_due(due_value)
+                    if not parsed_due:
+                        due_error = (
+                            f"I could not read the due date '{due_value}'. "
+                            "Use YYYY-MM-DD, today, tomorrow or in N days.")
+                        break
+                    due = parsed_due
                     task = task[:due_match.start()].strip(" :")
-            if due_error:
+                    continue
+                break
+            if priority_error:
+                reply = priority_error
+            elif due_error:
                 reply = due_error
             elif task:
-                tid = self.add_task(task, due=due)
+                tid = self.add_task(task, due=due, priority=priority)
                 suffix = f" (due {due})" if due else ""
+                if priority != "normal":
+                    suffix += f" (priority {priority})"
                 reply = f"Added task {tid}: {task}{suffix}"
             else:
                 reply = "Tell me the task after 'add task'."
@@ -428,6 +477,25 @@ class ChatHuman:
                     else:
                         reply = (f"Rescheduled task {task['id']} to "
                                  f"{task['due']}.")
+        elif low.startswith("set task"):
+            match = re.match(
+                r"set task\s*(\d+)\s+(?:priority\s+)?"
+                r"(low|normal|high)\??$", text, re.IGNORECASE)
+            if not match:
+                reply = "Use 'set task ID priority low|normal|high'."
+            else:
+                try:
+                    task = self.set_task_priority(
+                        int(match.group(1)), match.group(2))
+                except ValueError as exc:
+                    task = None
+                    reply = str(exc)
+                else:
+                    if task is None:
+                        reply = "I could not find that task."
+                    else:
+                        reply = (f"Set task {task['id']} priority to "
+                                 f"{task['priority']}.")
         elif "list tasks" in low:
             open_tasks = [task for task in self.data["tasks"]
                           if task["status"] == "open"]

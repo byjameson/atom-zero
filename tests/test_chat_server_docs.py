@@ -853,16 +853,21 @@ def test_ui_collection_scope_contract():
     assert 'id="tasksearch"' in page
     assert 'id="tasksearchstatus"' in page
     assert 'id="tasksearchdue"' in page
+    assert 'id="tasksearchpriority"' in page
     assert 'id="tasksearchbtn"' in page
     assert 'id="tasksearchres"' in page
     assert 'id="tasksearchmsg"' in page
     assert '<option value="overdue">' in page
     assert '<option value="week">' in page
     assert '<option value="none">' in page
+    assert '<option value="high">' in page
+    assert '<option value="normal">' in page
     assert "searchTasks" in page
     assert "/v1/tasks/search" in page
     assert "tasksearchstatus" in page
     assert "tasksearchdue" in page
+    assert "tasksearchpriority" in page
+    assert "task.priority" in page
     assert 'id="rescheduletaskid"' in page
     assert 'id="rescheduledue"' in page
     assert 'id="rescheduletaskbtn"' in page
@@ -1898,13 +1903,13 @@ def test_http_search_tasks(tmp_path):
     week = (today + timedelta(days=3)).isoformat()
     overdue = (today - timedelta(days=1)).isoformat()
     try:
-        for text, due in (
-                ("submit quarterly report", week),
-                ("submit expenses", overdue),
-                ("plan launch", ""),
-                ("submit archived report", ""),
-                ("submit today report", today.isoformat())):
-            message = f"add task {text}"
+        for text, due, priority in (
+                ("submit quarterly report", week, "high"),
+                ("submit expenses", overdue, "low"),
+                ("plan launch", "", "normal"),
+                ("submit archived report", "", "high"),
+                ("submit today report", today.isoformat(), "low")):
+            message = f"add task {text} priority {priority}"
             if due:
                 message += f" due {due}"
             _post(base + "/v1/agent/chat", {
@@ -1927,6 +1932,7 @@ def test_http_search_tasks(tmp_path):
         assert result["query"] == "submit report"
         assert result["status"] == "all"
         assert result["due"] == "all"
+        assert result["priority"] == "all"
         assert result["count"] == 3
         assert [task["id"] for task in result["tasks"]] == [1, 4, 5]
         assert result["open_task_count"] == 4
@@ -1947,10 +1953,20 @@ def test_http_search_tasks(tmp_path):
         assert [task["id"] for task in undated["tasks"]] == [4]
         combined = search(status="open", due="week")
         assert [task["id"] for task in combined["tasks"]] == [1, 5]
+        high = search(priority="high")
+        assert high["priority"] == "high"
+        assert [task["id"] for task in high["tasks"]] == [1, 4]
+        low = search(priority="low")
+        assert [task["id"] for task in low["tasks"]] == [2, 5]
+        normal = search(q="plan", priority="normal")
+        assert [task["id"] for task in normal["tasks"]] == [3]
+        combined = search(status="open", due="week", priority="high")
+        assert [task["id"] for task in combined["tasks"]] == [1]
         empty = search(q="missing")
         assert empty["count"] == 0
         assert empty["tasks"] == []
-        for bad in ({"status": "blocked"}, {"due": "month"}):
+        for bad in ({"status": "blocked"}, {"due": "month"},
+                    {"priority": "urgent"}):
             with pytest.raises(urllib.error.HTTPError) as invalid:
                 search(**bad)
             assert invalid.value.code == 400

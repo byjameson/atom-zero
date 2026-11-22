@@ -181,15 +181,16 @@ def test_cli_search_tasks(tmp_path, capsys):
     session_path.write_text(json.dumps({"tasks": [
         {"id": 1, "text": "Submit quarterly report", "status": "open",
          "created": "2026-11-01T09:00:00", "completed": "",
-         "due": soon},
+         "due": soon, "priority": "high"},
         {"id": 2, "text": "submit expenses", "status": "done",
          "created": "2026-11-01T09:00:00", "completed": "2026-11-02",
-         "due": "2000-01-01"},
+         "due": "2000-01-01", "priority": "normal"},
         {"id": 3, "text": "plan launch", "status": "open",
-         "created": "2026-11-01T09:00:00", "completed": ""},
+         "created": "2026-11-01T09:00:00", "completed": "",
+         "priority": "low"},
         {"id": 4, "text": "submit late report", "status": "open",
          "created": "2026-11-01T09:00:00", "completed": "",
-         "due": overdue},
+         "due": overdue, "priority": "high"},
     ]}), encoding="utf-8")
     common = [
         "--session", str(session_path),
@@ -200,6 +201,7 @@ def test_cli_search_tasks(tmp_path, capsys):
     assert payload["query"] == "SUBMIT"
     assert payload["status"] == "all"
     assert payload["due"] == "all"
+    assert payload["priority"] == "all"
     assert payload["count"] == 3
     assert [task["id"] for task in payload["tasks"]] == [1, 2, 4]
     assert payload["open_task_count"] == 3
@@ -207,9 +209,11 @@ def test_cli_search_tasks(tmp_path, capsys):
     assert main(common + ["--search-tasks", "submit"]) == 0
     output = capsys.readouterr().out
     assert 'Task search "submit" (3 match(es))' in output
-    assert f"- 1 [open] Submit quarterly report (due {soon})" in output
+    assert (f"- 1 [open] Submit quarterly report [high] "
+            f"(due {soon})") in output
     assert "- 2 [done] submit expenses (due 2000-01-01)" in output
-    assert f"- 4 [open] submit late report (due {overdue} [overdue])" in output
+    assert (f"- 4 [open] submit late report [high] "
+            f"(due {overdue} [overdue])") in output
     assert "plan launch" not in output
 
     assert main(common + [
@@ -241,6 +245,24 @@ def test_cli_search_tasks(tmp_path, capsys):
     assert combined["due"] == "week"
     assert [task["id"] for task in combined["tasks"]] == [1]
     assert main(common + [
+        "--search-tasks", "submit", "--search-status", "open",
+        "--search-due", "week", "--search-priority", "high",
+        "--json"]) == 0
+    combined = json.loads(capsys.readouterr().out)
+    assert combined["priority"] == "high"
+    assert [task["id"] for task in combined["tasks"]] == [1]
+    assert main(common + [
+        "--search-tasks", "submit", "--search-priority", "high",
+        "--json"]) == 0
+    high = json.loads(capsys.readouterr().out)
+    assert high["priority"] == "high"
+    assert [task["id"] for task in high["tasks"]] == [1, 4]
+    assert main(common + [
+        "--search-tasks", "launch", "--search-priority", "low",
+        "--json"]) == 0
+    low = json.loads(capsys.readouterr().out)
+    assert [task["id"] for task in low["tasks"]] == [3]
+    assert main(common + [
         "--search-tasks", "launch", "--search-due", "none", "--json"]) == 0
     undated = json.loads(capsys.readouterr().out)
     assert [task["id"] for task in undated["tasks"]] == [3]
@@ -262,7 +284,14 @@ def test_cli_search_tasks(tmp_path, capsys):
         main(common + ["--search-tasks", "submit", "--search-due", "month"])
     assert exc.value.code == 2
     with pytest.raises(SystemExit) as exc:
+        main(common + [
+            "--search-tasks", "submit", "--search-priority", "urgent"])
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
         main(common + ["--search-status", "open"])
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--search-priority", "high"])
     assert exc.value.code == 2
 
 
@@ -674,10 +703,10 @@ def test_brief_and_weekly_review_show_due_and_overdue_tasks(tmp_path):
     session = {"tasks": [
         {"id": 1, "text": "submit report", "status": "open",
          "created": "2026-11-01T09:00:00", "completed": "",
-         "due": "2026-11-20"},
+         "due": "2026-11-20", "priority": "high"},
         {"id": 2, "text": "plan launch", "status": "open",
          "created": "2026-11-01T09:00:00", "completed": "",
-         "due": "2026-11-25"},
+         "due": "2026-11-25", "priority": "low"},
         {"id": 3, "text": "no deadline", "status": "open",
          "created": "2026-11-01T09:00:00", "completed": ""},
     ]}
@@ -688,8 +717,9 @@ def test_brief_and_weekly_review_show_due_and_overdue_tasks(tmp_path):
     assert brief["due_soon_count"] == 1
     assert brief["focus"].startswith("overdue task 1")
     assert "3 open | 1 overdue | 1 due soon" in brief["text"]
-    assert "submit report (due 2026-11-20 [overdue])" in brief["text"]
-    assert "plan launch (due 2026-11-25)" in brief["text"]
+    assert ("submit report [high] (due 2026-11-20 [overdue])"
+            in brief["text"])
+    assert "plan launch [low] (due 2026-11-25)" in brief["text"]
 
     review = build_weekly_review(
         session, None, None, days=7, now="2026-11-22 09:00")
@@ -697,11 +727,13 @@ def test_brief_and_weekly_review_show_due_and_overdue_tasks(tmp_path):
     assert review["due_soon_count"] == 1
     assert "Overdue: 1" in review["text"]
     assert "Due soon: 1 (next 7 days)" in review["text"]
-    assert "submit report (due 2026-11-20 [overdue])" in review["text"]
+    assert ("submit report [high] (due 2026-11-20 [overdue])"
+            in review["text"])
     markdown = render_weekly_markdown(review)
     assert "### Overdue (1)" in markdown
     assert "### Due soon (1)" in markdown
-    assert "submit report (due 2026-11-20 [overdue])" in markdown
+    assert ("submit report [high] (due 2026-11-20 [overdue])"
+            in markdown)
 
 
 def test_plan_goal_adds_cited_context_and_suggestions(tmp_path):

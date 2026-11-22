@@ -210,8 +210,9 @@ def test_agent_searches_task_text(tmp_path):
     soon = (today + timedelta(days=2)).isoformat()
     overdue = (today - timedelta(days=1)).isoformat()
     agent = AgentSession("s-search-tasks", tmp_path / "memory.json")
-    agent.chat(f"add task submit quarterly report due {soon}")
-    agent.chat(f"add task submit expenses due {overdue}")
+    agent.chat(
+        f"add task submit quarterly report priority high due {soon}")
+    agent.chat(f"add task submit expenses due {overdue} priority low")
     agent.chat("add task plan launch")
     found = agent.chat("search tasks report")
     assert found["tool_calls"][0]["name"] == "search_tasks"
@@ -226,6 +227,7 @@ def test_agent_searches_task_text(tmp_path):
     open_only = agent.chat("search tasks submit open")
     assert open_only["tool_calls"][0]["status"] == "open"
     assert open_only["tool_calls"][0]["due"] == "all"
+    assert open_only["tool_calls"][0]["priority"] == "all"
     assert open_only["task_search"]["count"] == 2
     week = agent.chat("search tasks submit open due week")
     assert week["task_search"]["status"] == "open"
@@ -233,6 +235,20 @@ def test_agent_searches_task_text(tmp_path):
     assert week["task_search"]["count"] == 1
     assert "status=open" in week["reply"]
     assert "due=week" in week["reply"]
+    high = agent.chat("search tasks submit priority high")
+    assert high["task_search"]["priority"] == "high"
+    assert high["task_search"]["count"] == 1
+    assert "priority=high" in high["reply"]
+    assert high["task_search"]["tasks"][0]["id"] == 1
+    combined = agent.chat("search tasks submit high open due week")
+    assert combined["task_search"]["priority"] == "high"
+    assert combined["task_search"]["status"] == "open"
+    assert combined["task_search"]["due"] == "week"
+    assert combined["task_search"]["count"] == 1
+    low = agent.chat("search tasks submit low due overdue")
+    assert low["task_search"]["priority"] == "low"
+    assert low["task_search"]["count"] == 1
+    assert low["task_search"]["tasks"][0]["id"] == 2
     overdue_only = agent.chat("search tasks submit overdue")
     assert overdue_only["task_search"]["due"] == "overdue"
     assert overdue_only["task_search"]["tasks"][0]["text"] == "submit expenses"
@@ -244,6 +260,10 @@ def test_agent_searches_task_text(tmp_path):
     assert done["task_search"]["status"] == "done"
     assert done["task_search"]["count"] == 1
     assert done["task_search"]["tasks"][0]["id"] == 1
+    done_high = agent.chat("search tasks submit done high")
+    assert done_high["task_search"]["status"] == "done"
+    assert done_high["task_search"]["priority"] == "high"
+    assert done_high["task_search"]["count"] == 1
     explicit = agent.chat("search tasks report status done")
     assert explicit["task_search"]["status"] == "done"
     assert explicit["task_search"]["count"] == 1
@@ -252,6 +272,32 @@ def test_agent_searches_task_text(tmp_path):
     assert "None" in missing["reply"]
     no_text = agent.chat("search tasks open")
     assert "Tell me task text to search" in no_text["reply"]
+
+
+def test_agent_task_priority_metadata(tmp_path):
+    agent = AgentSession("s-task-priority", tmp_path / "memory.json")
+    added = agent.chat("add task submit report priority high")
+    assert "(priority high)" in added["reply"]
+    assert agent.human.data["tasks"][0]["priority"] == "high"
+    agent.chat("add task plan launch due tomorrow priority low")
+    assert agent.human.data["tasks"][1]["priority"] == "low"
+    listed = agent.chat("list tasks")["reply"]
+    assert "1 [high] submit report" in listed
+    assert "2 [low] plan launch" in listed
+    changed = agent.chat("set task 1 priority low")
+    assert "Set task 1 priority to low." in changed["reply"]
+    assert agent.human.data["tasks"][0]["priority"] == "low"
+    no_priority_word = agent.chat("set task 1 high")
+    assert "Set task 1 priority to high." in no_priority_word["reply"]
+    missing = agent.chat("set task 99 priority high")
+    assert "could not find that task" in missing["reply"]
+    invalid_add = agent.chat("add task bad priority urgent")
+    assert "could not read the priority 'urgent'" in invalid_add["reply"]
+    assert len(agent.human.data["tasks"]) == 2
+    invalid_set = agent.chat("set task 1 priority urgent")
+    assert ("Use 'set task ID priority low|normal|high'."
+            in invalid_set["reply"])
+    assert agent.human.data["tasks"][0]["priority"] == "high"
 
 
 def test_agent_brief_me_returns_local_brief(tmp_path):

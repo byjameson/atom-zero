@@ -30,7 +30,7 @@ Endpoints:
   GET  /v1/weekly-review/export?session_id=...&days=7
   GET  /v1/tasks/overdue?session_id=default
   GET  /v1/tasks/due-soon?session_id=default&days=7
-  GET  /v1/tasks/search?session_id=default&q=report&status=open&due=week
+  GET  /v1/tasks/search?session_id=default&q=report&status=open&due=week&priority=high
   POST /v1/tasks/reschedule
   POST /v1/tasks/delete
   GET  /v1/weekly-review/reports?limit=10
@@ -291,6 +291,12 @@ and suggested next actions.</p>
 <option value="today">Today</option>
 <option value="week">Next 7 days</option>
 <option value="none">No due date</option>
+</select>
+<select id="tasksearchpriority" title="Task priority">
+<option value="all" selected>Any priority</option>
+<option value="low">Low</option>
+<option value="normal">Normal</option>
+<option value="high">High</option>
 </select>
 <button id="tasksearchbtn">Search tasks</button>
 <input id="rescheduletaskid" type="number" min="1" placeholder="task ID"
@@ -721,6 +727,7 @@ async function searchTasks() {
   const query = document.getElementById('tasksearch').value.trim();
   const status = document.getElementById('tasksearchstatus').value;
   const due = document.getElementById('tasksearchdue').value;
+  const priority = document.getElementById('tasksearchpriority').value;
   if (!query) {
     msg.textContent = 'enter text to search tasks';
     return;
@@ -729,7 +736,7 @@ async function searchTasks() {
   box.textContent = '';
   try {
     const params = new URLSearchParams({
-      session_id: sessionId, q: query, status, due});
+      session_id: sessionId, q: query, status, due, priority});
     const r = await fetch('/v1/tasks/search?' + params.toString());
     const j = await r.json();
     if (!r.ok) {
@@ -742,6 +749,9 @@ async function searchTasks() {
     }
     if ((j.due || due) !== 'all') {
       filters.push('due=' + (j.due || due));
+    }
+    if ((j.priority || priority) !== 'all') {
+      filters.push('priority=' + (j.priority || priority));
     }
     msg.textContent = 'task search "' + (j.query || query) + '" | ' +
       (j.count || 0) + ' match(es)' +
@@ -757,8 +767,8 @@ async function searchTasks() {
     tasks.forEach(task => {
       const card = document.createElement('div');
       card.className = 'qitem';
-      let line = '#' + task.id + ' [' + (task.status || '?') + '] ' +
-        (task.text || '');
+      let line = '#' + task.id + ' [' + (task.status || '?') + '] [' +
+        (task.priority || 'normal') + '] ' + (task.text || '');
       if (task.due) line += ' | due ' + task.due;
       card.textContent = line;
       box.appendChild(card);
@@ -3079,6 +3089,8 @@ class Handler(BaseHTTPRequestHandler):
             query = str(params.get("q", [""])[0] or "").strip()
             status = str(params.get("status", ["all"])[0] or "all").strip()
             due = str(params.get("due", ["all"])[0] or "all").strip()
+            priority = str(
+                params.get("priority", ["all"])[0] or "all").strip()
             if not query:
                 return self._json(400, {"error": "q is required"})
             try:
@@ -3087,6 +3099,7 @@ class Handler(BaseHTTPRequestHandler):
 
                 result = task_search_view(
                     session.human.data, query, status=status, due=due,
+                    priority=priority,
                     now=params.get("today", [None])[0])
             except Exception as exc:
                 return self._json(400, {"error": str(exc)})

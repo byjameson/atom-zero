@@ -66,10 +66,10 @@ More fixes are in [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
 ## What it is
 
 - **A local, single-user daily assistant:** short chat, tasks with optional due
-  dates and overdue/due-soon focus in brief/review/chat, task rescheduling,
-  confirmed deletion and filtered text search (status/due), CLI/HTTP/UI
-  overdue and due-soon task views, notes, arithmetic, time and source-cited
-  document lookup.
+  dates, priorities and overdue/due-soon focus in brief/review/chat, task
+  rescheduling, confirmed deletion and filtered text search
+  (status/due/priority), CLI/HTTP/UI overdue and due-soon task views, notes,
+  arithmetic, time and source-cited document lookup.
 - **A source-cited RAG system** over your own text, Markdown, HTML, PDF and DOCX
   files.
 - **A deterministic tool runtime:** arithmetic, time, tasks, name/likes memory and
@@ -139,7 +139,7 @@ LoRA adapters.
 | document benchmark, 100 authored questions | **80/80 answerable, 20/20 no-answer** |
 | public SQuAD v2 retrieval (20 contexts) | **0.98 top-1 context (FTS), 1.00 top-5** |
 | public SQuAD v2 retrieval (50 contexts) | **hybrid 0.975 top-1; 0.816 answer in visible snippet** |
-| test suite | **355 passed** |
+| test suite | **356 passed** |
 
 The raw-model probe asks ten simple general questions with no documents, no
 calculator and no agent. The 49.2M model gets **2/10**. The product gets
