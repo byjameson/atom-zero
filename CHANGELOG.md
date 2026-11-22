@@ -44,6 +44,8 @@ work stays on `main`; see `docs/RELEASING.md`.
   and a UI Run chain control, with explicit `{previous}` context passing,
   no-carry mode and merged sources.
 - Added `benchmarks/skills_chain_regression.py` (6/6 checks).
+- Added `benchmarks/skills_chain_ui_regression.py` (6/6 checks): UI contract +
+  the exact chain request through the real handler.
 
 ## atomzero 0.4.2 - UI collection scope (2026-11-22)
 

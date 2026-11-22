@@ -38,6 +38,19 @@ python benchmarks/skills_flow_regression.py
 Latest result: **9/9 checks pass**. Raw result:
 [`results/skills_flow_regression.json`](results/skills_flow_regression.json).
 
+## Skill-chain UI regression
+
+`benchmarks/skills_chain_ui_regression.py` fetches the served page, checks the
+chain controls/request contract, then executes the exact UI request through the
+real handler: context hand-off, step metadata, sources and no-carry behavior.
+
+```powershell
+python benchmarks/skills_chain_ui_regression.py
+```
+
+Latest result: **6/6 checks pass**. Raw result:
+[`results/skills_chain_ui_regression.json`](results/skills_chain_ui_regression.json).
+
 ## Skill-chain regression
 
 `benchmarks/skills_chain_regression.py` calls `POST /v1/skills/chain` and

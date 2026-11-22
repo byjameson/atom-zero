@@ -1,0 +1,39 @@
+{
+  "benchmark": "atomzero-skills-chain-ui-regression",
+  "generated": "2026-11-22T22:08:41",
+  "checks": [
+    {
+      "name": "ui_chain_controls",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "name": "ui_chain_endpoint",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "name": "ui_chain_context",
+      "ok": true,
+      "detail": "Chain previous: Provider answer L-7781."
+    },
+    {
+      "name": "ui_chain_steps",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "ui_chain_sources",
+      "ok": true,
+      "detail": "[{'source': 'notes/launch.txt', 'title': 'Launch', 'kind': 'document', 'verified': True}]"
+    },
+    {
+      "name": "ui_chain_no_carry",
+      "ok": true,
+      "detail": "Chain previous: "
+    }
+  ],
+  "passed": 6,
+  "failed": 0,
+  "ok": true
+}
