@@ -11,6 +11,7 @@ import argparse
 import json
 import re
 import time
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from atomzero import __version__
@@ -126,6 +127,145 @@ def build_briefing(session_data: dict | None, gaps, docs,
     }
 
 
+def _done_tasks(session_data: dict | None) -> list[dict]:
+    data = session_data if isinstance(session_data, dict) else {}
+    tasks = data.get("tasks", [])
+    if not isinstance(tasks, list):
+        return []
+    return [task for task in tasks
+            if isinstance(task, dict) and task.get("status") == "done"]
+
+
+def _task_recent(value, cutoff: datetime) -> bool:
+    if not value:
+        return False
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return False
+    if parsed.tzinfo is not None:
+        parsed = parsed.replace(tzinfo=None)
+    return parsed >= cutoff
+
+
+def _source_recent(item: dict, cutoff_ts: float) -> bool:
+    value = item.get("created", "")
+    if not value:
+        return True
+    try:
+        return float(value) >= cutoff_ts
+    except (TypeError, ValueError):
+        try:
+            parsed = datetime.fromisoformat(str(value))
+            return parsed >= datetime.fromtimestamp(cutoff_ts)
+        except (TypeError, ValueError):
+            return True
+
+
+def build_weekly_review(session_data: dict | None, gaps, docs,
+                        days: int = 7, now=None) -> dict:
+    """Aggregate tasks, gaps, recent sources and graph highlights."""
+    try:
+        days = max(1, min(int(days), 90))
+    except (TypeError, ValueError):
+        days = 7
+    stamp = (now.strftime("%Y-%m-%d %H:%M")
+             if isinstance(now, datetime)
+             else str(now or time.strftime("%Y-%m-%d %H:%M")))
+    cutoff = datetime.now() - timedelta(days=days)
+    cutoff_ts = time.time() - days * 86400
+    open_tasks = _open_tasks(session_data)
+    done_tasks = _done_tasks(session_data)
+    completed_recent = [task for task in done_tasks
+                        if _task_recent(task.get("completed"), cutoff)]
+    completed_undated = [task for task in done_tasks
+                         if not task.get("completed")]
+    pending = _pending_gaps(gaps)
+    sources = docs.sources() if docs is not None else []
+    recent_sources = [source for source in sources
+                      if _source_recent(source, cutoff_ts)]
+    graph = _graph_snapshot(docs)
+    nodes = graph.get("nodes", [])
+    edges = graph.get("edges", [])
+    highlights = []
+    if recent_sources:
+        first = recent_sources[0]
+        highlights.append(
+            f"Recently indexed: {first.get('title', first.get('source', ''))}")
+    if nodes:
+        highlights.append(
+            "Top graph entity: " + nodes[0].get("name", ""))
+    if edges:
+        edge = edges[0]
+        highlights.append(
+            f"Strongest connection: {edge.get('source')} ↔ "
+            f"{edge.get('target')}")
+    next_week = []
+    for task in open_tasks[:3]:
+        next_week.append(
+            f"Close task {task.get('id')}: {task.get('text', '')}")
+    for gap in pending[:2]:
+        next_week.append(f"Resolve the gap: {gap.get('query', '')}")
+    if recent_sources:
+        next_week.append(
+            f"Review the new source: "
+            f"{recent_sources[0].get('title', recent_sources[0].get('source', ''))}")
+    if nodes:
+        next_week.append(
+            f"Explore the graph around {nodes[0].get('name', '')}")
+    next_week.append("Run a skill or named recipe for a recurring task")
+    lines = [
+        f"Weekly review - {stamp} (last {days} days)",
+        f"Tasks: {len(open_tasks)} open | {len(completed_recent)} "
+        f"completed this week",
+        "Open:",
+    ]
+    lines.extend(f"- {task.get('id')}: {task.get('text', '')}"
+                 for task in open_tasks[:8])
+    if completed_recent:
+        lines.append("Completed this week:")
+        lines.extend(f"- {task.get('id')}: {task.get('text', '')}"
+                     for task in completed_recent[:8])
+    if completed_undated:
+        lines.append("Completed (undated):")
+        lines.extend(f"- {task.get('id')}: {task.get('text', '')}"
+                     for task in completed_undated[:5])
+    lines.append(f"Gaps: {len(pending)} pending")
+    lines.extend(f"- {gap.get('query', '')}" for gap in pending[:5])
+    lines.append(f"Recent sources: {len(recent_sources)}")
+    lines.extend(f"- {source.get('title', source.get('source', ''))} "
+                 f"({source.get('source', '')})"
+                 for source in recent_sources[:8])
+    lines.append(
+        f"Graph: {len(nodes)} entities / {len(edges)} connections")
+    lines.append("Next week:")
+    lines.extend(f"- {action}" for action in next_week[:7])
+    return {
+        "generated": stamp,
+        "period_days": days,
+        "open_tasks": open_tasks[:8],
+        "completed_tasks": completed_recent[:8],
+        "completed_undated": completed_undated[:5],
+        "task_counts": {
+            "open": len(open_tasks),
+            "completed_recent": len(completed_recent),
+            "completed_total": len(done_tasks),
+        },
+        "pending_gaps": pending[:5],
+        "pending_gap_count": len(pending),
+        "recent_sources": recent_sources[:8],
+        "recent_source_count": len(recent_sources),
+        "graph": {
+            "entities": nodes[:8],
+            "connections": edges[:8],
+        },
+        "highlights": highlights,
+        "next_week": next_week[:7],
+        "text": "\n".join(lines),
+        "weights_changed": False,
+    }
+
+
 def plan_goal(goal: str, docs, gaps=None, session_data: dict | None = None,
               max_steps: int = 3) -> dict:
     """Create a cited, deterministic plan skeleton for a local goal."""
@@ -225,6 +365,9 @@ def main(argv=None) -> int:
     parser.add_argument("--docs", default="data/atomzero_demo.db")
     parser.add_argument("--gaps", default="data/knowledge_gaps.json")
     parser.add_argument("--goal", default="")
+    parser.add_argument("--weekly", action="store_true",
+                        help="build a weekly review instead of a daily brief")
+    parser.add_argument("--days", type=int, default=7)
     parser.add_argument("--max-steps", type=int, default=3)
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
@@ -239,7 +382,10 @@ def main(argv=None) -> int:
         if Path(args.gaps).exists():
             from atomzero.knowledge_gaps import KnowledgeGapStore
             gaps = KnowledgeGapStore(args.gaps)
-        if args.goal:
+        if args.weekly:
+            result = build_weekly_review(
+                session, gaps, docs, days=args.days)
+        elif args.goal:
             result = plan_goal(
                 args.goal, docs, gaps, session, args.max_steps)
         else:

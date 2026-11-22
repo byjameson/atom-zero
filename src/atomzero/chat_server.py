@@ -25,6 +25,7 @@ Endpoints:
   POST /v1/documents/answer
   POST /v1/hungry/run
   POST /v1/briefing
+  POST /v1/weekly-review
   POST /v1/goals/plan
   GET  /v1/teacher/notes
   POST /v1/teacher/notes
@@ -236,6 +237,7 @@ hr{border:0;border-top:1px solid #ddd;margin:22px 0}
 graph entities. No provider is required. A goal plan adds cited local context
 and suggested next actions.</p>
 <div class="row"><button id="briefrefresh">Get daily brief</button>
+<button id="briefweekly">Weekly review</button>
 <input id="goalinput" placeholder="Optional goal, e.g. prepare the warranty page">
 <button id="goalplan">Plan goal</button></div>
 <p id="briefmsg" class="hint"></p>
@@ -538,6 +540,32 @@ async function getBriefing() {
     msg.textContent = 'brief error: ' + e;
   }
 }
+async function getWeeklyReview() {
+  const msg = document.getElementById('briefmsg');
+  const box = document.getElementById('briefres');
+  msg.textContent = 'building weekly review...';
+  box.textContent = '';
+  try {
+    const r = await fetch('/v1/weekly-review', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({session_id: sessionId, days: 7})});
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'weekly review error: ' + (j.error || r.status);
+      return;
+    }
+    const counts = j.task_counts || {};
+    msg.textContent = 'weekly review | ' + (counts.open || 0) +
+      ' open | ' + (counts.completed_recent || 0) + ' completed | ' +
+      (j.recent_source_count || 0) + ' new source(s)';
+    const card = document.createElement('div');
+    card.className = 'qitem';
+    card.textContent = j.text || '';
+    box.appendChild(card);
+  } catch (e) {
+    msg.textContent = 'weekly review error: ' + e;
+  }
+}
 async function planGoal(confirmCreate) {
   const goal = document.getElementById('goalinput').value.trim();
   const msg = document.getElementById('briefmsg');
@@ -607,6 +635,7 @@ async function planGoal(confirmCreate) {
   }
 }
 document.getElementById('briefrefresh').onclick = () => getBriefing();
+document.getElementById('briefweekly').onclick = () => getWeeklyReview();
 document.getElementById('goalplan').onclick = () => planGoal(false);
 document.getElementById('goalinput').addEventListener('keydown', event => {
   if (event.key === 'Enter') planGoal(false);
@@ -2484,7 +2513,8 @@ class Handler(BaseHTTPRequestHandler):
                          "/v1/curiosity/propose", "/v1/hungry/run",
                          "/v1/skills/run", "/v1/skills/chain",
                          "/v1/skills/chains/run",
-                         "/v1/briefing", "/v1/goals/plan",
+                         "/v1/briefing", "/v1/weekly-review",
+                         "/v1/goals/plan",
                          "/v1/learn_url", "/v1/research",
                          "/v1/research/queue",
                          "/v1/research/queue/approve",
@@ -2549,6 +2579,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._skills_recipe_run(req)
             if route == "/v1/briefing":
                 return self._briefing(req)
+            if route == "/v1/weekly-review":
+                return self._weekly_review(req)
             if route == "/v1/goals/plan":
                 return self._goal_plan(req)
             if route == "/v1/research/queue":
@@ -3004,6 +3036,19 @@ class Handler(BaseHTTPRequestHandler):
 
             result = build_briefing(
                 session.human.data, _state.get("gaps"), _state.get("docs"))
+        except Exception as exc:
+            return self._json(400, {"error": str(exc)})
+        return self._json(200, result)
+
+    def _weekly_review(self, req: dict):
+        session_id = str(req.get("session_id", "default")).strip() or "default"
+        try:
+            session = self._session(session_id)
+            from atomzero.briefing import build_weekly_review
+
+            result = build_weekly_review(
+                session.human.data, _state.get("gaps"), _state.get("docs"),
+                days=req.get("days", 7))
         except Exception as exc:
             return self._json(400, {"error": str(exc)})
         return self._json(200, result)

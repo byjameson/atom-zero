@@ -1,6 +1,9 @@
 import json
+import time
+from datetime import datetime, timedelta
 
-from atomzero.briefing import build_briefing, load_session, main, plan_goal
+from atomzero.briefing import (
+    build_briefing, build_weekly_review, load_session, main, plan_goal)
 from atomzero.doc_memory import DocMemory
 from atomzero.knowledge_gaps import KnowledgeGapStore
 
@@ -27,6 +30,70 @@ def test_build_briefing_with_tasks_gaps_and_docs(tmp_path):
                          for node in brief["graph"]["entities"]}
     assert brief["weights_changed"] is False
     docs.close()
+
+
+def test_weekly_review_aggregates_tasks_sources_gaps_and_graph(tmp_path):
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("notes/launch.txt", "The launch code is L-7781.",
+                  title="Launch")
+    docs.add_text("notes/warranty.txt", "The warranty period is 24 months.",
+                  title="Warranty")
+    docs.add_text("old.txt", "An old note.", title="Old")
+    docs.con.execute(
+        "UPDATE doc_meta SET created = ? WHERE source = 'old.txt'",
+        (str(int(time.time()) - 10 * 86400),))
+    docs.con.commit()
+    gaps = KnowledgeGapStore(tmp_path / "gaps.json")
+    gaps.add("What is the warranty claim deadline?")
+    now = datetime.now()
+    session = {"tasks": [
+        {"id": 1, "text": "open task", "status": "open",
+         "created": now.strftime("%Y-%m-%dT%H:%M:%S"), "completed": ""},
+        {"id": 2, "text": "recent task", "status": "done",
+         "created": now.strftime("%Y-%m-%dT%H:%M:%S"),
+         "completed": now.strftime("%Y-%m-%dT%H:%M:%S")},
+        {"id": 3, "text": "old task", "status": "done",
+         "created": (now - timedelta(days=10)).strftime("%Y-%m-%dT%H:%M:%S"),
+         "completed": (now - timedelta(days=10)).strftime("%Y-%m-%dT%H:%M:%S")},
+    ]}
+    review = build_weekly_review(
+        session, gaps, docs, days=7, now="2026-11-22 09:00")
+    assert review["task_counts"] == {
+        "open": 1, "completed_recent": 1, "completed_total": 2}
+    assert review["pending_gap_count"] == 1
+    assert review["recent_source_count"] == 2
+    assert "L-7781" in {node["name"]
+                         for node in review["graph"]["entities"]}
+    assert "Weekly review - 2026-11-22 09:00 (last 7 days)" in review["text"]
+    assert "Completed this week" in review["text"]
+    assert "Recent sources: 2" in review["text"]
+    assert review["next_week"]
+    assert review["weights_changed"] is False
+    docs.close()
+
+
+def test_cli_weekly_review(tmp_path, capsys):
+    session_path = tmp_path / "session.json"
+    now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    session_path.write_text(json.dumps({"tasks": [
+        {"id": 1, "text": "open task", "status": "open",
+         "created": now, "completed": ""},
+        {"id": 2, "text": "done task", "status": "done",
+         "created": now, "completed": now},
+    ]}), encoding="utf-8")
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("notes/launch.txt", "The launch code is L-7781.")
+    docs.close()
+    gaps_path = tmp_path / "gaps.json"
+    KnowledgeGapStore(gaps_path).add("What is the warranty deadline?")
+    assert main([
+        "--session", str(session_path), "--docs", str(tmp_path / "docs.db"),
+        "--gaps", str(gaps_path), "--weekly", "--days", "7",
+        "--json"]) == 0
+    review = json.loads(capsys.readouterr().out)
+    assert review["task_counts"]["open"] == 1
+    assert review["task_counts"]["completed_recent"] == 1
+    assert review["recent_source_count"] == 1
 
 
 def test_plan_goal_adds_cited_context_and_suggestions(tmp_path):

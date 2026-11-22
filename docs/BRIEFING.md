@@ -22,6 +22,31 @@ If `--session` is omitted, the CLI uses
 `data/sessions/<session-id>.json`. Missing session/document/gap files are
 treated as empty, not as errors.
 
+## Weekly review
+
+```powershell
+atomzero-brief --session data/sessions/default.json `
+  --docs data/atomzero_demo.db --weekly --days 7
+```
+
+```text
+POST /v1/weekly-review
+{"session_id": "default", "days": 7}
+```
+
+A weekly review aggregates:
+
+- open tasks and tasks completed within the window;
+- undated completed tasks separately;
+- pending gaps;
+- sources indexed within the window;
+- graph entities/connections and highlights;
+- suggested next-week actions.
+
+Completions carry `completed` timestamps when tasks are finished through
+`ChatHuman`; older undated completions are listed separately rather than
+silently dropped. The UI **Weekly review** button uses the same endpoint.
+
 ## Chat flow
 
 ```text

@@ -71,6 +71,19 @@ python benchmarks/squad_retrieval.py `
   --max-contexts 20 --max-questions 100 --per-context 5 --seed 0
 ```
 
+## Weekly-review regression
+
+`benchmarks/weekly_review_regression.py` checks the served weekly-review
+control, then adds/completes tasks, requests `/v1/weekly-review`, and verifies
+task counts, gaps, recent sources, graph entities, text and no-weight behavior.
+
+```powershell
+python benchmarks/weekly_review_regression.py
+```
+
+Current result: **6/6 checks pass**. Raw result:
+[`results/weekly_review_regression.json`](results/weekly_review_regression.json).
+
 ## Graph-path regression
 
 `benchmarks/graph_path_regression.py` checks the UI path controls, the

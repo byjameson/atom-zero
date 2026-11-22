@@ -5,6 +5,13 @@
 - Added multi-hop **graph paths**: `atomzero-docs path`, `GET /v1/graph/path`,
   chat “how is X connected to Y?” and UI Find path.
 - Added `benchmarks/graph_path_regression.py` (6/6 checks).
+- Added a **weekly review**: open/recently completed tasks, pending gaps,
+  sources indexed within the window and graph highlights.
+- Added `atomzero-brief --weekly --days N`, `POST /v1/weekly-review` and a UI
+  Weekly review button.
+- Added task `created`/`completed` timestamps with an undated-completion
+  fallback for older sessions.
+- Added `benchmarks/weekly_review_regression.py` (6/6 checks).
 
 ## atomzero 0.5.0 - second brain and skill workflows (2026-11-22)
 

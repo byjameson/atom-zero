@@ -187,7 +187,11 @@ class ChatHuman:
     def add_task(self, text: str) -> int:
         tid = int(self.data.get("next_task", 1))
         self.data["next_task"] = tid + 1
-        self.data["tasks"].append({"id": tid, "text": text, "status": "open"})
+        self.data["tasks"].append({
+            "id": tid, "text": text, "status": "open",
+            "created": time.strftime("%Y-%m-%dT%H:%M:%S"),
+            "completed": "",
+        })
         self.save()
         return tid
 
@@ -195,6 +199,7 @@ class ChatHuman:
         for task in self.data["tasks"]:
             if int(task["id"]) == int(tid):
                 task["status"] = "done"
+                task["completed"] = time.strftime("%Y-%m-%dT%H:%M:%S")
                 self.save()
                 return True
         return False
