@@ -82,6 +82,29 @@ Selecting an exact source clears the prefix; typing a prefix clears the source
 selector, so the two scopes cannot conflict. A collection summary lists the
 selected prefix, source/chunk counts and one locator per contributing source.
 
+### Compare sources
+
+The local index can compare one source against another source, or against all
+other sources:
+
+```powershell
+atomzero-docs compare policy_a.txt --against policy_b.txt --db data/docs.db
+atomzero-docs compare policy_a.txt --db data/docs.db
+```
+
+```text
+GET /v1/documents/compare?source=policy_a.txt&against=policy_b.txt
+```
+
+The UI has **Compare sources** selects in the documents section. Flags are
+deterministic hints, not a truth verdict:
+
+- `numeric_mismatch` — overlapping claims have different numeric values;
+- `identifier_mismatch` — overlapping claims use different code identifiers;
+- `negation_mismatch` — one claim is negated and the other is not.
+
+Every conflict includes both snippets and page/section locators for review.
+
 ### CLI
 
 ```powershell

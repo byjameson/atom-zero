@@ -59,6 +59,9 @@ def test_demo_page_uses_daily_agent_endpoint():
     assert "/v1/documents/evidence" in page
     assert "/v1/documents/answer" in page
     assert "/v1/documents/summary" in page
+    assert "/v1/documents/compare" in page
+    assert 'id="cmpbtn"' in page
+    assert "comparesources" in page
     assert "/v1/hungry/run" in page
     assert "hungry mode" in page
     assert "grounded answer" in page
@@ -1147,6 +1150,53 @@ def test_http_graph_and_entity(tmp_path):
         with pytest.raises(urllib.error.HTTPError) as missing:
             urllib.request.urlopen(
                 base + "/v1/graph/entity?name=", timeout=10)
+        assert missing.value.code == 400
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
+        docs.close()
+
+
+def test_http_source_comparison(tmp_path):
+    try:
+        docs = DocMemory(tmp_path / "docs.db")
+    except Exception as exc:
+        pytest.skip(f"sqlite fts5 unavailable: {exc}")
+    docs.add_text("policy_a.txt",
+                  "The warranty period is 24 months. "
+                  "The warranty covers water damage.", title="Policy A")
+    docs.add_text("policy_b.txt",
+                  "The warranty period is 36 months. "
+                  "The warranty does not cover water damage.",
+                  title="Policy B")
+    old = dict(chat_server._state)
+    chat_server._state.update({
+        "model": None, "tok": None, "docs": docs, "adapter": "",
+        "name": "tiny-test", "params": 1, "config": {}, "step": 0,
+        "api_key": "", "metrics": {"requests": 0, "generated_tokens": 0},
+        "safety": None, "wiki_lang": "en",
+        "session_dir": str(tmp_path / "sessions"), "sessions": {},
+    })
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        result = json.loads(urllib.request.urlopen(
+            base + "/v1/documents/compare?source=policy_a.txt"
+                   "&against=policy_b.txt", timeout=10).read().decode())
+        reasons = {reason for conflict in result["conflicts"]
+                   for reason in conflict["reasons"]}
+        assert "numeric_mismatch" in reasons
+        assert "negation_mismatch" in reasons
+        assert result["summary"]["conflict_count"] >= 2
+        assert result["weights_changed"] is False
+        with pytest.raises(urllib.error.HTTPError) as missing:
+            urllib.request.urlopen(
+                base + "/v1/documents/compare?source=missing.txt",
+                timeout=10)
         assert missing.value.code == 400
     finally:
         httpd.shutdown()

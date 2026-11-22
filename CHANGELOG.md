@@ -12,6 +12,10 @@
 - Added task `created`/`completed` timestamps with an undated-completion
   fallback for older sessions.
 - Added `benchmarks/weekly_review_regression.py` (6/6 checks).
+- Added deterministic **source comparison**: `atomzero-docs compare`,
+  `GET /v1/documents/compare` and UI Compare sources, flagging numeric,
+  identifier and negation conflicts with both snippets/locators.
+- Added `benchmarks/contradiction_regression.py` (5/5 checks).
 
 ## atomzero 0.5.0 - second brain and skill workflows (2026-11-22)
 

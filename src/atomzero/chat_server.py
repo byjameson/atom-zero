@@ -11,6 +11,7 @@ Endpoints:
   GET  /v1/documents
   GET  /v1/documents/evidence?source=...&page=...&section=...
   GET  /v1/documents/summary?source=...&source_prefix=...&sentences=8
+  GET  /v1/documents/compare?source=...&against=...&max_claims=200
   GET  /v1/graph?limit_chunks=...&min_edge=...&max_entities=...
   GET  /v1/graph/entity?name=...&limit=...
   GET  /v1/graph/path?source=...&target=...&max_depth=4
@@ -274,6 +275,10 @@ weights.</p>
 <div id="docanswer"></div>
 <div id="docresults"></div>
 <div id="evidence"></div>
+<div class="row"><select id="cmpsource"><option value="">compare source...</option></select>
+<select id="cmpagainst"><option value="">against all others</option></select>
+<button id="cmpbtn">Compare sources</button></div>
+<div id="cmpresult"></div>
 <hr>
 <h3>Second brain graph</h3>
 <p class="hint">Local co-occurrence graph over indexed chunks. It links
@@ -771,6 +776,26 @@ async function refreshDocs() {
         select.value = current;
       }
     }
+    ['cmpsource', 'cmpagainst'].forEach(id => {
+      const select = document.getElementById(id);
+      if (!select) return;
+      const current = select.value;
+      select.textContent = '';
+      const empty = document.createElement('option');
+      empty.value = '';
+      empty.textContent = id === 'cmpsource'
+        ? 'compare source...' : 'against all others';
+      select.appendChild(empty);
+      data.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item.source;
+        option.textContent = item.title || item.source;
+        select.appendChild(option);
+      });
+      if ([...select.options].some(option => option.value === current)) {
+        select.value = current;
+      }
+    });
     if (!data.length) {
       const empty = document.createElement('div');
       empty.className = 'hint';
@@ -905,6 +930,56 @@ async function answerDocs() {
     });
   } catch (e) { msg.textContent = 'error: ' + e; }
 }
+async function compareSources() {
+  const source = document.getElementById('cmpsource').value;
+  const against = document.getElementById('cmpagainst').value;
+  const msg = document.getElementById('docmsg');
+  const box = document.getElementById('cmpresult');
+  box.textContent = '';
+  if (!source) {
+    msg.textContent = 'choose a source to compare';
+    return;
+  }
+  msg.textContent = 'comparing sources...';
+  try {
+    const query = new URLSearchParams({source, against});
+    const r = await fetch('/v1/documents/compare?' + query.toString());
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'compare error: ' + (j.error || r.status);
+      return;
+    }
+    msg.textContent = (j.summary?.conflict_count || 0) +
+      ' conflict hint(s) | ' + (j.summary?.sources_compared || 0) +
+      ' source(s)';
+    (j.conflicts || []).forEach(conflict => {
+      const card = document.createElement('div');
+      card.className = 'qitem';
+      const title = document.createElement('div');
+      title.textContent = (conflict.reasons || []).join(', ') +
+        ' | shared: ' + (conflict.shared_terms || []).join(', ');
+      card.appendChild(title);
+      [conflict.left, conflict.right].forEach(side => {
+        const row = document.createElement('div');
+        row.className = 'src';
+        row.textContent = (side.title || side.source) + ' | ' +
+          side.source + ': ' + (side.text || '');
+        card.appendChild(row);
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+        actions.appendChild(qbutton('Evidence', () =>
+          showEvidence(side.source, side.page, side.section)));
+        actions.appendChild(qbutton('Copy citation', () =>
+          copyCitation(side.source, side.page, side.section)));
+        card.appendChild(actions);
+      });
+      box.appendChild(card);
+    });
+  } catch (e) {
+    msg.textContent = 'compare error: ' + e;
+  }
+}
+document.getElementById('cmpbtn').onclick = () => compareSources();
 function copyCitation(source, page, section) {
   const text = source + (page ? ' (p. ' + page + ')' : '') +
                (section ? ' [' + section + ']' : '');
@@ -2363,6 +2438,24 @@ class Handler(BaseHTTPRequestHandler):
                     docs, params.get("name", [""])[0],
                     limit=int(params.get("limit", ["10"])[0]))
             except ValueError as exc:
+                return self._json(400, {"error": str(exc)})
+            return self._json(200, result)
+        elif (self.path == "/v1/documents/compare"
+              or self.path.startswith("/v1/documents/compare?")):
+            docs = _state.get("docs")
+            if docs is None:
+                return self._json(400, {
+                    "error": "no document memory configured"})
+            params = urllib.parse.parse_qs(
+                urllib.parse.urlparse(self.path).query)
+            from atomzero.contradictions import compare_sources
+
+            try:
+                result = compare_sources(
+                    docs, params.get("source", [""])[0],
+                    against=params.get("against", [""])[0],
+                    max_claims=int(params.get("max_claims", ["200"])[0]))
+            except (TypeError, ValueError) as exc:
                 return self._json(400, {"error": str(exc)})
             return self._json(200, result)
         elif (self.path == "/v1/documents/evidence"

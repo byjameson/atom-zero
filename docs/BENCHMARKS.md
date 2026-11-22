@@ -71,6 +71,19 @@ python benchmarks/squad_retrieval.py `
   --max-contexts 20 --max-questions 100 --per-context 5 --seed 0
 ```
 
+## Source-comparison regression
+
+`benchmarks/contradiction_regression.py` checks the served compare controls,
+numeric/negation conflicts, identifier conflicts and a no-conflict comparison
+through the real handler.
+
+```powershell
+python benchmarks/contradiction_regression.py
+```
+
+Current result: **5/5 checks pass**. Raw result:
+[`results/contradiction_regression.json`](results/contradiction_regression.json).
+
 ## Weekly-review regression
 
 `benchmarks/weekly_review_regression.py` checks the served weekly-review

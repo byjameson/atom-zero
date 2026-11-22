@@ -136,7 +136,7 @@ LoRA adapters.
 | document benchmark, 100 authored questions | **80/80 answerable, 20/20 no-answer** |
 | public SQuAD v2 retrieval (20 contexts) | **0.98 top-1 context (FTS), 1.00 top-5** |
 | public SQuAD v2 retrieval (50 contexts) | **hybrid 0.975 top-1; 0.816 answer in visible snippet** |
-| test suite | **293 passed** |
+| test suite | **297 passed** |
 
 The raw-model probe asks ten simple general questions with no documents, no
 calculator and no agent. The 49.2M model gets **2/10**. The product gets
@@ -166,6 +166,9 @@ short generation. It is **not MMLU, GSM8K or HumanEval**.
   with source counts and one-click evidence; CLI `graph`/`entity`/`path`, HTTP
   and UI. Chat answers “what is related to X?” and multi-hop “how is X
   connected to Y?” with graph evidence.
+- **Source comparison:** flag overlapping claims with different numbers, code
+  identifiers or negation; CLI/API/UI keep both snippets and locators for
+  review. It is a hint, not a truth verdict.
 - **Custom skills:** drop JSON skills into `data/skills` to add trigger phrases,
   local-context prompts, provider workflows or deterministic templates;
   `atomzero-skills list/validate/show`. Skills are declarative, not arbitrary
