@@ -24,6 +24,16 @@ The first run:
 
 No streamft checkout or trainer install is needed.
 
+## Check the install
+
+```powershell
+atomzero-doctor
+atomzero-doctor --provider --json
+```
+
+The doctor checks Python, dependencies, torch/CUDA, the exact model-cache sizes,
+document/session write access, the local port and the optional Ollama provider.
+
 ## Try these
 
 ```text
