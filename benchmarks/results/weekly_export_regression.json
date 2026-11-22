@@ -1,6 +1,6 @@
 {
   "benchmark": "atomzero-weekly-export-regression",
-  "generated": "2026-11-22T23:07:21",
+  "generated": "2026-11-22T23:11:10",
   "checks": [
     {
       "name": "ui_export_controls",
@@ -15,12 +15,12 @@
     {
       "name": "export_tasks",
       "ok": true,
-      "detail": "# Weekly review - 2026-11-22 23:07\n\nPeriod: last 7 days\n\n## Tasks\n\n- Open: 1\n- Completed in the last 7 days: 1\n- Completed total: 1\n\n### Open\n\n- [ ] **#2** write report\n\n### Completed in the last 7 days\n\n- [x] **#1** buy"
+      "detail": "# Weekly review - 2026-11-22 23:11\n\nPeriod: last 7 days\n\n## Tasks\n\n- Open: 1\n- Completed in the last 7 days: 1\n- Completed total: 1\n\n### Open\n\n- [ ] **#2** write report\n\n### Completed in the last 7 days\n\n- [x] **#1** buy"
     },
     {
       "name": "export_context",
       "ok": true,
-      "detail": "# Weekly review - 2026-11-22 23:07\n\nPeriod: last 7 days\n\n## Tasks\n\n- Open: 1\n- Completed in the last 7 days: 1\n- Completed total: 1\n\n### Open\n\n- [ ] **#2** write report\n\n### Completed in the last 7 days\n\n- [x] **#1** buy milk\n\n## Pending gaps (1)\n\n- What is the warranty claim deadline?\n\n## Recent sources (1)\n\n- **Launc"
+      "detail": "# Weekly review - 2026-11-22 23:11\n\nPeriod: last 7 days\n\n## Tasks\n\n- Open: 1\n- Completed in the last 7 days: 1\n- Completed total: 1\n\n### Open\n\n- [ ] **#2** write report\n\n### Completed in the last 7 days\n\n- [x] **#1** buy milk\n\n## Pending gaps (1)\n\n- What is the warranty claim deadline?\n\n## Recent sources (1)\n\n- **Launc"
     },
     {
       "name": "export_next_and_limits",
@@ -30,7 +30,7 @@
     {
       "name": "export_14_day_window",
       "ok": true,
-      "detail": "# Weekly review - 2026-11-22 23:07\n\nPeriod: last 14 days\n\n## Tasks\n\n- Open: 1\n- Completed in the last 14 days: 1\n- Completed total: 1\n\n### Open\n\n- [ ] **#2** write report\n\n### Comp"
+      "detail": "# Weekly review - 2026-11-22 23:11\n\nPeriod: last 14 days\n\n## Tasks\n\n- Open: 1\n- Completed in the last 14 days: 1\n- Completed total: 1\n\n### Open\n\n- [ ] **#2** write report\n\n### Comp"
     },
     {
       "name": "export_invalid_days",
@@ -40,25 +40,30 @@
     {
       "name": "cli_markdown_out",
       "ok": true,
-      "detail": "exit=0 path=C:\\Users\\biris\\AppData\\Local\\Temp\\atomzero-weekly-export-humcdcwl\\cli\\reports\\weekly.md"
+      "detail": "exit=0 path=C:\\Users\\biris\\AppData\\Local\\Temp\\atomzero-weekly-export-u2_q4wrn\\cli\\reports\\weekly.md"
     },
     {
       "name": "archive_listing",
       "ok": true,
-      "detail": "{'id': 'w0001', 'title': 'Weekly review - 2026-11-22 23:07', 'path': 'C:\\\\Users\\\\biris\\\\AppData\\\\Local\\\\Temp\\\\atomzero-weekly-export-humcdcwl\\\\cli\\\\reports\\\\weekly.md', 'name': 'weekly.md', 'generated': '2026-11-22 23:07', 'exported_at': '2026-11-22T23:07:21', 'period_days': 7, 'task_counts': {'open': 1, 'completed_recent': 1, 'completed_total': 1}, 'pending_gap_count': 1, 'recent_source_count': 1, 'entities': 1, 'connections': 0, 'size_bytes': 1007, 'sha256': 'c6e0de53ac04c9a069bcd50d1c27ff0c24f27c3555dba7e1a8e3e8e45d1597f2', 'exists': True}"
+      "detail": "{'id': 'w0001', 'title': 'Weekly review - 2026-11-22 23:11', 'path': 'C:\\\\Users\\\\biris\\\\AppData\\\\Local\\\\Temp\\\\atomzero-weekly-export-u2_q4wrn\\\\cli\\\\reports\\\\weekly.md', 'name': 'weekly.md', 'generated': '2026-11-22 23:11', 'exported_at': '2026-11-22T23:11:10', 'period_days': 7, 'task_counts': {'open': 1, 'completed_recent': 1, 'completed_total': 1}, 'pending_gap_count': 1, 'recent_source_count': 1, 'entities': 1, 'connections': 0, 'size_bytes': 1007, 'sha256': 'cdae4e1aad8a7e3871ecb11e102987e4beedf572e5f3d39244dd8053c35cc9ac', 'exists': True}"
     },
     {
       "name": "archive_download",
       "ok": true,
-      "detail": "# Weekly review - 2026-11-22 23:07\n\nPeriod: last 7 days\n\n## Tasks\n\n- Open: 1\n- Completed in the last 7 days: 1\n- Completed total: 1\n\n### Open\n\n- [ ] **#2** write report\n\n### Comple"
+      "detail": "# Weekly review - 2026-11-22 23:11\n\nPeriod: last 7 days\n\n## Tasks\n\n- Open: 1\n- Completed in the last 7 days: 1\n- Completed total: 1\n\n### Open\n\n- [ ] **#2** write report\n\n### Comple"
     },
     {
       "name": "archive_prune",
       "ok": true,
-      "detail": "{'removed': 1, 'remaining': 1, 'index': 'C:\\\\Users\\\\biris\\\\AppData\\\\Local\\\\Temp\\\\atomzero-weekly-export-humcdcwl\\\\weekly_reports.json'}"
+      "detail": "{'removed': 1, 'remaining': 1, 'index': 'C:\\\\Users\\\\biris\\\\AppData\\\\Local\\\\Temp\\\\atomzero-weekly-export-u2_q4wrn\\\\weekly_reports.json'}"
+    },
+    {
+      "name": "archive_keep",
+      "ok": true,
+      "detail": "{'keep': 2, 'trimmed': 2, 'remaining': 2, 'index': 'C:\\\\Users\\\\biris\\\\AppData\\\\Local\\\\Temp\\\\atomzero-weekly-export-u2_q4wrn\\\\weekly_reports.json'}"
     }
   ],
-  "passed": 11,
+  "passed": 12,
   "failed": 0,
   "ok": true
 }

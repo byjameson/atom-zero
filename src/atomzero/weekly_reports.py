@@ -154,6 +154,27 @@ class WeeklyReportArchive:
                 items.append(item)
             return items
 
+    def keep(self, limit: int) -> int:
+        """Keep the newest ``limit`` entries and remove older ones."""
+        try:
+            limit = int(limit)
+        except (TypeError, ValueError) as exc:
+            raise WeeklyReportError("keep must be a positive integer") from exc
+        if limit < 1:
+            raise WeeklyReportError("keep must be a positive integer")
+        with self._lock:
+            self._reload()
+            ordered = sorted(
+                self.reports,
+                key=lambda item: str(item.get("exported_at", "")),
+                reverse=True)
+            kept = ordered[:limit]
+            removed = len(ordered) - len(kept)
+            if removed:
+                self.reports = kept
+                self._save()
+            return removed
+
     def prune(self) -> int:
         """Remove entries whose report file no longer exists."""
         with self._lock:

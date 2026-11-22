@@ -218,6 +218,34 @@ def test_cli_reports_prune_missing_files(tmp_path, capsys):
     assert exc.value.code == 2
 
 
+def test_cli_reports_keep_retention(tmp_path, capsys):
+    index_path = tmp_path / "weekly_reports.json"
+    archive = WeeklyReportArchive(index_path)
+    for number in range(1, 4):
+        report = tmp_path / f"report-{number}.md"
+        report.write_text(f"# Report {number}\n", encoding="utf-8")
+        archive.record(report, {
+            "generated": f"2026-11-2{number} 09:00", "period_days": 7,
+            "task_counts": {"open": number}, "recent_source_count": 1,
+            "graph": {"entities": [], "connections": []},
+        }, exported_at=f"2026-11-2{number}T09:00:00")
+
+    assert main(["--reports", "--keep", "2", "--json", "--reports-index",
+                 str(index_path)]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["trimmed"] == 1
+    assert payload["keep"] == 2
+    assert payload["total"] == 2
+    assert [item["id"] for item in payload["data"]] == ["w0003", "w0002"]
+
+    assert main(["--reports", "--keep", "2", "--reports-index",
+                 str(index_path)]) == 0
+    assert "Removed 0 older report(s) to keep 2." in capsys.readouterr().out
+    with pytest.raises(SystemExit) as exc:
+        main(["--reports", "--keep", "0"])
+    assert exc.value.code == 2
+
+
 def test_cli_weekly_markdown_out_rejects_file_parent(tmp_path, capsys):
     blocker = tmp_path / "blocking-file"
     blocker.write_text("not a directory", encoding="utf-8")

@@ -845,11 +845,15 @@ def test_ui_collection_scope_contract():
     assert 'id="weeklymd"' in page
     assert 'id="weeklyreportsrefresh"' in page
     assert 'id="weeklyreportsprune"' in page
+    assert 'id="weeklyreportskeep"' in page
+    assert 'id="weeklykeep"' in page
+    assert "/v1/weekly-review/reports/keep" in page
     assert "getWeeklyReview" in page
     assert "downloadWeeklyMarkdown" in page
     assert "refreshWeeklyReports" in page
     assert "downloadArchivedReport" in page
     assert "pruneWeeklyReports" in page
+    assert "keepWeeklyReports" in page
     assert "planGoal" in page
     assert 'data-q="plan goal prepare the warranty page"' in page
     assert 'data-q="brief me"' in page
@@ -1390,6 +1394,22 @@ def test_http_weekly_reports_archive(tmp_path):
         assert response.headers.get_content_type() == "text/markdown"
         assert "weekly.md" in response.headers["Content-Disposition"]
         assert "archived task" in response.read().decode("utf-8")
+        for number in range(1, 3):
+            extra = tmp_path / f"extra-{number}.md"
+            extra.write_text(f"# Extra {number}\n", encoding="utf-8")
+            archive.record(extra, {
+                "generated": f"2026-11-2{number} 09:00", "period_days": 7,
+                "task_counts": {"open": 0}, "recent_source_count": 0,
+                "graph": {"entities": [], "connections": []},
+            }, exported_at=f"2026-11-2{number}T09:00:00")
+        retention = _post(
+            base + "/v1/weekly-review/reports/keep", {"keep": 2})
+        assert retention["trimmed"] == 1
+        assert retention["remaining"] == 2
+        listing = json.loads(urllib.request.urlopen(
+            base + "/v1/weekly-review/reports?limit=5",
+            timeout=10).read().decode("utf-8"))
+        assert listing["total"] == 2
         with pytest.raises(urllib.error.HTTPError) as missing:
             urllib.request.urlopen(
                 base + "/v1/weekly-review/reports?id=w9999", timeout=10)

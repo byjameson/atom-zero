@@ -6,5 +6,5 @@ def test_weekly_export_regression_passes(tmp_path):
     payload = run(output)
     assert payload["ok"] is True, payload["checks"]
     assert payload["failed"] == 0
-    assert payload["passed"] >= 11
+    assert payload["passed"] >= 12
     assert output.exists()

@@ -64,6 +64,25 @@ def test_archive_records_dedupes_and_reads_bom_index(tmp_path):
     assert reloaded.list()[0]["task_counts"]["open"] == 4
 
 
+def test_archive_keep_trims_oldest_reports(tmp_path):
+    index_path = tmp_path / "weekly_reports.json"
+    archive = WeeklyReportArchive(index_path)
+    for number in range(1, 4):
+        report = tmp_path / f"report-{number}.md"
+        report.write_text(f"# Report {number}\n", encoding="utf-8")
+        archive.record(
+            report, _review(), exported_at=f"2026-11-2{number}T09:00:00")
+    assert archive.count() == 3
+
+    assert archive.keep(2) == 1
+    entries = archive.list()
+    assert [item["id"] for item in entries] == ["w0003", "w0002"]
+    assert archive.keep(2) == 0
+    assert archive.keep(10) == 0
+    with pytest.raises(WeeklyReportError):
+        archive.keep(0)
+
+
 def test_archive_prune_removes_missing_reports(tmp_path):
     index_path = tmp_path / "weekly_reports.json"
     archive = WeeklyReportArchive(index_path)

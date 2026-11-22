@@ -31,6 +31,7 @@ Endpoints:
   GET  /v1/weekly-review/reports?limit=10
   GET  /v1/weekly-review/reports?id=w0001
   POST /v1/weekly-review/reports/prune
+  POST /v1/weekly-review/reports/keep
   POST /v1/goals/plan
   GET  /v1/teacher/notes
   POST /v1/teacher/notes
@@ -261,7 +262,10 @@ and suggested next actions.</p>
 <p id="briefmsg" class="hint"></p>
 <div id="briefres"></div>
 <div class="row"><button id="weeklyreportsrefresh">Recent reports</button>
-<button id="weeklyreportsprune">Prune missing</button></div>
+<button id="weeklyreportsprune">Prune missing</button>
+<input id="weeklykeep" type="number" min="1" max="500" value="5"
+       title="Keep newest N reports" style="width:5em">
+<button id="weeklyreportskeep">Keep newest</button></div>
 <p id="weeklyreportsmsg" class="hint"></p>
 <div id="weeklyreports"></div>
 <hr>
@@ -674,6 +678,31 @@ async function refreshWeeklyReports() {
     msg.textContent = 'report archive error: ' + e;
   }
 }
+async function keepWeeklyReports() {
+  const msg = document.getElementById('weeklyreportsmsg');
+  const keep = parseInt(document.getElementById('weeklykeep').value, 10);
+  if (!Number.isInteger(keep) || keep < 1) {
+    msg.textContent = 'enter a keep count of at least 1';
+    return;
+  }
+  msg.textContent = 'applying retention policy...';
+  try {
+    const r = await fetch('/v1/weekly-review/reports/keep', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({keep})});
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'report retention error: ' + (j.error || r.status);
+      return;
+    }
+    const trimmed = j.trimmed || 0;
+    await refreshWeeklyReports();
+    msg.textContent = 'kept ' + (j.remaining || 0) +
+      ' newest report(s) | removed ' + trimmed + ' older';
+  } catch (e) {
+    msg.textContent = 'report retention error: ' + e;
+  }
+}
 async function pruneWeeklyReports() {
   const msg = document.getElementById('weeklyreportsmsg');
   msg.textContent = 'pruning missing reports...';
@@ -800,6 +829,8 @@ document.getElementById('weeklyreportsrefresh').onclick =
   () => refreshWeeklyReports();
 document.getElementById('weeklyreportsprune').onclick =
   () => pruneWeeklyReports();
+document.getElementById('weeklyreportskeep').onclick =
+  () => keepWeeklyReports();
 document.getElementById('goalplan').onclick = () => planGoal(false);
 document.getElementById('goalinput').addEventListener('keydown', event => {
   if (event.key === 'Enter') planGoal(false);
@@ -2834,6 +2865,7 @@ class Handler(BaseHTTPRequestHandler):
                          "/v1/skills/chains/run",
                          "/v1/briefing", "/v1/weekly-review",
                          "/v1/weekly-review/reports/prune",
+                         "/v1/weekly-review/reports/keep",
                          "/v1/goals/plan",
                          "/v1/learn_url", "/v1/research",
                          "/v1/research/queue",
@@ -2903,6 +2935,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._weekly_review(req)
             if route == "/v1/weekly-review/reports/prune":
                 return self._weekly_reports_prune()
+            if route == "/v1/weekly-review/reports/keep":
+                return self._weekly_reports_keep(req)
             if route == "/v1/goals/plan":
                 return self._goal_plan(req)
             if route == "/v1/research/queue":
@@ -3371,6 +3405,23 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(400, {"error": str(exc)})
         return self._json(200, {
             "removed": removed,
+            "remaining": remaining,
+            "index": str(archive.path),
+        })
+
+    def _weekly_reports_keep(self, req: dict):
+        try:
+            keep = int(req.get("keep"))
+            if keep < 1:
+                raise ValueError("keep must be at least 1")
+            archive = _weekly_reports_archive()
+            trimmed = archive.keep(keep)
+            remaining = archive.count()
+        except (TypeError, ValueError, WeeklyReportError, OSError) as exc:
+            return self._json(400, {"error": str(exc)})
+        return self._json(200, {
+            "keep": keep,
+            "trimmed": trimmed,
             "remaining": remaining,
             "index": str(archive.path),
         })

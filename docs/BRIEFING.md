@@ -99,6 +99,7 @@ Every successful `--out` export is recorded in a local JSON index:
 atomzero-brief --reports
 atomzero-brief --reports --json
 atomzero-brief --reports --prune
+atomzero-brief --reports --keep 10
 atomzero-brief --reports --reports-index reports\weekly_reports.json --limit 5
 ```
 
@@ -107,19 +108,23 @@ entry, refreshed on later exports to the same path. Entries store the report
 path, time, period, task/source counts, graph counts, size and SHA-256.
 
 `--prune` removes entries whose report file no longer exists and prints the
-removed count. With `--json`, the result includes a `removed` field.
+removed count. `--keep N` retains only the newest N entries and atomically
+removes older ones. With `--json`, the result includes `removed` and/or
+`trimmed` fields.
 
 ```text
 GET  /v1/weekly-review/reports?limit=10
 GET  /v1/weekly-review/reports?id=w0001
 POST /v1/weekly-review/reports/prune
+POST /v1/weekly-review/reports/keep
+{"keep": 10}
 ```
 
 The UI **Recent reports** panel lists the archive, downloads an indexed
-Markdown file and exposes **Prune missing** for entries whose files were
-deleted. Keep `--reports-index` pointed at the same file for CLI and the
-server; both default to `data/weekly_reports.json`. `quickstart` and
-`chat_server` accept `--reports-index`.
+Markdown file, exposes **Prune missing** for deleted files and a
+**Keep newest** retention control. Keep `--reports-index` pointed at the same
+file for CLI and the server; both default to `data/weekly_reports.json`.
+`quickstart` and `chat_server` accept `--reports-index`.
 
 ## Chat flow
 

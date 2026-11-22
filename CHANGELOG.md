@@ -32,8 +32,11 @@
 - Added `atomzero-brief --reports --prune`,
   `POST /v1/weekly-review/reports/prune` and a UI **Prune missing** action to
   remove index entries whose report files no longer exist.
-- Added `benchmarks/weekly_export_regression.py` (11/11 checks: CLI, HTTP, UI,
-  the report archive and pruning).
+- Added `atomzero-brief --reports --keep N`,
+  `POST /v1/weekly-review/reports/keep` and a UI **Keep newest** control for
+  atomic retention of the newest N reports.
+- Added `benchmarks/weekly_export_regression.py` (12/12 checks: CLI, HTTP, UI,
+  the report archive, pruning and retention).
 - Fixed BOM-sensitive session loading: `atomzero-brief` and `ChatHuman` now
   accept PowerShell-written UTF-8 session files with a BOM.
 - Extended BOM-tolerant reads to feedback, knowledge-gap, research-queue,

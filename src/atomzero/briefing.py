@@ -547,6 +547,8 @@ def main(argv=None) -> int:
                         help="list recent archived weekly reports")
     parser.add_argument("--prune", action="store_true",
                         help="remove archived reports whose files are missing")
+    parser.add_argument("--keep", type=int, default=None,
+                        help="keep only the N newest archived reports")
     parser.add_argument("--reports-index", default=DEFAULT_REPORTS_PATH,
                         help="weekly report archive JSON path")
     parser.add_argument("--limit", type=int, default=10,
@@ -562,13 +564,20 @@ def main(argv=None) -> int:
         parser.error("--reports cannot be combined with brief/plan options")
     if args.prune and not args.reports:
         parser.error("--prune requires --reports")
+    if args.keep is not None and not args.reports:
+        parser.error("--keep requires --reports")
+    if args.keep is not None and args.keep < 1:
+        parser.error("--keep must be at least 1")
     if args.reports:
         index_path = args.reports_index or DEFAULT_REPORTS_PATH
         removed = 0
+        trimmed = 0
         try:
             archive = WeeklyReportArchive(index_path)
             if args.prune:
                 removed = archive.prune()
+            if args.keep is not None:
+                trimmed = archive.keep(args.keep)
             entries = archive.list(args.limit)
             total = archive.count()
         except (WeeklyReportError, OSError) as exc:
@@ -587,10 +596,16 @@ def main(argv=None) -> int:
             }
             if args.prune:
                 payload["removed"] = removed
+            if args.keep is not None:
+                payload["trimmed"] = trimmed
+                payload["keep"] = args.keep
             print(json.dumps(payload, indent=2, ensure_ascii=False))
         else:
             if args.prune:
                 print(f"Removed {removed} missing report(s).")
+            if args.keep is not None:
+                print(f"Removed {trimmed} older report(s) to keep "
+                      f"{args.keep}.")
             print(render_weekly_report_index(entries, archive.path))
         return 0
     session_path = Path(args.session) if args.session else (

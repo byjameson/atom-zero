@@ -8,7 +8,8 @@ Checks:
 - invalid day input returning 400;
 - `atomzero-brief --weekly --markdown --out PATH` writing a file directly;
 - the CLI report appearing in the HTTP/UI archive and downloading from it;
-- pruning a missing archive entry through the HTTP/UI flow.
+- pruning a missing archive entry through the HTTP/UI flow;
+- retaining only the newest N reports through the HTTP/UI flow.
 
 Run:
 
@@ -95,8 +96,12 @@ def run(output: str | Path | None = None) -> dict:
                 and "/v1/weekly-review/reports" in page
                 and 'id="weeklyreportsrefresh"' in page
                 and 'id="weeklyreportsprune"' in page
+                and 'id="weeklyreportskeep"' in page
+                and 'id="weeklykeep"' in page
+                and "/v1/weekly-review/reports/keep" in page
                 and "refreshWeeklyReports" in page
-                and "pruneWeeklyReports" in page,
+                and "pruneWeeklyReports" in page
+                and "keepWeeklyReports" in page,
                 "present")
             for message in ("add task buy milk",
                             "add task write report",
@@ -218,6 +223,26 @@ def run(output: str | Path | None = None) -> dict:
                 and pruned.get("remaining") == 1
                 and after_prune.get("total") == 1,
                 str(pruned))
+            for number in range(1, 4):
+                extra = Path(folder) / f"extra-{number}.md"
+                extra.write_text(f"# Extra {number}\n", encoding="utf-8")
+                archive.record(extra, {
+                    "generated": f"2026-11-2{number} 09:00",
+                    "period_days": 7, "task_counts": {"open": 0},
+                    "pending_gap_count": 0, "recent_source_count": 0,
+                    "graph": {"entities": [], "connections": []},
+                }, exported_at=f"2026-11-2{number}T09:00:00")
+            kept = _post(
+                base, "/v1/weekly-review/reports/keep", {"keep": 2})
+            after_keep = json.loads(urllib.request.urlopen(
+                base + "/v1/weekly-review/reports?limit=5",
+                timeout=15).read().decode("utf-8"))
+            check(
+                "archive_keep",
+                kept.get("trimmed") == 2
+                and kept.get("remaining") == 2
+                and after_keep.get("total") == 2,
+                str(kept))
         finally:
             httpd.shutdown()
             httpd.server_close()
