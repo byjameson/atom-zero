@@ -103,11 +103,12 @@ disappeared. Use `--no-prune`, `--no-dedupe` or `--prefix NAME` to change that
 behavior. This keeps the index portable when the folder moves to another
 machine.
 
-`search` accepts `--source` (exact), `--source-prefix`, `--kind` (`document`
-or `teacher`) and `--no-rerank`. `answer` runs the same grounded-answer path as
-the HTTP endpoint and returns the note text, evidence and confidence. All
-commands print JSON, so they can be piped into other local tools.
-`python -m atomzero.doc_memory ...` is the same CLI.
+`search` and `answer` accept `--source` (exact), `--source-prefix` and
+`--kind` (`document` or `teacher`); `search` also accepts `--no-rerank`.
+`answer` runs the same grounded-answer path as the HTTP endpoint and returns
+the note text, evidence and confidence. All commands print JSON, so they can
+be piped into other local tools. `python -m atomzero.doc_memory ...` is the
+same CLI.
 
 ### HTTP
 
@@ -137,6 +138,10 @@ POST /v1/documents
 POST /v1/documents/answer
 {"query": "what is the warranty period?", "source": "policy.docx"}
 ```
+
+The same endpoint accepts `source_prefix` for a synced collection
+(`"notes/"`) and `kind` (`"document"` or `"teacher"`). `POST
+/v1/documents/search` accepts the same filters.
 
 The response contains the cited note text, the source map, per-hit evidence and
 a match-confidence object:

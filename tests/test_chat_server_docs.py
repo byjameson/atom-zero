@@ -812,6 +812,17 @@ def test_doc_answer_returns_evidence_confidence_and_source_scope(tmp_path):
     assert all(item["source"] == "warranty.txt"
                for item in scoped["evidence"])
     assert "24 months" in scoped["text"]
+    by_prefix = chat_server.doc_answer(
+        "launch code", docs, source_prefix="launch")
+    assert by_prefix is not None
+    assert "L-7781" in by_prefix["text"]
+    docs.add_text("teacher://chatgpt/1",
+                  "The warranty period is 36 months.",
+                  title="Teacher", meta={"kind": "teacher"})
+    by_kind = chat_server.doc_answer("warranty period", docs, kind="teacher")
+    assert by_kind is not None
+    assert "36 months" in by_kind["text"]
+    assert all(item["kind"] == "teacher" for item in by_kind["evidence"])
     assert chat_server.doc_answer("population of Paris", docs) is None
     docs.close()
 
@@ -851,6 +862,9 @@ def test_http_document_answer_and_scoped_search(tmp_path):
         filtered = _post(base + "/v1/documents/search", {
             "query": "launch code", "source": "warranty.txt"})
         assert filtered["data"] == []
+        prefixed = _post(base + "/v1/documents/answer", {
+            "query": "launch code", "source_prefix": "launch"})
+        assert "L-7781" in prefixed["text"]
         missing = _post(base + "/v1/documents/answer",
                         {"query": "population of Paris"})
         assert missing["sources"] == []

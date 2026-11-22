@@ -257,7 +257,13 @@ def rerank_hits(query: str, hits: list[dict], k: int = 5) -> list[dict]:
 
 
 def best_snippet(query: str, chunk: str, max_chars: int = 500) -> str:
-    """Select the one or two sentences that best match the query."""
+    """Select the sentence that best answers the query.
+
+    Number/date questions get a small bonus for sentences containing digits,
+    and a sentence that opens with a pronoun pulls in the previous sentence for
+    context. Otherwise the result stays short and quote-like instead of
+    padding the evidence with unrelated sentences.
+    """
     text = str(chunk or "").strip()
     if not text:
         return ""
@@ -265,19 +271,38 @@ def best_snippet(query: str, chunk: str, max_chars: int = 500) -> str:
              re.split(r"(?<=[.!?])\s+|\n+", text) if part.strip()]
     if len(parts) <= 1:
         return text[:max_chars]
-    words = {word for word in re.findall(r"[a-z0-9]+", str(query).lower())
-             if len(word) > 2 and word not in STOPWORDS}
-    scores = [
-        sum(1 for word in re.findall(r"[a-z0-9]+", part.lower())
-            if word in words)
-        for part in parts
-    ]
-    chosen = sorted(sorted(range(len(parts)),
-                           key=lambda i: (-scores[i], i))[:2])
-    snippet = " ".join(parts[i] for i in chosen)
+    terms = _query_terms(query)
+    low_query = str(query or "").lower()
+    wants_number = bool(re.search(
+        r"\b(how many|how much|how long|how old|how far|when|what year|"
+        r"what date|what time|price|cost|population|number|percentage)\b",
+        low_query))
+    scores = []
+    for part in parts:
+        score = _term_coverage(terms, part)
+        if re.search(r"\d", part):
+            score += 0.30 if wants_number else 0.10
+            if re.search(
+                    r"\d+\.\d+|\d+\s*(?:days?|months?|years?|hours?|"
+                    r"minutes?|seconds?|million|billion|kg|km|percent|%)",
+                    part, re.IGNORECASE):
+                score += 0.08
+        scores.append(score)
+    best = max(range(len(parts)), key=lambda i: (scores[i], -i))
+    start = best
+    if best > 0 and re.match(
+            r"^(it|this|these|they|he|she|its|their|such|that|those)\b",
+            parts[best].lower()):
+        start = best - 1
+    snippet = " ".join(parts[start:best + 1])
+    if best + 1 < len(parts) and len(snippet) < max_chars:
+        following = parts[best + 1]
+        follow_coverage = _term_coverage(terms, following)
+        short_context = len(snippet) < 60 and not re.search(r"\d", snippet)
+        if follow_coverage > 0.0 or short_context:
+            snippet += " " + following
     if len(snippet) > max_chars:
-        snippet = parts[min(range(len(parts)),
-                            key=lambda i: (-scores[i], i))]
+        snippet = parts[best]
     return snippet[:max_chars]
 
 
@@ -1463,6 +1488,8 @@ def main(argv=None):
     answer.add_argument("query")
     answer.add_argument("-k", type=int, default=6)
     answer.add_argument("--source", default="")
+    answer.add_argument("--source-prefix", default="")
+    answer.add_argument("--kind", default="")
     sync = sub.add_parser(
         "sync", help="sync a directory collection into the index")
     sync.add_argument("path")
@@ -1510,7 +1537,8 @@ def main(argv=None):
             print(json.dumps(hits, indent=2, ensure_ascii=False))
         elif args.cmd == "answer":
             hits = mem.search(
-                args.query, k=args.k, source=args.source)
+                args.query, k=args.k, source=args.source,
+                source_prefix=args.source_prefix, kind=args.kind)
             if not hits:
                 result = {
                     "text": "I do not have a source for that yet.",

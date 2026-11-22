@@ -13,6 +13,8 @@
   shared core.
 - Improved lexical reranking with a small morphology allowance
   (`claim`/`claims`, `submit`/`submitted`).
+- Answer snippets now prefer answer-bearing sentences with numeric/unit cues,
+  add only adjacent context, and drop notes far below the winning score.
 - Added a "Grounded answer" control, an indexed-source picker, per-document
   "Ask", and "Copy citation" actions to the local document UI.
 - Added answer-in-visible-snippet and confidence metrics to the public SQuAD

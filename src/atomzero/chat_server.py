@@ -1480,14 +1480,16 @@ refreshAdapters();
 </script>"""
 
 
-def doc_answer(text: str, docs, source: str = "") -> dict | None:
+def doc_answer(text: str, docs, source: str = "",
+               source_prefix: str = "", kind: str = "") -> dict | None:
     """Return grounded notes with sources, evidence and match confidence."""
     if docs is None:
         return None
     query = str(text or "").strip()
     if not query:
         return None
-    hits = docs.search(query, k=6, source=source)
+    hits = docs.search(query, k=6, source=source,
+                       source_prefix=source_prefix, kind=kind)
     if not hits:
         return None
     return grounded_answer(query, hits)
@@ -1784,9 +1786,14 @@ class Handler(BaseHTTPRequestHandler):
                 except (TypeError, ValueError):
                     return self._json(400, {"error": "k must be an integer"})
                 source = str(req.get("source", "") or "").strip()
+                source_prefix = str(
+                    req.get("source_prefix", "") or "").strip()
+                kind = str(req.get("kind", "") or "").strip()
                 try:
-                    hits = (docs.search(query, k=k, source=source)
-                            if docs else [])
+                    hits = (docs.search(
+                        query, k=k, source=source,
+                        source_prefix=source_prefix, kind=kind)
+                        if docs else [])
                 except ValueError as exc:
                     return self._json(400, {"error": str(exc)})
                 return self._json(200, {"data": hits})
@@ -1799,8 +1806,13 @@ class Handler(BaseHTTPRequestHandler):
                 if not query:
                     return self._json(400, {"error": "empty query"})
                 source = str(req.get("source", "") or "").strip()
+                source_prefix = str(
+                    req.get("source_prefix", "") or "").strip()
+                kind = str(req.get("kind", "") or "").strip()
                 try:
-                    answer = doc_answer(query, docs, source=source)
+                    answer = doc_answer(
+                        query, docs, source=source,
+                        source_prefix=source_prefix, kind=kind)
                 except ValueError as exc:
                     return self._json(400, {"error": str(exc)})
                 if answer is None:

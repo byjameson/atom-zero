@@ -44,7 +44,7 @@ benchmarks and release — is
 | tests | 226 passed; product 21/21; behavior 16/16; retrieval 1.000 |
 | document benchmark | 100 authored questions: 80/80 answerable, 20/20 no-answer |
 | public retrieval benchmark | SQuAD v2: 0.975 top-1, 1.000 top-5 (50 contexts, hybrid) |
-| visible-snippet answer | SQuAD v2: 0.825 top-1 answer in snippet (50 contexts, hybrid) |
+| visible-snippet answer | SQuAD v2: 0.816 top-1 answer in snippet (50 contexts, hybrid) |
 
 ## Model
 
@@ -116,8 +116,8 @@ contexts / 200 questions (103 answerable, 97 no-answer):
 
 | mode | top-1 context | top-5 context | top-1 answer in chunk | top-1 answer in snippet | MRR |
 |---|---:|---:|---:|---:|---:|
-| FTS | 0.960 | 1.000 | 0.922 | 0.786 | 0.974 |
-| hybrid | **0.975** | 1.000 | **0.961** | **0.825** | **0.984** |
+| FTS | 0.960 | 1.000 | 0.922 | 0.777 | 0.974 |
+| hybrid | **0.975** | 1.000 | **0.961** | **0.816** | **0.984** |
 
 SQuAD questions share vocabulary with their contexts, so this is a public
 sanity check, not a hard semantic benchmark. The confidence score is a
