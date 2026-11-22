@@ -866,6 +866,9 @@ def test_ui_collection_scope_contract():
     assert '<option value="priority">Priority first</option>' in page
     assert "searchTasks" in page
     assert "tasksort" in page
+    assert page.count("document.getElementById('tasksort').value") >= 4
+    assert "session_id: sessionId, sort" in page
+    assert "session_id: sessionId, days: 7, sort" in page
     assert "&sort=" in page
     assert "/v1/tasks/search" in page
     assert "tasksearchstatus" in page
@@ -2088,9 +2091,35 @@ def test_http_priority_sort_views(tmp_path):
         search = get("/v1/tasks/search", q="task", sort="priority")
         assert search["sort"] == "priority"
         assert [task["id"] for task in search["tasks"]] == [2, 4, 3, 1]
+        brief = _post(base + "/v1/briefing", {
+            "session_id": "priority-sort-http", "sort": "priority"})
+        assert brief["sort"] == "priority"
+        assert [task["id"] for task in brief["tasks"]] == [2, 4, 3, 1]
+        assert brief["focus"].startswith("overdue task 2")
+        assert "sort=priority" in brief["text"]
+        weekly = _post(base + "/v1/weekly-review", {
+            "session_id": "priority-sort-http", "days": 7,
+            "sort": "priority"})
+        assert weekly["sort"] == "priority"
+        assert [task["id"] for task in weekly["open_tasks"]] == [2, 4, 3, 1]
+        assert "sort=priority" in weekly["text"]
+        export_params = urllib.parse.urlencode({
+            "session_id": "priority-sort-http", "days": 7,
+            "sort": "priority"})
+        markdown = urllib.request.urlopen(
+            base + "/v1/weekly-review/export?" + export_params,
+            timeout=10).read().decode("utf-8")
+        assert markdown.startswith("# Weekly review - ")
+        assert "sort=priority" in markdown
+        assert markdown.index("high overdue task") < \
+            markdown.index("low overdue task")
         with pytest.raises(urllib.error.HTTPError) as invalid:
             get("/v1/tasks/overdue", sort="bogus")
         assert invalid.value.code == 400
+        with pytest.raises(urllib.error.HTTPError) as invalid_brief:
+            _post(base + "/v1/briefing", {
+                "session_id": "priority-sort-http", "sort": "bogus"})
+        assert invalid_brief.value.code == 400
     finally:
         httpd.shutdown()
         httpd.server_close()

@@ -69,8 +69,8 @@ More fixes are in [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
   dates, priorities and overdue/due-soon focus in brief/review/chat, task
   priority updates via chat/CLI/HTTP/UI, rescheduling, confirmed deletion,
   filtered task search (status/due/priority) and priority-first sorting in
-  search/overdue/due-soon views, notes, arithmetic, time and source-cited
-  document lookup.
+  search/overdue/due-soon, daily-brief and weekly-review views, notes,
+  arithmetic, time and source-cited document lookup.
 - **A source-cited RAG system** over your own text, Markdown, HTML, PDF and DOCX
   files.
 - **A deterministic tool runtime:** arithmetic, time, tasks, name/likes memory and

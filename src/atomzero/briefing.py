@@ -366,12 +366,14 @@ def _graph_snapshot(docs) -> dict:
 
 
 def build_briefing(session_data: dict | None, gaps, docs,
-                   now=None) -> dict:
+                   now=None, sort="default") -> dict:
     """Build a compact local brief from tasks, gaps, docs and the graph."""
-    tasks = _open_tasks(session_data)
+    sort = _normalize_task_sort(sort)
+    tasks = sort_tasks(_open_tasks(session_data), sort)
     today = _today_from_now(now)
-    overdue = _overdue_tasks(session_data, today)
-    due_soon = due_soon_tasks(session_data, days=7, today=today)
+    overdue = sort_tasks(_overdue_tasks(session_data, today), sort)
+    due_soon = sort_tasks(
+        due_soon_tasks(session_data, days=7, today=today), sort)
     pending = _pending_gaps(gaps)
     sources = docs.sources() if docs is not None else []
     chunks = docs.stats().get("chunks", 0) if docs is not None else 0
@@ -422,8 +424,11 @@ def build_briefing(session_data: dict | None, gaps, docs,
         task_summary += f" | {len(overdue)} overdue"
     if due_soon:
         task_summary += f" | {len(due_soon)} due soon"
+    title = f"Daily brief - {stamp}"
+    if sort != "default":
+        title += f" | sort={sort}"
     lines = [
-        f"Daily brief - {stamp}",
+        title,
         f"Focus: {focus}",
         task_summary,
     ]
@@ -444,6 +449,7 @@ def build_briefing(session_data: dict | None, gaps, docs,
     lines.extend(f"- {action}" for action in actions[:6])
     return {
         "generated": stamp,
+        "sort": sort,
         "focus": focus,
         "tasks": tasks[:5],
         "open_task_count": len(tasks),
@@ -511,8 +517,9 @@ def _source_recent(item: dict, cutoff_ts: float) -> bool:
 
 
 def build_weekly_review(session_data: dict | None, gaps, docs,
-                        days: int = 7, now=None) -> dict:
+                        days: int = 7, now=None, sort="default") -> dict:
     """Aggregate tasks, gaps, recent sources and graph highlights."""
+    sort = _normalize_task_sort(sort)
     try:
         days = max(1, min(int(days), 90))
     except (TypeError, ValueError):
@@ -522,10 +529,11 @@ def build_weekly_review(session_data: dict | None, gaps, docs,
              else str(now or time.strftime("%Y-%m-%d %H:%M")))
     cutoff = datetime.now() - timedelta(days=days)
     cutoff_ts = time.time() - days * 86400
-    open_tasks = _open_tasks(session_data)
+    open_tasks = sort_tasks(_open_tasks(session_data), sort)
     today = _today_from_now(now)
-    overdue = _overdue_tasks(session_data, today)
-    due_soon = due_soon_tasks(session_data, days=7, today=today)
+    overdue = sort_tasks(_overdue_tasks(session_data, today), sort)
+    due_soon = sort_tasks(
+        due_soon_tasks(session_data, days=7, today=today), sort)
     done_tasks = _done_tasks(session_data)
     completed_recent = [task for task in done_tasks
                         if _task_recent(task.get("completed"), cutoff)]
@@ -575,8 +583,11 @@ def build_weekly_review(session_data: dict | None, gaps, docs,
                     else f"in the last {days} days")
     completed_label = ("Completed this week:" if days == 7
                        else f"Completed in the last {days} days:")
+    title = f"Weekly review - {stamp} (last {days} days)"
+    if sort != "default":
+        title += f" | sort={sort}"
     lines = [
-        f"Weekly review - {stamp} (last {days} days)",
+        title,
         f"Tasks: {len(open_tasks)} open | {len(completed_recent)} "
         f"completed {period_label}",
     ]
@@ -610,6 +621,7 @@ def build_weekly_review(session_data: dict | None, gaps, docs,
     lines.extend(f"- {action}" for action in next_week[:7])
     return {
         "generated": stamp,
+        "sort": sort,
         "period_days": days,
         "open_tasks": open_tasks[:8],
         "overdue_tasks": overdue[:8],
@@ -910,8 +922,11 @@ def render_weekly_markdown(review: dict) -> str:
     """Render a weekly review as a portable Markdown report."""
     days = review.get("period_days", 7)
     counts = review.get("task_counts", {})
+    title = f"# Weekly review - {review.get('generated', '')}"
+    if review.get("sort", "default") != "default":
+        title += f" | sort={review['sort']}"
     lines = [
-        f"# Weekly review - {review.get('generated', '')}",
+        title,
         "",
         f"Period: last {days} days",
         "",
@@ -1075,7 +1090,7 @@ def main(argv=None) -> int:
                         help="set one task priority to low, normal or high")
     parser.add_argument("--task-sort", choices=TASK_SORTS,
                         default="default",
-                        help="sort overdue/due-soon/search tasks")
+                        help="sort tasks in brief, review and task views")
     parser.add_argument("--days", type=int, default=7)
     parser.add_argument("--max-steps", type=int, default=3)
     parser.add_argument("--json", action="store_true")
@@ -1127,10 +1142,8 @@ def main(argv=None) -> int:
         parser.error("--due-days requires --due-soon")
     if args.due_days is not None and args.due_days < 1:
         parser.error("--due-days must be at least 1")
-    if args.task_sort != "default" and not (
-            args.search_tasks is not None or args.overdue or args.due_soon):
-        parser.error(
-            "--task-sort requires --search-tasks, --overdue or --due-soon")
+    if args.task_sort != "default" and (args.goal or args.reports):
+        parser.error("--task-sort cannot be combined with goal/report views")
     if args.set_task_priority is not None:
         raw_id, raw_priority = args.set_task_priority
         try:
@@ -1364,12 +1377,14 @@ def main(argv=None) -> int:
                 session, days=args.due_days or 7, sort=args.task_sort)
         elif args.weekly:
             result = build_weekly_review(
-                session, gaps, docs, days=args.days)
+                session, gaps, docs, days=args.days,
+                sort=args.task_sort)
         elif args.goal:
             result = plan_goal(
                 args.goal, docs, gaps, session, args.max_steps)
         else:
-            result = build_briefing(session, gaps, docs)
+            result = build_briefing(
+                session, gaps, docs, sort=args.task_sort)
     except (ValueError, OSError) as exc:
         if args.json:
             print(json.dumps({"ok": False, "error": str(exc)}, indent=2))

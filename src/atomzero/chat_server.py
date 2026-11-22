@@ -639,19 +639,21 @@ async function sendFeedback(user, assistant, rating, corrected, status) {
 async function getBriefing() {
   const msg = document.getElementById('briefmsg');
   const box = document.getElementById('briefres');
+  const sort = document.getElementById('tasksort').value;
   msg.textContent = 'building local brief...';
   box.textContent = '';
   try {
     const r = await fetch('/v1/briefing', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({session_id: sessionId})});
+      body: JSON.stringify({session_id: sessionId, sort})});
     const j = await r.json();
     if (!r.ok) {
       msg.textContent = 'brief error: ' + (j.error || r.status);
       return;
     }
     msg.textContent = 'daily brief | ' + (j.open_task_count || 0) +
-      ' open task(s) | ' + (j.pending_gap_count || 0) + ' pending gap(s)';
+      ' open task(s) | ' + (j.pending_gap_count || 0) + ' pending gap(s)' +
+      ((j.sort || sort) !== 'default' ? ' | sort=' + (j.sort || sort) : '');
     const card = document.createElement('div');
     card.className = 'qitem';
     card.textContent = j.text || '';
@@ -879,12 +881,13 @@ async function deleteTask() {
 async function getWeeklyReview() {
   const msg = document.getElementById('briefmsg');
   const box = document.getElementById('briefres');
+  const sort = document.getElementById('tasksort').value;
   msg.textContent = 'building weekly review...';
   box.textContent = '';
   try {
     const r = await fetch('/v1/weekly-review', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({session_id: sessionId, days: 7})});
+      body: JSON.stringify({session_id: sessionId, days: 7, sort})});
     const j = await r.json();
     if (!r.ok) {
       msg.textContent = 'weekly review error: ' + (j.error || r.status);
@@ -893,7 +896,8 @@ async function getWeeklyReview() {
     const counts = j.task_counts || {};
     msg.textContent = 'weekly review | ' + (counts.open || 0) +
       ' open | ' + (counts.completed_recent || 0) + ' completed | ' +
-      (j.recent_source_count || 0) + ' new source(s)';
+      (j.recent_source_count || 0) + ' new source(s)' +
+      ((j.sort || sort) !== 'default' ? ' | sort=' + (j.sort || sort) : '');
     const card = document.createElement('div');
     card.className = 'qitem';
     card.textContent = j.text || '';
@@ -906,7 +910,8 @@ async function downloadWeeklyMarkdown() {
   const msg = document.getElementById('briefmsg');
   msg.textContent = 'exporting weekly review...';
   try {
-    const query = new URLSearchParams({session_id: sessionId, days: 7});
+    const sort = document.getElementById('tasksort').value;
+    const query = new URLSearchParams({session_id: sessionId, days: 7, sort});
     const r = await fetch('/v1/weekly-review/export?' + query.toString());
     if (!r.ok) {
       let detail = r.status;
@@ -3307,7 +3312,9 @@ class Handler(BaseHTTPRequestHandler):
 
                 review = build_weekly_review(
                     session.human.data, _state.get("gaps"),
-                    _state.get("docs"), days=days)
+                    _state.get("docs"), days=days,
+                    sort=str(params.get("sort", ["default"])[0]
+                             or "default").strip())
                 markdown = render_weekly_markdown(review)
             except Exception as exc:
                 return self._json(400, {"error": str(exc)})
@@ -4097,7 +4104,8 @@ class Handler(BaseHTTPRequestHandler):
             from atomzero.briefing import build_briefing
 
             result = build_briefing(
-                session.human.data, _state.get("gaps"), _state.get("docs"))
+                session.human.data, _state.get("gaps"), _state.get("docs"),
+                sort=str(req.get("sort", "default") or "default").strip())
         except Exception as exc:
             return self._json(400, {"error": str(exc)})
         return self._json(200, result)
@@ -4237,7 +4245,8 @@ class Handler(BaseHTTPRequestHandler):
 
             result = build_weekly_review(
                 session.human.data, _state.get("gaps"), _state.get("docs"),
-                days=req.get("days", 7))
+                days=req.get("days", 7),
+                sort=str(req.get("sort", "default") or "default").strip())
         except Exception as exc:
             return self._json(400, {"error": str(exc)})
         return self._json(200, result)

@@ -88,6 +88,12 @@ expose the same session views; HTTP equivalents are
 `atomzero-brief --session ... --due-soon --due-days 7 --task-sort priority
 [--json]`. The shared UI **Task order** selector applies to all three views.
 
+`--task-sort priority` also orders open, overdue and due-soon task lists in the
+daily brief and weekly review. The HTTP JSON forms accept
+`{"sort": "priority"}` on `POST /v1/briefing` and `POST /v1/weekly-review`;
+the Markdown export accepts `GET /v1/weekly-review/export?sort=priority`.
+Priority-sorted brief and review titles show `| sort=priority`.
+
 This is local metadata only: there are no background reminders, notifications
 or calendar sync.
 

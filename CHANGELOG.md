@@ -102,6 +102,8 @@
 - Added priority-first sorting for task search, overdue and due-soon views:
   `--task-sort priority`, HTTP `sort=priority` and a shared UI task-order
   selector.
+- Applied priority-first sorting to daily brief and weekly review task lists,
+  HTTP briefing/review JSON, Markdown export and the UI sort selector.
 - Added `benchmarks/weekly_export_regression.py` (29/29 checks: CLI, HTTP, UI,
   the report archive, pruning, retention, dry-run preview, deletion, query
   filtering, chat search/list/maintenance, chat/HTTP sorting, report viewing,

@@ -327,7 +327,7 @@ def test_cli_search_tasks(tmp_path, capsys):
         main(common + ["--set-task-priority", "1", "high", "--weekly"])
     assert exc.value.code == 2
     with pytest.raises(SystemExit) as exc:
-        main(common + ["--task-sort", "priority"])
+        main(common + ["--task-sort", "priority", "--reports"])
     assert exc.value.code == 2
 
 
@@ -371,8 +371,27 @@ def test_cli_priority_sort_views(tmp_path, capsys):
     output = capsys.readouterr().out
     assert "sort=priority" in output
     assert output.index("high overdue task") < output.index("low overdue task")
+    assert main(common + ["--task-sort", "priority", "--json"]) == 0
+    brief = json.loads(capsys.readouterr().out)
+    assert brief["sort"] == "priority"
+    assert [task["id"] for task in brief["tasks"]] == [2, 4, 3, 1]
+    assert brief["focus"].startswith("overdue task 2")
+    assert "sort=priority" in brief["text"]
+    assert main(common + [
+        "--weekly", "--task-sort", "priority", "--json"]) == 0
+    review = json.loads(capsys.readouterr().out)
+    assert review["sort"] == "priority"
+    assert [task["id"] for task in review["open_tasks"]] == [2, 4, 3, 1]
+    assert "sort=priority" in review["text"]
+    assert main(common + [
+        "--weekly", "--markdown", "--task-sort", "priority"]) == 0
+    markdown = capsys.readouterr().out
+    assert markdown.startswith("# Weekly review - ")
+    assert "sort=priority" in markdown
+    assert markdown.index("high overdue task") < \
+        markdown.index("low overdue task")
     with pytest.raises(SystemExit) as exc:
-        main(common + ["--task-sort", "priority"])
+        main(common + ["--task-sort", "priority", "--reports"])
     assert exc.value.code == 2
 
 
