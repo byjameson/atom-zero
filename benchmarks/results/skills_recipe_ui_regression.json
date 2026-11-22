@@ -1,0 +1,44 @@
+{
+  "benchmark": "atomzero-skills-recipe-ui-regression",
+  "generated": "2026-11-22T22:15:29",
+  "checks": [
+    {
+      "name": "ui_recipe_controls",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "name": "ui_recipe_contract",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "name": "ui_recipe_listed",
+      "ok": true,
+      "detail": "[{'name': 'demo-recipe', 'description': 'provider then template', 'steps': [{'name': 'provider-skill', 'query': ''}, {'name': 'chain-skill', 'query': ''}], 'carry_context': True, 'path': 'C:\\\\Users\\\\biris\\\\AppData\\\\Local\\\\Temp\\\\atomzero-recipe-ui-8v9753oh\\\\skills\\\\chains\\\\demo-recipe.json'}]"
+    },
+    {
+      "name": "ui_recipe_context",
+      "ok": true,
+      "detail": "Chain previous: Provider answer L-7781."
+    },
+    {
+      "name": "ui_recipe_metadata",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "ui_recipe_carry_override",
+      "ok": true,
+      "detail": "Chain previous: "
+    },
+    {
+      "name": "ui_recipe_unknown_404",
+      "ok": true,
+      "detail": "HTTP 404"
+    }
+  ],
+  "passed": 7,
+  "failed": 0,
+  "ok": true
+}

@@ -50,6 +50,8 @@ work stays on `main`; see `docs/RELEASING.md`.
   recipes` / `recipe`, `GET /v1/skills/chains`,
   `POST /v1/skills/chains/run` and a UI recipe select/run control.
 - Added `benchmarks/skills_recipe_regression.py` (6/6 checks).
+- Added `benchmarks/skills_recipe_ui_regression.py` (7/7 checks): recipe UI
+  contract + exact request, carry override and unknown-recipe path.
 
 ## atomzero 0.4.2 - UI collection scope (2026-11-22)
 

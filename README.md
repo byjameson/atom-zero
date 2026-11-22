@@ -136,7 +136,7 @@ LoRA adapters.
 | document benchmark, 100 authored questions | **80/80 answerable, 20/20 no-answer** |
 | public SQuAD v2 retrieval (20 contexts) | **0.98 top-1 context (FTS), 1.00 top-5** |
 | public SQuAD v2 retrieval (50 contexts) | **hybrid 0.975 top-1; 0.816 answer in visible snippet** |
-| test suite | **285 passed** |
+| test suite | **286 passed** |
 
 The raw-model probe asks ten simple general questions with no documents, no
 calculator and no agent. The 49.2M model gets **2/10**. The product gets
@@ -185,6 +185,8 @@ short generation. It is **not MMLU, GSM8K or HumanEval**.
   pending gaps, index counts, graph entities and briefing sources.
 - **Skill-chain UI regression:** checks the served chain controls and executes
   the same request through the real handler, including `{previous}` hand-off.
+- **Named-recipe UI regression:** checks recipe selection/execution, carry
+  override and unknown-recipe behavior through the served UI contract and HTTP.
 - **Headless CLI:** `atomzero-docs add/sync/status/doctor/search/answer/
   summary/summary-collection/list/evidence/export/import/forget` works without
   the web UI; `sync` keeps a portable relative-path collection, skips unchanged

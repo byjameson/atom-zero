@@ -114,6 +114,19 @@ python benchmarks/skills_recipe_regression.py
 Current result: **6/6 checks pass**. Raw result:
 [`results/skills_recipe_regression.json`](results/skills_recipe_regression.json).
 
+## Named recipe UI regression
+
+`benchmarks/skills_recipe_ui_regression.py` checks the served recipe controls
+and request contract, then runs the exact UI request through the real handler:
+recipe list, context hand-off, metadata, carry override and unknown-recipe 404.
+
+```powershell
+python benchmarks/skills_recipe_ui_regression.py
+```
+
+Current result: **7/7 checks pass**. Raw result:
+[`results/skills_recipe_ui_regression.json`](results/skills_recipe_ui_regression.json).
+
 ## Skill-chain UI regression
 
 `benchmarks/skills_chain_ui_regression.py` checks the served UI chain controls
