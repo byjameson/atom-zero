@@ -35,13 +35,13 @@ benchmarks and release — is
 | research | approved-only queue, Wikipedia fetch, worker lock/log, teacher synthesis |
 | teacher | local Ollama/OpenAI-compatible, unverified notes, reviewer verification |
 | curiosity | gap -> pending topic -> approval -> Wikipedia + teacher -> RAG note |
-| self-learning | RAG memory (no weights), reviewed LoRA (weights), manual full training |
+| self-learning | bounded hungry-mode teacher notes (no weights), reviewed LoRA (weights), manual full training |
 | provider | optional local free-form chat, RAG/tools stay local, `--allow-general-chat` |
 | safety | optional rules + local linear ML head; off by default; exact fallback |
 | privacy | localhost, no telemetry, SSRF guard, upload caps, deletion |
 | UI | chat, documents, gaps, research queue, teacher notes, adapters, health |
 | packaging | standalone `atomzero` package (assistant deps only), `atomzero`/`atomzero-quickstart` entry points, GitHub release, HF/ModelScope weights |
-| tests | 237 passed; product 21/21; behavior 16/16; retrieval 1.000 |
+| tests | 245 passed; product 21/21; behavior 16/16; retrieval 1.000 |
 | document benchmark | 100 authored questions: 80/80 answerable, 20/20 no-answer |
 | public retrieval benchmark | SQuAD v2: 0.975 top-1, 1.000 top-5 (50 contexts, hybrid) |
 | visible-snippet answer | SQuAD v2: 0.816 top-1 answer in snippet (50 contexts, hybrid) |

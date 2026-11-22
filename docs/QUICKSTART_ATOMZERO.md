@@ -79,6 +79,26 @@ files and prunes deleted ones. `status` is a dry run; `doctor` checks orphan
 rows and FTS5 integrity; `export`/`import` move the index as JSONL. See
 [`DOCUMENTS.md`](DOCUMENTS.md) for every command.
 
+## Hungry mode (optional)
+
+Start the local teacher and the UI together:
+
+```powershell
+atomzero-quickstart --teacher
+```
+
+Then run a bounded curiosity pass:
+
+```powershell
+atomzero-hungry --docs data/atomzero_demo.db --topic Ankara --max-questions 5
+atomzero-hungry --docs data/atomzero_demo.db --dry-run --json
+```
+
+It checks local notes first, asks Ollama only for unknown questions, stores
+answers as **unverified** teacher notes and writes an audit ledger. It never
+fetches web pages and never changes weights. See
+[`HUNGRY_MODE.md`](HUNGRY_MODE.md) for budgets and the exact boundaries.
+
 ## Provider mode
 
 ```powershell

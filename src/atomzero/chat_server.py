@@ -15,6 +15,7 @@ Endpoints:
   POST /v1/documents/upload?source=...&title=...
   POST /v1/documents/search
   POST /v1/documents/answer
+  POST /v1/hungry/run
   GET  /v1/teacher/notes
   POST /v1/teacher/notes
   POST /v1/teacher/notes/verify
@@ -325,6 +326,20 @@ weights automatically.</p>
 <button id="gcuriosity">Propose curiosity topics</button></div>
 <p id="gmsg" class="hint"></p>
 <div id="gq"></div>
+<hr>
+<h3>Hungry mode</h3>
+<p class="hint">Opt-in. It checks pending gaps and an optional topic, asks the
+configured local teacher only for unknown facts, and stores answers as
+unverified notes. It never fetches web pages and never changes weights. Each
+run is bounded by a question/provider-call budget.</p>
+<div class="row">
+<label>questions <input id="hmax" type="number" min="1" max="20" value="3"></label>
+<label><input id="hdry" type="checkbox"> dry run</label>
+<input id="htopic" placeholder="Optional topic, e.g. Ankara">
+<button id="hrun">Run hungry mode</button>
+</div>
+<p id="hmsg" class="hint"></p>
+<div id="hres"></div>
 <script>
 function getSessionId() {
   try {
@@ -1487,6 +1502,58 @@ async function proposeCuriosity() {
   }
 }
 document.getElementById('gcuriosity').onclick = proposeCuriosity;
+async function runHungry() {
+  const msg = document.getElementById('hmsg');
+  const box = document.getElementById('hres');
+  const button = document.getElementById('hrun');
+  const parsed = parseInt(document.getElementById('hmax').value, 10);
+  const maxQuestions = Number.isFinite(parsed) ? parsed : 3;
+  const dryRun = document.getElementById('hdry').checked;
+  const topic = document.getElementById('htopic').value.trim();
+  button.disabled = true;
+  button.textContent = 'Running...';
+  msg.textContent = 'running hungry mode...';
+  box.textContent = '';
+  try {
+    const r = await fetch('/v1/hungry/run', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        max_questions: maxQuestions,
+        max_provider_calls: Math.max(4, maxQuestions + 3),
+        dry_run: dryRun,
+        topic,
+      })});
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'hungry error: ' + (j.error || r.status);
+      return;
+    }
+    msg.textContent = (j.learned || 0) + ' learned, ' +
+      (j.known || 0) + ' known, ' + (j.skipped || 0) + ' skipped, ' +
+      (j.failed || 0) + ' failed | weights changed: ' + j.weights_changed;
+    (j.results || []).forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'qitem';
+      const title = document.createElement('div');
+      title.textContent = (item.status || '?') + ' | ' +
+                          (item.question || '');
+      card.appendChild(title);
+      const detail = document.createElement('div');
+      detail.className = 'src';
+      detail.textContent = (item.source ? 'source: ' + item.source : '') +
+        (item.error ? ' | ' + item.error : '');
+      card.appendChild(detail);
+      box.appendChild(card);
+    });
+    await refreshGaps();
+  } catch (e) {
+    msg.textContent = 'hungry error: ' + e;
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Run hungry mode';
+  }
+}
+document.getElementById('hrun').onclick = runHungry;
 function refreshHealth() {
   fetch('/health').then(r => r.json()).then(j => {
     const docs = j.documents ? j.documents.chunks : 0;
@@ -1770,7 +1837,7 @@ class Handler(BaseHTTPRequestHandler):
                          "/v1/learning/queue/export",
                          "/v1/learning/gaps/propose",
                          "/v1/learning/gaps/dismiss",
-                         "/v1/curiosity/propose",
+                         "/v1/curiosity/propose", "/v1/hungry/run",
                          "/v1/learn_url", "/v1/research",
                          "/v1/research/queue",
                          "/v1/research/queue/approve",
@@ -1825,6 +1892,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._gap_dismiss(req)
             if route == "/v1/curiosity/propose":
                 return self._curiosity_propose(req)
+            if route == "/v1/hungry/run":
+                return self._hungry_run(req)
             if route == "/v1/research/queue":
                 return self._queue_add(req)
             if route == "/v1/research/queue/approve":
@@ -2124,6 +2193,39 @@ class Handler(BaseHTTPRequestHandler):
                 min_count=req.get("min_count", 1))
         except (CuriosityError, KnowledgeGapError, ResearchQueueError,
                 ValueError) as exc:
+            return self._json(400, {"error": str(exc)})
+        return self._json(200, result)
+
+    def _hungry_run(self, req: dict):
+        docs = _state.get("docs")
+        gaps = _state.get("gaps")
+        if docs is None or gaps is None:
+            return self._json(400, {
+                "error": "document memory and gap store are required"})
+        dry_run = bool(req.get("dry_run", False))
+        teacher = _state.get("teacher")
+        if teacher is None and not dry_run:
+            return self._json(400, {
+                "error": "teacher provider is not configured; use dry_run "
+                         "or start with --provider"})
+        topics = req.get("topics") or []
+        if isinstance(topics, str):
+            topics = [topics]
+        if req.get("topic"):
+            topics.append(str(req["topic"]))
+        try:
+            from atomzero.hungry import run_hungry
+
+            result = run_hungry(
+                docs, gaps, teacher, topics=topics,
+                max_questions=req.get("max_questions", 3),
+                max_provider_calls=req.get("max_provider_calls", 6),
+                question_limit=req.get("question_limit", 2),
+                min_confidence=req.get("min_confidence", 0.55),
+                expand=bool(req.get("expand", False)),
+                dry_run=dry_run,
+                ledger_path=_state.get("hungry_ledger_path"))
+        except (ValueError, OSError) as exc:
             return self._json(400, {"error": str(exc)})
         return self._json(200, result)
 
@@ -2466,6 +2568,7 @@ def serve(model_path: str, tokenizer_path: str, host: str = "127.0.0.1",
           teacher_label: str = "openai-compatible",
           active_adapter_file: str = "data/active_adapter.json",
           gap_store_path: str = "data/knowledge_gaps.json",
+          hungry_ledger_path: str = "data/hungry_ledger.jsonl",
           safety_filter: bool = False,
           reranker: str = "auto",
           neural_model: str = "models/all-MiniLM-L6-v2",
@@ -2577,6 +2680,7 @@ def serve(model_path: str, tokenizer_path: str, host: str = "127.0.0.1",
         "feedback_export_path": feedback_export_path,
         "gaps": gaps,
         "gap_store_path": gap_store_path,
+        "hungry_ledger_path": hungry_ledger_path,
         "adapter_history_path": "data/adapter_history.jsonl",
         "active_adapter_file": active_adapter_file,
         "safety": safety,
@@ -2633,6 +2737,7 @@ def main():
     ap.add_argument("--feedback-store", default="data/feedback_queue.json")
     ap.add_argument("--feedback-export", default="data/feedback_training.jsonl")
     ap.add_argument("--gap-store", default="data/knowledge_gaps.json")
+    ap.add_argument("--hungry-ledger", default="data/hungry_ledger.jsonl")
     ap.add_argument("--safety-filter", action="store_true")
     ap.add_argument("--no-safety-ml", dest="safety_ml",
                     action="store_false", default=True,
@@ -2672,7 +2777,8 @@ def main():
                  args.feedback_export, args.teacher_url, args.teacher_model,
                  args.teacher_timeout, args.teacher_label,
                  args.active_adapter_file, args.gap_store,
-                 args.safety_filter, args.reranker, args.neural_model,
+                 args.hungry_ledger, args.safety_filter, args.reranker,
+                 args.neural_model,
                  args.prewarm_vectors, args.vector_index, args.safety_ml,
                  args.chat_provider_url, args.chat_provider_model,
                  args.chat_provider_api_key, args.chat_provider_timeout,

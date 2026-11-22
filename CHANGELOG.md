@@ -8,6 +8,11 @@
 - Added `atomzero-docs summary-collection` and collection mode on
   `GET /v1/documents/summary`; every selected sentence keeps its source,
   page and section.
+- Added **hungry mode**: `atomzero-hungry`, `POST /v1/hungry/run` and a UI
+  section. It generates bounded questions, checks local knowledge, asks the
+  configured teacher only for unknowns, stores unverified notes and writes an
+  audit ledger. Weights never change.
+- Added `atomzero-quickstart --teacher` and gap states `known`/`learned`.
 
 ## atomzero 0.3.0 - document workflow and grounded answers (2026-11-22)
 

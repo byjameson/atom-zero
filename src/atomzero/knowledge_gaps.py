@@ -144,6 +144,31 @@ class KnowledgeGapStore:
             self._save()
             return copy.deepcopy(item)
 
+    def _resolve(self, item_id: str, status: str, **fields) -> dict:
+        with self._lock:
+            self._reload()
+            item = self._find(item_id)
+            if item.get("status") not in ("pending", "proposed"):
+                raise KnowledgeGapError(
+                    f"cannot mark a {item.get('status')} gap as {status}")
+            item["status"] = status
+            item["resolved_at"] = _now()
+            item.update({key: value for key, value in fields.items()
+                         if value is not None})
+            self._save()
+            return copy.deepcopy(item)
+
+    def mark_known(self, item_id: str, source: str = "") -> dict:
+        """Mark a gap as answered by an existing local source."""
+        return self._resolve(item_id, "known", source=str(source or ""))
+
+    def mark_learned(self, item_id: str, source: str = "",
+                     teacher: str = "", model: str = "") -> dict:
+        """Mark a gap as answered by a stored teacher note."""
+        return self._resolve(
+            item_id, "learned", teacher_source=str(source or ""),
+            teacher=str(teacher or ""), model=str(model or ""))
+
     def dismiss(self, item_id: str) -> dict:
         with self._lock:
             self._reload()

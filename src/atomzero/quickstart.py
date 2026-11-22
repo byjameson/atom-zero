@@ -103,6 +103,12 @@ def main(argv=None) -> int:
                         help="enable a local Ollama/OpenAI-compatible provider")
     parser.add_argument("--provider-url", default="http://127.0.0.1:11434/v1")
     parser.add_argument("--provider-model", default="llama3.2:3b")
+    parser.add_argument("--teacher", action="store_true",
+                        help="enable the Ollama teacher for hungry mode and "
+                             "teacher notes")
+    parser.add_argument("--teacher-url", default="http://127.0.0.1:11434/v1")
+    parser.add_argument("--teacher-model", default="llama3.2:3b")
+    parser.add_argument("--teacher-label", default="ollama")
     parser.add_argument("--safety-filter", action="store_true",
                         help="enable the optional rules + ML safety filter")
     parser.add_argument("--reset-demo", action="store_true",
@@ -127,6 +133,9 @@ def main(argv=None) -> int:
         safety_filter=args.safety_filter,
         chat_provider_url=(args.provider_url if args.provider else ""),
         chat_provider_model=(args.provider_model if args.provider else ""),
+        teacher_url=(args.teacher_url if args.teacher else ""),
+        teacher_model=(args.teacher_model if args.teacher else ""),
+        teacher_label=args.teacher_label,
         allow_general_chat=args.provider,
     )
 

@@ -59,6 +59,8 @@ def test_demo_page_uses_daily_agent_endpoint():
     assert "/v1/documents/evidence" in page
     assert "/v1/documents/answer" in page
     assert "/v1/documents/summary" in page
+    assert "/v1/hungry/run" in page
+    assert "hungry mode" in page
     assert "grounded answer" in page
     assert "summary" in page
     assert 'id="docsrc"' in page
@@ -884,6 +886,59 @@ def test_http_document_answer_and_scoped_search(tmp_path):
         with pytest.raises(urllib.error.HTTPError) as empty:
             _post(base + "/v1/documents/answer", {"query": "  "})
         assert empty.value.code == 400
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
+        docs.close()
+
+
+def test_http_hungry_mode_dry_run_and_learn(tmp_path):
+    class FakeTeacher:
+        label = "fake"
+        model = "fake-1"
+
+        def ask(self, prompt, system="", max_tokens=512):
+            if prompt.startswith("Propose"):
+                return "What is the capital of France?"
+            return "Paris is the capital of France."
+
+    try:
+        docs = DocMemory(tmp_path / "docs.db")
+    except Exception as exc:
+        pytest.skip(f"sqlite fts5 unavailable: {exc}")
+    docs.add_text("launch.txt", "The launch code is L-7781.")
+    gaps = KnowledgeGapStore(tmp_path / "gaps.json")
+    gap = gaps.add("What is the capital of France?")
+    old = dict(chat_server._state)
+    chat_server._state.update({
+        "model": None, "tok": None, "docs": docs, "adapter": "",
+        "name": "tiny-test", "params": 1, "config": {}, "step": 0,
+        "api_key": "", "metrics": {"requests": 0, "generated_tokens": 0},
+        "safety": None, "wiki_lang": "en",
+        "session_dir": str(tmp_path / "sessions"), "sessions": {},
+        "gaps": gaps, "teacher": FakeTeacher(),
+        "hungry_ledger_path": str(tmp_path / "hungry.jsonl"),
+    })
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        dry = _post(base + "/v1/hungry/run", {
+            "dry_run": True, "max_questions": 1})
+        assert dry["dry_run"] is True
+        assert dry["provider_calls"] == 0
+        assert gaps.get(gap["id"])["status"] == "pending"
+        learned = _post(base + "/v1/hungry/run", {
+            "max_questions": 1, "max_provider_calls": 2})
+        assert learned["learned"] == 1
+        assert learned["weights_changed"] is False
+        assert gaps.get(gap["id"])["status"] == "learned"
+        hits = docs.search("capital of France")
+        assert hits[0]["kind"] == "teacher"
+        assert hits[0]["verified"] is False
     finally:
         httpd.shutdown()
         httpd.server_close()

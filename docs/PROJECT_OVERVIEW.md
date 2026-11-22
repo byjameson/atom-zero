@@ -200,8 +200,15 @@ before approval. Live evidence: `research/results/curiosity_live.json`
 | level | what changes | approval | weights change? |
 |---|---|---|---|
 | RAG memory | document/teacher note enters index | human/queue | no |
+| Hungry mode | bounded teacher-fed note + gap status | explicit command; unverified | no |
 | Reviewed adapter | LoRA style/skill adapter | human + gate | yes |
 | Full training | new base checkpoint | offline decision | yes, manual |
+
+Hungry mode is an explicit, bounded loop for growing the retrieval index. It
+generates questions from pending gaps, topics and document titles, checks the
+local index, asks the configured teacher only for unknown questions, stores
+answers as unverified notes and writes a JSONL ledger. It never fetches web
+pages and stops at the question/provider-call budgets.
 
 The only runtime weight-update path is the reviewed adapter:
 
@@ -213,7 +220,8 @@ feedback -> human approve/reject -> export approved JSONL
 
 Adapters are a style/skill layer, not a fact database: raw probe stays 2/10
 with the adapter. Curiosity/teacher notes do not train weights. The model does
-not decide what to study or self-modify.
+not decide what to study during chat or self-modify; hungry mode is an explicit
+command with hard budgets.
 
 ## 10. Optional local provider
 
@@ -278,7 +286,7 @@ whether to enable it.
 | document benchmark (100 authored questions) | **80/80 answerable, 20/20 no-answer** |
 | public SQuAD v2 retrieval (50 contexts) | **hybrid 0.975 top-1; 0.816 answer in snippet** |
 | safety-enabled product | **26/26** |
-| test suite | **237 passed** |
+| test suite | **245 passed** |
 
 The product benchmark is narrow and authored: tools, memory, tasks, retrieval,
 teacher-note review, missing-source detection and one short generation. It is

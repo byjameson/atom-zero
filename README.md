@@ -136,7 +136,7 @@ LoRA adapters.
 | document benchmark, 100 authored questions | **80/80 answerable, 20/20 no-answer** |
 | public SQuAD v2 retrieval (20 contexts) | **0.98 top-1 context (FTS), 1.00 top-5** |
 | public SQuAD v2 retrieval (50 contexts) | **hybrid 0.975 top-1; 0.816 answer in visible snippet** |
-| test suite | **237 passed** |
+| test suite | **245 passed** |
 
 The raw-model probe asks ten simple general questions with no documents, no
 calculator and no agent. The 49.2M model gets **2/10**. The product gets
@@ -206,8 +206,21 @@ The self-improvement ladder is deliberately split:
 - **Full training:** a new base checkpoint; offline project decision; weights
   change offline.
 
-The model never crawls, mutates its own weights or decides what to study while
-you chat.
+The model never crawls, mutates its own weights or studies topics on its own
+during chat. **Hungry mode** is an explicit, bounded command for growing the
+retrieval index:
+
+```powershell
+atomzero-hungry --topic Ankara --max-questions 5
+atomzero-hungry --dry-run --json
+```
+
+It generates questions from pending gaps, topic seeds and document titles,
+checks the local index, asks the configured local teacher only for unknown
+questions, stores answers as unverified notes and writes an audit ledger. It
+never fetches web pages, never changes weights and stops at the question and
+provider-call budgets. See
+[HUNGRY_MODE.md](https://github.com/byjameson/atom-zero/blob/main/docs/HUNGRY_MODE.md).
 
 ## Optional local provider
 

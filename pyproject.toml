@@ -32,6 +32,7 @@ atomzero = "atomzero.chat_server:main"
 atomzero-quickstart = "atomzero.quickstart:main"
 atomzero-doctor = "atomzero.doctor:main"
 atomzero-docs = "atomzero.doc_memory:main"
+atomzero-hungry = "atomzero.hungry:main"
 
 [project.urls]
 Homepage = "https://github.com/byjameson/atom-zero"

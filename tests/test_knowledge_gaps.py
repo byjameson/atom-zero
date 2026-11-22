@@ -22,6 +22,25 @@ def test_gap_store_dedupes_and_tracks_status(tmp_path):
     assert store.stats() == {"total": 1, "dismissed": 1}
 
 
+def test_gap_store_marks_known_and_learned(tmp_path):
+    store = KnowledgeGapStore(tmp_path / "gaps.json")
+    known = store.add("What is the launch code?")
+    learned = store.add("What is the capital of France?")
+    resolved = store.mark_known(known["id"], "launch.txt")
+    assert resolved["status"] == "known"
+    assert resolved["source"] == "launch.txt"
+    assert resolved["resolved_at"]
+    taught = store.mark_learned(
+        learned["id"], "teacher://ollama/abc", "ollama", "llama3.2:3b")
+    assert taught["status"] == "learned"
+    assert taught["teacher_source"] == "teacher://ollama/abc"
+    assert taught["teacher"] == "ollama"
+    assert taught["model"] == "llama3.2:3b"
+    assert store.stats() == {"total": 2, "known": 1, "learned": 1}
+    with pytest.raises(KnowledgeGapError):
+        store.mark_known(known["id"], "launch.txt")
+
+
 def test_gap_store_validates_input_and_missing_ids(tmp_path):
     store = KnowledgeGapStore(tmp_path / "gaps.json")
     with pytest.raises(KnowledgeGapError):
