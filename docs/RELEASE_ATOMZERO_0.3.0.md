@@ -1,7 +1,7 @@
 # atomzero 0.3.0 - document workflow and grounded answers
 
-Status: **release candidate prepared on 2026-11-22.** No model or runtime
-weights changed; the weights remain `0.8.0`.
+Status: **published to PyPI as `atomzero 0.3.0` on 2026-11-22.** No model or
+runtime weights changed; the weights remain `0.8.0`.
 
 ## What changed
 

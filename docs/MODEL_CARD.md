@@ -31,7 +31,7 @@ benchmarks and release — is
 | vector index | cached `doc_vectors`, prewarmed numpy matrix, IVF ANN above 256 chunks, exact fallback |
 | tools | time, safe arithmetic, task add/list/complete, name/likes memory, allowlisted 3-step plan API with confirmation |
 | sessions | transcript restore, JSON export/import, exact Forget, session Forget |
-| documents | ingest text/Markdown/HTML/PDF/DOCX, page/section citations, evidence panel/API, source/title/sha256, scoped answers, extractive summaries, per-source delete |
+| documents | ingest text/Markdown/HTML/PDF/DOCX, page/section citations, evidence panel/API, source/title/sha256, scoped answers, extractive summaries, headless `atomzero-docs` CLI with sync/status/doctor/export/import, per-source delete |
 | research | approved-only queue, Wikipedia fetch, worker lock/log, teacher synthesis |
 | teacher | local Ollama/OpenAI-compatible, unverified notes, reviewer verification |
 | curiosity | gap -> pending topic -> approval -> Wikipedia + teacher -> RAG note |
