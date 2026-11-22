@@ -252,6 +252,7 @@ hr{border:0;border-top:1px solid #ddd;margin:22px 0}
 <button data-q="find report weekly">find report</button>
 <button data-q="list reports">list reports</button>
 <button data-q="list reports oldest">reports oldest</button>
+<button data-q="verify report archive">verify archive</button>
 <button data-q="keep reports 2 dry-run">report dry-run</button>
 <button data-q="plan goal prepare the warranty page">plan goal</button>
 </div>

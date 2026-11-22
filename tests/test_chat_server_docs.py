@@ -864,6 +864,7 @@ def test_ui_collection_scope_contract():
     assert 'data-q="find report weekly"' in page
     assert 'data-q="list reports"' in page
     assert 'data-q="list reports oldest"' in page
+    assert 'data-q="verify report archive"' in page
     assert 'data-q="keep reports 2 dry-run"' in page
     assert "show report w0001" in page
     assert "getWeeklyReview" in page
@@ -1457,6 +1458,16 @@ def test_http_weekly_reports_archive(tmp_path):
             item["id"]: item for item in verification["entries"]}
         assert verified_by_id[entry["id"]]["status"] == "ok"
         assert verified_by_id[missing_entry["id"]]["status"] == "missing"
+        chat_verify = _post(base + "/v1/agent/chat", {
+            "session_id": "report-chat",
+            "message": "verify report archive"})
+        assert chat_verify["verification"]["summary"]["missing"] == 1
+        assert "1 ok, 1 failed" in chat_verify["reply"]
+        chat_one = _post(base + "/v1/agent/chat", {
+            "session_id": "report-chat",
+            "message": f"verify report {entry['id']}"})
+        assert chat_one["ok"] is True
+        assert chat_one["report_id"] == entry["id"]
         pruned = _post(base + "/v1/weekly-review/reports/prune", {})
         assert pruned["removed"] == 1
         assert pruned["remaining"] == 1

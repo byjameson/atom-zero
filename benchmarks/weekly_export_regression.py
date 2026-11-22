@@ -17,7 +17,8 @@ Checks:
 - sorting archive entries by newest, oldest and largest, including chat sort
   commands;
 - opening an archived report by id from chat;
-- verifying stored size and SHA-256 against archived files.
+- verifying stored size and SHA-256 against archived files, including chat
+  verification commands.
 
 Run:
 
@@ -122,6 +123,7 @@ def run(output: str | Path | None = None) -> dict:
                 and 'data-q="find report weekly"' in page
                 and 'data-q="list reports"' in page
                 and 'data-q="list reports oldest"' in page
+                and 'data-q="verify report archive"' in page
                 and 'data-q="keep reports 2 dry-run"' in page
                 and "refreshWeeklyReports" in page
                 and "pruneWeeklyReports" in page
@@ -315,6 +317,21 @@ def run(output: str | Path | None = None) -> dict:
                 and verification.get("summary", {}).get("missing") == 1
                 and verification.get("ok") is False,
                 str(verification.get("summary")))
+            chat_verify = _post(base, "/v1/agent/chat", {
+                "session_id": "verify-chat",
+                "message": "verify report archive"})
+            chat_one = _post(base, "/v1/agent/chat", {
+                "session_id": "verify-chat",
+                "message": f"verify report {entry.get('id')}"})
+            check(
+                "chat_report_verify",
+                (chat_verify.get("tool_calls") or [{}])[0].get("scope")
+                == "archive"
+                and chat_verify.get("verification", {}).get(
+                    "summary", {}).get("missing") == 1
+                and chat_one.get("ok") is True
+                and chat_one.get("report_id") == entry.get("id"),
+                chat_verify.get("reply", "")[:200])
             pruned = _post(base, "/v1/weekly-review/reports/prune", {})
             after_prune = json.loads(urllib.request.urlopen(
                 base + "/v1/weekly-review/reports?limit=5",

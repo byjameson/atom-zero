@@ -174,6 +174,11 @@ show report w0001
 -> metadata plus Markdown content for one archived report
 -> Turkish: "rapor göster w0001"
 
+verify report archive
+verify report w0001
+-> size/SHA-256 integrity for all entries or one id
+-> Turkish: "rapor arşivini doğrula", "rapor w0001 doğrula"
+
 prune report archive
 keep reports 2
 keep reports 1 dry-run

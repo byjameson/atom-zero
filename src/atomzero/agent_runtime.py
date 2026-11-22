@@ -479,6 +479,92 @@ class AgentSession:
             "truncated": truncated,
         }
 
+    def _verify_weekly_reports(self, report_id: str = "") -> dict:
+        report_id = str(report_id or "").strip()
+        tool = [{"name": "verify_weekly_reports",
+                 "scope": "report" if report_id else "archive"}]
+        try:
+            archive = WeeklyReportArchive(self.weekly_reports_path)
+            result = archive.verify()
+        except (WeeklyReportError, OSError) as exc:
+            return {"reply": f"report archive error: {exc}",
+                    "tool_calls": tool, "sources": [], "evidence": []}
+        if report_id:
+            entry = next(
+                (item for item in result["entries"]
+                 if str(item.get("id", "")) == report_id), None)
+            if entry is None:
+                return {"reply": f"weekly report not found: {report_id}",
+                        "tool_calls": tool, "sources": [], "evidence": []}
+            problems = list(entry.get("problems", []))
+            summary = {
+                "total": 1, "ok": 0, "failed": 0, "missing": 0,
+                "size_mismatch": 0, "hash_mismatch": 0,
+            }
+            if entry["status"] == "ok":
+                summary["ok"] = 1
+            else:
+                summary["failed"] = 1
+            for problem in problems:
+                summary[problem] = summary.get(problem, 0) + 1
+            verification = {
+                "verified_at": result["verified_at"],
+                "index": result["index"],
+                "summary": summary,
+                "entries": [entry],
+                "ok": entry["status"] == "ok",
+            }
+            tool[0].update({"id": report_id, "status": entry["status"],
+                            "problems": problems})
+            lines = [
+                f"Report {report_id} integrity: {entry['status']}",
+                f"- {entry.get('path', '')}",
+                f"Stored size: {entry.get('size_bytes')} | "
+                f"actual: {entry.get('actual_size_bytes')}",
+                f"Stored SHA-256: {entry.get('sha256', '')}",
+                f"Actual SHA-256: {entry.get('actual_sha256', '') or '-'}",
+            ]
+            if problems:
+                lines.append("Problems: " + ", ".join(problems))
+            return {
+                "reply": "\n".join(lines),
+                "tool_calls": tool,
+                "sources": [],
+                "evidence": [],
+                "verification": verification,
+                "reports": [entry],
+                "report_id": report_id,
+                "ok": entry["status"] == "ok",
+            }
+        summary = result["summary"]
+        tool[0]["summary"] = summary
+        if summary["failed"] == 0:
+            reply = (f"Report integrity: all {summary['total']} report(s) "
+                     "match stored size and SHA-256.")
+        else:
+            lines = [
+                f"Report integrity: {summary['ok']} ok, "
+                f"{summary['failed']} failed, {summary['missing']} missing "
+                f"({summary['total']} total)"
+            ]
+            for entry in result["entries"]:
+                if entry["status"] == "ok":
+                    continue
+                problems = ", ".join(entry.get("problems", []))
+                lines.append(
+                    f"- {entry.get('id', '?')} | {entry['status']} | "
+                    f"{entry.get('path', '')} [{problems}]")
+            reply = "\n".join(lines)
+        return {
+            "reply": reply,
+            "tool_calls": tool,
+            "sources": [],
+            "evidence": [],
+            "verification": result,
+            "reports": result["entries"],
+            "ok": result["ok"],
+        }
+
     @staticmethod
     def _report_action_lines(entries: list[dict]) -> str:
         lines = []
@@ -806,6 +892,26 @@ class AgentSession:
             query = re.sub(r"^search (docs|my notes|documents)\s*:?\s*", "",
                            text, flags=re.IGNORECASE)
             return self._search_docs(query)
+        verify_match = re.match(
+            r"^(?:verify|check)\s+(?:the\s+)?"
+            r"(?:report\s+archive|reports?|report\s+integrity)"
+            r"(?:\s+(w\d+))?\??$", text, re.IGNORECASE)
+        if not verify_match:
+            verify_match = re.match(
+                r"^(?:verify|check)\s+(w\d+)\??$",
+                text, re.IGNORECASE)
+        if not verify_match:
+            verify_match = re.match(
+                r"^(?:rapor|raporlar[ıi])\s+ar[şs]ivini\s+"
+                r"do[ğg]rula\??$", text, re.IGNORECASE)
+        if not verify_match:
+            verify_match = re.match(
+                r"^(?:rapor|raporu)\s+(w\d+)\s+do[ğg]rula\??$",
+                text, re.IGNORECASE)
+        if verify_match:
+            report_id = (verify_match.group(1)
+                         if verify_match.lastindex else "")
+            return self._verify_weekly_reports(report_id or "")
         show_match = re.match(
             r"^(?:show|open|display|view)\s+(?:the\s+)?"
             r"(?:report|report\s+archive|archive\s+entry)\s+"

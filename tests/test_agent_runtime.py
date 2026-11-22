@@ -223,6 +223,43 @@ def test_agent_searches_weekly_report_archive(tmp_path):
     assert "not found" in missing_show["reply"]
 
 
+def test_agent_verifies_report_archive_integrity(tmp_path):
+    index_path = tmp_path / "weekly_reports.json"
+    archive = WeeklyReportArchive(index_path)
+    good = tmp_path / "good.md"
+    good.write_text("# Good\n", encoding="utf-8")
+    changed = tmp_path / "changed.md"
+    changed.write_text("# Alpha\n", encoding="utf-8")
+    missing = tmp_path / "missing.md"
+    missing.write_text("# Missing\n", encoding="utf-8")
+    for number, path in enumerate((good, changed, missing), start=1):
+        archive.record(path, {
+            "generated": f"2026-11-2{number} 09:00", "period_days": 7,
+            "task_counts": {}, "recent_source_count": 0,
+            "graph": {"entities": [], "connections": []},
+        }, exported_at=f"2026-11-2{number}T09:00:00")
+    changed.write_text("# Bravo\n", encoding="utf-8")
+    missing.unlink()
+    agent = AgentSession(
+        "s-verify", tmp_path / "memory.json",
+        weekly_reports_path=str(index_path))
+
+    result = agent.chat("verify report archive")
+    assert result["tool_calls"][0]["scope"] == "archive"
+    assert result["verification"]["summary"]["ok"] == 1
+    assert result["verification"]["summary"]["failed"] == 2
+    assert result["verification"]["summary"]["missing"] == 1
+    assert "1 ok, 2 failed, 1 missing" in result["reply"]
+    good_check = agent.chat("verify report w0001")
+    assert good_check["ok"] is True
+    assert good_check["reports"][0]["status"] == "ok"
+    changed_check = agent.chat("verify report w0002")
+    assert changed_check["ok"] is False
+    assert "hash_mismatch" in changed_check["reply"]
+    missing_check = agent.chat("verify report w9999")
+    assert "not found" in missing_check["reply"]
+
+
 def test_agent_report_archive_maintenance_flow(tmp_path):
     index_path = tmp_path / "weekly_reports.json"
     archive = WeeklyReportArchive(index_path)
