@@ -1,5 +1,15 @@
 # Changelog
 
+## atomzero 0.1.9 - support and onboarding polish (2026-11-22)
+
+- Added EVM, Solana and Bitcoin donation addresses to the README, PyPI
+  description, HF/ModelScope model card, project overview and articles.
+- Added `atomzero-quickstart --reset-demo`.
+- Added `atomzero --version` and `atomzero-quickstart --version`.
+- Added `docs/TROUBLESHOOTING.md`.
+- No model/runtime behavior changed; weights remain `0.8.0`.
+- Release notes: [`docs/RELEASE_ATOMZERO_0.1.9.md`](docs/RELEASE_ATOMZERO_0.1.9.md).
+
 ## atomzero 0.1.8 - install doctor (2026-11-22)
 
 - Added `atomzero-doctor`: Python/package/dependency/torch-CUDA/cache/port/

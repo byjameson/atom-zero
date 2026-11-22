@@ -13,7 +13,7 @@ ModelScope.
 ## Install
 
 ```powershell
-pip install atomzero==0.1.8
+pip install atomzero==0.1.9
 ```
 
 Optional local MiniLM reranker:
@@ -224,11 +224,25 @@ the exact rules. It is an operator tool, not a hosted content policy.
 - The document benchmark is an authored regression gate, not a public
   leaderboard.
 
+## Support
+
+If Atom Zero is useful, donations help cover compute, evaluation and
+maintenance. There is no paid support or investment offer, and donations do not
+buy influence over results or roadmap decisions.
+
+- **EVM-compatible networks** (Ethereum, BNB Smart Chain, Polygon, Optimism,
+  Arbitrum One, Base, Avalanche C-Chain):
+  `0xa4dEc84Fe6F13c8A3b8707446D6892a6E272285c`
+- **Solana:** `EDqs8w4JkS5vAAfxmsB7fAQwoauEYufYXvMWFW9aYPdc`
+- **Bitcoin:** `bc1qsq4mdtf0dlfvppllqwdaknxrq6xkjgsrx6ctgm`
+
+Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
+
 ## Links
 
-- PyPI: <https://pypi.org/project/atomzero/0.1.8/>
+- PyPI: <https://pypi.org/project/atomzero/0.1.9/>
 - GitHub source: <https://github.com/byjameson/atom-zero>
-- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v0.1.8>
+- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v0.1.9>
 - Quickstart: <https://github.com/byjameson/atom-zero/blob/main/docs/QUICKSTART_ATOMZERO.md>
 - Model card: <https://github.com/byjameson/atom-zero/blob/main/docs/MODEL_CARD.md>
 - Full project map: <https://github.com/byjameson/atom-zero/blob/main/docs/PROJECT_OVERVIEW.md>

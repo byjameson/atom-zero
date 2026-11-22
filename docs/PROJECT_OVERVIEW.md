@@ -275,11 +275,11 @@ not MMLU, GSM8K or HumanEval. The 21/21 is the product, not the bare model.
 ## 14. Packaging and reproduction
 
 ```powershell
-pip install atomzero==0.1.8
+pip install atomzero==0.1.9
 atomzero-quickstart
 ```
 
-`atomzero 0.1.8` is the standalone assistant package. `streamft 1.0` is the
+`atomzero 0.1.9` is the standalone assistant package. `streamft 1.0` is the
 separate low-VRAM trainer; `streamft 0.9.2` is the last compatibility release
 that bundled Atom Zero. The quickstart downloads the checkpoint/tokenizer from
 Hugging Face, seeds a demo corpus, starts the server and opens the browser.
@@ -307,6 +307,10 @@ LinkedIn and ModelScope.
 - LinkedIn: https://www.linkedin.com/in/g%C3%B6khan-cava-874a32157/
 - Document formats: `DOCUMENTS.md`
 - Email: **gokhancava@gmail.com**
+- Support: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
+  - EVM: `0xa4dEc84Fe6F13c8A3b8707446D6892a6E272285c`
+  - Solana: `EDqs8w4JkS5vAAfxmsB7fAQwoauEYufYXvMWFW9aYPdc`
+  - Bitcoin: `bc1qsq4mdtf0dlfvppllqwdaknxrq6xkjgsrx6ctgm`
 - License: Apache-2.0; data attribution in `NOTICE`.
 
 ## 16. Limits and potential

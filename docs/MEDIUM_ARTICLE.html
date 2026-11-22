@@ -114,7 +114,7 @@ weights_changed: false
 </ul>
 <p>The closest description is: a compact <strong>agent harness</strong> with a small language model inside. The harness is the reusable asset.</p>
 <h2>Try it</h2>
-<pre><code class="language-powershell">pip install atomzero==0.1.8
+<pre><code class="language-powershell">pip install atomzero==0.1.9
 atomzero-quickstart
 </code></pre>
 <p>Atom Zero is the standalone <code>atomzero</code> package. The first <code>atomzero-quickstart</code> run downloads the ~197 MB checkpoint/tokenizer from Hugging Face, seeds a small demo corpus (launch code, warranty, travel, visitor badge), starts the server and opens the browser. <code>streamft</code> remains the low-VRAM trainer and is not required. Try:</p>
@@ -140,7 +140,7 @@ Add task buy milk / My name is Alex              -&gt; local tools + memory
 <p>If you want to inspect the claims:</p>
 <ul>
 <li>GitHub: https://github.com/byjameson/atom-zero</li>
-<li>PyPI: https://pypi.org/project/atomzero/0.1.8/</li>
+<li>PyPI: https://pypi.org/project/atomzero/0.1.9/</li>
 <li>streamft trainer: https://pypi.org/project/streamft/1.0.1/</li>
 <li>Hugging Face: https://huggingface.co/byjameson/atom-zero-49m</li>
 <li>ModelScope: https://modelscope.cn/models/byjameson/atom-zero-49m</li>
@@ -148,6 +148,14 @@ Add task buy milk / My name is Alex              -&gt; local tools + memory
 <li>Benchmarks: https://github.com/byjameson/atom-zero/blob/main/docs/BENCHMARKS.md</li>
 <li>Original dev.to post: https://dev.to/mycute_97b39c4e34027570f9/atom-zero-a-49m-local-assistant-that-says-i-dont-know-1p7m</li>
 </ul>
+<h2>Support</h2>
+<p>Donations help cover compute, evaluation and maintenance. There is no paid support or investment offer, and donations do not buy influence over results or roadmap decisions.</p>
+<ul>
+<li><strong>EVM-compatible networks:</strong> <code>0xa4dEc84Fe6F13c8A3b8707446D6892a6E272285c</code></li>
+<li><strong>Solana:</strong> <code>EDqs8w4JkS5vAAfxmsB7fAQwoauEYufYXvMWFW9aYPdc</code></li>
+<li><strong>Bitcoin:</strong> <code>bc1qsq4mdtf0dlfvppllqwdaknxrq6xkjgsrx6ctgm</code></li>
+</ul>
+<p>Full details: https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md</p>
 <p>Apache-2.0 for code and weights. Built on a 6 GB RTX 3050 laptop.</p>
 <hr />
 <p><em>If you build local RAG or small-model agents, I would like to hear what breaks first. The most useful feedback is a failing question with a source and an expected answer.</em></p>

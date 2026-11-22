@@ -1,11 +1,11 @@
 # Atom Zero 49.2M model card
 
-Version: model weights `0.8.0`; standalone `atomzero 0.1.8`<br>
+Version: model weights `0.8.0`; standalone `atomzero 0.1.9`<br>
 Last updated: 2026-11-22
 License: Apache-2.0 for code and weights; data attribution in `NOTICE`.
 
 ```powershell
-pip install atomzero==0.1.8
+pip install atomzero==0.1.9
 atomzero-quickstart
 ```
 
@@ -174,15 +174,29 @@ Evidence lives in `research/results/` and
 
 ## Published artifacts
 
-- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v0.1.8>
+- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v0.1.9>
 - GitHub source: <https://github.com/byjameson/atom-zero>
-- Atom Zero PyPI: <https://pypi.org/project/atomzero/0.1.8/>
+- Atom Zero PyPI: <https://pypi.org/project/atomzero/0.1.9/>
 - Hugging Face: <https://huggingface.co/byjameson/atom-zero-49m>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-49m>
 - launch article: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-a-49m-local-assistant-that-says-i-dont-know-1p7m>
 - Medium: <https://medium.com/@myredditacc9393/atom-zero-a-49m-local-assistant-that-says-i-dont-know-df1ebc0e2e78>
 - LinkedIn: <https://www.linkedin.com/in/g%C3%B6khan-cava-874a32157/>
 - document formats: <https://github.com/byjameson/atom-zero/blob/main/docs/DOCUMENTS.md>
+
+## Support
+
+Donations help cover compute, evaluation and maintenance. There is no paid
+support or investment offer, and donations do not buy influence over results or
+roadmap decisions.
+
+- **EVM-compatible networks** (Ethereum, BNB Smart Chain, Polygon, Optimism,
+  Arbitrum One, Base, Avalanche C-Chain):
+  `0xa4dEc84Fe6F13c8A3b8707446D6892a6E272285c`
+- **Solana:** `EDqs8w4JkS5vAAfxmsB7fAQwoauEYufYXvMWFW9aYPdc`
+- **Bitcoin:** `bc1qsq4mdtf0dlfvppllqwdaknxrq6xkjgsrx6ctgm`
+
+Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 
 ## Contact
 

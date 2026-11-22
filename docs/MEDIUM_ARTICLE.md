@@ -152,7 +152,7 @@ The closest description is: a compact **agent harness** with a small language mo
 ## Try it
 
 ```powershell
-pip install atomzero==0.1.8
+pip install atomzero==0.1.9
 atomzero-quickstart
 ```
 
@@ -188,13 +188,23 @@ The honest gaps are model capability, tool planning, multilingual quality and a 
 If you want to inspect the claims:
 
 - GitHub: https://github.com/byjameson/atom-zero
-- PyPI: https://pypi.org/project/atomzero/0.1.8/
+- PyPI: https://pypi.org/project/atomzero/0.1.9/
 - streamft trainer: https://pypi.org/project/streamft/1.0.1/
 - Hugging Face: https://huggingface.co/byjameson/atom-zero-49m
 - ModelScope: https://modelscope.cn/models/byjameson/atom-zero-49m
 - Model card: https://github.com/byjameson/atom-zero/blob/main/docs/MODEL_CARD.md
 - Benchmarks: https://github.com/byjameson/atom-zero/blob/main/docs/BENCHMARKS.md
 - Original dev.to post: https://dev.to/mycute_97b39c4e34027570f9/atom-zero-a-49m-local-assistant-that-says-i-dont-know-1p7m
+
+## Support
+
+Donations help cover compute, evaluation and maintenance. There is no paid support or investment offer, and donations do not buy influence over results or roadmap decisions.
+
+- **EVM-compatible networks:** `0xa4dEc84Fe6F13c8A3b8707446D6892a6E272285c`
+- **Solana:** `EDqs8w4JkS5vAAfxmsB7fAQwoauEYufYXvMWFW9aYPdc`
+- **Bitcoin:** `bc1qsq4mdtf0dlfvppllqwdaknxrq6xkjgsrx6ctgm`
+
+Full details: https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md
 
 Apache-2.0 for code and weights. Built on a 6 GB RTX 3050 laptop.
 

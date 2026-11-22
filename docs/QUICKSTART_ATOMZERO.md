@@ -11,7 +11,7 @@
 ## Run
 
 ```powershell
-pip install atomzero==0.1.8
+pip install atomzero==0.1.9
 atomzero-quickstart
 ```
 
@@ -73,8 +73,7 @@ local. Start Ollama first. Use a different model with `--provider-model`.
 ## Reset the demo
 
 ```powershell
-Remove-Item data/atomzero_demo.db -ErrorAction SilentlyContinue
-atomzero-quickstart
+atomzero-quickstart --reset-demo
 ```
 
 ## Troubleshooting
@@ -86,5 +85,14 @@ atomzero-quickstart
   retrieval; download `models/all-MiniLM-L6-v2` for semantic recall.
 - **No Ollama** — chat still works; curiosity/teacher calls will report the
   provider error. Start Ollama and pull `llama3.2:3b`.
-- **Safety** — off by default. Add `--safety-filter` only if you want the
+- **Safety** – off by default. Add `--safety-filter` only if you want the
   optional rule+ML filter.
+
+## Support
+
+- EVM-compatible networks:
+  `0xa4dEc84Fe6F13c8A3b8707446D6892a6E272285c`
+- Solana: `EDqs8w4JkS5vAAfxmsB7fAQwoauEYufYXvMWFW9aYPdc`
+- Bitcoin: `bc1qsq4mdtf0dlfvppllqwdaknxrq6xkjgsrx6ctgm`
+
+Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
