@@ -383,6 +383,78 @@ def add_citation_source(sources: dict, hit: dict) -> dict:
     return source
 
 
+def grounded_answer(query: str, hits: list[dict],
+                    limit: int = 3) -> dict:
+    """Build a cited answer, evidence list and confidence from search hits.
+
+    This is the shared core used by both the HTTP endpoint and the
+    ``atomzero-docs answer`` CLI. It does not generate new facts; it quotes the
+    retrieved local sentences and labels teacher notes.
+    """
+    scored = []
+    for hit in hits:
+        try:
+            value = float(hit.get("rerank_score") or 0.0)
+        except (TypeError, ValueError):
+            value = 0.0
+        scored.append((value, hit))
+    top_score = max((value for value, _ in scored), default=0.0)
+    # Keep only notes close to the winning match. Without this, a strong hit
+    # can drag unrelated documents into the answer just to fill three slots.
+    cutoff = max(0.18, top_score * 0.5)
+    relevant = [hit for value, hit in scored if value >= cutoff]
+    if not relevant and scored:
+        relevant = [scored[0][1]]
+    selected = diverse_hits(relevant, limit=limit)
+    confidence = retrieval_confidence(query, selected)
+    notes = []
+    evidence = []
+    source_map: dict = {}
+    unverified = False
+    for hit in selected:
+        teacher = hit.get("kind") == "teacher"
+        verified = bool(hit.get("verified", True))
+        if teacher and not verified:
+            label = "teacher note, unverified"
+        elif teacher:
+            reviewer = str(hit.get("reviewer", "")).strip()
+            label = (f"teacher note, verified by {reviewer}"
+                     if reviewer else "teacher note, verified")
+        else:
+            label = "source"
+        snippet = best_snippet(query, hit.get("chunk", ""))
+        location = format_citation(hit)
+        notes.append(f"- {snippet} ({label}: {location})")
+        try:
+            score = round(float(hit.get("rerank_score") or 0.0), 3)
+        except (TypeError, ValueError):
+            score = 0.0
+        evidence.append({
+            "source": hit.get("source", ""),
+            "title": hit.get("title", ""),
+            "page": hit.get("page"),
+            "section": hit.get("section", ""),
+            "snippet": snippet,
+            "chunk": hit.get("chunk", ""),
+            "score": score,
+            "kind": hit.get("kind", "document"),
+            "verified": verified,
+            "source_url": hit.get("source_url", ""),
+        })
+        add_citation_source(source_map, hit)
+        if not verified:
+            unverified = True
+    text = (f"I found these notes:\n" + "\n".join(notes) + "\n\n"
+            "This is a local note, not professional advice.")
+    if confidence["label"] == "low":
+        text += ("\n\nMatch confidence is low; check the source before "
+                 "relying on this answer.")
+    if unverified:
+        text += "\n\nThis includes an unverified teacher-derived note."
+    return {"text": text, "sources": list(source_map.values()),
+            "evidence": evidence, "confidence": confidence}
+
+
 def _chunks(text: str) -> list[str]:
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
@@ -1315,6 +1387,11 @@ def main(argv=None):
     search.add_argument("--source-prefix", default="")
     search.add_argument("--kind", default="")
     search.add_argument("--no-rerank", action="store_true")
+    answer = sub.add_parser(
+        "answer", help="return a cited answer with evidence and confidence")
+    answer.add_argument("query")
+    answer.add_argument("-k", type=int, default=6)
+    answer.add_argument("--source", default="")
     list_db = sub.add_parser("list", help="list indexed sources")
     stats_db = sub.add_parser("stats", help="show index statistics")
     evidence = sub.add_parser("evidence", help="show chunks for a source")
@@ -1325,7 +1402,7 @@ def main(argv=None):
     forget.add_argument("source", nargs="?")
     forget.add_argument("--all", action="store_true")
     # Accept --db on either side of the subcommand; the docs use both forms.
-    for parser in (add, search, list_db, stats_db, evidence, forget):
+    for parser in (add, search, answer, list_db, stats_db, evidence, forget):
         parser.add_argument("--db", dest="db_after", default=None)
     args = ap.parse_args(argv)
     mem = DocMemory(args.db_after or args.db or "data/docs.db")
@@ -1351,6 +1428,19 @@ def main(argv=None):
                 source=args.source, source_prefix=args.source_prefix,
                 kind=args.kind)
             print(json.dumps(hits, indent=2, ensure_ascii=False))
+        elif args.cmd == "answer":
+            hits = mem.search(
+                args.query, k=args.k, source=args.source)
+            if not hits:
+                result = {
+                    "text": "I do not have a source for that yet.",
+                    "sources": [], "evidence": [],
+                    "confidence": {"score": 0.0, "label": "none",
+                                   "coverage": 0.0, "margin": 0.0},
+                }
+            else:
+                result = grounded_answer(args.query, hits)
+            print(json.dumps(result, indent=2, ensure_ascii=False))
         elif args.cmd == "list":
             print(json.dumps(mem.sources(), indent=2, ensure_ascii=False))
         elif args.cmd == "evidence":

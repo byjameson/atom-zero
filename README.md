@@ -135,7 +135,7 @@ LoRA adapters.
 | document benchmark, 100 authored questions | **80/80 answerable, 20/20 no-answer** |
 | public SQuAD v2 retrieval (20 contexts) | **0.98 top-1 context (FTS), 1.00 top-5** |
 | public SQuAD v2 retrieval (50 contexts) | **hybrid 0.975 top-1; 0.825 answer in visible snippet** |
-| test suite | **224 passed** |
+| test suite | **225 passed** |
 
 The raw-model probe asks ten simple general questions with no documents, no
 calculator and no agent. The 49.2M model gets **2/10**. The product gets
@@ -156,9 +156,9 @@ short generation. It is **not MMLU, GSM8K or HumanEval**.
   evidence and a transparent match-confidence score.
 - **Source-scoped retrieval:** search and answers can be limited to one exact
   source, a source prefix or teacher notes.
-- **Headless CLI:** `atomzero-docs add/search/list/evidence/forget` works
-  without the web UI; directory sync skips unchanged files by content hash
-  and can skip the same content indexed under another filename.
+- **Headless CLI:** `atomzero-docs add/search/answer/list/evidence/forget`
+  works without the web UI; directory sync skips unchanged files by content
+  hash and can skip the same content indexed under another filename.
 - **Per-source delete:** Forget removes chunks, page/section metadata, source
   metadata and cached vectors.
 

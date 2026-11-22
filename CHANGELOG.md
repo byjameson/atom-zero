@@ -6,8 +6,9 @@
 - Added recursive directory ingestion with per-file reports,
   `--skip-unchanged` and `--dedupe` content-hash deduplication.
 - Added source, source-prefix and kind filters to document search.
-- Added `POST /v1/documents/answer`: cited answer, evidence list and a
-  transparent heuristic match-confidence score.
+- Added `POST /v1/documents/answer` and `atomzero-docs answer`: cited answer,
+  evidence list and a transparent heuristic match-confidence score from one
+  shared core.
 - Improved lexical reranking with a small morphology allowance
   (`claim`/`claims`, `submit`/`submitted`).
 - Added a "Grounded answer" control, an indexed-source picker, per-document

@@ -360,3 +360,20 @@ def test_directory_dedupe_skips_same_content_under_another_name(tmp_path):
     with pytest.raises(ValueError):
         mem.find_by_content_sha("not-a-sha")
     mem.close()
+
+
+def test_cli_answer_returns_evidence_and_no_source(tmp_path, capsys):
+    note = tmp_path / "launch.txt"
+    note.write_text("The launch code is L-7781.", encoding="utf-8")
+    db = tmp_path / "docs.db"
+    main(["add", str(note), "--db", str(db)])
+    capsys.readouterr()
+    main(["answer", "what is the launch code?", "--db", str(db)])
+    answer = json.loads(capsys.readouterr().out)
+    assert "L-7781" in answer["text"]
+    assert answer["evidence"][0]["source"] == str(note)
+    assert answer["confidence"]["label"] in {"low", "medium", "high"}
+    main(["answer", "population of Paris", "--db", str(db)])
+    missing = json.loads(capsys.readouterr().out)
+    assert missing["sources"] == []
+    assert missing["confidence"]["label"] == "none"

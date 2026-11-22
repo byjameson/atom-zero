@@ -46,9 +46,7 @@ from pathlib import Path
 import torch
 
 from atomzero import __version__
-from atomzero.doc_memory import (
-    SourceNotFound, add_citation_source, best_snippet, diverse_hits,
-    format_citation, retrieval_confidence)
+from atomzero.doc_memory import SourceNotFound, grounded_answer
 from atomzero.curiosity import (
     CuriosityError, curiosity_items, propose_from_gaps)
 from atomzero.feedback import (
@@ -1492,54 +1490,7 @@ def doc_answer(text: str, docs, source: str = "") -> dict | None:
     hits = docs.search(query, k=6, source=source)
     if not hits:
         return None
-    hits = diverse_hits(hits, limit=3)
-    confidence = retrieval_confidence(query, hits)
-    notes = []
-    evidence = []
-    source_map = {}
-    unverified = False
-    for hit in hits:
-        teacher = hit.get("kind") == "teacher"
-        verified = bool(hit.get("verified", True))
-        if teacher and not verified:
-            label = "teacher note, unverified"
-        elif teacher:
-            reviewer = str(hit.get("reviewer", "")).strip()
-            label = (f"teacher note, verified by {reviewer}"
-                     if reviewer else "teacher note, verified")
-        else:
-            label = "source"
-        snippet = best_snippet(query, hit["chunk"])
-        location = format_citation(hit)
-        notes.append(f"- {snippet} ({label}: {location})")
-        try:
-            score = round(float(hit.get("rerank_score") or 0.0), 3)
-        except (TypeError, ValueError):
-            score = 0.0
-        evidence.append({
-            "source": hit.get("source", ""),
-            "title": hit.get("title", ""),
-            "page": hit.get("page"),
-            "section": hit.get("section", ""),
-            "snippet": snippet,
-            "chunk": hit.get("chunk", ""),
-            "score": score,
-            "kind": hit.get("kind", "document"),
-            "verified": verified,
-            "source_url": hit.get("source_url", ""),
-        })
-        add_citation_source(source_map, hit)
-        if not verified:
-            unverified = True
-    answer = (f"I found these notes:\n" + "\n".join(notes) + "\n\n"
-              "This is a local note, not professional advice.")
-    if confidence["label"] == "low":
-        answer += ("\n\nMatch confidence is low; check the source before "
-                   "relying on this answer.")
-    if unverified:
-        answer += "\n\nThis includes an unverified teacher-derived note."
-    return {"text": answer, "sources": list(source_map.values()),
-            "evidence": evidence, "confidence": confidence}
+    return grounded_answer(query, hits)
 
 
 def chat_prompt(messages) -> str:

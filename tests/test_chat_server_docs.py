@@ -794,11 +794,15 @@ def test_doc_answer_returns_evidence_confidence_and_source_scope(tmp_path):
                   title="Launch")
     docs.add_text("warranty.txt", "The warranty period is 24 months.",
                   title="Warranty")
+    docs.add_text("travel.txt",
+                  "Book business class. The travel portal code is TR-42.",
+                  title="Travel")
     answer = chat_server.doc_answer("what is the launch code?", docs)
     assert answer is not None
     assert "L-7781" in answer["text"]
     assert answer["sources"][0]["source"] == "launch.txt"
     assert answer["evidence"][0]["source"] == "launch.txt"
+    assert [item["source"] for item in answer["evidence"]] == ["launch.txt"]
     assert "L-7781" in answer["evidence"][0]["snippet"]
     assert 0.0 <= answer["confidence"]["score"] <= 1.0
     assert answer["confidence"]["label"] in {"low", "medium", "high"}

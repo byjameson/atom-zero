@@ -81,6 +81,8 @@ atomzero-docs add manual.pdf --db data/docs.db
 atomzero-docs add .\notes --db data/docs.db --skip-unchanged
 atomzero-docs search "warranty code" --db data/docs.db
 atomzero-docs search "warranty" --db data/docs.db --source policy.docx
+atomzero-docs answer "what is the warranty period?" --source policy.docx `
+  --db data/docs.db
 atomzero-docs evidence policy.docx --section Warranty --db data/docs.db
 atomzero-docs list --db data/docs.db
 atomzero-docs forget policy.docx --db data/docs.db
@@ -94,8 +96,10 @@ a file whose extracted content hash already exists under another source is
 skipped and reported as `duplicate_of` instead of being indexed twice.
 
 `search` accepts `--source` (exact), `--source-prefix`, `--kind` (`document`
-or `teacher`) and `--no-rerank`. It prints JSON, so it can be piped into other
-local tools. `python -m atomzero.doc_memory ...` is the same CLI.
+or `teacher`) and `--no-rerank`. `answer` runs the same grounded-answer path as
+the HTTP endpoint and returns the note text, evidence and confidence. All
+commands print JSON, so they can be piped into other local tools.
+`python -m atomzero.doc_memory ...` is the same CLI.
 
 ### HTTP
 
