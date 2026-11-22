@@ -861,6 +861,7 @@ def test_ui_collection_scope_contract():
     assert 'data-q="list reports"' in page
     assert 'data-q="list reports oldest"' in page
     assert 'data-q="keep reports 2 dry-run"' in page
+    assert "show report w0001" in page
     assert "getWeeklyReview" in page
     assert "downloadWeeklyMarkdown" in page
     assert "refreshWeeklyReports" in page
@@ -1436,6 +1437,12 @@ def test_http_weekly_reports_archive(tmp_path):
             "message": "find report weekly largest"})
         assert sorted_search["sort"] == "largest"
         assert sorted_search["reports"][0]["id"] == entry["id"]
+        shown = _post(base + "/v1/agent/chat", {
+            "session_id": "report-chat",
+            "message": f"show report {entry['id']}"})
+        assert shown["tool_calls"][0]["name"] == "show_weekly_report"
+        assert "archived task" in shown["report_markdown"]
+        assert shown["report_id"] == entry["id"]
         pruned = _post(base + "/v1/weekly-review/reports/prune", {})
         assert pruned["removed"] == 1
         assert pruned["remaining"] == 1

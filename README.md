@@ -192,8 +192,8 @@ short generation. It is **not MMLU, GSM8K or HumanEval**.
   filters the archive and `--reports --sort newest|oldest|largest` orders it.
   `/v1/goals/plan` produces a cited plan skeleton. Chat supports `brief me`,
   `find report weekly` / `rapor ara weekly`, `list reports` (optional limit and
-  newest/oldest/largest sort), archive `prune/keep/delete` previews with
-  `confirm reports`,
+  newest/oldest/largest sort), `show report w0001`, archive
+  `prune/keep/delete` previews with `confirm reports`,
   `weekly review` (optionally `for 14 days` / `haftalık özet 14 gün`) and
   `plan goal ...` → `confirm plan` with explicit task creation only after
   confirmation.

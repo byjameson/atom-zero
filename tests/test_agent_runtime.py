@@ -214,6 +214,13 @@ def test_agent_searches_weekly_report_archive(tmp_path):
     assert "sort: largest" in largest["reply"]
     assert largest["matched"] == 2
     assert largest["reports"][0]["name"] == "alpha-report.md"
+    shown = agent.chat("show report w0001")
+    assert shown["tool_calls"][0]["name"] == "show_weekly_report"
+    assert shown["report_id"] == "w0001"
+    assert shown["report_markdown"].startswith("# alpha-report")
+    assert "exported" in shown["reply"]
+    missing_show = agent.chat("show report w9999")
+    assert "not found" in missing_show["reply"]
 
 
 def test_agent_report_archive_maintenance_flow(tmp_path):

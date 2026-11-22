@@ -15,7 +15,8 @@ Checks:
 - filtering the archive with a text query;
 - searching, listing and maintaining the archive from chat with confirmation;
 - sorting archive entries by newest, oldest and largest, including chat sort
-  commands.
+  commands;
+- opening an archived report by id from chat.
 
 Run:
 
@@ -354,6 +355,17 @@ def run(output: str | Path | None = None) -> dict:
                 == (largest.get("data") or [{}])[0].get("id"),
                 f"oldest={chat_oldest.get('sort')} "
                 f"largest={chat_largest.get('sort')}")
+            shown_chat = _post(base, "/v1/agent/chat", {
+                "session_id": "sort-chat",
+                "message": "show report w0001"})
+            check(
+                "chat_report_show",
+                (shown_chat.get("tool_calls") or [{}])[0].get("name")
+                == "show_weekly_report"
+                and shown_chat.get("report_id") == "w0001"
+                and shown_chat.get("report_markdown", "").startswith(
+                    "# Weekly review -"),
+                shown_chat.get("reply", "")[:200])
             preview = _post(
                 base, "/v1/weekly-review/reports/keep",
                 {"keep": 2, "dry_run": True})

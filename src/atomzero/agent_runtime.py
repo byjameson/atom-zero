@@ -445,6 +445,40 @@ class AgentSession:
             "sort": order,
         }
 
+    def _show_weekly_report(self, report_id: str) -> dict:
+        report_id = str(report_id or "").strip()
+        tool = [{"name": "show_weekly_report", "id": report_id}]
+        try:
+            archive = WeeklyReportArchive(self.weekly_reports_path)
+            entry, markdown = archive.markdown(report_id)
+        except (WeeklyReportError, OSError) as exc:
+            return {"reply": str(exc), "tool_calls": tool,
+                    "sources": [], "evidence": [], "reports": []}
+        tool[0]["path"] = entry.get("path", "")
+        body = markdown.strip()
+        truncated = len(body) > 6000
+        if truncated:
+            body = body[:6000].rstrip() + "\n\n[truncated]"
+        if not body:
+            body = "(empty report)"
+        reply = "\n".join([
+            f"Report {entry.get('id', report_id)} | "
+            f"exported {entry.get('exported_at', '')} | "
+            f"{entry.get('path', '')}",
+            "",
+            body,
+        ])
+        return {
+            "reply": reply,
+            "tool_calls": tool,
+            "sources": [],
+            "evidence": [],
+            "reports": [entry],
+            "report_id": entry.get("id", report_id),
+            "report_markdown": body,
+            "truncated": truncated,
+        }
+
     @staticmethod
     def _report_action_lines(entries: list[dict]) -> str:
         lines = []
@@ -772,6 +806,20 @@ class AgentSession:
             query = re.sub(r"^search (docs|my notes|documents)\s*:?\s*", "",
                            text, flags=re.IGNORECASE)
             return self._search_docs(query)
+        show_match = re.match(
+            r"^(?:show|open|display|view)\s+(?:the\s+)?"
+            r"(?:report|report\s+archive|archive\s+entry)\s+"
+            r"(w\d+)\??$", text, re.IGNORECASE)
+        if not show_match:
+            show_match = re.match(
+                r"^(?:show|open|display|view)\s+(w\d+)\s+"
+                r"(?:report|archive\s+entry)\??$", text, re.IGNORECASE)
+        if not show_match:
+            show_match = re.match(
+                r"^(?:rapor|raporu)\s+(?:g[öo]ster|a[çc])\s+"
+                r"(w\d+)\??$", text, re.IGNORECASE)
+        if show_match:
+            return self._show_weekly_report(show_match.group(1))
         report_sort = "newest"
         report_text = text
         if re.match(r"^(?:find|search|show|list)\s+", text,

@@ -163,6 +163,10 @@ find report weekly largest
 -> recent archived reports, optionally limited to N entries
 -> sort by newest, oldest or largest
 
+show report w0001
+-> metadata plus Markdown content for one archived report
+-> Turkish: "rapor göster w0001"
+
 prune report archive
 keep reports 2
 keep reports 1 dry-run

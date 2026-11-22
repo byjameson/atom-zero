@@ -55,9 +55,12 @@
   `GET /v1/weekly-review/reports?sort=...` and a UI sort selector.
 - Added chat sort suffixes for archive list/search commands, such as
   `list reports oldest` and `find report weekly largest`.
-- Added `benchmarks/weekly_export_regression.py` (20/20 checks: CLI, HTTP, UI,
+- Added chat report viewing by id (`show report w0001`, `rapor göster w0001`)
+  with metadata, Markdown content and a `show_weekly_report` tool call.
+- Added `benchmarks/weekly_export_regression.py` (21/21 checks: CLI, HTTP, UI,
   the report archive, pruning, retention, dry-run preview, deletion, query
-  filtering, chat search/list/maintenance and chat/HTTP sorting).
+  filtering, chat search/list/maintenance, chat/HTTP sorting and report
+  viewing).
 - Fixed BOM-sensitive session loading: `atomzero-brief` and `ChatHuman` now
   accept PowerShell-written UTF-8 session files with a BOM.
 - Extended BOM-tolerant reads to feedback, knowledge-gap, research-queue,

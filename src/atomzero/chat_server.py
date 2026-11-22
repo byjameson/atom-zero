@@ -282,6 +282,7 @@ and suggested next actions.</p>
 <p id="weeklyreportsmsg" class="hint"></p>
 <div id="weeklyreports"></div>
 <div id="weeklyreportspreview"></div>
+<p class="hint">Chat: <code>show report w0001</code> opens an archived report.</p>
 <hr>
 <h3>Teach a fact</h3>
 <p class="hint">Stored in the local document index with a source. Facts do not
