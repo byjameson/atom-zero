@@ -107,6 +107,8 @@ atomzero-brief --reports --sort oldest
 atomzero-brief --reports --sort largest
 atomzero-brief --reports --verify
 atomzero-brief --reports --verify --json
+atomzero-brief --reports --repair
+atomzero-brief --reports --repair --json
 atomzero-brief --reports --reports-index reports\weekly_reports.json --limit 5
 ```
 
@@ -125,13 +127,16 @@ With `--json`, the result includes `removed`, `trimmed`, or
 on disk. `--query TEXT` filters entries by ID, title, filename, path or date.
 `--sort newest|oldest|largest` orders the listing. `--verify` compares each
 stored size and SHA-256 with the report file and reports
-`ok`/`missing`/`size_mismatch`/`hash_mismatch`.
+`ok`/`missing`/`size_mismatch`/`hash_mismatch`. `--repair` recomputes metadata
+for existing changed files and writes the index atomically; missing files are
+reported but not silently dropped.
 
 ```text
 GET  /v1/weekly-review/reports?limit=10&sort=newest
 GET  /v1/weekly-review/reports?query=weekly&sort=oldest
 GET  /v1/weekly-review/reports?id=w0001
 GET  /v1/weekly-review/reports/verify
+POST /v1/weekly-review/reports/repair
 POST /v1/weekly-review/reports/prune
 POST /v1/weekly-review/reports/keep
 POST /v1/weekly-review/reports/delete
@@ -143,8 +148,8 @@ POST /v1/weekly-review/reports/delete
 The UI **Recent reports** panel has a search box and a
 newest/oldest/largest sort selector, lists the archive, downloads an indexed
 Markdown file, exposes **Delete** for one entry, **Prune missing** for deleted
-files, **Verify files** for size/SHA-256 checks and a **Keep newest** retention
-control with **Preview only**. A dry-run response includes `would_remove`
+files, **Verify files** for size/SHA-256 checks, **Repair metadata** for changed
+files and a **Keep newest** retention control with **Preview only**. A dry-run response includes `would_remove`
 entries and leaves the archive unchanged. Keep `--reports-index` pointed at
 the same file for CLI and the server; both default to
 `data/weekly_reports.json`. `quickstart` and `chat_server` accept

@@ -254,6 +254,35 @@ def test_cli_reports_verify_integrity(tmp_path, capsys):
     assert exc.value.code == 2
 
 
+def test_cli_reports_repair_metadata(tmp_path, capsys):
+    index_path = tmp_path / "weekly_reports.json"
+    archive = WeeklyReportArchive(index_path)
+    report = tmp_path / "changed.md"
+    report.write_text("# Alpha\n", encoding="utf-8")
+    archive.record(report, {
+        "generated": "2026-11-22 09:00", "period_days": 7,
+        "task_counts": {}, "recent_source_count": 0,
+        "graph": {"entities": [], "connections": []},
+    }, exported_at="2026-11-22T09:00:00")
+    report.write_text("# Bravo changed\n", encoding="utf-8")
+
+    assert main(["--reports", "--repair", "--json",
+                 "--reports-index", str(index_path)]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["repair"]["repaired"] == 1
+    assert payload["repair"]["missing"] == 0
+    assert payload["data"][0]["status"] == "repaired"
+    assert payload["data"][0]["actual_size_bytes"] == report.stat().st_size
+    assert main(["--reports", "--repair", "--reports-index",
+                 str(index_path)]) == 0
+    output = capsys.readouterr().out
+    assert "Report metadata repair:" in output
+    assert "0 repaired" in output
+    with pytest.raises(SystemExit) as exc:
+        main(["--reports", "--repair", "--verify"])
+    assert exc.value.code == 2
+
+
 def test_cli_reports_sort_orders(tmp_path, capsys):
     index_path = tmp_path / "weekly_reports.json"
     archive = WeeklyReportArchive(index_path)

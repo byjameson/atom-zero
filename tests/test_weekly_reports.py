@@ -133,6 +133,44 @@ def test_archive_verify_detects_changed_and_missing_files(tmp_path):
     assert by_name["missing.md"]["status"] == "missing"
 
 
+def test_archive_repair_updates_changed_metadata_atomically(tmp_path):
+    index_path = tmp_path / "weekly_reports.json"
+    archive = WeeklyReportArchive(index_path)
+    good = tmp_path / "good.md"
+    good.write_text("# Good\n", encoding="utf-8")
+    changed = tmp_path / "changed.md"
+    changed.write_text("# Alpha\n", encoding="utf-8")
+    missing = tmp_path / "missing.md"
+    missing.write_text("# Missing\n", encoding="utf-8")
+    for number, path in enumerate((good, changed, missing), start=1):
+        archive.record(
+            path, _review(),
+            exported_at=f"2026-11-2{number}T09:00:00")
+    changed.write_text("# Bravo changed\n", encoding="utf-8")
+    missing.unlink()
+
+    result = archive.repair()
+    assert result["ok"] is False
+    assert result["summary"] == {
+        "total": 3, "repaired": 1, "ok": 1, "missing": 1, "failed": 1,
+    }
+    by_name = {item["name"]: item for item in result["entries"]}
+    assert by_name["good.md"]["status"] == "ok"
+    assert by_name["changed.md"]["status"] == "repaired"
+    assert by_name["changed.md"]["actual_size_bytes"] == (
+        changed.stat().st_size)
+    assert by_name["changed.md"]["actual_sha256"] != (
+        by_name["changed.md"]["old_sha256"])
+    assert by_name["missing.md"]["status"] == "missing"
+
+    verification = archive.verify()
+    statuses = {item["name"]: item["status"]
+                for item in verification["entries"]}
+    assert statuses["changed.md"] == "ok"
+    assert statuses["missing.md"] == "missing"
+    assert archive.repair()["summary"]["repaired"] == 0
+
+
 def test_archive_delete_removes_one_entry_only(tmp_path):
     index_path = tmp_path / "weekly_reports.json"
     archive = WeeklyReportArchive(index_path)

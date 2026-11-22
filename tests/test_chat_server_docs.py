@@ -847,9 +847,12 @@ def test_ui_collection_scope_contract():
     assert 'id="weeklyreportsrefresh"' in page
     assert 'id="weeklyreportsprune"' in page
     assert 'id="weeklyreportsverify"' in page
+    assert 'id="weeklyreportsrepair"' in page
     assert 'id="weeklyreportscheck"' in page
     assert "/v1/weekly-review/reports/verify" in page
+    assert "/v1/weekly-review/reports/repair" in page
     assert "verifyWeeklyReports" in page
+    assert "repairWeeklyReports" in page
     assert 'id="weeklyreportskeep"' in page
     assert 'id="weeklykeep"' in page
     assert 'id="weeklykeepdry"' in page
@@ -1616,6 +1619,59 @@ def test_http_chat_report_maintenance_flow(tmp_path):
         cancelled = _post(base + "/v1/agent/chat", {
             "session_id": "maint-chat", "message": "cancel reports"})
         assert "no pending report action" in cancelled["reply"].lower()
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
+
+
+def test_http_weekly_reports_repair(tmp_path):
+    from atomzero.weekly_reports import WeeklyReportArchive
+
+    index_path = tmp_path / "weekly_reports.json"
+    archive = WeeklyReportArchive(index_path)
+    good = tmp_path / "good.md"
+    good.write_text("# Good\n", encoding="utf-8")
+    changed = tmp_path / "changed.md"
+    changed.write_text("# Alpha\n", encoding="utf-8")
+    missing = tmp_path / "missing.md"
+    missing.write_text("# Missing\n", encoding="utf-8")
+    for number, path in enumerate((good, changed, missing), start=1):
+        archive.record(path, {
+            "generated": f"2026-11-2{number} 09:00", "period_days": 7,
+            "task_counts": {}, "recent_source_count": 0,
+            "graph": {"entities": [], "connections": []},
+        }, exported_at=f"2026-11-2{number}T09:00:00")
+    changed.write_text("# Bravo changed\n", encoding="utf-8")
+    missing.unlink()
+    old = dict(chat_server._state)
+    chat_server._state.update({
+        "model": None, "tok": None, "docs": None, "adapter": "",
+        "name": "tiny-test", "params": 1, "config": {}, "step": 0,
+        "api_key": "", "metrics": {"requests": 0, "generated_tokens": 0},
+        "safety": None, "wiki_lang": "en",
+        "session_dir": str(tmp_path / "sessions"), "sessions": {},
+        "weekly_reports_path": str(index_path),
+        "weekly_reports": archive,
+    })
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        repaired = _post(
+            base + "/v1/weekly-review/reports/repair", {})
+        assert repaired["summary"]["repaired"] == 1
+        assert repaired["summary"]["ok"] == 1
+        assert repaired["summary"]["missing"] == 1
+        by_name = {item["name"]: item for item in repaired["entries"]}
+        assert by_name["changed.md"]["status"] == "repaired"
+        verification = json.loads(urllib.request.urlopen(
+            base + "/v1/weekly-review/reports/verify",
+            timeout=10).read().decode("utf-8"))
+        assert verification["summary"]["ok"] == 2
+        assert verification["summary"]["missing"] == 1
     finally:
         httpd.shutdown()
         httpd.server_close()

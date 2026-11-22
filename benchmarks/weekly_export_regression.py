@@ -18,7 +18,8 @@ Checks:
   commands;
 - opening an archived report by id from chat;
 - verifying stored size and SHA-256 against archived files, including chat
-  verification commands.
+  verification commands;
+- repairing changed report metadata atomically.
 
 Run:
 
@@ -115,9 +116,12 @@ def run(output: str | Path | None = None) -> dict:
                 and 'id="weeklyreportssearch"' in page
                 and 'id="weeklyreportsort"' in page
                 and 'id="weeklyreportsverify"' in page
+                and 'id="weeklyreportsrepair"' in page
                 and 'id="weeklyreportscheck"' in page
                 and "/v1/weekly-review/reports/verify" in page
+                and "/v1/weekly-review/reports/repair" in page
                 and "verifyWeeklyReports" in page
+                and "repairWeeklyReports" in page
                 and 'value="oldest"' in page
                 and 'value="largest"' in page
                 and 'data-q="find report weekly"' in page
@@ -332,6 +336,17 @@ def run(output: str | Path | None = None) -> dict:
                 and chat_one.get("ok") is True
                 and chat_one.get("report_id") == entry.get("id"),
                 chat_verify.get("reply", "")[:200])
+            out_path.write_text("# Changed weekly report\n", encoding="utf-8")
+            repaired = _post(
+                base, "/v1/weekly-review/reports/repair", {})
+            check(
+                "archive_repair",
+                repaired.get("summary", {}).get("repaired") == 1
+                and repaired.get("summary", {}).get("missing") == 1
+                and any(item.get("name") == "weekly.md"
+                        and item.get("status") == "repaired"
+                        for item in repaired.get("entries", [])),
+                str(repaired.get("summary")))
             pruned = _post(base, "/v1/weekly-review/reports/prune", {})
             after_prune = json.loads(urllib.request.urlopen(
                 base + "/v1/weekly-review/reports?limit=5",
@@ -395,8 +410,7 @@ def run(output: str | Path | None = None) -> dict:
                 (shown_chat.get("tool_calls") or [{}])[0].get("name")
                 == "show_weekly_report"
                 and shown_chat.get("report_id") == "w0001"
-                and shown_chat.get("report_markdown", "").startswith(
-                    "# Weekly review -"),
+                and shown_chat.get("report_markdown", "").startswith("#"),
                 shown_chat.get("reply", "")[:200])
             preview = _post(
                 base, "/v1/weekly-review/reports/keep",

@@ -309,6 +309,71 @@ class WeeklyReportArchive:
                 "ok": summary["failed"] == 0,
             }
 
+    def repair(self) -> dict:
+        """Recompute size/SHA-256 metadata for existing report files."""
+        stamp = time.strftime("%Y-%m-%dT%H:%M:%S")
+        with self._lock:
+            self._reload()
+            entries = []
+            counts = {"repaired": 0, "ok": 0, "missing": 0}
+            for entry in self.reports:
+                raw = str(entry.get("path", "") or "")
+                try:
+                    old_size = int(entry.get("size_bytes"))
+                except (TypeError, ValueError):
+                    old_size = None
+                old_sha = str(entry.get("sha256", "") or "")
+                new_size = None
+                new_sha = ""
+                if not raw or not Path(raw).is_file():
+                    status = "missing"
+                else:
+                    try:
+                        data = Path(raw).read_bytes()
+                    except OSError:
+                        status = "missing"
+                    else:
+                        new_size = len(data)
+                        new_sha = hashlib.sha256(data).hexdigest()
+                        needs_update = (
+                            new_size != old_size
+                            or not old_sha
+                            or new_sha != old_sha)
+                        if needs_update:
+                            entry["size_bytes"] = new_size
+                            entry["sha256"] = new_sha
+                            entry["metadata_repaired_at"] = stamp
+                            status = "repaired"
+                        else:
+                            status = "ok"
+                counts[status] += 1
+                item = dict(entry)
+                item.update({
+                    "status": status,
+                    "old_size_bytes": old_size,
+                    "old_sha256": old_sha,
+                    "actual_size_bytes": new_size,
+                    "actual_sha256": new_sha,
+                })
+                entries.append(item)
+            if counts["repaired"]:
+                self._save()
+            total = len(entries)
+            summary = {
+                "total": total,
+                "repaired": counts["repaired"],
+                "ok": counts["ok"],
+                "missing": counts["missing"],
+                "failed": counts["missing"],
+            }
+            return {
+                "repaired_at": stamp,
+                "index": str(self.path),
+                "summary": summary,
+                "entries": entries,
+                "ok": summary["missing"] == 0,
+            }
+
     def get(self, report_id: str) -> dict:
         report_id = str(report_id or "").strip()
         if not report_id:

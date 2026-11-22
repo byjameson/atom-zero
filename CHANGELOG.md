@@ -62,10 +62,13 @@
   comparing stored size and SHA-256 with each file.
 - Added chat integrity commands (`verify report archive`,
   `verify report w0001`) and a UI quick prompt.
-- Added `benchmarks/weekly_export_regression.py` (23/23 checks: CLI, HTTP, UI,
+- Added archived-report metadata repair: `--reports --repair`,
+  `POST /v1/weekly-review/reports/repair` and a UI **Repair metadata** action
+  with atomic index updates for changed files.
+- Added `benchmarks/weekly_export_regression.py` (24/24 checks: CLI, HTTP, UI,
   the report archive, pruning, retention, dry-run preview, deletion, query
-  filtering, chat search/list/maintenance, chat/HTTP sorting, report viewing
-  and CLI/HTTP/chat integrity verification).
+  filtering, chat search/list/maintenance, chat/HTTP sorting, report viewing,
+  integrity verification and metadata repair).
 - Fixed BOM-sensitive session loading: `atomzero-brief` and `ChatHuman` now
   accept PowerShell-written UTF-8 session files with a BOM.
 - Extended BOM-tolerant reads to feedback, knowledge-gap, research-queue,

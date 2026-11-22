@@ -31,6 +31,7 @@ Endpoints:
   GET  /v1/weekly-review/reports?limit=10
   GET  /v1/weekly-review/reports?id=w0001
   GET  /v1/weekly-review/reports/verify
+  POST /v1/weekly-review/reports/repair
   POST /v1/weekly-review/reports/prune
   POST /v1/weekly-review/reports/keep
   POST /v1/weekly-review/reports/delete
@@ -278,6 +279,7 @@ and suggested next actions.</p>
 <button id="weeklyreportsrefresh">Recent reports</button>
 <button id="weeklyreportsprune">Prune missing</button>
 <button id="weeklyreportsverify">Verify files</button>
+<button id="weeklyreportsrepair">Repair metadata</button>
 <input id="weeklykeep" type="number" min="1" max="500" value="5"
        title="Keep newest N reports" style="width:5em">
 <label class="hint"><input id="weeklykeepdry" type="checkbox"> Preview only</label>
@@ -800,6 +802,40 @@ async function verifyWeeklyReports() {
     msg.textContent = 'report verify error: ' + e;
   }
 }
+async function repairWeeklyReports() {
+  const msg = document.getElementById('weeklyreportsmsg');
+  msg.textContent = 'repairing report metadata...';
+  try {
+    const r = await fetch('/v1/weekly-review/reports/repair', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: '{}'});
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'report repair error: ' + (j.error || r.status);
+      return;
+    }
+    await refreshWeeklyReports();
+    const summary = j.summary || {};
+    msg.textContent = 'repair: ' + (summary.repaired || 0) + ' repaired | ' +
+      (summary.ok || 0) + ' unchanged | ' + (summary.missing || 0) +
+      ' missing';
+    const box = document.getElementById('weeklyreportscheck');
+    box.textContent = '';
+    (j.entries || []).filter(item => item.status !== 'ok').forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'qitem';
+      card.textContent = (item.id || '?') + ' | ' + (item.status || '?') +
+        ' | ' + (item.path || '') +
+        (item.status === 'repaired'
+          ? ' | ' + item.old_size_bytes + ' -> ' +
+            item.actual_size_bytes + ' bytes'
+          : '');
+      box.appendChild(card);
+    });
+  } catch (e) {
+    msg.textContent = 'report repair error: ' + e;
+  }
+}
 async function pruneWeeklyReports() {
   const msg = document.getElementById('weeklyreportsmsg');
   msg.textContent = 'pruning missing reports...';
@@ -957,6 +993,8 @@ document.getElementById('weeklyreportsprune').onclick =
   () => pruneWeeklyReports();
 document.getElementById('weeklyreportsverify').onclick =
   () => verifyWeeklyReports();
+document.getElementById('weeklyreportsrepair').onclick =
+  () => repairWeeklyReports();
 document.getElementById('weeklyreportskeep').onclick =
   () => keepWeeklyReports();
 document.getElementById('goalplan').onclick = () => planGoal(false);
@@ -3011,6 +3049,7 @@ class Handler(BaseHTTPRequestHandler):
                          "/v1/weekly-review/reports/prune",
                          "/v1/weekly-review/reports/keep",
                          "/v1/weekly-review/reports/delete",
+                         "/v1/weekly-review/reports/repair",
                          "/v1/goals/plan",
                          "/v1/learn_url", "/v1/research",
                          "/v1/research/queue",
@@ -3084,6 +3123,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._weekly_reports_keep(req)
             if route == "/v1/weekly-review/reports/delete":
                 return self._weekly_reports_delete(req)
+            if route == "/v1/weekly-review/reports/repair":
+                return self._weekly_reports_repair()
             if route == "/v1/goals/plan":
                 return self._goal_plan(req)
             if route == "/v1/research/queue":
@@ -3555,6 +3596,14 @@ class Handler(BaseHTTPRequestHandler):
             "remaining": remaining,
             "index": str(archive.path),
         })
+
+    def _weekly_reports_repair(self):
+        try:
+            archive = _weekly_reports_archive()
+            result = archive.repair()
+        except (WeeklyReportError, OSError) as exc:
+            return self._json(400, {"error": str(exc)})
+        return self._json(200, result)
 
     def _weekly_reports_delete(self, req: dict):
         try:

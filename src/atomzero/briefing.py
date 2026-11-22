@@ -410,6 +410,29 @@ def render_weekly_report_verification(result: dict) -> str:
     return "\n".join(lines)
 
 
+def render_weekly_report_repair(result: dict) -> str:
+    summary = result.get("summary", {})
+    lines = [
+        f"Report metadata repair: {summary.get('repaired', 0)} repaired, "
+        f"{summary.get('ok', 0)} unchanged, "
+        f"{summary.get('missing', 0)} missing "
+        f"({summary.get('total', 0)} total)"
+    ]
+    for item in result.get("entries", []):
+        status = item.get("status", "?")
+        if status == "repaired":
+            lines.append(
+                f"- {item.get('id', '?')} | repaired | "
+                f"{item.get('old_size_bytes')} -> "
+                f"{item.get('actual_size_bytes')} bytes | "
+                f"{item.get('path', '')}")
+        else:
+            lines.append(
+                f"- {item.get('id', '?')} | {status} | "
+                f"{item.get('path', '')}")
+    return "\n".join(lines)
+
+
 def render_weekly_report_preview(entries: list[dict], keep: int) -> str:
     lines = [
         f"Dry run: would remove {len(entries)} older report(s) to keep "
@@ -603,6 +626,8 @@ def main(argv=None) -> int:
                         help="sort archived reports")
     parser.add_argument("--verify", action="store_true",
                         help="verify archived report sizes and SHA-256 values")
+    parser.add_argument("--repair", action="store_true",
+                        help="recompute changed archived report metadata")
     parser.add_argument("--reports-index", default=DEFAULT_REPORTS_PATH,
                         help="weekly report archive JSON path")
     parser.add_argument("--limit", type=int, default=10,
@@ -644,6 +669,13 @@ def main(argv=None) -> int:
                         or args.keep is not None
                         or args.delete is not None or args.dry_run):
         parser.error("--verify cannot be combined with other report actions")
+    if args.repair and not args.reports:
+        parser.error("--repair requires --reports")
+    if args.repair and (args.query or args.sort or args.prune
+                        or args.keep is not None
+                        or args.delete is not None or args.dry_run
+                        or args.verify):
+        parser.error("--repair cannot be combined with other report actions")
     if args.reports:
         index_path = args.reports_index or DEFAULT_REPORTS_PATH
         query = str(args.query or "").strip()
@@ -668,6 +700,22 @@ def main(argv=None) -> int:
                     }, indent=2, ensure_ascii=False))
                 else:
                     print(render_weekly_report_verification(verification))
+                return 0
+            if args.repair:
+                repair = archive.repair()
+                if args.json:
+                    print(json.dumps({
+                        "data": repair["entries"],
+                        "count": len(repair["entries"]),
+                        "total": repair["summary"]["total"],
+                        "index": str(archive.path),
+                        "repaired_at": repair["repaired_at"],
+                        "repaired": repair["summary"]["repaired"],
+                        "ok": repair["ok"],
+                        "repair": repair["summary"],
+                    }, indent=2, ensure_ascii=False))
+                else:
+                    print(render_weekly_report_repair(repair))
                 return 0
             if args.delete is not None:
                 deleted = archive.delete(args.delete)
