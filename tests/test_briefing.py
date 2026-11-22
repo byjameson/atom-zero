@@ -584,7 +584,7 @@ def test_brief_and_weekly_review_show_due_and_overdue_tasks(tmp_path):
          "due": "2026-11-20"},
         {"id": 2, "text": "plan launch", "status": "open",
          "created": "2026-11-01T09:00:00", "completed": "",
-         "due": "2026-11-30"},
+         "due": "2026-11-25"},
         {"id": 3, "text": "no deadline", "status": "open",
          "created": "2026-11-01T09:00:00", "completed": ""},
     ]}
@@ -592,18 +592,22 @@ def test_brief_and_weekly_review_show_due_and_overdue_tasks(tmp_path):
         session, None, None, now="2026-11-22 09:00")
     assert brief["open_task_count"] == 3
     assert brief["overdue_task_count"] == 1
+    assert brief["due_soon_count"] == 1
     assert brief["focus"].startswith("overdue task 1")
-    assert "3 open | 1 overdue" in brief["text"]
+    assert "3 open | 1 overdue | 1 due soon" in brief["text"]
     assert "submit report (due 2026-11-20 [overdue])" in brief["text"]
-    assert "plan launch (due 2026-11-30)" in brief["text"]
+    assert "plan launch (due 2026-11-25)" in brief["text"]
 
     review = build_weekly_review(
         session, None, None, days=7, now="2026-11-22 09:00")
     assert review["overdue_task_count"] == 1
+    assert review["due_soon_count"] == 1
     assert "Overdue: 1" in review["text"]
+    assert "Due soon: 1 (next 7 days)" in review["text"]
     assert "submit report (due 2026-11-20 [overdue])" in review["text"]
     markdown = render_weekly_markdown(review)
     assert "### Overdue (1)" in markdown
+    assert "### Due soon (1)" in markdown
     assert "submit report (due 2026-11-20 [overdue])" in markdown
 
 

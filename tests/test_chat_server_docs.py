@@ -848,6 +848,7 @@ def test_ui_collection_scope_contract():
     assert 'id="overdueres"' in page
     assert 'id="duesoonbtn"' in page
     assert 'id="duedays"' in page
+    assert 'data-q="due soon"' in page
     assert 'id="dueres"' in page
     assert "getOverdueTasks" in page
     assert "getDueSoonTasks" in page
@@ -1830,6 +1831,18 @@ def test_http_due_soon_tasks(tmp_path):
         assert result["due_soon_tasks"][0]["text"] == "submit report"
         assert result["window_end"] == (
             today + timedelta(days=7)).isoformat()
+        chat = _post(base + "/v1/agent/chat", {
+            "session_id": "due-soon-http", "message": "due soon"})
+        assert chat["tool_calls"][0]["name"] == "due_soon"
+        assert chat["due_soon"]["due_soon_count"] == 1
+        brief = _post(base + "/v1/briefing", {
+            "session_id": "due-soon-http"})
+        assert brief["due_soon_count"] == 1
+        assert "1 due soon" in brief["text"]
+        weekly = _post(base + "/v1/weekly-review", {
+            "session_id": "due-soon-http", "days": 7})
+        assert weekly["due_soon_count"] == 1
+        assert "Due soon: 1 (next 7 days)" in weekly["text"]
         with pytest.raises(urllib.error.HTTPError) as invalid_days:
             urllib.request.urlopen(
                 base + "/v1/tasks/due-soon?session_id=due-soon-http&days=0",

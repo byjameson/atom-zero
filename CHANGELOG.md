@@ -82,6 +82,8 @@
   `GET /v1/tasks/overdue` and a UI **Overdue tasks** button.
 - Added a due-soon view: `atomzero-brief --due-soon --due-days N`,
   `GET /v1/tasks/due-soon?days=N` and a UI **Due soon** button.
+- Integrated due-soon tasks into the daily brief, weekly review, weekly
+  Markdown report and chat (`due soon`, `due soon in 14 days`).
 - Added `benchmarks/weekly_export_regression.py` (29/29 checks: CLI, HTTP, UI,
   the report archive, pruning, retention, dry-run preview, deletion, query
   filtering, chat search/list/maintenance, chat/HTTP sorting, report viewing,

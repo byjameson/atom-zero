@@ -35,9 +35,10 @@ add task review notes due in 3 days
 ```
 
 `list tasks` shows due dates and marks overdue items. The daily brief and
-weekly review add overdue counts, a focus item and due-date labels. The UI
-**Overdue tasks** and **Due soon** buttons expose the same session views;
-HTTP equivalents are `/v1/tasks/overdue` and
+weekly review add overdue/due-soon counts, a focus item, due-date labels and
+dedicated Markdown sections. Chat understands `due soon` and
+`due soon in 14 days`. The UI **Overdue tasks** and **Due soon** buttons expose
+the same session views; HTTP equivalents are `/v1/tasks/overdue` and
 `/v1/tasks/due-soon?days=7`. CLI equivalents are
 `atomzero-brief --session ... --overdue [--json]` and
 `atomzero-brief --session ... --due-soon --due-days 7 [--json]`.

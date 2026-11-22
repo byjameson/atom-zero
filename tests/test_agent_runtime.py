@@ -1,3 +1,4 @@
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -147,24 +148,33 @@ def test_agent_graph_path_query(tmp_path):
 
 
 def test_agent_task_due_dates_and_overdue_brief(tmp_path):
+    overdue = (date.today() - timedelta(days=1)).isoformat()
+    soon = (date.today() + timedelta(days=2)).isoformat()
+    later = (date.today() + timedelta(days=10)).isoformat()
     agent = AgentSession("s-due", tmp_path / "memory.json")
-    added = agent.chat("add task submit report due 2026-11-20")
-    assert "(due 2026-11-20)" in added["reply"]
-    assert agent.human.data["tasks"][0]["due"] == "2026-11-20"
-    agent.chat("add task plan launch due 2026-12-01")
+    added = agent.chat(f"add task submit report due {overdue}")
+    assert f"(due {overdue})" in added["reply"]
+    assert agent.human.data["tasks"][0]["due"] == overdue
+    agent.chat(f"add task plan launch due {soon}")
+    agent.chat(f"add task later item due {later}")
     listed = agent.chat("list tasks")
-    assert "2026-11-20, overdue" in listed["reply"]
-    assert "2026-12-01" in listed["reply"]
+    assert f"{overdue}, overdue" in listed["reply"]
+    assert soon in listed["reply"]
     invalid = agent.chat("add task bad deadline due next week")
     assert "could not read the due date" in invalid["reply"]
-    assert len(agent.human.data["tasks"]) == 2
+    assert len(agent.human.data["tasks"]) == 3
 
     brief = agent.chat("brief me")
-    assert "2 open | 1 overdue" in brief["reply"]
-    assert "submit report (due 2026-11-20 [overdue])" in brief["reply"]
+    assert "3 open | 1 overdue | 1 due soon" in brief["reply"]
+    assert f"submit report (due {overdue} [overdue])" in brief["reply"]
+    due = agent.chat("due soon")
+    assert due["tool_calls"][0]["name"] == "due_soon"
+    assert due["due_soon"]["due_soon_count"] == 1
+    assert "plan launch" in due["reply"]
     review = agent.chat("weekly review")
     assert "Overdue: 1" in review["reply"]
-    assert "submit report (due 2026-11-20 [overdue])" in review["reply"]
+    assert "Due soon: 1 (next 7 days)" in review["reply"]
+    assert f"submit report (due {overdue} [overdue])" in review["reply"]
 
 
 def test_agent_brief_me_returns_local_brief(tmp_path):

@@ -8,8 +8,8 @@ from datetime import datetime
 from pathlib import Path
 
 from atomzero.briefing import (
-    build_briefing, build_weekly_review, plan_goal,
-    render_weekly_report_comparison)
+    build_briefing, build_weekly_review, due_soon_view, plan_goal,
+    render_due_soon_view, render_weekly_report_comparison)
 from atomzero.contradictions import compare_sources
 from atomzero.doc_memory import format_citation, grounded_answer
 from atomzero.knowledge_gaps import KnowledgeGapError
@@ -863,6 +863,17 @@ class AgentSession:
             "tool_calls": [], "sources": [], "evidence": [],
         }
 
+    def _due_soon(self, days: int = 7) -> dict:
+        view = due_soon_view(self.human.data, days=days)
+        return {
+            "reply": render_due_soon_view(view),
+            "tool_calls": [{"name": "due_soon", "days": view["days"]}],
+            "sources": [],
+            "evidence": [],
+            "due_soon": view,
+            "weights_changed": False,
+        }
+
     def _weekly_review(self, days: int = 7) -> dict:
         review = build_weekly_review(
             self.human.data, self.gap_store, self.docs, days=days)
@@ -1198,6 +1209,13 @@ class AgentSession:
         if low in ("brief me", "brief me?", "daily brief", "daily brief?",
                    "what should i do today", "what should i do today?"):
             return self._briefing()
+        due_match = re.match(
+            r"^(?:due soon|tasks due soon|what(?:'s| is) due soon|"
+            r"show due soon)(?:\s+(?:in\s+)?(\d+)\s+days?)?\??$",
+            text, re.IGNORECASE)
+        if due_match:
+            return self._due_soon(
+                int(due_match.group(1)) if due_match.group(1) else 7)
         weekly_match = re.match(
             r"^(?:(?:weekly|week)\s+(?:review|summary)|"
             r"haftal[ıi]k\s+(?:özet|rapor|değerlendirme))"

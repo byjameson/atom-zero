@@ -173,6 +173,7 @@ def build_briefing(session_data: dict | None, gaps, docs,
     tasks = _open_tasks(session_data)
     today = _today_from_now(now)
     overdue = _overdue_tasks(session_data, today)
+    due_soon = due_soon_tasks(session_data, days=7, today=today)
     pending = _pending_gaps(gaps)
     sources = docs.sources() if docs is not None else []
     chunks = docs.stats().get("chunks", 0) if docs is not None else 0
@@ -182,6 +183,9 @@ def build_briefing(session_data: dict | None, gaps, docs,
     if overdue:
         focus = (f"overdue task {overdue[0].get('id')}: "
                  f"{overdue[0].get('text', '')}")
+    elif due_soon:
+        focus = (f"due soon: task {due_soon[0].get('id')}: "
+                 f"{due_soon[0].get('text', '')}")
     elif tasks:
         focus = f"task {tasks[0].get('id')}: {tasks[0].get('text', '')}"
     elif pending:
@@ -198,8 +202,12 @@ def build_briefing(session_data: dict | None, gaps, docs,
         actions.append(
             f"Handle overdue task {task.get('id')}: "
             f"{task.get('text', '')} (due {task.get('due', '')})")
+    for task in due_soon[:3]:
+        actions.append(
+            f"Finish due-soon task {task.get('id')}: "
+            f"{task.get('text', '')} (due {task.get('due', '')})")
     for task in tasks[:3]:
-        if task in overdue:
+        if task in overdue or task in due_soon:
             continue
         actions.append(f"Finish task {task.get('id')}: {task.get('text', '')}")
     for gap in pending[:2]:
@@ -214,6 +222,8 @@ def build_briefing(session_data: dict | None, gaps, docs,
     task_summary = f"Tasks: {len(tasks)} open"
     if overdue:
         task_summary += f" | {len(overdue)} overdue"
+    if due_soon:
+        task_summary += f" | {len(due_soon)} due soon"
     lines = [
         f"Daily brief - {stamp}",
         f"Focus: {focus}",
@@ -240,6 +250,8 @@ def build_briefing(session_data: dict | None, gaps, docs,
         "open_task_count": len(tasks),
         "overdue_tasks": overdue[:5],
         "overdue_task_count": len(overdue),
+        "due_soon_tasks": due_soon[:5],
+        "due_soon_count": len(due_soon),
         "pending_gaps": pending[:5],
         "pending_gap_count": len(pending),
         "documents": {
@@ -314,6 +326,7 @@ def build_weekly_review(session_data: dict | None, gaps, docs,
     open_tasks = _open_tasks(session_data)
     today = _today_from_now(now)
     overdue = _overdue_tasks(session_data, today)
+    due_soon = due_soon_tasks(session_data, days=7, today=today)
     done_tasks = _done_tasks(session_data)
     completed_recent = [task for task in done_tasks
                         if _task_recent(task.get("completed"), cutoff)]
@@ -340,7 +353,13 @@ def build_weekly_review(session_data: dict | None, gaps, docs,
             f"Strongest connection: {edge.get('source')} ↔ "
             f"{edge.get('target')}")
     next_week = []
+    for task in due_soon[:3]:
+        next_week.append(
+            f"Finish due-soon task {task.get('id')}: "
+            f"{task.get('text', '')} (due {task.get('due', '')})")
     for task in open_tasks[:3]:
+        if task in due_soon:
+            continue
         next_week.append(
             f"Close task {task.get('id')}: {task.get('text', '')}")
     for gap in pending[:2]:
@@ -364,6 +383,8 @@ def build_weekly_review(session_data: dict | None, gaps, docs,
     ]
     if overdue:
         lines.append(f"Overdue: {len(overdue)}")
+    if due_soon:
+        lines.append(f"Due soon: {len(due_soon)} (next 7 days)")
     lines.append("Open:")
     lines.extend(
         f"- {task.get('id')}: {task.get('text', '')}"
@@ -393,6 +414,8 @@ def build_weekly_review(session_data: dict | None, gaps, docs,
         "open_tasks": open_tasks[:8],
         "overdue_tasks": overdue[:8],
         "overdue_task_count": len(overdue),
+        "due_soon_tasks": due_soon[:8],
+        "due_soon_count": len(due_soon),
         "completed_tasks": completed_recent[:8],
         "completed_undated": completed_undated[:5],
         "task_counts": {
@@ -708,12 +731,19 @@ def render_weekly_markdown(review: dict) -> str:
     else:
         lines.append("- None")
     overdue = review.get("overdue_tasks", [])
+    due_soon = review.get("due_soon_tasks", [])
     if overdue:
         lines.extend(["", f"### Overdue ({len(overdue)})", ""])
         lines.extend(
             f"- [ ] **#{task.get('id')}** {task.get('text', '')} "
             f"(due {task.get('due', '')})"
             for task in overdue)
+    if due_soon:
+        lines.extend(["", f"### Due soon ({len(due_soon)})", ""])
+        lines.extend(
+            f"- [ ] **#{task.get('id')}** {task.get('text', '')} "
+            f"(due {task.get('due', '')})"
+            for task in due_soon)
     lines.extend([
         "",
         f"### Completed in the last {days} days",
