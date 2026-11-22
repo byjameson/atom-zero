@@ -31,10 +31,16 @@ reviewed gate. See the [model card](MODEL_CARD.md) for the full distinction.
 | FTS | 0.98 | 1.00 | 0.96 | 1.00 | 0.99 |
 | hybrid | 0.98 | 1.00 | 0.96 | 1.00 | 0.99 |
 
+A larger subset (50 contexts, 200 questions: 103 answerable, 97 no-answer):
+
+| mode | top-1 context | top-5 context | top-1 answer in chunk | top-5 answer in chunk | MRR |
+|---|---:|---:|---:|---:|---:|
+| FTS | 0.960 | 1.000 | 0.922 | 1.000 | 0.974 |
+| hybrid | **0.970** | 1.000 | **0.951** | 1.000 | **0.980** |
+
 This is **retrieval**, not generation. SQuAD questions share vocabulary with
-their contexts, and the 20 contexts produce only 25 chunks, so FTS already finds
-the right chunk; the hybrid path ties rather than beating it. The result is a
-public sanity check, not a hard semantic benchmark. Reproduce with:
+their contexts, so the result is a public sanity check, not a hard semantic
+benchmark. The hybrid path gives a small gain on the 50-context subset. Reproduce with:
 
 ```powershell
 pip install datasets

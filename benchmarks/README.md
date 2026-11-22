@@ -22,11 +22,19 @@ Result on 2026-11-22:
 The raw result is in
 [`results/squad_retrieval.json`](results/squad_retrieval.json).
 
-Why both modes tie: the 20 selected contexts produce only 25 chunks, the
-questions share vocabulary with the source paragraphs, and FTS already recovers
-the right chunk. SQuAD is a useful public sanity check, not a hard semantic
-retrieval benchmark. A harder paraphrase/no-answer benchmark and the optional
-MiniLM reranker are the next steps.
+A larger subset (50 contexts, 200 questions: 103 answerable, 97 no-answer):
+
+| mode | top-1 context | top-5 context | top-1 answer in chunk | top-5 answer in chunk | MRR |
+|---|---:|---:|---:|---:|---:|
+| FTS | 0.960 | 1.000 | 0.922 | 1.000 | 0.974 |
+| hybrid | **0.970** | 1.000 | **0.951** | 1.000 | **0.980** |
+
+The hybrid path is slightly better on the harder subset, but both modes remain
+high because SQuAD questions share vocabulary with their source paragraphs. This
+is a public retrieval sanity check, not a hard semantic benchmark. A harder
+paraphrase/no-answer benchmark and the optional MiniLM reranker are the next
+steps. Raw result:
+[`results/squad_retrieval_50x200.json`](results/squad_retrieval_50x200.json).
 
 This benchmark measures **retrieval**. It does not measure whether the 49.2M
 model generates the answer or refuses a no-answer question; those are separate

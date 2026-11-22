@@ -1,0 +1,33 @@
+{
+  "benchmark": "atomzero-squad-v2-retrieval",
+  "dataset": "rajpurkar/squad_v2",
+  "split": "validation",
+  "seed": 0,
+  "max_contexts": 50,
+  "max_questions": 200,
+  "per_context": 5,
+  "contexts_ingested": 50,
+  "chunks_ingested": 66,
+  "results": {
+    "fts": {
+      "questions": 200,
+      "answerable": 103,
+      "no_answer": 97,
+      "top1_context": 0.96,
+      "top5_context": 1.0,
+      "top1_answer": 0.9223300970873787,
+      "top5_answer": 1.0,
+      "mrr": 0.9736666666666666
+    },
+    "hybrid": {
+      "questions": 200,
+      "answerable": 103,
+      "no_answer": 97,
+      "top1_context": 0.97,
+      "top5_context": 1.0,
+      "top1_answer": 0.9514563106796117,
+      "top5_answer": 1.0,
+      "mrr": 0.9799166666666665
+    }
+  }
+}
