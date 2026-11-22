@@ -102,10 +102,23 @@ def embedding_similarity(left: str, right: str) -> float:
     return sum(x * y for x, y in zip(a, b))
 
 
+CODE_RE = re.compile(
+    r"\b[A-Za-z]{1,8}[-_]?\d{2,}\b|\b\d{2,}[-_][A-Za-z]{1,8}\b")
+
+
+def _identifier_terms(text: str) -> set[str]:
+    """Return code-like tokens such as L-7781, VB_42 or 42-A."""
+    return {match.group(0).lower()
+            for match in CODE_RE.finditer(str(text or ""))}
+
+
 def _query_terms(text: str) -> set[str]:
-    words = re.findall(r"[^\W_]+", str(text).lower(), re.UNICODE)
-    return {word for word in words
-            if len(word) > 2 and word not in STOPWORDS}
+    value = str(text or "")
+    words = re.findall(r"[^\W_]+", value.lower(), re.UNICODE)
+    terms = {word for word in words
+             if len(word) > 2 and word not in STOPWORDS}
+    terms.update(_identifier_terms(value))
+    return terms
 
 
 def _term_coverage(terms: set[str], text: str) -> float:
@@ -209,6 +222,7 @@ def rerank_hits(query: str, hits: list[dict], k: int = 5) -> list[dict]:
     terms = _query_terms(query)
     if not terms or not hits:
         return hits[:k]
+    codes = _identifier_terms(query)
     phrase = " ".join(str(query or "").lower().split())
     query_vector = embed_text(query)
     raw = []
@@ -236,6 +250,8 @@ def rerank_hits(query: str, hits: list[dict], k: int = 5) -> list[dict]:
         section_hits = (_term_coverage(terms, section)
                         if section else 0.0)
         exact = 1.0 if len(terms) >= 2 and phrase in searchable else 0.0
+        code_match = (sum(1 for code in codes if code in searchable)
+                      / len(codes)) if codes else 0.0
         if raw[index] is not None and span:
             bm25 = 1.0 - ((raw[index] - low) / span)
         elif raw[index] is not None:
@@ -249,6 +265,8 @@ def rerank_hits(query: str, hits: list[dict], k: int = 5) -> list[dict]:
         score = (0.40 * coverage + 0.10 * title_hits
                  + 0.05 * section_hits + 0.10 * exact
                  + 0.15 * bm25 + 0.25 * embedding)
+        if code_match:
+            score = min(1.0, score + 0.18 * code_match)
         item = dict(hit)
         item["rerank_score"] = score
         item["embedding_score"] = embedding
@@ -273,6 +291,7 @@ def best_snippet(query: str, chunk: str, max_chars: int = 500) -> str:
     if len(parts) <= 1:
         return text[:max_chars]
     terms = _query_terms(query)
+    codes = _identifier_terms(query)
     low_query = str(query or "").lower()
     wants_number = bool(re.search(
         r"\b(how many|how much|how long|how old|how far|when|what year|"
@@ -288,6 +307,10 @@ def best_snippet(query: str, chunk: str, max_chars: int = 500) -> str:
                     r"minutes?|seconds?|million|billion|kg|km|percent|%)",
                     part, re.IGNORECASE):
                 score += 0.08
+        if codes:
+            matches = sum(1 for code in codes if code in part.lower())
+            if matches:
+                score += 0.25 * (matches / len(codes))
         scores.append(score)
     best = max(range(len(parts)), key=lambda i: (scores[i], -i))
     start = best
@@ -1415,6 +1438,9 @@ class DocMemory:
         meaningful = [w for w in words if w.lower() not in STOPWORDS]
         if meaningful:
             words = meaningful
+        for code in _identifier_terms(query):
+            if code not in words:
+                words.append(code)
         if not words:
             return []
         match = " OR ".join(f'"{w}"' for w in words[:12])

@@ -152,7 +152,7 @@ The closest description is: a compact **agent harness** with a small language mo
 ## Try it
 
 ```powershell
-pip install atomzero==0.4.0
+pip install atomzero==0.4.1
 atomzero-quickstart
 ```
 
@@ -188,7 +188,7 @@ The honest gaps are model capability, tool planning, multilingual quality and a 
 If you want to inspect the claims:
 
 - GitHub: https://github.com/byjameson/atom-zero
-- PyPI: https://pypi.org/project/atomzero/0.4.0/
+- PyPI: https://pypi.org/project/atomzero/0.4.1/
 - streamft trainer: https://pypi.org/project/streamft/1.0.1/
 - Hugging Face: https://huggingface.co/byjameson/atom-zero-49m
 - ModelScope: https://modelscope.cn/models/byjameson/atom-zero-49m

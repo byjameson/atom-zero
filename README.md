@@ -13,7 +13,7 @@ ModelScope.
 ## Install
 
 ```powershell
-pip install atomzero==0.4.0
+pip install atomzero==0.4.1
 ```
 
 Optional local MiniLM reranker:
@@ -136,7 +136,7 @@ LoRA adapters.
 | document benchmark, 100 authored questions | **80/80 answerable, 20/20 no-answer** |
 | public SQuAD v2 retrieval (20 contexts) | **0.98 top-1 context (FTS), 1.00 top-5** |
 | public SQuAD v2 retrieval (50 contexts) | **hybrid 0.975 top-1; 0.816 answer in visible snippet** |
-| test suite | **246 passed** |
+| test suite | **248 passed** |
 
 The raw-model probe asks ten simple general questions with no documents, no
 calculator and no agent. The 49.2M model gets **2/10**. The product gets
@@ -158,6 +158,8 @@ short generation. It is **not MMLU, GSM8K or HumanEval**.
   core and expose the match label.
 - **Source-scoped retrieval:** search and answers can be limited to one exact
   source, a source prefix or teacher notes.
+- **Exact code/ID retrieval:** `L-7781` and `W-7781` are treated as distinct
+  identifiers in FTS candidates, reranking and snippets.
 - **Headless CLI:** `atomzero-docs add/sync/status/doctor/search/answer/
   summary/summary-collection/list/evidence/export/import/forget` works without
   the web UI; `sync` keeps a portable relative-path collection, skips unchanged
@@ -266,9 +268,9 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 
 ## Links
 
-- PyPI: <https://pypi.org/project/atomzero/0.4.0/>
+- PyPI: <https://pypi.org/project/atomzero/0.4.1/>
 - GitHub source: <https://github.com/byjameson/atom-zero>
-- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v0.4.0>
+- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v0.4.1>
 - Quickstart: <https://github.com/byjameson/atom-zero/blob/main/docs/QUICKSTART_ATOMZERO.md>
 - Model card: <https://github.com/byjameson/atom-zero/blob/main/docs/MODEL_CARD.md>
 - Full project map: <https://github.com/byjameson/atom-zero/blob/main/docs/PROJECT_OVERVIEW.md>

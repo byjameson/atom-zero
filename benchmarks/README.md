@@ -1,5 +1,26 @@
 # Atom Zero benchmarks
 
+## Scoped answer and summary regression
+
+`benchmarks/scoped_regression.py` is a deterministic product regression gate
+for the document workflow. It builds a temporary corpus with normal notes, a
+PDF-style page locator and a teacher note, then checks:
+
+- source-scoped answers do not leak other documents;
+- source-prefix and kind filters stay inside their scope;
+- single-source summaries keep page/section locators;
+- collection summaries include only the selected prefix;
+- no-answer questions return nothing;
+- exact code identifiers (`L-7781` vs `W-7781`) rank the right source;
+- missing source/collection summaries raise `SourceNotFound`.
+
+```powershell
+python benchmarks/scoped_regression.py
+```
+
+Latest result: **10/10 checks pass**. Raw result:
+[`results/scoped_regression.json`](results/scoped_regression.json).
+
 ## SQuAD v2 retrieval
 
 This is a **public retrieval benchmark**, not a generation benchmark. It uses

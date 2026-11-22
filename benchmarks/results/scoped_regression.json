@@ -1,0 +1,59 @@
+{
+  "benchmark": "atomzero-scoped-regression",
+  "generated": "2026-11-22T21:13:17",
+  "checks": [
+    {
+      "name": "source_scope_answer",
+      "ok": true,
+      "detail": "['notes/warranty.md']"
+    },
+    {
+      "name": "prefix_scope_answer",
+      "ok": true,
+      "detail": "['notes/launch.txt']"
+    },
+    {
+      "name": "kind_scope_answer",
+      "ok": true,
+      "detail": "['teacher://ollama/warranty']"
+    },
+    {
+      "name": "scope_search_no_leak",
+      "ok": true,
+      "detail": "0 hit(s)"
+    },
+    {
+      "name": "no_answer",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "source_summary_locator",
+      "ok": true,
+      "detail": "[{'page': 4, 'section': 'Launch'}]"
+    },
+    {
+      "name": "collection_summary",
+      "ok": true,
+      "detail": "4 source(s), 4 citation(s)"
+    },
+    {
+      "name": "exact_code_ranking",
+      "ok": true,
+      "detail": "L=notes/launch.txt; W=notes/legacy.txt"
+    },
+    {
+      "name": "missing_source_summary",
+      "ok": true,
+      "detail": "SourceNotFound not raised"
+    },
+    {
+      "name": "missing_collection_summary",
+      "ok": true,
+      "detail": "SourceNotFound not raised"
+    }
+  ],
+  "passed": 10,
+  "failed": 0,
+  "ok": true
+}

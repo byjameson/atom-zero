@@ -71,6 +71,21 @@ python benchmarks/squad_retrieval.py `
   --max-contexts 20 --max-questions 100 --per-context 5 --seed 0
 ```
 
+## Scoped retrieval and summary regression
+
+`benchmarks/scoped_regression.py` is a deterministic regression gate for the
+document workflow, separate from the public SQuAD retrieval check. It builds a
+temporary corpus with normal notes, a page/section locator and a teacher note,
+then checks source/prefix/kind scoping, no-answer behavior, summary locators,
+collection boundaries and exact code identifiers (`L-7781` vs `W-7781`).
+
+```powershell
+python benchmarks/scoped_regression.py
+```
+
+Current result: **10/10 checks pass**. Raw result:
+[`results/scoped_regression.json`](results/scoped_regression.json).
+
 ## Product benchmark
 
 ```bash

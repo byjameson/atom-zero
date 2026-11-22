@@ -1,5 +1,17 @@
 # Changelog
 
+## atomzero 0.4.1 - scoped regression and code-aware retrieval (2026-11-22)
+
+- Added `benchmarks/scoped_regression.py`, a deterministic regression gate for
+  source/prefix/kind-scoped answers, summaries, locators, no-answer behavior
+  and exact code identifiers. Latest result: 10/10 checks pass.
+- Added exact code/ID awareness to FTS candidates, reranking and snippets:
+  `L-7781` and `W-7781` now rank their matching source instead of competing on
+  the shared numeric token.
+- Added tests for the benchmark and identifier-aware search; 248 tests pass.
+- Release notes:
+  [`docs/RELEASE_ATOMZERO_0.4.1.md`](docs/RELEASE_ATOMZERO_0.4.1.md).
+
 ## atomzero 0.4.0 - hungry mode and install diagnostics (2026-11-22)
 
 - Added **hungry mode**: `atomzero-hungry`, `POST /v1/hungry/run` and a UI

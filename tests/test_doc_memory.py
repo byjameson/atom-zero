@@ -3,9 +3,9 @@ import json
 import pytest
 
 from atomzero.doc_memory import (
-    DocMemory, SourceNotFound, _chunks, ann_topk, best_snippet, diverse_hits,
-    embed_text, extractive_summary, extractive_summary_units, main,
-    retrieval_confidence)
+    DocMemory, SourceNotFound, _chunks, _identifier_terms, _query_terms,
+    ann_topk, best_snippet, diverse_hits, embed_text, extractive_summary,
+    extractive_summary_units, main, retrieval_confidence)
 
 
 def test_doc_memory_indexes_and_searches_with_source(tmp_path):
@@ -37,6 +37,21 @@ def test_best_snippet_selects_query_sentence_and_keeps_teacher_value():
     assert "population of 3.7 million" in snippet
     teacher = ("Topic: Teacher code\n\nThe teacher code is T-9000.")
     assert "T-9000" in best_snippet("what is the teacher code?", teacher)
+
+
+def test_identifier_terms_and_exact_code_ranking(tmp_path):
+    assert "l-7781" in _identifier_terms("Use L-7781 here")
+    assert "l-7781" in _query_terms("What is L-7781?")
+    mem = DocMemory(tmp_path / "docs.db")
+    mem.add_text("launch.txt", "The launch code is L-7781.", title="Launch")
+    mem.add_text("warranty.txt", "The warranty code is W-7781.",
+                 title="Warranty")
+    launch = mem.search("L-7781", k=2)
+    warranty = mem.search("W-7781", k=2)
+    assert launch[0]["source"] == "launch.txt"
+    assert warranty[0]["source"] == "warranty.txt"
+    assert "L-7781" in best_snippet("L-7781", launch[0]["chunk"])
+    mem.close()
 
 
 def test_chunks_split_long_text_on_word_boundaries():
