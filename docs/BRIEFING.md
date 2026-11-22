@@ -24,6 +24,21 @@ treated as empty, not as errors. Session JSON is read as UTF-8 with or without
 a BOM, so files written by PowerShell `Set-Content -Encoding utf8` work
 directly.
 
+## Task due dates
+
+Tasks can carry an optional local due date:
+
+```text
+add task submit report due 2026-11-30
+add task call mom due tomorrow
+add task review notes due in 3 days
+```
+
+`list tasks` shows due dates and marks overdue items. The daily brief and
+weekly review add overdue counts, a focus item and due-date labels. This is
+local metadata only: there are no background reminders, notifications or
+calendar sync.
+
 ## Weekly review
 
 ```powershell

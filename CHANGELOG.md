@@ -75,6 +75,9 @@
   deltas.
 - Added comparison Markdown export: `--compare ... --markdown`,
   `GET /v1/weekly-review/reports/compare/export` and UI Download/Copy actions.
+- Added task due dates (`due YYYY-MM-DD`, `today`, `tomorrow`, `in N days`)
+  with overdue markers in `list tasks`, the daily brief, weekly review and
+  Markdown export.
 - Added `benchmarks/weekly_export_regression.py` (29/29 checks: CLI, HTTP, UI,
   the report archive, pruning, retention, dry-run preview, deletion, query
   filtering, chat search/list/maintenance, chat/HTTP sorting, report viewing,

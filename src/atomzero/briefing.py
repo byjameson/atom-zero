@@ -13,7 +13,7 @@ import os
 import re
 import tempfile
 import time
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from atomzero import __version__
@@ -31,6 +31,32 @@ def _open_tasks(session_data: dict | None) -> list[dict]:
         return []
     return [task for task in tasks
             if isinstance(task, dict) and task.get("status") == "open"]
+
+
+def _today_from_now(now=None) -> str:
+    if isinstance(now, datetime):
+        return now.date().isoformat()
+    text = str(now or "").strip()
+    try:
+        return date.fromisoformat(text[:10]).isoformat()
+    except (TypeError, ValueError):
+        return date.today().isoformat()
+
+
+def _task_due_label(task: dict, today: str) -> str:
+    due = str(task.get("due", "") or "").strip()
+    if not due:
+        return ""
+    marker = " [overdue]" if due < today else ""
+    return f" (due {due}{marker})"
+
+
+def _overdue_tasks(session_data: dict | None,
+                   today: str | None = None) -> list[dict]:
+    today = today or date.today().isoformat()
+    return [task for task in _open_tasks(session_data)
+            if str(task.get("due", "") or "").strip()
+            and str(task["due"]) < today]
 
 
 def _pending_gaps(gaps) -> list[dict]:
@@ -56,13 +82,18 @@ def build_briefing(session_data: dict | None, gaps, docs,
                    now=None) -> dict:
     """Build a compact local brief from tasks, gaps, docs and the graph."""
     tasks = _open_tasks(session_data)
+    today = _today_from_now(now)
+    overdue = _overdue_tasks(session_data, today)
     pending = _pending_gaps(gaps)
     sources = docs.sources() if docs is not None else []
     chunks = docs.stats().get("chunks", 0) if docs is not None else 0
     graph = _graph_snapshot(docs)
     nodes = graph.get("nodes", [])
     edges = graph.get("edges", [])
-    if tasks:
+    if overdue:
+        focus = (f"overdue task {overdue[0].get('id')}: "
+                 f"{overdue[0].get('text', '')}")
+    elif tasks:
         focus = f"task {tasks[0].get('id')}: {tasks[0].get('text', '')}"
     elif pending:
         focus = f"gap: {pending[0].get('query', '')}"
@@ -74,7 +105,13 @@ def build_briefing(session_data: dict | None, gaps, docs,
         focus = "ask a question about your local notes"
 
     actions = []
+    for task in overdue[:3]:
+        actions.append(
+            f"Handle overdue task {task.get('id')}: "
+            f"{task.get('text', '')} (due {task.get('due', '')})")
     for task in tasks[:3]:
+        if task in overdue:
+            continue
         actions.append(f"Finish task {task.get('id')}: {task.get('text', '')}")
     for gap in pending[:2]:
         actions.append(f"Review the open gap: {gap.get('query', '')}")
@@ -85,13 +122,18 @@ def build_briefing(session_data: dict | None, gaps, docs,
             f"Explore the graph: what is related to {nodes[0].get('name')}?")
     actions.append("Ask a grounded question or run a custom skill")
     stamp = (now or time.strftime("%Y-%m-%d %H:%M"))
+    task_summary = f"Tasks: {len(tasks)} open"
+    if overdue:
+        task_summary += f" | {len(overdue)} overdue"
     lines = [
         f"Daily brief - {stamp}",
         f"Focus: {focus}",
-        f"Tasks: {len(tasks)} open",
+        task_summary,
     ]
-    lines.extend(f"- {task.get('id')}: {task.get('text', '')}"
-                 for task in tasks[:5])
+    lines.extend(
+        f"- {task.get('id')}: {task.get('text', '')}"
+        f"{_task_due_label(task, today)}"
+        for task in tasks[:5])
     lines.append(f"Gaps: {len(pending)} pending")
     lines.extend(f"- {gap.get('query', '')}" for gap in pending[:5])
     lines.append(f"Index: {chunks} chunk(s) / {len(sources)} source(s)")
@@ -107,6 +149,8 @@ def build_briefing(session_data: dict | None, gaps, docs,
         "focus": focus,
         "tasks": tasks[:5],
         "open_task_count": len(tasks),
+        "overdue_tasks": overdue[:5],
+        "overdue_task_count": len(overdue),
         "pending_gaps": pending[:5],
         "pending_gap_count": len(pending),
         "documents": {
@@ -179,6 +223,8 @@ def build_weekly_review(session_data: dict | None, gaps, docs,
     cutoff = datetime.now() - timedelta(days=days)
     cutoff_ts = time.time() - days * 86400
     open_tasks = _open_tasks(session_data)
+    today = _today_from_now(now)
+    overdue = _overdue_tasks(session_data, today)
     done_tasks = _done_tasks(session_data)
     completed_recent = [task for task in done_tasks
                         if _task_recent(task.get("completed"), cutoff)]
@@ -226,10 +272,14 @@ def build_weekly_review(session_data: dict | None, gaps, docs,
         f"Weekly review - {stamp} (last {days} days)",
         f"Tasks: {len(open_tasks)} open | {len(completed_recent)} "
         f"completed {period_label}",
-        "Open:",
     ]
-    lines.extend(f"- {task.get('id')}: {task.get('text', '')}"
-                 for task in open_tasks[:8])
+    if overdue:
+        lines.append(f"Overdue: {len(overdue)}")
+    lines.append("Open:")
+    lines.extend(
+        f"- {task.get('id')}: {task.get('text', '')}"
+        f"{_task_due_label(task, today)}"
+        for task in open_tasks[:8])
     if completed_recent:
         lines.append(completed_label)
         lines.extend(f"- {task.get('id')}: {task.get('text', '')}"
@@ -252,6 +302,8 @@ def build_weekly_review(session_data: dict | None, gaps, docs,
         "generated": stamp,
         "period_days": days,
         "open_tasks": open_tasks[:8],
+        "overdue_tasks": overdue[:8],
+        "overdue_task_count": len(overdue),
         "completed_tasks": completed_recent[:8],
         "completed_undated": completed_undated[:5],
         "task_counts": {
@@ -559,11 +611,20 @@ def render_weekly_markdown(review: dict) -> str:
     ]
     open_tasks = review.get("open_tasks", [])
     if open_tasks:
+        today = _today_from_now(review.get("generated"))
         lines.extend(
             f"- [ ] **#{task.get('id')}** {task.get('text', '')}"
+            f"{_task_due_label(task, today)}"
             for task in open_tasks)
     else:
         lines.append("- None")
+    overdue = review.get("overdue_tasks", [])
+    if overdue:
+        lines.extend(["", f"### Overdue ({len(overdue)})", ""])
+        lines.extend(
+            f"- [ ] **#{task.get('id')}** {task.get('text', '')} "
+            f"(due {task.get('due', '')})"
+            for task in overdue)
     lines.extend([
         "",
         f"### Completed in the last {days} days",

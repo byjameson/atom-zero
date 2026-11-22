@@ -5,7 +5,8 @@ from datetime import datetime, timedelta
 import pytest
 
 from atomzero.briefing import (
-    build_briefing, build_weekly_review, load_session, main, plan_goal)
+    build_briefing, build_weekly_review, load_session, main, plan_goal,
+    render_weekly_markdown)
 from atomzero.doc_memory import DocMemory
 from atomzero.knowledge_gaps import KnowledgeGapStore
 from atomzero.weekly_reports import WeeklyReportArchive
@@ -501,6 +502,36 @@ def test_cli_weekly_markdown_out_atomic_replace_failure(
     assert "simulated replace failure" in captured.out
     assert target.read_text(encoding="utf-8") == "original report"
     assert not list(tmp_path.glob(f".{target.name}.*.tmp"))
+
+
+def test_brief_and_weekly_review_show_due_and_overdue_tasks(tmp_path):
+    session = {"tasks": [
+        {"id": 1, "text": "submit report", "status": "open",
+         "created": "2026-11-01T09:00:00", "completed": "",
+         "due": "2026-11-20"},
+        {"id": 2, "text": "plan launch", "status": "open",
+         "created": "2026-11-01T09:00:00", "completed": "",
+         "due": "2026-11-30"},
+        {"id": 3, "text": "no deadline", "status": "open",
+         "created": "2026-11-01T09:00:00", "completed": ""},
+    ]}
+    brief = build_briefing(
+        session, None, None, now="2026-11-22 09:00")
+    assert brief["open_task_count"] == 3
+    assert brief["overdue_task_count"] == 1
+    assert brief["focus"].startswith("overdue task 1")
+    assert "3 open | 1 overdue" in brief["text"]
+    assert "submit report (due 2026-11-20 [overdue])" in brief["text"]
+    assert "plan launch (due 2026-11-30)" in brief["text"]
+
+    review = build_weekly_review(
+        session, None, None, days=7, now="2026-11-22 09:00")
+    assert review["overdue_task_count"] == 1
+    assert "Overdue: 1" in review["text"]
+    assert "submit report (due 2026-11-20 [overdue])" in review["text"]
+    markdown = render_weekly_markdown(review)
+    assert "### Overdue (1)" in markdown
+    assert "submit report (due 2026-11-20 [overdue])" in markdown
 
 
 def test_plan_goal_adds_cited_context_and_suggestions(tmp_path):

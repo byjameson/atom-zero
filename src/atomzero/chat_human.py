@@ -12,6 +12,7 @@ import copy
 import json
 import re
 import time
+from datetime import date, timedelta
 from pathlib import Path
 
 import torch
@@ -50,6 +51,30 @@ _QUESTION_STARTS = (
     "is ", "are ", "was ", "were ", "do ", "does ", "did ", "can ", "could ",
     "should ", "would ", "will ", "tell me about",
 )
+
+
+def _parse_due(value: str) -> str:
+    value = str(value or "").strip().lower()
+    if value in ("today", "bugün"):
+        return date.today().isoformat()
+    if value in ("tomorrow", "yarın"):
+        return (date.today() + timedelta(days=1)).isoformat()
+    match = re.fullmatch(r"(?:in\s+)?(\d+)\s+days?", value)
+    if match:
+        return (date.today() + timedelta(days=int(match.group(1)))).isoformat()
+    try:
+        return date.fromisoformat(value).isoformat()
+    except ValueError:
+        return ""
+
+
+def _task_label(task: dict) -> str:
+    due = str(task.get("due", "") or "").strip()
+    suffix = ""
+    if due:
+        overdue = due < date.today().isoformat()
+        suffix = f" (due {due}{', overdue' if overdue else ''})"
+    return f"{task['id']} {task['text']}{suffix}"
 
 
 def looks_like_question(text: str) -> bool:
@@ -184,13 +209,13 @@ class ChatHuman:
         self.data["episodes"] = self.data["episodes"][-200:]
         self.save()
 
-    def add_task(self, text: str) -> int:
+    def add_task(self, text: str, due: str = "") -> int:
         tid = int(self.data.get("next_task", 1))
         self.data["next_task"] = tid + 1
         self.data["tasks"].append({
             "id": tid, "text": text, "status": "open",
             "created": time.strftime("%Y-%m-%dT%H:%M:%S"),
-            "completed": "",
+            "completed": "", "due": due,
         })
         self.save()
         return tid
@@ -241,7 +266,7 @@ class ChatHuman:
                       if task["status"] == "open"]
         if open_tasks:
             lines.append("Open tasks: " + "; ".join(
-                f"{task['id']} {task['text']}" for task in open_tasks))
+                _task_label(task) for task in open_tasks))
         return "\n".join(lines)
 
     def format_skill(self, text: str) -> str | None:
@@ -343,16 +368,30 @@ class ChatHuman:
                      else "I do not know what you like yet.")
         elif low.startswith("add task"):
             task = text.split("add task", 1)[1].strip(" :")
-            if task:
-                tid = self.add_task(task)
-                reply = f"Added task {tid}: {task}"
+            due = ""
+            due_error = ""
+            due_match = re.search(r"\s+due\s+(.+)$", task, re.IGNORECASE)
+            if due_match:
+                due_value = due_match.group(1).strip()
+                due = _parse_due(due_value)
+                if not due:
+                    due_error = (f"I could not read the due date '{due_value}'. "
+                                 "Use YYYY-MM-DD, today, tomorrow or in N days.")
+                else:
+                    task = task[:due_match.start()].strip(" :")
+            if due_error:
+                reply = due_error
+            elif task:
+                tid = self.add_task(task, due=due)
+                suffix = f" (due {due})" if due else ""
+                reply = f"Added task {tid}: {task}{suffix}"
             else:
                 reply = "Tell me the task after 'add task'."
         elif "list tasks" in low:
             open_tasks = [task for task in self.data["tasks"]
                           if task["status"] == "open"]
             reply = ("Open tasks: " + "; ".join(
-                f"{task['id']} {task['text']}" for task in open_tasks)
+                _task_label(task) for task in open_tasks)
                 if open_tasks else "There are no open tasks.")
         elif "complete task" in low:
             match = re.search(r"complete task\s*(\d+)", low)

@@ -146,6 +146,27 @@ def test_agent_graph_path_query(tmp_path):
     docs.close()
 
 
+def test_agent_task_due_dates_and_overdue_brief(tmp_path):
+    agent = AgentSession("s-due", tmp_path / "memory.json")
+    added = agent.chat("add task submit report due 2026-11-20")
+    assert "(due 2026-11-20)" in added["reply"]
+    assert agent.human.data["tasks"][0]["due"] == "2026-11-20"
+    agent.chat("add task plan launch due 2026-12-01")
+    listed = agent.chat("list tasks")
+    assert "2026-11-20, overdue" in listed["reply"]
+    assert "2026-12-01" in listed["reply"]
+    invalid = agent.chat("add task bad deadline due next week")
+    assert "could not read the due date" in invalid["reply"]
+    assert len(agent.human.data["tasks"]) == 2
+
+    brief = agent.chat("brief me")
+    assert "2 open | 1 overdue" in brief["reply"]
+    assert "submit report (due 2026-11-20 [overdue])" in brief["reply"]
+    review = agent.chat("weekly review")
+    assert "Overdue: 1" in review["reply"]
+    assert "submit report (due 2026-11-20 [overdue])" in review["reply"]
+
+
 def test_agent_brief_me_returns_local_brief(tmp_path):
     docs = DocMemory(tmp_path / "docs.db")
     docs.add_text("notes/launch.txt", "The launch code is L-7781.",
