@@ -153,6 +153,10 @@ find report weekly
 -> archived report matches with id, date, path and missing-file marker
 -> Turkish: "rapor ara weekly"
 
+list reports
+show report archive 5
+-> recent archived reports, optionally limited to N entries
+
 prune report archive
 keep reports 2
 keep reports 1 dry-run

@@ -13,7 +13,7 @@ Checks:
   flow;
 - deleting one archive entry while leaving its report file on disk;
 - filtering the archive with a text query;
-- searching and maintaining the archive from chat with confirmation.
+- searching, listing and maintaining the archive from chat with confirmation.
 
 Run:
 
@@ -109,6 +109,7 @@ def run(output: str | Path | None = None) -> dict:
                 and 'id="weeklyreportsearch"' in page
                 and 'id="weeklyreportssearch"' in page
                 and 'data-q="find report weekly"' in page
+                and 'data-q="list reports"' in page
                 and 'data-q="keep reports 2 dry-run"' in page
                 and "refreshWeeklyReports" in page
                 and "pruneWeeklyReports" in page
@@ -234,6 +235,17 @@ def run(output: str | Path | None = None) -> dict:
                 and (chat.get("reports") or [{}])[0].get("name")
                 == "weekly.md",
                 chat.get("reply", "")[:240])
+            listed = _post(base, "/v1/agent/chat", {
+                "session_id": "export-chat",
+                "message": "list reports 1"})
+            check(
+                "chat_report_list",
+                (listed.get("tool_calls") or [{}])[0].get("name")
+                == "list_weekly_reports"
+                and "Archived weekly reports (1 of 1)" in listed.get(
+                    "reply", "")
+                and len(listed.get("reports") or []) == 1,
+                listed.get("reply", "")[:200])
             missing_chat = Path(folder) / "chat-missing.md"
             missing_chat.write_text("# Chat missing\n", encoding="utf-8")
             chat_archive = (chat_server._state.get("weekly_reports")

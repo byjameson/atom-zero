@@ -196,6 +196,15 @@ def test_agent_searches_weekly_report_archive(tmp_path):
     turkish = agent.chat("rapor ara beta")
     assert turkish["matched"] == 1
     assert turkish["reports"][0]["name"] == "beta-report.md"
+    listed = agent.chat("list reports")
+    assert "Archived weekly reports (2 of 2)" in listed["reply"]
+    assert listed["tool_calls"][0]["name"] == "list_weekly_reports"
+    assert listed["tool_calls"][0]["limit"] == 10
+    limited = agent.chat("show report archive 1")
+    assert "Archived weekly reports (1 of 2)" in limited["reply"]
+    assert len(limited["reports"]) == 1
+    invalid_limit = agent.chat("list reports 0")
+    assert "at least 1" in invalid_limit["reply"]
 
 
 def test_agent_report_archive_maintenance_flow(tmp_path):

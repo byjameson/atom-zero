@@ -384,6 +384,57 @@ class AgentSession:
             "total": total,
         }
 
+    def _list_weekly_reports(self, limit: int = 10) -> dict:
+        try:
+            limit = int(limit)
+        except (TypeError, ValueError):
+            return {"reply": "Report limit must be a positive integer.",
+                    "tool_calls": [], "sources": [], "evidence": []}
+        if limit < 1:
+            return {"reply": "Report limit must be at least 1.",
+                    "tool_calls": [], "sources": [], "evidence": []}
+        limit = min(limit, 100)
+        tool = [{"name": "list_weekly_reports", "limit": limit}]
+        try:
+            archive = WeeklyReportArchive(self.weekly_reports_path)
+            reports = archive.list(limit=limit)
+            total = archive.count()
+        except (WeeklyReportError, OSError) as exc:
+            return {
+                "reply": f"report archive error: {exc}",
+                "tool_calls": tool,
+                "sources": [],
+                "evidence": [],
+                "reports": [],
+                "limit": limit,
+            }
+        tool[0]["matches"] = len(reports)
+        if not reports:
+            reply = ("No archived weekly reports yet. Create one with "
+                     "atomzero-brief --weekly --markdown --out PATH.")
+        else:
+            lines = [f"Archived weekly reports ({len(reports)} of {total}):"]
+            for item in reports:
+                marker = "" if item.get("exists", True) else " [missing]"
+                lines.append(
+                    f"- {item.get('id', '?')} | "
+                    f"exported {item.get('exported_at', '')} | "
+                    f"last {item.get('period_days', 7)} days | "
+                    f"{item.get('path', '')}{marker}")
+            lines.append(
+                "Report files stay on your disk; use "
+                "atomzero-brief --reports --delete ID to remove an index entry.")
+            reply = "\n".join(lines)
+        return {
+            "reply": reply,
+            "tool_calls": tool,
+            "sources": [],
+            "evidence": [],
+            "reports": reports,
+            "limit": limit,
+            "total": total,
+        }
+
     @staticmethod
     def _report_action_lines(entries: list[dict]) -> str:
         lines = []
@@ -711,6 +762,18 @@ class AgentSession:
             query = re.sub(r"^search (docs|my notes|documents)\s*:?\s*", "",
                            text, flags=re.IGNORECASE)
             return self._search_docs(query)
+        list_match = re.match(
+            r"^(?:list|show)\s+(?:the\s+)?"
+            r"(?:reports?|report\s+archive|weekly\s+reports?)"
+            r"(?:\s+(?:limit\s+)?(\d+))?\??$", text, re.IGNORECASE)
+        if not list_match:
+            list_match = re.match(
+                r"^(?:list|show)\s+(?:the\s+)?(?:last\s+)?(\d+)\s+"
+                r"(?:reports?|weekly\s+reports?)\??$",
+                text, re.IGNORECASE)
+        if list_match:
+            return self._list_weekly_reports(
+                int(list_match.group(1)) if list_match.group(1) else 10)
         report_query = re.match(
             r"^(?:find|search|show)\s+(?:the\s+)?report\s+archive\s+"
             r"(?:for\s+)?(.+?)\??$", text, re.IGNORECASE)

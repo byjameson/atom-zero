@@ -122,13 +122,13 @@ Markdown content type/filename, task checkboxes, gaps, sources, graph, next
 actions, the 14-day window, invalid day input,
 `atomzero-brief --markdown --out PATH` file output, the archive
 listing/download flow, pruning, retention, dry-run preview, deletion, query
-filtering and chat search/maintenance.
+filtering and chat search/list/maintenance.
 
 ```powershell
 python benchmarks/weekly_export_regression.py
 ```
 
-Current result: **17/17 checks pass**. Raw result:
+Current result: **18/18 checks pass**. Raw result:
 [`results/weekly_export_regression.json`](results/weekly_export_regression.json).
 
 ## Graph-path regression
