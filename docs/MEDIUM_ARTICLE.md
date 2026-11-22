@@ -1,6 +1,9 @@
+<!-- Medium title: Atom Zero: A 49M Local Assistant That Says “I Don’t Know” -->
+<!-- Medium subtitle: Why I put facts in RAG instead of the model weights — and what 403 tests taught me about small local AI. -->
+
 # Atom Zero: A 49M Local Assistant That Says “I Don’t Know”
 
-**Subtitle:** Why I put facts in RAG instead of the model weights — and what 412 tests taught me about small local AI.
+Why I put facts in RAG instead of the model weights — and what 403 tests taught me about small local AI.
 
 *This is not a ChatGPT competitor. It is a deliberately small, local assistant with source citations, deterministic tools, and an approval gate for research.*
 
@@ -32,7 +35,7 @@ This is the part I wish more small-model projects published.
 - Behavior checks: **16/16**
 - Source-cited retrieval top-1: **1.000** (FTS 0.850)
 - Document benchmark, 100 authored questions: **80/80 answerable, 20/20 no-answer**
-- Test suite: **412 passed**
+- Test suite: **403 passed across both repos** (200 trainer + 203 assistant)
 
 The raw-model probe asks ten simple general questions with no documents, no calculator and no agent. The 49.2M model gets **2/10**. The product gets **21/21** because the runtime does the work.
 
@@ -186,7 +189,7 @@ If you want to inspect the claims:
 
 - GitHub: https://github.com/byjameson/atom-zero
 - PyPI: https://pypi.org/project/atomzero/0.1.6/
-- streamft trainer: https://pypi.org/project/streamft/1.0.0/
+- streamft trainer: https://pypi.org/project/streamft/1.0.1/
 - Hugging Face: https://huggingface.co/byjameson/atom-zero-49m
 - ModelScope: https://modelscope.cn/models/byjameson/atom-zero-49m
 - Model card: https://github.com/byjameson/atom-zero/blob/main/docs/MODEL_CARD.md
