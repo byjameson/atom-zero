@@ -8,6 +8,8 @@ changes model weights and never calls a provider on its own.
 from __future__ import annotations
 
 import argparse
+import csv
+import io
 import json
 import os
 import re
@@ -29,6 +31,7 @@ TASK_SEARCH_DUE_FILTERS = ("all", "overdue", "today", "week", "none")
 TASK_PRIORITIES = ("low", "normal", "high")
 TASK_SEARCH_PRIORITIES = ("all",) + TASK_PRIORITIES
 TASK_SORTS = ("default", "priority")
+TASK_EXPORT_FORMATS = ("text", "csv", "markdown")
 
 
 def _normalize_search_filters(status="all", due="all",
@@ -189,6 +192,65 @@ def task_list_view(session_data: dict | None, status="open", due="all",
         "text": text,
         "weights_changed": False,
     }
+
+
+def _task_overdue(task: dict, today: str) -> bool:
+    due = str(task.get("due", "") or "").strip()
+    return (task.get("status", "open") == "open"
+            and bool(due) and due < today)
+
+
+def render_task_list_csv(view: dict) -> str:
+    today = _today_from_now(view.get("generated"))
+    output = io.StringIO()
+    writer = csv.writer(output, lineterminator="\n")
+    writer.writerow([
+        "id", "status", "priority", "text", "due", "overdue",
+        "created", "completed",
+    ])
+    for task in view.get("tasks", []):
+        writer.writerow([
+            task.get("id", ""),
+            task.get("status", ""),
+            task.get("priority", "normal"),
+            task.get("text", ""),
+            task.get("due", ""),
+            "true" if _task_overdue(task, today) else "false",
+            task.get("created", ""),
+            task.get("completed", ""),
+        ])
+    return output.getvalue()
+
+
+def _markdown_cell(value) -> str:
+    return str(value or "").replace("|", "\\|").replace("\n", " ")
+
+
+def render_task_list_markdown(view: dict) -> str:
+    today = _today_from_now(view.get("generated"))
+    lines = [
+        f"# Task list - {view.get('generated', '')}",
+        "",
+        f"- Status: {view.get('status', 'open')}",
+        f"- Due: {view.get('due', 'all')}",
+        f"- Priority: {view.get('priority', 'all')}",
+        f"- Sort: {view.get('sort', 'default')}",
+        f"- Count: {view.get('count', 0)}",
+        "",
+        "| ID | Status | Priority | Task | Due | Overdue |",
+        "|---:|---|---|---|---|---|",
+    ]
+    for task in view.get("tasks", []):
+        lines.append(
+            f"| {_markdown_cell(task.get('id'))} "
+            f"| {_markdown_cell(task.get('status'))} "
+            f"| {_markdown_cell(task.get('priority', 'normal'))} "
+            f"| {_markdown_cell(task.get('text'))} "
+            f"| {_markdown_cell(task.get('due'))} "
+            f"| {'yes' if _task_overdue(task, today) else 'no'} |")
+    if not view.get("tasks"):
+        lines.extend(["", "_No tasks match._"])
+    return "\n".join(lines) + "\n"
 
 
 def set_task_priority(session_data: dict | None, tid, priority) -> dict:
@@ -1173,6 +1235,17 @@ def main(argv=None) -> int:
     parser.add_argument("--task-sort", choices=TASK_SORTS,
                         default="default",
                         help="sort tasks in brief, review and task views")
+    parser.add_argument("--task-list", action="store_true",
+                        help="render a filtered task list")
+    parser.add_argument("--task-status", choices=TASK_SEARCH_STATUSES,
+                        default=None, help="task-list status filter")
+    parser.add_argument("--task-due", choices=TASK_SEARCH_DUE_FILTERS,
+                        default=None, help="task-list due-date filter")
+    parser.add_argument("--task-priority", choices=TASK_SEARCH_PRIORITIES,
+                        default=None, help="task-list priority filter")
+    parser.add_argument("--task-format", choices=TASK_EXPORT_FORMATS,
+                        default="text",
+                        help="task-list output: text, csv or markdown")
     parser.add_argument("--days", type=int, default=7)
     parser.add_argument("--max-steps", type=int, default=3)
     parser.add_argument("--json", action="store_true")
@@ -1226,6 +1299,22 @@ def main(argv=None) -> int:
         parser.error("--due-days must be at least 1")
     if args.task_sort != "default" and (args.goal or args.reports):
         parser.error("--task-sort cannot be combined with goal/report views")
+    if not args.task_list:
+        if (args.task_status is not None or args.task_due is not None
+                or args.task_priority is not None
+                or args.task_format != "text"):
+            parser.error(
+                "--task-status/--task-due/--task-priority/--task-format "
+                "require --task-list")
+    else:
+        if (args.weekly or args.goal or args.reports or args.markdown
+                or args.out or args.overdue or args.due_soon
+                or args.search_tasks is not None
+                or args.set_task_priority is not None):
+            parser.error("--task-list cannot be combined with other views")
+        if args.json and args.task_format != "text":
+            parser.error(
+                "--json cannot be combined with --task-format csv/markdown")
     if args.set_task_priority is not None:
         raw_id, raw_priority = args.set_task_priority
         try:
@@ -1416,6 +1505,31 @@ def main(argv=None) -> int:
         return 0
     session_path = Path(args.session) if args.session else (
         Path(args.sessions_dir) / f"{args.session_id}.json")
+    if args.task_list:
+        status = args.task_status or "open"
+        due = args.task_due or "all"
+        priority = args.task_priority or "all"
+        try:
+            session = load_session(session_path)
+            result = task_list_view(
+                session, status=status, due=due, priority=priority,
+                sort=args.task_sort)
+        except (ValueError, OSError) as exc:
+            if args.json:
+                print(json.dumps({"ok": False, "error": str(exc)},
+                                 indent=2, ensure_ascii=False))
+            else:
+                print(f"briefing error: {exc}")
+            return 1
+        if args.json:
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+        elif args.task_format == "csv":
+            print(render_task_list_csv(result), end="")
+        elif args.task_format == "markdown":
+            print(render_task_list_markdown(result), end="")
+        else:
+            print(result["text"])
+        return 0
     if args.set_task_priority is not None:
         raw_id, raw_priority = args.set_task_priority
         try:

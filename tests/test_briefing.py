@@ -1,3 +1,5 @@
+import csv
+import io
 import json
 import time
 from datetime import date, datetime, timedelta
@@ -392,6 +394,78 @@ def test_cli_priority_sort_views(tmp_path, capsys):
         markdown.index("low overdue task")
     with pytest.raises(SystemExit) as exc:
         main(common + ["--task-sort", "priority", "--reports"])
+    assert exc.value.code == 2
+
+
+def test_cli_task_list_export(tmp_path, capsys):
+    session_path = tmp_path / "session.json"
+    today = date.today()
+    soon = (today + timedelta(days=1)).isoformat()
+    overdue = (today - timedelta(days=1)).isoformat()
+    later = (today + timedelta(days=2)).isoformat()
+    now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    session_path.write_text(json.dumps({"tasks": [
+        {"id": 1, "text": "high soon task", "status": "open",
+         "created": now, "completed": "", "due": soon,
+         "priority": "high"},
+        {"id": 2, "text": "low overdue task", "status": "open",
+         "created": now, "completed": "", "due": overdue,
+         "priority": "low"},
+        {"id": 3, "text": "normal soon task", "status": "open",
+         "created": now, "completed": "", "due": later},
+        {"id": 4, "text": "done task", "status": "done",
+         "created": now, "completed": now, "priority": "high"},
+    ]}), encoding="utf-8")
+    common = [
+        "--session", str(session_path),
+        "--docs", str(tmp_path / "missing.db"),
+        "--gaps", str(tmp_path / "missing-gaps.json")]
+    assert main(common + [
+        "--task-list", "--task-status", "open", "--task-due", "week",
+        "--task-priority", "high", "--task-sort", "priority",
+        "--task-format", "csv"]) == 0
+    output = capsys.readouterr().out
+    rows = list(csv.reader(io.StringIO(output)))
+    assert rows[0] == [
+        "id", "status", "priority", "text", "due", "overdue",
+        "created", "completed"]
+    assert len(rows) == 2
+    assert rows[1][:4] == ["1", "open", "high", "high soon task"]
+    assert rows[1][4] == soon
+    assert rows[1][5] == "false"
+
+    assert main(common + [
+        "--task-list", "--task-status", "all",
+        "--task-sort", "priority", "--task-format", "markdown"]) == 0
+    markdown = capsys.readouterr().out
+    assert markdown.startswith("# Task list - ")
+    assert "- Status: all" in markdown
+    assert "- Count: 4" in markdown
+    assert "| 1 | open | high | high soon task |" in markdown
+    assert (markdown.index("high soon task")
+            < markdown.index("low overdue task"))
+
+    assert main(common + [
+        "--task-list", "--task-priority", "high", "--json"]) == 0
+    priority = json.loads(capsys.readouterr().out)
+    assert priority["status"] == "open"
+    assert priority["priority"] == "high"
+    assert [task["id"] for task in priority["tasks"]] == [1]
+
+    assert main(common + [
+        "--task-list", "--task-status", "done", "--json"]) == 0
+    done = json.loads(capsys.readouterr().out)
+    assert [task["id"] for task in done["tasks"]] == [4]
+
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--task-format", "csv"])
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--task-list", "--weekly"])
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
+        main(common + [
+            "--task-list", "--json", "--task-format", "csv"])
     assert exc.value.code == 2
 
 

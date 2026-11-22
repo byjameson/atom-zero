@@ -29,6 +29,7 @@ Endpoints:
   POST /v1/weekly-review
   GET  /v1/weekly-review/export?session_id=...&days=7
   GET  /v1/tasks/list?session_id=default&status=open&due=week&priority=high&sort=priority
+  GET  /v1/tasks/export?session_id=default&status=open&due=week&priority=high&sort=priority&format=csv
   GET  /v1/tasks/overdue?session_id=default&sort=priority
   GET  /v1/tasks/due-soon?session_id=default&days=7&sort=priority
   GET  /v1/tasks/search?session_id=default&q=report&status=open&due=week&priority=high&sort=priority
@@ -338,6 +339,8 @@ and suggested next actions.</p>
 <option value="priority">Priority first</option>
 </select>
 <button id="tasklistbtn">Task list</button>
+<button id="tasklistcsv">Download CSV</button>
+<button id="tasklistmd">Download .md</button>
 <input id="rescheduletaskid" type="number" min="1" placeholder="task ID"
        style="width:5em">
 <input id="rescheduledue" placeholder="new due date" style="width:9em">
@@ -882,6 +885,48 @@ async function getTaskList() {
     });
   } catch (e) {
     msg.textContent = 'task list error: ' + e;
+  }
+}
+async function downloadTaskList(format) {
+  const msg = document.getElementById('tasklistmsg');
+  const status = document.getElementById('taskliststatus').value;
+  const due = document.getElementById('tasklistdue').value;
+  const priority = document.getElementById('tasklistpriority').value;
+  const sort = document.getElementById('tasklistsort').value;
+  msg.textContent = 'exporting task list...';
+  try {
+    const params = new URLSearchParams({
+      session_id: sessionId, status, due, priority, sort, format});
+    const r = await fetch('/v1/tasks/export?' + params.toString());
+    if (!r.ok) {
+      let detail = r.status;
+      try {
+        const j = await r.json();
+        detail = j.error || detail;
+      } catch (e) {}
+      msg.textContent = 'task export error: ' + detail;
+      return;
+    }
+    const text = await r.text();
+    const disposition = r.headers.get('Content-Disposition') || '';
+    const match = disposition.match(/filename="([^"]+)"/);
+    const fallback = 'atomzero-tasks.' +
+      (format === 'markdown' ? 'md' : 'csv');
+    const filename = match ? match[1] : fallback;
+    const mime = format === 'markdown'
+      ? 'text/markdown;charset=utf-8' : 'text/csv;charset=utf-8';
+    const blob = new Blob([text], {type: mime});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    msg.textContent = 'downloaded ' + filename;
+  } catch (e) {
+    msg.textContent = 'task export error: ' + e;
   }
 }
 async function rescheduleTask() {
@@ -1459,6 +1504,8 @@ document.getElementById('overduebtn').onclick = () => getOverdueTasks();
 document.getElementById('duesoonbtn').onclick = () => getDueSoonTasks();
 document.getElementById('tasksearchbtn').onclick = () => searchTasks();
 document.getElementById('tasklistbtn').onclick = () => getTaskList();
+document.getElementById('tasklistcsv').onclick = () => downloadTaskList('csv');
+document.getElementById('tasklistmd').onclick = () => downloadTaskList('markdown');
 document.getElementById('rescheduletaskbtn').onclick = () => rescheduleTask();
 document.getElementById('taskprioritybtn').onclick = () => setTaskPriority();
 document.getElementById('deletetaskbtn').onclick = () => deleteTask();
@@ -3217,6 +3264,46 @@ class Handler(BaseHTTPRequestHandler):
             }]})
         elif self.path == "/metrics":
             self._json(200, _state["metrics"])
+        elif (self.path == "/v1/tasks/export"
+              or self.path.startswith("/v1/tasks/export?")):
+            params = urllib.parse.parse_qs(
+                urllib.parse.urlparse(self.path).query)
+            session_id = (params.get("session_id", ["default"])[0]
+                          or "default")
+            status = str(params.get("status", ["open"])[0] or "open").strip()
+            due = str(params.get("due", ["all"])[0] or "all").strip()
+            priority = str(
+                params.get("priority", ["all"])[0] or "all").strip()
+            sort = str(params.get("sort", ["default"])[0] or "default").strip()
+            export_format = str(
+                params.get("format", ["csv"])[0] or "csv").strip().lower()
+            if export_format not in ("csv", "markdown"):
+                return self._json(400, {
+                    "error": "format must be csv or markdown"})
+            try:
+                session = self._session(session_id)
+                from atomzero.briefing import (
+                    render_task_list_csv, render_task_list_markdown,
+                    task_list_view)
+
+                view = task_list_view(
+                    session.human.data, status=status, due=due,
+                    priority=priority, sort=sort,
+                    now=params.get("today", [None])[0])
+                if export_format == "csv":
+                    body = render_task_list_csv(view)
+                    content_type = "text/csv; charset=utf-8"
+                else:
+                    body = render_task_list_markdown(view)
+                    content_type = "text/markdown; charset=utf-8"
+            except Exception as exc:
+                return self._json(400, {"error": str(exc)})
+            day = str(view.get("generated", ""))[:10] or "latest"
+            suffix = "md" if export_format == "markdown" else "csv"
+            filename = f"atomzero-tasks-{day}.{suffix}"
+            return self._send(
+                200, body.encode("utf-8"), content_type,
+                {"Content-Disposition": f'attachment; filename="{filename}"'})
         elif (self.path == "/v1/tasks/list"
               or self.path.startswith("/v1/tasks/list?")):
             params = urllib.parse.parse_qs(

@@ -53,6 +53,20 @@ Chat returns a structured `list_tasks` tool call with `status`, `due`,
 `GET /v1/tasks/list?status=open&due=week&priority=high&sort=priority` and in
 the UI **Task list** controls.
 
+Filtered task lists export as CSV or Markdown:
+
+```powershell
+atomzero-brief --session data/sessions/default.json `
+  --task-list --task-status open --task-due week `
+  --task-priority high --task-sort priority --task-format csv
+```
+
+`--task-format markdown` emits a filtered Markdown table. HTTP uses
+`GET /v1/tasks/export?status=open&due=week&priority=high&sort=priority&format=csv`
+(or `format=markdown`). The UI **Download CSV** and **Download .md** buttons
+use the currently selected task-list filters. CSV columns are
+`id,status,priority,text,due,overdue,created,completed`.
+
 Priority can also be updated outside chat:
 
 ```powershell

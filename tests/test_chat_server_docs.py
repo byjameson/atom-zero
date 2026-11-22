@@ -1,3 +1,5 @@
+import csv
+import io
 import json
 import threading
 from datetime import date, timedelta
@@ -871,11 +873,15 @@ def test_ui_collection_scope_contract():
     assert 'id="tasklistpriority"' in page
     assert 'id="tasklistsort"' in page
     assert 'id="tasklistbtn"' in page
+    assert 'id="tasklistcsv"' in page
+    assert 'id="tasklistmd"' in page
     assert 'id="tasklistmsg"' in page
     assert 'id="tasklistres"' in page
     assert '<option value="open" selected>Open</option>' in page
     assert "getTaskList" in page
+    assert "downloadTaskList" in page
     assert "/v1/tasks/list" in page
+    assert "/v1/tasks/export" in page
     assert page.count("document.getElementById('tasksort').value") >= 4
     assert "session_id: sessionId, sort" in page
     assert "session_id: sessionId, days: 7, sort" in page
@@ -2127,6 +2133,39 @@ def test_http_priority_sort_views(tmp_path):
             "priority": "high", "sort": "default", "count": 1}
         assert ([task["id"] for task in chat_list["task_list"]["tasks"]]
                 == [task["id"] for task in task_list["tasks"]])
+        export_params = urllib.parse.urlencode({
+            "session_id": "priority-sort-http",
+            "today": today.isoformat(),
+            "status": "open", "due": "week", "priority": "high",
+            "sort": "priority", "format": "csv",
+        })
+        with urllib.request.urlopen(
+                base + "/v1/tasks/export?" + export_params,
+                timeout=10) as response:
+            assert response.headers.get_content_type() == "text/csv"
+            assert ".csv" in response.headers.get("Content-Disposition", "")
+            csv_body = response.read().decode("utf-8")
+        csv_rows = list(csv.reader(io.StringIO(csv_body)))
+        assert csv_rows[0][:6] == [
+            "id", "status", "priority", "text", "due", "overdue"]
+        assert len(csv_rows) == 2
+        assert csv_rows[1][:5] == [
+            "4", "open", "high", "high soon task",
+            (today + timedelta(days=1)).isoformat()]
+        export_params = urllib.parse.urlencode({
+            "session_id": "priority-sort-http",
+            "today": today.isoformat(),
+            "status": "open", "due": "week", "priority": "high",
+            "sort": "priority", "format": "markdown",
+        })
+        with urllib.request.urlopen(
+                base + "/v1/tasks/export?" + export_params,
+                timeout=10) as response:
+            assert response.headers.get_content_type() == "text/markdown"
+            assert ".md" in response.headers.get("Content-Disposition", "")
+            markdown_body = response.read().decode("utf-8")
+        assert markdown_body.startswith("# Task list - ")
+        assert "| 4 | open | high | high soon task |" in markdown_body
         brief = _post(base + "/v1/briefing", {
             "session_id": "priority-sort-http", "sort": "priority"})
         assert brief["sort"] == "priority"
@@ -2159,6 +2198,9 @@ def test_http_priority_sort_views(tmp_path):
         with pytest.raises(urllib.error.HTTPError) as invalid_list:
             get("/v1/tasks/list", status="blocked")
         assert invalid_list.value.code == 400
+        with pytest.raises(urllib.error.HTTPError) as invalid_export:
+            get("/v1/tasks/export", format="json")
+        assert invalid_export.value.code == 400
     finally:
         httpd.shutdown()
         httpd.server_close()
