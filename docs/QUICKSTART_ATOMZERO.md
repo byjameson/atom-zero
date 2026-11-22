@@ -61,6 +61,24 @@ keep the section heading. Scanned PDFs need OCR before ingestion.
 
 The full format and provenance rules are in [`DOCUMENTS.md`](DOCUMENTS.md).
 
+## Headless document workflow
+
+The same index works without the browser:
+
+```powershell
+atomzero-docs sync .\notes --db data/docs.db
+atomzero-docs answer "what is the launch code?" --db data/docs.db
+atomzero-docs summary manual.pdf --sentences 5 --db data/docs.db
+atomzero-docs summary-collection --prefix notes/ --sentences 8 `
+  --db data/docs.db
+atomzero-docs doctor --db data/docs.db
+```
+
+`sync` keeps a portable relative-path collection, skips unchanged/duplicate
+files and prunes deleted ones. `status` is a dry run; `doctor` checks orphan
+rows and FTS5 integrity; `export`/`import` move the index as JSONL. See
+[`DOCUMENTS.md`](DOCUMENTS.md) for every command.
+
 ## Provider mode
 
 ```powershell
