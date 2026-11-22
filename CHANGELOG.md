@@ -1,8 +1,9 @@
 # Changelog
 
-## Unreleased - document workflow and grounded answers
+## atomzero 0.3.0 - document workflow and grounded answers (2026-11-22)
 
-- Added `atomzero-docs`, a headless CLI for add/list/search/evidence/forget.
+- Added `atomzero-docs`, a headless CLI for add/sync/status/doctor/search/
+  answer/summary/evidence/export/import/list/forget.
 - Added recursive directory ingestion with per-file reports,
   `--skip-unchanged` and `--dedupe` content-hash deduplication.
 - Added `atomzero-docs sync`: portable relative-path collections, unchanged
@@ -28,7 +29,9 @@
   "Ask", and "Copy citation" actions to the local document UI.
 - Added answer-in-visible-snippet and confidence metrics to the public SQuAD
   retrieval benchmark.
-- Added tests for all of the above.
+- Added tests for all of the above; 233 pass.
+- Release notes:
+  [`docs/RELEASE_ATOMZERO_0.3.0.md`](docs/RELEASE_ATOMZERO_0.3.0.md).
 
 ## atomzero 0.2.0 - public benchmark and demo UI (2026-11-22)
 

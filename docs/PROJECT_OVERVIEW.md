@@ -278,7 +278,7 @@ whether to enable it.
 | document benchmark (100 authored questions) | **80/80 answerable, 20/20 no-answer** |
 | public SQuAD v2 retrieval (50 contexts) | **hybrid 0.975 top-1; 0.816 answer in snippet** |
 | safety-enabled product | **26/26** |
-| test suite | **230 passed** |
+| test suite | **233 passed** |
 
 The product benchmark is narrow and authored: tools, memory, tasks, retrieval,
 teacher-note review, missing-source detection and one short generation. It is
@@ -287,11 +287,11 @@ not MMLU, GSM8K or HumanEval. The 21/21 is the product, not the bare model.
 ## 14. Packaging and reproduction
 
 ```powershell
-pip install atomzero==0.2.0
+pip install atomzero==0.3.0
 atomzero-quickstart
 ```
 
-`atomzero 0.2.0` is the standalone assistant package. `streamft 1.0` is the
+`atomzero 0.3.0` is the standalone assistant package. `streamft 1.0` is the
 separate low-VRAM trainer; `streamft 0.9.2` is the last compatibility release
 that bundled Atom Zero. The quickstart downloads the checkpoint/tokenizer from
 Hugging Face, seeds a demo corpus, starts the server and opens the browser.

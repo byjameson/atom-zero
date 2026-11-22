@@ -1,11 +1,11 @@
 # Atom Zero 49.2M model card
 
-Version: model weights `0.8.0`; standalone `atomzero 0.2.0`<br>
+Version: model weights `0.8.0`; standalone `atomzero 0.3.0`<br>
 Last updated: 2026-11-22
 License: Apache-2.0 for code and weights; data attribution in `NOTICE`.
 
 ```powershell
-pip install atomzero==0.2.0
+pip install atomzero==0.3.0
 atomzero-quickstart
 ```
 
@@ -41,7 +41,7 @@ benchmarks and release — is
 | privacy | localhost, no telemetry, SSRF guard, upload caps, deletion |
 | UI | chat, documents, gaps, research queue, teacher notes, adapters, health |
 | packaging | standalone `atomzero` package (assistant deps only), `atomzero`/`atomzero-quickstart` entry points, GitHub release, HF/ModelScope weights |
-| tests | 230 passed; product 21/21; behavior 16/16; retrieval 1.000 |
+| tests | 233 passed; product 21/21; behavior 16/16; retrieval 1.000 |
 | document benchmark | 100 authored questions: 80/80 answerable, 20/20 no-answer |
 | public retrieval benchmark | SQuAD v2: 0.975 top-1, 1.000 top-5 (50 contexts, hybrid) |
 | visible-snippet answer | SQuAD v2: 0.816 top-1 answer in snippet (50 contexts, hybrid) |
@@ -191,9 +191,9 @@ Evidence lives in `research/results/` and
 
 ## Published artifacts
 
-- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v0.2.0>
+- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v0.3.0>
 - GitHub source: <https://github.com/byjameson/atom-zero>
-- Atom Zero PyPI: <https://pypi.org/project/atomzero/0.2.0/>
+- Atom Zero PyPI: <https://pypi.org/project/atomzero/0.3.0/>
 - Hugging Face: <https://huggingface.co/byjameson/atom-zero-49m>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-49m>
 - launch article: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-a-49m-local-assistant-that-says-i-dont-know-1p7m>
