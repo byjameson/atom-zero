@@ -74,6 +74,14 @@ Text/Markdown/HTML files are also editable in the textarea before indexing.
 PDF/DOCX files are uploaded as bytes; they are never converted to text in the
 browser.
 
+### Collection scope in the UI
+
+The document bar accepts either one exact source or a collection prefix such as
+`notes/`. Search, **Answer** and **Summarize collection** use the same scope.
+Selecting an exact source clears the prefix; typing a prefix clears the source
+selector, so the two scopes cannot conflict. A collection summary lists the
+selected prefix, source/chunk counts and one locator per contributing source.
+
 ### CLI
 
 ```powershell

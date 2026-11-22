@@ -244,6 +244,8 @@ weights.</p>
 <select id="docsrc"><option value="">all sources</option></select>
 <button id="docsearch">Search</button>
 <button id="docanswerbtn">Answer</button></div>
+<div class="row"><input id="docprefix" placeholder="Collection prefix, e.g. notes/">
+<button id="docsumcollection">Summarize collection</button></div>
 <p id="docmsg" class="hint"></p>
 <div id="docanswer"></div>
 <div id="docresults"></div>
@@ -630,6 +632,8 @@ async function refreshDocs() {
 async function searchDocs() {
   const query = document.getElementById('docq').value.trim();
   const source = document.getElementById('docsrc').value.trim();
+  const prefix = document.getElementById('docprefix').value.trim();
+  const scope = source ? {source} : (prefix ? {source_prefix: prefix} : {});
   const msg = document.getElementById('docmsg');
   const box = document.getElementById('docresults');
   box.textContent = '';
@@ -639,12 +643,13 @@ async function searchDocs() {
   try {
     const r = await fetch('/v1/documents/search', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({query, k: 5, source})});
+      body: JSON.stringify({query, k: 5, ...scope})});
     const j = await r.json();
     if (!r.ok) { msg.textContent = 'error: ' + (j.error || r.status); return; }
     const hits = j.data || [];
     msg.textContent = hits.length + ' hit(s)' +
-      (source ? ' | source: ' + source : '');
+      (source ? ' | source: ' + source :
+        (prefix ? ' | prefix: ' + prefix : ''));
     hits.forEach(hit => {
       const card = document.createElement('div');
       card.className = 'qitem';
@@ -672,6 +677,8 @@ async function searchDocs() {
 async function answerDocs() {
   const query = document.getElementById('docq').value.trim();
   const source = document.getElementById('docsrc').value.trim();
+  const prefix = document.getElementById('docprefix').value.trim();
+  const scope = source ? {source} : (prefix ? {source_prefix: prefix} : {});
   const msg = document.getElementById('docmsg');
   const box = document.getElementById('docanswer');
   box.textContent = '';
@@ -680,13 +687,14 @@ async function answerDocs() {
   try {
     const r = await fetch('/v1/documents/answer', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({query, source})});
+      body: JSON.stringify({query, ...scope})});
     const j = await r.json();
     if (!r.ok) { msg.textContent = 'error: ' + (j.error || r.status); return; }
     const conf = j.confidence || {};
     msg.textContent = 'grounded answer | confidence: ' +
       (conf.label || 'none') + ' (' + (conf.score ?? 0) + ')' +
-      (source ? ' | source: ' + source : '');
+      (source ? ' | source: ' + source :
+        (prefix ? ' | prefix: ' + prefix : ''));
     const answer = document.createElement('div');
     answer.className = 'qitem';
     answer.textContent = j.text || '';
@@ -753,6 +761,56 @@ async function showSummary(source) {
     box.appendChild(actions);
   } catch (e) { box.textContent = 'summary error: ' + e; }
 }
+async function summarizeCollection() {
+  const prefix = document.getElementById('docprefix').value.trim();
+  const msg = document.getElementById('docmsg');
+  const box = document.getElementById('docanswer');
+  box.textContent = '';
+  if (!prefix) {
+    msg.textContent = 'enter a collection prefix, e.g. notes/';
+    return;
+  }
+  msg.textContent = 'summarizing collection...';
+  try {
+    const query = new URLSearchParams({source_prefix: prefix, sentences: 8});
+    const r = await fetch('/v1/documents/summary?' + query.toString());
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'collection summary error: ' +
+        (j.error || r.status);
+      return;
+    }
+    msg.textContent = 'collection summary | ' + (j.sources || 0) +
+      ' source(s) | ' + (j.chunks || 0) + ' chunk(s)';
+    const head = document.createElement('div');
+    head.className = 'hint';
+    head.textContent = 'Extractive collection summary: ' + prefix;
+    box.appendChild(head);
+    const text = document.createElement('div');
+    text.className = 'qitem';
+    text.textContent = j.text || '';
+    box.appendChild(text);
+    (j.citations || []).slice(0, 8).forEach(citation => {
+      const card = document.createElement('div');
+      card.className = 'qitem';
+      const title = document.createElement('div');
+      title.textContent = (citation.source || '') +
+        (citation.page ? ' | p. ' + citation.page : '') +
+        (citation.section ? ' | ' + citation.section : '');
+      card.appendChild(title);
+      const actions = document.createElement('div');
+      actions.className = 'actions';
+      actions.appendChild(qbutton('Evidence', () =>
+        showEvidence(citation.source, citation.page, citation.section)));
+      actions.appendChild(qbutton('Copy citation', () =>
+        copyCitation(citation.source, citation.page, citation.section)));
+      card.appendChild(actions);
+      box.appendChild(card);
+    });
+  } catch (e) {
+    msg.textContent = 'collection summary error: ' + e;
+  }
+}
 async function showEvidence(source, page, section) {
   const box = document.getElementById('evidence');
   box.textContent = 'loading evidence...';
@@ -791,6 +849,16 @@ async function showEvidence(source, page, section) {
 }
 document.getElementById('docsearch').onclick = () => searchDocs();
 document.getElementById('docanswerbtn').onclick = () => answerDocs();
+document.getElementById('docsumcollection').onclick = () => summarizeCollection();
+document.getElementById('docsrc').addEventListener('change', () => {
+  document.getElementById('docprefix').value = '';
+});
+document.getElementById('docprefix').addEventListener('input', () => {
+  document.getElementById('docsrc').value = '';
+});
+document.getElementById('docprefix').addEventListener('keydown', event => {
+  if (event.key === 'Enter') summarizeCollection();
+});
 document.getElementById('docq').addEventListener('keydown', event => {
   if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
     event.preventDefault();

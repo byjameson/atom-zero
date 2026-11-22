@@ -64,6 +64,10 @@ def test_demo_page_uses_daily_agent_endpoint():
     assert "grounded answer" in page
     assert "summary" in page
     assert 'id="docsrc"' in page
+    assert 'id="docprefix"' in page
+    assert "docsumcollection" in page
+    assert "summarize collection" in page
+    assert "source_prefix" in page
     assert "all sources" in page
     assert "copy citation" in page
     assert "evidence" in page
@@ -799,6 +803,15 @@ def test_http_research_queue_requires_approval_and_cites(tmp_path, monkeypatch):
         docs.close()
 
 
+def test_ui_collection_scope_contract():
+    page = chat_server.PAGE
+    assert 'id="docprefix"' in page
+    assert 'id="docsumcollection"' in page
+    assert "source_prefix: prefix" in page
+    assert "summarizeCollection" in page
+    assert "collection summary" in page
+
+
 def test_doc_answer_returns_evidence_confidence_and_source_scope(tmp_path):
     try:
         docs = DocMemory(tmp_path / "docs.db")
@@ -850,6 +863,8 @@ def test_http_document_answer_and_scoped_search(tmp_path):
                   title="Launch")
     docs.add_text("warranty.txt", "The warranty period is 24 months.",
                   title="Warranty")
+    docs.add_text("notes/extra.txt", "The visitor badge code is VB-42.",
+                  title="Visitor")
     old = dict(chat_server._state)
     chat_server._state.update({
         "model": None, "tok": None, "docs": docs, "adapter": "",
@@ -879,6 +894,12 @@ def test_http_document_answer_and_scoped_search(tmp_path):
         prefixed = _post(base + "/v1/documents/answer", {
             "query": "launch code", "source_prefix": "launch"})
         assert "L-7781" in prefixed["text"]
+        collection = json.loads(urllib.request.urlopen(
+            base + "/v1/documents/summary?source_prefix=notes/&sentences=2",
+            timeout=10).read().decode("utf-8"))
+        assert "VB-42" in collection["text"]
+        assert collection["sources"] == 1
+        assert collection["citations"][0]["source"] == "notes/extra.txt"
         missing = _post(base + "/v1/documents/answer",
                         {"query": "population of Paris"})
         assert missing["sources"] == []

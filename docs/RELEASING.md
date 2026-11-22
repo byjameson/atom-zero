@@ -11,7 +11,7 @@ python -m build
 python -m twine check dist/*
 ```
 
-Expected for 0.4.1: `248 passed` or more.
+Expected for 0.4.2: `249 passed` or more.
 
 ## 2. PyPI
 

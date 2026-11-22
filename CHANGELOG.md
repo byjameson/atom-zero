@@ -1,5 +1,14 @@
 # Changelog
 
+## atomzero 0.4.2 - UI collection scope (2026-11-22)
+
+- Added a collection-prefix input and **Summarize collection** button to the
+  document UI. Search and Answer accept the same prefix scope.
+- Exact source and prefix scopes are mutually exclusive in the UI.
+- Added a UI regression test for the collection-scope contract; 249 tests pass.
+- Release notes:
+  [`docs/RELEASE_ATOMZERO_0.4.2.md`](docs/RELEASE_ATOMZERO_0.4.2.md).
+
 ## atomzero 0.4.1 - scoped regression and code-aware retrieval (2026-11-22)
 
 - Added `benchmarks/scoped_regression.py`, a deterministic regression gate for

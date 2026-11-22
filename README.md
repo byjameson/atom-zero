@@ -13,7 +13,7 @@ ModelScope.
 ## Install
 
 ```powershell
-pip install atomzero==0.4.1
+pip install atomzero==0.4.2
 ```
 
 Optional local MiniLM reranker:
@@ -160,6 +160,8 @@ short generation. It is **not MMLU, GSM8K or HumanEval**.
   source, a source prefix or teacher notes.
 - **Exact code/ID retrieval:** `L-7781` and `W-7781` are treated as distinct
   identifiers in FTS candidates, reranking and snippets.
+- **Collection scope in the UI:** choose an exact source or type a prefix such
+  as `notes/`; search, Answer and Summarize collection share the same scope.
 - **Headless CLI:** `atomzero-docs add/sync/status/doctor/search/answer/
   summary/summary-collection/list/evidence/export/import/forget` works without
   the web UI; `sync` keeps a portable relative-path collection, skips unchanged
@@ -268,9 +270,9 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 
 ## Links
 
-- PyPI: <https://pypi.org/project/atomzero/0.4.1/>
+- PyPI: <https://pypi.org/project/atomzero/0.4.2/>
 - GitHub source: <https://github.com/byjameson/atom-zero>
-- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v0.4.1>
+- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v0.4.2>
 - Quickstart: <https://github.com/byjameson/atom-zero/blob/main/docs/QUICKSTART_ATOMZERO.md>
 - Model card: <https://github.com/byjameson/atom-zero/blob/main/docs/MODEL_CARD.md>
 - Full project map: <https://github.com/byjameson/atom-zero/blob/main/docs/PROJECT_OVERVIEW.md>
