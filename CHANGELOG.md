@@ -32,6 +32,8 @@ work stays on `main`; see `docs/RELEASING.md`.
 - Added `benchmarks/briefing_regression.py` (9/9 checks) and its test.
 - Added `benchmarks/goal_flow_regression.py` (6/6 checks), an end-to-end HTTP
   test for plan/no-task, exactly-once confirmation and cancel/no-mutation.
+- Added `benchmarks/brief_me_flow_regression.py` (7/7 checks), an end-to-end
+  HTTP chat test for tasks, gaps, index, graph and briefing sources.
 
 ## atomzero 0.4.2 - UI collection scope (2026-11-22)
 

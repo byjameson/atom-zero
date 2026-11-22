@@ -1,0 +1,44 @@
+{
+  "benchmark": "atomzero-brief-me-flow-regression",
+  "generated": "2026-11-22T21:53:55",
+  "checks": [
+    {
+      "name": "task_added",
+      "ok": true,
+      "detail": "Added task 1: buy milk"
+    },
+    {
+      "name": "brief_me_reply",
+      "ok": true,
+      "detail": "Daily brief - 2026-11-22 21:53\nFocus: task 1: buy milk\nTasks: 1 open\n- 1: buy milk\nGaps: 1 pending\n- What is the warranty claim deadline?\nIndex: 2 chunk(s) / 2 "
+    },
+    {
+      "name": "brief_task_count",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "brief_pending_gap",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "brief_index_status",
+      "ok": true,
+      "detail": "{'chunks': 2, 'sources': 2, 'titles': ['Launch', 'Warranty'], 'items': [{'source': 'notes/launch.txt', 'title': 'Launch', 'kind': 'document', 'verified': True}, {'source': 'notes/warranty.txt', 'title': 'Warranty', 'kind': 'document', 'verified': True}]}"
+    },
+    {
+      "name": "brief_graph_entities",
+      "ok": true,
+      "detail": "['L-7781']"
+    },
+    {
+      "name": "brief_tool_and_sources",
+      "ok": true,
+      "detail": "[{'source': 'notes/launch.txt', 'title': 'Launch', 'kind': 'document', 'verified': True}, {'source': 'notes/warranty.txt', 'title': 'Warranty', 'kind': 'document', 'verified': True}]"
+    }
+  ],
+  "passed": 7,
+  "failed": 0,
+  "ok": true
+}

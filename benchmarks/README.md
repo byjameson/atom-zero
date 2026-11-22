@@ -21,6 +21,19 @@ python benchmarks/scoped_regression.py
 Latest result: **10/10 checks pass**. Raw result:
 [`results/scoped_regression.json`](results/scoped_regression.json).
 
+## `brief me` end-to-end regression
+
+`benchmarks/brief_me_flow_regression.py` starts the real HTTP chat handler,
+adds a task, then checks the `brief me` response for the open task, a pending
+gap, document counts, graph entities, the briefing tool call and source items.
+
+```powershell
+python benchmarks/brief_me_flow_regression.py
+```
+
+Latest result: **7/7 checks pass**. Raw result:
+[`results/brief_me_flow_regression.json`](results/brief_me_flow_regression.json).
+
 ## Goal-flow end-to-end regression
 
 `benchmarks/goal_flow_regression.py` starts the real HTTP chat handler and
