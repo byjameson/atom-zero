@@ -41,6 +41,8 @@ after `0.5.0`.
   `atomzero-brief --task-list --task-format csv|markdown`,
   `GET /v1/tasks/export` and UI Download CSV/.md buttons.
 - Task tags are included as a `tags` column in CSV and Markdown exports.
+- Optional AISC architecture specs and an audit script for the critical read
+  and task-action paths; AISC remains an external, optional tool.
 
 ## Source comparison and reliability
 
@@ -55,7 +57,7 @@ after `0.5.0`.
 
 ## Verified regressions
 
-- `363 passed` in the assistant test suite.
+- `364 passed` in the assistant test suite.
 - Weekly chat regression: 7/7.
 - Weekly export/archive regression: 29/29.
 - Weekly review regression: 6/6.
@@ -101,6 +103,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v0.6.0>
 - Weekly review: <https://github.com/byjameson/atom-zero/blob/main/docs/BRIEFING.md>
 - Tasks and exports: <https://github.com/byjameson/atom-zero/blob/main/docs/BRIEFING.md>
+- AISC audit: <https://github.com/byjameson/atom-zero/blob/main/docs/AISC_AUDIT.md>
 - Hugging Face: <https://huggingface.co/byjameson/atom-zero-49m>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-49m>
 - Contact: **gokhancava@gmail.com**

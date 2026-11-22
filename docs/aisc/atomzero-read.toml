@@ -1,0 +1,54 @@
+name = "AtomZeroReadPipeline"
+version = "0.6.0"
+description = "Critical local read-only answer path: retrieval, grounded answer, citation gate and renderer."
+min_assurance = 0.90
+max_context_tokens = 128000
+
+[[components]]
+name = "LocalRetriever"
+input_type = "UserQuery"
+output_type = "Evidence"
+kind = "tool"
+assurance = 0.95
+verified = true
+evidence = "document retrieval, source and evidence tests"
+assumptions = ["local index is available", "query is untrusted text"]
+guarantees = ["bounded local retrieval with source locators"]
+context_tokens = 8000
+
+[[components]]
+name = "GroundedAnswer"
+input_type = "Evidence"
+output_type = "DraftAnswer"
+kind = "evaluator"
+assurance = 0.97
+verified = true
+evidence = "grounded answer and no-source fallback tests"
+assumptions = ["answer stays extractive from supplied evidence"]
+guarantees = ["answer text is derived from retrieved evidence"]
+context_tokens = 512
+
+[[components]]
+name = "CitationGate"
+input_type = "DraftAnswer"
+output_type = "CheckedAnswer"
+kind = "evaluator"
+assurance = 0.98
+verified = true
+evidence = "citation, source-id and no-answer tests"
+assumptions = ["citation metadata is present in evidence"]
+guarantees = ["no unsourced factual answer is released"]
+context_tokens = 128
+
+[[components]]
+name = "LocalRenderer"
+input_type = "CheckedAnswer"
+output_type = "Reply"
+kind = "tool"
+assurance = 1.0
+verified = true
+evidence = "deterministic formatting tests"
+assumptions = ["checked answer is already source-bound"]
+guarantees = ["deterministic local response formatting"]
+reversible = true
+context_tokens = 64

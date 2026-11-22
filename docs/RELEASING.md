@@ -39,9 +39,11 @@ source comparison, graph paths and reliability fixes accumulated after
 python -m pytest tests -q
 python -m build
 python -m twine check dist/*
+# Optional when AISC is available:
+python scripts/aisc_audit.py --aisc-path "<aisc-checkout>"
 ```
 
-Expected for the next batch: `363 passed` or more.
+Expected for the next batch: `364 passed` or more.
 
 ## 2. PyPI
 

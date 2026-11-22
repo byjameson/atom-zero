@@ -1,0 +1,54 @@
+name = "AtomZeroTaskActions"
+version = "0.6.0"
+description = "Critical local task mutation path with deterministic parsing, evaluation and human confirmation."
+min_assurance = 0.90
+max_context_tokens = 16000
+
+[[components]]
+name = "TaskParser"
+input_type = "TaskRequest"
+output_type = "TaskCommand"
+kind = "tool"
+assurance = 0.98
+verified = true
+evidence = "task parsing, due date and priority tests"
+assumptions = ["request is local session text"]
+guarantees = ["typed task command with parsed metadata"]
+context_tokens = 1024
+
+[[components]]
+name = "TaskIntentEvaluator"
+input_type = "TaskCommand"
+output_type = "CheckedCommand"
+kind = "evaluator"
+assurance = 0.96
+verified = true
+evidence = "task filter, scope and destructive-action tests"
+assumptions = ["command has an explicit task target"]
+guarantees = ["invalid or ambiguous mutation is rejected"]
+context_tokens = 128
+
+[[components]]
+name = "HumanConfirmation"
+input_type = "CheckedCommand"
+output_type = "ApprovedCommand"
+kind = "human"
+assurance = 0.99
+verified = true
+evidence = "confirmed deletion and cancellation regression tests"
+assumptions = ["user confirms irreversible mutations explicitly"]
+guarantees = ["destructive task changes require confirmation"]
+context_tokens = 32
+
+[[components]]
+name = "TaskStore"
+input_type = "ApprovedCommand"
+output_type = "TaskResult"
+kind = "tool"
+assurance = 0.99
+verified = true
+evidence = "atomic session write and task mutation tests"
+assumptions = ["session file is writable"]
+guarantees = ["task mutation is applied locally"]
+reversible = false
+context_tokens = 64
