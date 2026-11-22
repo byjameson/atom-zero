@@ -1,0 +1,54 @@
+{
+  "benchmark": "atomzero-skills-flow-regression",
+  "generated": "2026-11-22T21:55:51",
+  "checks": [
+    {
+      "name": "skills_listed",
+      "ok": true,
+      "detail": "['fallback-skill', 'provider-skill', 'template-skill']"
+    },
+    {
+      "name": "provider_reply",
+      "ok": true,
+      "detail": "Provider answer."
+    },
+    {
+      "name": "provider_context",
+      "ok": true,
+      "detail": "Provider prompt for provider skill launch code.\nContext:\n- The launch code is L-7781. (source: notes/launch.txt)"
+    },
+    {
+      "name": "provider_tool_and_source",
+      "ok": true,
+      "detail": "[{'source': 'notes/launch.txt', 'title': 'Launch', 'kind': 'document', 'verified': True}]"
+    },
+    {
+      "name": "template_reply",
+      "ok": true,
+      "detail": "Template result for template skill launch code.\nContext:\n- The launch code is L-7781. (source: notes/launch.txt)"
+    },
+    {
+      "name": "template_does_not_call_provider",
+      "ok": true,
+      "detail": "1 provider call(s)"
+    },
+    {
+      "name": "fallback_reply",
+      "ok": true,
+      "detail": "Skill 'fallback-skill' needs a local provider. Start Atom Zero with --provider or configure an OpenAI-compatible endpoint."
+    },
+    {
+      "name": "fallback_source",
+      "ok": true,
+      "detail": "[{'source': 'notes/launch.txt', 'title': 'Launch', 'kind': 'document', 'verified': True}]"
+    },
+    {
+      "name": "fallback_does_not_call_provider",
+      "ok": true,
+      "detail": "1 provider call(s)"
+    }
+  ],
+  "passed": 9,
+  "failed": 0,
+  "ok": true
+}

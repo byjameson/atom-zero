@@ -21,6 +21,23 @@ python benchmarks/scoped_regression.py
 Latest result: **10/10 checks pass**. Raw result:
 [`results/scoped_regression.json`](results/scoped_regression.json).
 
+## Custom skills end-to-end regression
+
+`benchmarks/skills_flow_regression.py` starts the real HTTP chat handler and
+checks three skill modes:
+
+- provider skill: local context is rendered and the provider is called;
+- template skill: no provider call, rendered prompt returned;
+- no-provider fallback: explicit message plus local sources;
+- `GET /v1/skills` lists the loaded skills.
+
+```powershell
+python benchmarks/skills_flow_regression.py
+```
+
+Latest result: **9/9 checks pass**. Raw result:
+[`results/skills_flow_regression.json`](results/skills_flow_regression.json).
+
 ## `brief me` end-to-end regression
 
 `benchmarks/brief_me_flow_regression.py` starts the real HTTP chat handler,
