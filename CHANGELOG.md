@@ -29,8 +29,11 @@
   indexed with its period, task/source/graph counts, size and SHA-256.
 - Added `atomzero-brief --reports [--json]`, `GET /v1/weekly-review/reports`,
   indexed report download and a UI **Recent reports** panel.
-- Added `benchmarks/weekly_export_regression.py` (10/10 checks: CLI, HTTP, UI
-  and the report archive).
+- Added `atomzero-brief --reports --prune`,
+  `POST /v1/weekly-review/reports/prune` and a UI **Prune missing** action to
+  remove index entries whose report files no longer exist.
+- Added `benchmarks/weekly_export_regression.py` (11/11 checks: CLI, HTTP, UI,
+  the report archive and pruning).
 - Fixed BOM-sensitive session loading: `atomzero-brief` and `ChatHuman` now
   accept PowerShell-written UTF-8 session files with a BOM.
 - Extended BOM-tolerant reads to feedback, knowledge-gap, research-queue,

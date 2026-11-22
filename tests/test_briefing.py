@@ -8,6 +8,7 @@ from atomzero.briefing import (
     build_briefing, build_weekly_review, load_session, main, plan_goal)
 from atomzero.doc_memory import DocMemory
 from atomzero.knowledge_gaps import KnowledgeGapStore
+from atomzero.weekly_reports import WeeklyReportArchive
 
 
 def test_build_briefing_with_tasks_gaps_and_docs(tmp_path):
@@ -180,6 +181,40 @@ def test_cli_weekly_markdown_out_file(tmp_path, capsys):
     assert listing["data"][0]["exists"] is True
     with pytest.raises(SystemExit) as exc:
         main(["--out", str(tmp_path / "invalid.md")])
+    assert exc.value.code == 2
+
+
+def test_cli_reports_prune_missing_files(tmp_path, capsys):
+    index_path = tmp_path / "weekly_reports.json"
+    present = tmp_path / "present.md"
+    present.write_text("# Present\n", encoding="utf-8")
+    missing = tmp_path / "missing.md"
+    missing.write_text("# Missing\n", encoding="utf-8")
+    archive = WeeklyReportArchive(index_path)
+    kept = archive.record(present, {
+        "generated": "2026-11-22 09:00", "period_days": 7,
+        "task_counts": {"open": 0}, "recent_source_count": 1,
+        "graph": {"entities": [], "connections": []},
+    })
+    archive.record(missing, {
+        "generated": "2026-11-22 10:00", "period_days": 14,
+        "task_counts": {"open": 1}, "recent_source_count": 0,
+        "graph": {"entities": [], "connections": []},
+    })
+    missing.unlink()
+
+    assert main(["--reports", "--prune", "--json", "--reports-index",
+                 str(index_path)]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["removed"] == 1
+    assert payload["total"] == 1
+    assert payload["data"][0]["id"] == kept["id"]
+
+    assert main(["--reports", "--prune", "--reports-index",
+                 str(index_path)]) == 0
+    assert "Removed 0 missing report(s)." in capsys.readouterr().out
+    with pytest.raises(SystemExit) as exc:
+        main(["--prune"])
     assert exc.value.code == 2
 
 

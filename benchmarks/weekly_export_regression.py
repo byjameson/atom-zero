@@ -7,7 +7,8 @@ Checks:
 - the 14-day window label;
 - invalid day input returning 400;
 - `atomzero-brief --weekly --markdown --out PATH` writing a file directly;
-- the CLI report appearing in the HTTP/UI archive and downloading from it.
+- the CLI report appearing in the HTTP/UI archive and downloading from it;
+- pruning a missing archive entry through the HTTP/UI flow.
 
 Run:
 
@@ -93,7 +94,9 @@ def run(output: str | Path | None = None) -> dict:
                 and "downloadWeeklyMarkdown" in page
                 and "/v1/weekly-review/reports" in page
                 and 'id="weeklyreportsrefresh"' in page
-                and "refreshWeeklyReports" in page,
+                and 'id="weeklyreportsprune"' in page
+                and "refreshWeeklyReports" in page
+                and "pruneWeeklyReports" in page,
                 "present")
             for message in ("add task buy milk",
                             "add task write report",
@@ -194,6 +197,27 @@ def run(output: str | Path | None = None) -> dict:
                 and archived.startswith("# Weekly review - ")
                 and "- [ ] **#2** write report" in archived,
                 archived[:180])
+            missing_path = Path(folder) / "gone.md"
+            missing_path.write_text("# Gone\n", encoding="utf-8")
+            archive = (chat_server._state.get("weekly_reports")
+                       or WeeklyReportArchive(report_index))
+            archive.record(missing_path, {
+                "generated": "2026-11-22 10:00", "period_days": 14,
+                "task_counts": {"open": 0}, "pending_gap_count": 0,
+                "recent_source_count": 0,
+                "graph": {"entities": [], "connections": []},
+            })
+            missing_path.unlink()
+            pruned = _post(base, "/v1/weekly-review/reports/prune", {})
+            after_prune = json.loads(urllib.request.urlopen(
+                base + "/v1/weekly-review/reports?limit=5",
+                timeout=15).read().decode("utf-8"))
+            check(
+                "archive_prune",
+                pruned.get("removed") == 1
+                and pruned.get("remaining") == 1
+                and after_prune.get("total") == 1,
+                str(pruned))
         finally:
             httpd.shutdown()
             httpd.server_close()

@@ -30,6 +30,7 @@ Endpoints:
   GET  /v1/weekly-review/export?session_id=...&days=7
   GET  /v1/weekly-review/reports?limit=10
   GET  /v1/weekly-review/reports?id=w0001
+  POST /v1/weekly-review/reports/prune
   POST /v1/goals/plan
   GET  /v1/teacher/notes
   POST /v1/teacher/notes
@@ -259,7 +260,8 @@ and suggested next actions.</p>
 <button id="goalplan">Plan goal</button></div>
 <p id="briefmsg" class="hint"></p>
 <div id="briefres"></div>
-<div class="row"><button id="weeklyreportsrefresh">Recent reports</button></div>
+<div class="row"><button id="weeklyreportsrefresh">Recent reports</button>
+<button id="weeklyreportsprune">Prune missing</button></div>
 <p id="weeklyreportsmsg" class="hint"></p>
 <div id="weeklyreports"></div>
 <hr>
@@ -672,6 +674,26 @@ async function refreshWeeklyReports() {
     msg.textContent = 'report archive error: ' + e;
   }
 }
+async function pruneWeeklyReports() {
+  const msg = document.getElementById('weeklyreportsmsg');
+  msg.textContent = 'pruning missing reports...';
+  try {
+    const r = await fetch('/v1/weekly-review/reports/prune', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: '{}'});
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'report prune error: ' + (j.error || r.status);
+      return;
+    }
+    const removed = j.removed || 0;
+    await refreshWeeklyReports();
+    msg.textContent = 'pruned ' + removed + ' missing report(s) | ' +
+      (j.remaining || 0) + ' remaining';
+  } catch (e) {
+    msg.textContent = 'report prune error: ' + e;
+  }
+}
 async function downloadArchivedReport(reportId, name) {
   const msg = document.getElementById('weeklyreportsmsg');
   msg.textContent = 'downloading ' + reportId + '...';
@@ -776,6 +798,8 @@ document.getElementById('briefweekly').onclick = () => getWeeklyReview();
 document.getElementById('weeklymd').onclick = () => downloadWeeklyMarkdown();
 document.getElementById('weeklyreportsrefresh').onclick =
   () => refreshWeeklyReports();
+document.getElementById('weeklyreportsprune').onclick =
+  () => pruneWeeklyReports();
 document.getElementById('goalplan').onclick = () => planGoal(false);
 document.getElementById('goalinput').addEventListener('keydown', event => {
   if (event.key === 'Enter') planGoal(false);
@@ -2809,6 +2833,7 @@ class Handler(BaseHTTPRequestHandler):
                          "/v1/skills/run", "/v1/skills/chain",
                          "/v1/skills/chains/run",
                          "/v1/briefing", "/v1/weekly-review",
+                         "/v1/weekly-review/reports/prune",
                          "/v1/goals/plan",
                          "/v1/learn_url", "/v1/research",
                          "/v1/research/queue",
@@ -2876,6 +2901,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._briefing(req)
             if route == "/v1/weekly-review":
                 return self._weekly_review(req)
+            if route == "/v1/weekly-review/reports/prune":
+                return self._weekly_reports_prune()
             if route == "/v1/goals/plan":
                 return self._goal_plan(req)
             if route == "/v1/research/queue":
@@ -3334,6 +3361,19 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as exc:
             return self._json(400, {"error": str(exc)})
         return self._json(200, result)
+
+    def _weekly_reports_prune(self):
+        try:
+            archive = _weekly_reports_archive()
+            removed = archive.prune()
+            remaining = archive.count()
+        except (WeeklyReportError, OSError) as exc:
+            return self._json(400, {"error": str(exc)})
+        return self._json(200, {
+            "removed": removed,
+            "remaining": remaining,
+            "index": str(archive.path),
+        })
 
     def _weekly_review(self, req: dict):
         session_id = str(req.get("session_id", "default")).strip() or "default"

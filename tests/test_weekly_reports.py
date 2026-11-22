@@ -64,6 +64,25 @@ def test_archive_records_dedupes_and_reads_bom_index(tmp_path):
     assert reloaded.list()[0]["task_counts"]["open"] == 4
 
 
+def test_archive_prune_removes_missing_reports(tmp_path):
+    index_path = tmp_path / "weekly_reports.json"
+    archive = WeeklyReportArchive(index_path)
+    present = tmp_path / "present.md"
+    present.write_text("# Present\n", encoding="utf-8")
+    missing = tmp_path / "missing.md"
+    missing.write_text("# Missing\n", encoding="utf-8")
+    archive.record(present, _review())
+    archive.record(missing, _review(period_days=14))
+    missing.unlink()
+    assert archive.count() == 2
+
+    assert archive.prune() == 1
+    entries = archive.list()
+    assert len(entries) == 1
+    assert entries[0]["path"] == str(present.resolve())
+    assert archive.prune() == 0
+
+
 def test_archive_markdown_download_and_missing_files(tmp_path):
     index_path = tmp_path / "weekly_reports.json"
     report = tmp_path / "weekly.md"

@@ -844,10 +844,12 @@ def test_ui_collection_scope_contract():
     assert 'id="briefweekly"' in page
     assert 'id="weeklymd"' in page
     assert 'id="weeklyreportsrefresh"' in page
+    assert 'id="weeklyreportsprune"' in page
     assert "getWeeklyReview" in page
     assert "downloadWeeklyMarkdown" in page
     assert "refreshWeeklyReports" in page
     assert "downloadArchivedReport" in page
+    assert "pruneWeeklyReports" in page
     assert "planGoal" in page
     assert 'data-q="plan goal prepare the warranty page"' in page
     assert 'data-q="brief me"' in page
@@ -1344,6 +1346,14 @@ def test_http_weekly_reports_archive(tmp_path):
         "recent_source_count": 1,
         "graph": {"entities": [{"name": "L-7781"}], "connections": []},
     }, exported_at="2026-11-22T09:00:00")
+    missing_report = tmp_path / "gone.md"
+    missing_report.write_text("# Gone\n", encoding="utf-8")
+    missing_entry = archive.record(missing_report, {
+        "generated": "2026-11-22 10:00", "period_days": 14,
+        "task_counts": {"open": 0}, "recent_source_count": 0,
+        "graph": {"entities": [], "connections": []},
+    })
+    missing_report.unlink()
     old = dict(chat_server._state)
     chat_server._state.update({
         "model": None, "tok": None, "docs": None, "adapter": "",
@@ -1362,9 +1372,18 @@ def test_http_weekly_reports_archive(tmp_path):
         listing = json.loads(urllib.request.urlopen(
             base + "/v1/weekly-review/reports?limit=5",
             timeout=10).read().decode("utf-8"))
+        assert listing["total"] == 2
+        by_id = {item["id"]: item for item in listing["data"]}
+        assert by_id[entry["id"]]["exists"] is True
+        assert by_id[missing_entry["id"]]["exists"] is False
+        pruned = _post(base + "/v1/weekly-review/reports/prune", {})
+        assert pruned["removed"] == 1
+        assert pruned["remaining"] == 1
+        listing = json.loads(urllib.request.urlopen(
+            base + "/v1/weekly-review/reports?limit=5",
+            timeout=10).read().decode("utf-8"))
         assert listing["total"] == 1
         assert listing["data"][0]["id"] == entry["id"]
-        assert listing["data"][0]["exists"] is True
         response = urllib.request.urlopen(
             base + f"/v1/weekly-review/reports?id={entry['id']}",
             timeout=10)

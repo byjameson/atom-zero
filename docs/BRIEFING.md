@@ -98,6 +98,7 @@ Every successful `--out` export is recorded in a local JSON index:
 ```powershell
 atomzero-brief --reports
 atomzero-brief --reports --json
+atomzero-brief --reports --prune
 atomzero-brief --reports --reports-index reports\weekly_reports.json --limit 5
 ```
 
@@ -105,13 +106,18 @@ The index defaults to `data/weekly_reports.json`. Each output path has one
 entry, refreshed on later exports to the same path. Entries store the report
 path, time, period, task/source counts, graph counts, size and SHA-256.
 
+`--prune` removes entries whose report file no longer exists and prints the
+removed count. With `--json`, the result includes a `removed` field.
+
 ```text
-GET /v1/weekly-review/reports?limit=10
-GET /v1/weekly-review/reports?id=w0001
+GET  /v1/weekly-review/reports?limit=10
+GET  /v1/weekly-review/reports?id=w0001
+POST /v1/weekly-review/reports/prune
 ```
 
-The UI **Recent reports** panel lists the archive and can download an indexed
-Markdown file. Keep `--reports-index` pointed at the same file for CLI and the
+The UI **Recent reports** panel lists the archive, downloads an indexed
+Markdown file and exposes **Prune missing** for entries whose files were
+deleted. Keep `--reports-index` pointed at the same file for CLI and the
 server; both default to `data/weekly_reports.json`. `quickstart` and
 `chat_server` accept `--reports-index`.
 

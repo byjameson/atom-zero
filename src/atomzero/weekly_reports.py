@@ -154,6 +154,23 @@ class WeeklyReportArchive:
                 items.append(item)
             return items
 
+    def prune(self) -> int:
+        """Remove entries whose report file no longer exists."""
+        with self._lock:
+            self._reload()
+            kept = []
+            removed = 0
+            for entry in self.reports:
+                raw = str(entry.get("path", "") or "")
+                if raw and Path(raw).is_file():
+                    kept.append(entry)
+                else:
+                    removed += 1
+            if removed:
+                self.reports = kept
+                self._save()
+            return removed
+
     def count(self) -> int:
         with self._lock:
             self._reload()
