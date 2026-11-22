@@ -76,11 +76,14 @@ the CLI form is `atomzero-brief --session ... --search-tasks report
 --task-sort priority [--json]` and the UI has a **Search tasks** field with
 status, due, priority and task-order selectors. `priority` sorting places
 high before normal before low, then earliest due date, then task id; the
-default keeps session order.
+default keeps session order. Chat uses the same option with
+`search tasks report sort priority`, including combinations such as
+`search tasks report high open sort priority`.
 
 The daily brief and weekly review add overdue/due-soon counts, a focus item,
 priority/due-date labels and dedicated Markdown sections. Chat understands
-`due soon` and `due soon in 14 days`. The UI **Overdue tasks** and **Due soon** buttons
+`overdue tasks`, `overdue tasks priority`, `due soon`, `due soon in 14 days`
+and `due soon priority`. The UI **Overdue tasks** and **Due soon** buttons
 expose the same session views; HTTP equivalents are
 `/v1/tasks/overdue?sort=priority` and
 `/v1/tasks/due-soon?days=7&sort=priority`. CLI equivalents are

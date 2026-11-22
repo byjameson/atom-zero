@@ -950,6 +950,9 @@ def test_ui_collection_scope_contract():
     assert 'data-q="brief me"' in page
     assert 'data-q="brief me priority"' in page
     assert 'data-q="weekly review priority"' in page
+    assert 'data-q="due soon priority"' in page
+    assert 'data-q="overdue tasks priority"' in page
+    assert 'data-q="search tasks report sort priority"' in page
 
 
 def test_doc_answer_returns_evidence_confidence_and_source_scope(tmp_path):
@@ -2240,12 +2243,16 @@ def test_http_chat_weekly_review(tmp_path):
             "session_id": "week-chat", "message": "add task buy milk"})
         _post(base + "/v1/agent/chat", {
             "session_id": "week-chat", "message": "add task write report"})
+        yesterday = (date.today() - timedelta(days=1)).isoformat()
+        two_days_ago = (date.today() - timedelta(days=2)).isoformat()
         _post(base + "/v1/agent/chat", {
             "session_id": "week-chat",
-            "message": "add task low priority task priority low"})
+            "message": f"add task low priority task due {yesterday} "
+                       "priority low"})
         _post(base + "/v1/agent/chat", {
             "session_id": "week-chat",
-            "message": "add task high priority task priority high"})
+            "message": f"add task high priority task due {two_days_ago} "
+                       "priority high"})
         _post(base + "/v1/agent/chat", {
             "session_id": "week-chat", "message": "complete task 1"})
         result = _post(base + "/v1/agent/chat", {
@@ -2277,6 +2284,18 @@ def test_http_chat_weekly_review(tmp_path):
         assert [task["id"] for task in
                 priority_brief["brief"]["tasks"]] == [4, 2, 3]
         assert "sort=priority" in priority_brief["reply"]
+        chat_search = _post(base + "/v1/agent/chat", {
+            "session_id": "week-chat",
+            "message": "search tasks task sort priority"})
+        assert chat_search["tool_calls"][0]["sort"] == "priority"
+        assert [task["id"] for task in
+                chat_search["task_search"]["tasks"]] == [4, 3]
+        chat_overdue = _post(base + "/v1/agent/chat", {
+            "session_id": "week-chat", "message": "overdue tasks priority"})
+        assert chat_overdue["tool_calls"][0] == {
+            "name": "overdue", "sort": "priority", "count": 2}
+        assert [task["id"] for task in
+                chat_overdue["overdue"]["overdue_tasks"]] == [4, 3]
         turkish = _post(base + "/v1/agent/chat", {
             "session_id": "week-chat", "message": "haftalık özet 14 gün"})
         assert turkish["tool_calls"][0]["days"] == 14

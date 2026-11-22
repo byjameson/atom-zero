@@ -107,6 +107,9 @@
 - Added chat commands `brief me priority`, `daily brief priority` and
   `weekly review priority` (including `weekly review 14 days priority`), with
   `sort` exposed in tool calls.
+- Added priority sorting to chat task views: `search tasks ... sort priority`,
+  new `overdue tasks [priority]` commands and `due soon priority`. Tool calls
+  expose the selected sort.
 - Fixed `add task` priority parsing so task text ending in "priority task" is
   not interpreted as a second priority clause.
 - Added `benchmarks/weekly_export_regression.py` (29/29 checks: CLI, HTTP, UI,

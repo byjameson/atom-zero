@@ -1,6 +1,6 @@
 {
   "benchmark": "atomzero-weekly-chat-regression",
-  "generated": "2026-11-23T01:28:44",
+  "generated": "2026-11-23T01:32:36",
   "checks": [
     {
       "name": "chat_weekly_tool",
@@ -15,7 +15,7 @@
     {
       "name": "chat_weekly_sections",
       "ok": true,
-      "detail": "Weekly review - 2026-11-23 01:28 (last 7 days)\nTasks: 1 open | 1 completed this week\nOpen:\n- 2: write report\nCompleted this week:\n- 1: buy milk\nGaps: 1 pending\n- What is the warranty claim deadline?\nRecent sources: 1\n- L"
+      "detail": "Weekly review - 2026-11-23 01:32 (last 7 days)\nTasks: 1 open | 1 completed this week\nOpen:\n- 2: write report\nCompleted this week:\n- 1: buy milk\nGaps: 1 pending\n- What is the warranty claim deadline?\nRecent sources: 1\n- L"
     },
     {
       "name": "chat_weekly_sources",
@@ -30,12 +30,12 @@
     {
       "name": "chat_priority_sort",
       "ok": true,
-      "detail": "Weekly review - 2026-11-23 01:28 (last 7 days) | sort=priority\nTasks: 1 open | 1 completed this week\nOpen:\n- 2: write report\nCompleted this week:\n- 1: buy milk\n"
+      "detail": "Weekly review - 2026-11-23 01:32 (last 7 days) | sort=priority\nTasks: 1 open | 1 completed this week\nOpen:\n- 2: write report\nCompleted this week:\n- 1: buy milk\n"
     },
     {
       "name": "chat_weekly_days",
       "ok": true,
-      "detail": "Weekly review - 2026-11-23 01:28 (last 14 days)\nTasks: 1 open | 1 completed in the last 14 days\nOpen:\n- 2: write report\nCompleted in the last 14 days:\n- 1: buy "
+      "detail": "Weekly review - 2026-11-23 01:32 (last 14 days)\nTasks: 1 open | 1 completed in the last 14 days\nOpen:\n- 2: write report\nCompleted in the last 14 days:\n- 1: buy "
     }
   ],
   "passed": 7,

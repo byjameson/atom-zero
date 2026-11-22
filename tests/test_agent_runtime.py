@@ -274,6 +274,54 @@ def test_agent_searches_task_text(tmp_path):
     assert "Tell me task text to search" in no_text["reply"]
 
 
+def test_agent_priority_sort_task_views(tmp_path):
+    today = date.today()
+    agent = AgentSession("s-priority-task-views", tmp_path / "memory.json")
+    for text, offset, priority in (
+            ("low overdue task", -1, "low"),
+            ("high overdue task", -2, "high"),
+            ("normal soon task", 2, "normal"),
+            ("high soon task", 1, "high")):
+        due = (today + timedelta(days=offset)).isoformat()
+        agent.chat(f"add task {text} due {due} priority {priority}")
+    default_search = agent.chat("search tasks task")
+    assert [task["id"] for task in default_search["task_search"]["tasks"]] == [
+        1, 2, 3, 4]
+    search = agent.chat("search tasks task sort priority")
+    assert search["tool_calls"][0]["sort"] == "priority"
+    assert search["task_search"]["sort"] == "priority"
+    assert [task["id"] for task in search["task_search"]["tasks"]] == [
+        2, 4, 3, 1]
+    assert "sort=priority" in search["reply"]
+    filtered = agent.chat("search tasks task priority high sort priority")
+    assert filtered["tool_calls"][0]["priority"] == "high"
+    assert filtered["tool_calls"][0]["sort"] == "priority"
+    assert [task["id"] for task in filtered["task_search"]["tasks"]] == [2, 4]
+    default_overdue = agent.chat("overdue tasks")
+    assert default_overdue["tool_calls"][0] == {
+        "name": "overdue", "sort": "default", "count": 2}
+    assert [task["id"] for task in
+            default_overdue["overdue"]["overdue_tasks"]] == [1, 2]
+    overdue = agent.chat("overdue tasks priority")
+    assert overdue["tool_calls"][0] == {
+        "name": "overdue", "sort": "priority", "count": 2}
+    assert [task["id"] for task in overdue["overdue"]["overdue_tasks"]] == [
+        2, 1]
+    assert "sort=priority" in overdue["reply"]
+    default_due = agent.chat("due soon")
+    assert [task["id"] for task in
+            default_due["due_soon"]["due_soon_tasks"]] == [3, 4]
+    due = agent.chat("due soon priority")
+    assert due["tool_calls"][0] == {
+        "name": "due_soon", "days": 7, "sort": "priority"}
+    assert [task["id"] for task in due["due_soon"]["due_soon_tasks"]] == [
+        4, 3]
+    assert "sort=priority" in due["reply"]
+    longer = agent.chat("due soon in 7 days sort priority")
+    assert longer["tool_calls"][0] == {
+        "name": "due_soon", "days": 7, "sort": "priority"}
+
+
 def test_agent_task_priority_metadata(tmp_path):
     agent = AgentSession("s-task-priority", tmp_path / "memory.json")
     added = agent.chat("add task submit report priority high")

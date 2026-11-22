@@ -261,7 +261,10 @@ hr{border:0;border-top:1px solid #ddd;margin:22px 0}
 <button data-q="brief me priority">priority brief</button>
 <button data-q="weekly review priority">priority review</button>
 <button data-q="due soon">due soon</button>
+<button data-q="due soon priority">priority due soon</button>
+<button data-q="overdue tasks priority">priority overdue</button>
 <button data-q="search tasks report">search tasks</button>
+<button data-q="search tasks report sort priority">priority search</button>
 <button data-q="find report weekly">find report</button>
 <button data-q="list reports">list reports</button>
 <button data-q="list reports oldest">reports oldest</button>

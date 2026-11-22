@@ -8,9 +8,10 @@ from datetime import datetime
 from pathlib import Path
 
 from atomzero.briefing import (
-    build_briefing, build_weekly_review, due_soon_view, plan_goal,
-    render_due_soon_view, render_task_search_view,
-    render_weekly_report_comparison, task_search_view)
+    build_briefing, build_weekly_review, due_soon_view, overdue_view,
+    plan_goal, render_due_soon_view, render_overdue_view,
+    render_task_search_view, render_weekly_report_comparison,
+    task_search_view)
 from atomzero.contradictions import compare_sources
 from atomzero.doc_memory import format_citation, grounded_answer
 from atomzero.knowledge_gaps import KnowledgeGapError
@@ -81,17 +82,29 @@ def math_query(text: str) -> str | None:
     return candidate
 
 
-def parse_task_search_filters(raw: str) -> tuple[str, str, str, str]:
+def parse_task_search_filters(raw: str) -> tuple[str, str, str, str, str]:
     """Split trailing task-search filters from the text query."""
     tokens = str(raw or "").strip().split()
     status = "all"
     due = "all"
     priority = "all"
+    sort = "default"
     status_words = {"open", "done"}
     due_words = {"overdue", "today", "week", "none"}
     priority_words = {"low", "normal", "high"}
+    sort_words = {"default", "priority"}
     while tokens:
         last = tokens[-1].lower()
+        if (len(tokens) >= 3 and tokens[-3].lower() == "sorted"
+                and tokens[-2].lower() == "by" and last in sort_words):
+            sort = last
+            tokens = tokens[:-3]
+            continue
+        if (len(tokens) >= 2 and tokens[-2].lower() == "sort"
+                and last in sort_words):
+            sort = last
+            tokens = tokens[:-2]
+            continue
         if (len(tokens) >= 2 and tokens[-2].lower() == "priority"
                 and last in priority_words):
             priority = last
@@ -120,7 +133,7 @@ def parse_task_search_filters(raw: str) -> tuple[str, str, str, str]:
             tokens.pop()
             continue
         break
-    return " ".join(tokens).strip(), status, due, priority
+    return " ".join(tokens).strip(), status, due, priority, sort
 
 
 class AgentSession:
@@ -954,16 +967,17 @@ class AgentSession:
         }
 
     def _search_tasks(self, raw_query: str) -> dict:
-        query, status, due, priority = parse_task_search_filters(raw_query)
+        query, status, due, priority, sort = parse_task_search_filters(
+            raw_query)
         if not query:
             return {
                 "reply": ("Tell me task text to search, for example "
-                          "'search tasks report high open due week'."),
+                          "'search tasks report open sort priority'."),
                 "tool_calls": [], "sources": [], "evidence": [],
             }
         view = task_search_view(
             self.human.data, query, status=status, due=due,
-            priority=priority)
+            priority=priority, sort=sort)
         return {
             "reply": render_task_search_view(view),
             "tool_calls": [{"name": "search_tasks",
@@ -971,6 +985,7 @@ class AgentSession:
                             "status": view["status"],
                             "due": view["due"],
                             "priority": view["priority"],
+                            "sort": view["sort"],
                             "matches": view["count"]}],
             "sources": [],
             "evidence": [],
@@ -978,11 +993,26 @@ class AgentSession:
             "weights_changed": False,
         }
 
-    def _due_soon(self, days: int = 7) -> dict:
-        view = due_soon_view(self.human.data, days=days)
+    def _overdue(self, sort: str = "default") -> dict:
+        view = overdue_view(self.human.data, sort=sort)
+        return {
+            "reply": render_overdue_view(view),
+            "tool_calls": [{"name": "overdue",
+                            "sort": view["sort"],
+                            "count": view["overdue_task_count"]}],
+            "sources": [],
+            "evidence": [],
+            "overdue": view,
+            "weights_changed": False,
+        }
+
+    def _due_soon(self, days: int = 7, sort: str = "default") -> dict:
+        view = due_soon_view(self.human.data, days=days, sort=sort)
         return {
             "reply": render_due_soon_view(view),
-            "tool_calls": [{"name": "due_soon", "days": view["days"]}],
+            "tool_calls": [{"name": "due_soon",
+                            "days": view["days"],
+                            "sort": view["sort"]}],
             "sources": [],
             "evidence": [],
             "due_soon": view,
@@ -1352,13 +1382,25 @@ class AgentSession:
                 r"^task\s+search\s+(.+?)\??$", text, re.IGNORECASE)
         if task_search:
             return self._search_tasks(task_search.group(1).strip())
+        overdue_match = re.match(
+            r"^(?:overdue(?: tasks?)?|tasks overdue|"
+            r"show overdue(?: tasks?)?)"
+            r"(?:\s+(?:sort\s+)?(?P<sort>default|priority))?\??$",
+            text, re.IGNORECASE)
+        if overdue_match:
+            return self._overdue(
+                overdue_match.groupdict().get("sort") or "default")
         due_match = re.match(
             r"^(?:due soon|tasks due soon|what(?:'s| is) due soon|"
-            r"show due soon)(?:\s+(?:in\s+)?(\d+)\s+days?)?\??$",
+            r"show due soon)(?:\s+(?:in\s+)?(?P<days>\d+)\s+days?)?"
+            r"(?:\s+(?:sort\s+)?(?P<sort>default|priority))?\??$",
             text, re.IGNORECASE)
         if due_match:
+            groups = due_match.groupdict()
+            days_raw = groups.get("days")
             return self._due_soon(
-                int(due_match.group(1)) if due_match.group(1) else 7)
+                int(days_raw) if days_raw else 7,
+                sort=groups.get("sort") or "default")
         weekly_match = re.match(
             r"^(?:(?:weekly|week)\s+(?:review|summary)|"
             r"haftal[ıi]k\s+(?:özet|rapor|değerlendirme))"
