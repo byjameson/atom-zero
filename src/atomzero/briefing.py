@@ -59,6 +59,39 @@ def _overdue_tasks(session_data: dict | None,
             and str(task["due"]) < today]
 
 
+def overdue_view(session_data: dict | None, now=None) -> dict:
+    tasks = _open_tasks(session_data)
+    today = _today_from_now(now)
+    overdue = _overdue_tasks(session_data, today)
+    return {
+        "generated": (now.strftime("%Y-%m-%d %H:%M")
+                      if isinstance(now, datetime)
+                      else str(now or time.strftime("%Y-%m-%d %H:%M"))),
+        "today": today,
+        "open_task_count": len(tasks),
+        "overdue_task_count": len(overdue),
+        "open_tasks": tasks,
+        "overdue_tasks": overdue,
+        "weights_changed": False,
+    }
+
+
+def render_overdue_view(view: dict) -> str:
+    lines = [
+        f"Overdue tasks ({view.get('overdue_task_count', 0)} of "
+        f"{view.get('open_task_count', 0)} open) - {view.get('today', '')}"
+    ]
+    tasks = view.get("overdue_tasks", [])
+    if not tasks:
+        lines.append("- None")
+        return "\n".join(lines)
+    for task in tasks:
+        lines.append(
+            f"- {task.get('id')}: {task.get('text', '')} | "
+            f"due {task.get('due', '')} | overdue")
+    return "\n".join(lines)
+
+
 def _pending_gaps(gaps) -> list[dict]:
     if gaps is None:
         return []
@@ -729,6 +762,8 @@ def main(argv=None) -> int:
     parser.add_argument("--goal", default="")
     parser.add_argument("--weekly", action="store_true",
                         help="build a weekly review instead of a daily brief")
+    parser.add_argument("--overdue", action="store_true",
+                        help="list overdue tasks from the session")
     parser.add_argument("--days", type=int, default=7)
     parser.add_argument("--max-steps", type=int, default=3)
     parser.add_argument("--json", action="store_true")
@@ -770,6 +805,9 @@ def main(argv=None) -> int:
         parser.error("--markdown cannot be combined with --json")
     if args.out and not (args.weekly and args.markdown):
         parser.error("--out requires --weekly --markdown")
+    if args.overdue and (args.weekly or args.goal or args.reports
+                         or args.markdown or args.out):
+        parser.error("--overdue cannot be combined with other views")
     if args.reports and (
             args.weekly or (args.markdown and not args.compare)
             or args.out or args.goal):
@@ -942,7 +980,9 @@ def main(argv=None) -> int:
         if Path(args.gaps).exists():
             from atomzero.knowledge_gaps import KnowledgeGapStore
             gaps = KnowledgeGapStore(args.gaps)
-        if args.weekly:
+        if args.overdue:
+            result = overdue_view(session)
+        elif args.weekly:
             result = build_weekly_review(
                 session, gaps, docs, days=args.days)
         elif args.goal:
@@ -961,6 +1001,8 @@ def main(argv=None) -> int:
             docs.close()
     if args.json:
         print(json.dumps(result, indent=2, ensure_ascii=False))
+    elif args.overdue:
+        print(render_overdue_view(result))
     elif args.markdown:
         markdown = render_weekly_markdown(result)
         if args.out:

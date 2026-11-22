@@ -35,9 +35,13 @@ add task review notes due in 3 days
 ```
 
 `list tasks` shows due dates and marks overdue items. The daily brief and
-weekly review add overdue counts, a focus item and due-date labels. This is
-local metadata only: there are no background reminders, notifications or
-calendar sync.
+weekly review add overdue counts, a focus item and due-date labels. The UI
+**Overdue tasks** button and `GET /v1/tasks/overdue?session_id=default` expose
+the same session view; the CLI equivalent is
+`atomzero-brief --session ... --overdue [--json]`.
+
+This is local metadata only: there are no background reminders, notifications
+or calendar sync.
 
 ## Weekly review
 

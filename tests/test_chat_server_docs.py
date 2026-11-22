@@ -1,5 +1,6 @@
 import json
 import threading
+from datetime import date, timedelta
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -843,6 +844,10 @@ def test_ui_collection_scope_contract():
     assert "Daily brief" in page
     assert 'id="briefrefresh"' in page
     assert 'id="briefweekly"' in page
+    assert 'id="overduebtn"' in page
+    assert 'id="overdueres"' in page
+    assert "getOverdueTasks" in page
+    assert "/v1/tasks/overdue" in page
     assert 'id="weeklymd"' in page
     assert 'id="weeklyreportsrefresh"' in page
     assert 'id="weeklyreportsprune"' in page
@@ -1735,6 +1740,49 @@ def test_http_weekly_reports_repair(tmp_path):
         assert "Report w0002 metadata repair: 1 repaired" in single_repair[
             "reply"]
         assert archive.verify()["summary"]["ok"] == 2
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
+
+
+def test_http_overdue_tasks(tmp_path):
+    overdue = (date.today() - timedelta(days=1)).isoformat()
+    future = (date.today() + timedelta(days=1)).isoformat()
+    old = dict(chat_server._state)
+    chat_server._state.update({
+        "model": None, "tok": None, "docs": None, "adapter": "",
+        "name": "tiny-test", "params": 1, "config": {}, "step": 0,
+        "api_key": "", "metrics": {"requests": 0, "generated_tokens": 0},
+        "safety": None, "wiki_lang": "en",
+        "session_dir": str(tmp_path / "sessions"), "sessions": {},
+        "generator": None, "allow_general_chat": False, "skills": None,
+    })
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        _post(base + "/v1/agent/chat", {
+            "session_id": "due-http",
+            "message": f"add task submit report due {overdue}"})
+        _post(base + "/v1/agent/chat", {
+            "session_id": "due-http",
+            "message": f"add task plan launch due {future}"})
+        result = json.loads(urllib.request.urlopen(
+            base + "/v1/tasks/overdue?session_id=due-http"
+                   f"&today={date.today().isoformat()}",
+            timeout=10).read().decode("utf-8"))
+        assert result["open_task_count"] == 2
+        assert result["overdue_task_count"] == 1
+        assert result["overdue_tasks"][0]["text"] == "submit report"
+        assert result["overdue_tasks"][0]["due"] == overdue
+        empty = json.loads(urllib.request.urlopen(
+            base + "/v1/tasks/overdue?session_id=empty",
+            timeout=10).read().decode("utf-8"))
+        assert empty["open_task_count"] == 0
+        assert empty["overdue_tasks"] == []
     finally:
         httpd.shutdown()
         httpd.server_close()

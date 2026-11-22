@@ -1,6 +1,6 @@
 import json
 import time
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 import pytest
 
@@ -98,6 +98,40 @@ def test_cli_weekly_review(tmp_path, capsys):
     assert review["task_counts"]["open"] == 1
     assert review["task_counts"]["completed_recent"] == 1
     assert review["recent_source_count"] == 1
+
+
+def test_cli_overdue_tasks(tmp_path, capsys):
+    session_path = tmp_path / "session.json"
+    overdue = (date.today() - timedelta(days=1)).isoformat()
+    future = (date.today() + timedelta(days=1)).isoformat()
+    session_path.write_text(json.dumps({"tasks": [
+        {"id": 1, "text": "submit report", "status": "open",
+         "created": "2026-11-01T09:00:00", "completed": "",
+         "due": overdue},
+        {"id": 2, "text": "plan launch", "status": "open",
+         "created": "2026-11-01T09:00:00", "completed": "",
+         "due": future},
+        {"id": 3, "text": "done task", "status": "done",
+         "created": "2026-11-01T09:00:00", "completed": overdue,
+         "due": overdue},
+    ]}), encoding="utf-8")
+    common = [
+        "--session", str(session_path),
+        "--docs", str(tmp_path / "missing.db"),
+        "--gaps", str(tmp_path / "missing-gaps.json")]
+    assert main(common + ["--overdue", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["open_task_count"] == 2
+    assert payload["overdue_task_count"] == 1
+    assert payload["overdue_tasks"][0]["text"] == "submit report"
+    assert main(common + ["--overdue"]) == 0
+    output = capsys.readouterr().out
+    assert "Overdue tasks (1 of 2 open)" in output
+    assert "submit report | due" in output
+    assert "plan launch" not in output
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--overdue", "--weekly"])
+    assert exc.value.code == 2
 
 
 def test_cli_weekly_markdown_export(tmp_path, capsys):

@@ -78,6 +78,8 @@
 - Added task due dates (`due YYYY-MM-DD`, `today`, `tomorrow`, `in N days`)
   with overdue markers in `list tasks`, the daily brief, weekly review and
   Markdown export.
+- Added an overdue-task view: `atomzero-brief --overdue`,
+  `GET /v1/tasks/overdue` and a UI **Overdue tasks** button.
 - Added `benchmarks/weekly_export_regression.py` (29/29 checks: CLI, HTTP, UI,
   the report archive, pruning, retention, dry-run preview, deletion, query
   filtering, chat search/list/maintenance, chat/HTTP sorting, report viewing,
