@@ -70,6 +70,10 @@ def ensure_assets(cache_dir: Path, download: bool = True) -> dict:
     return paths
 
 
+def reset_demo(docs_path: str | Path) -> None:
+    Path(docs_path).unlink(missing_ok=True)
+
+
 def seed_demo(docs_path: str | Path) -> int:
     memory = DocMemory(docs_path)
     try:
@@ -99,8 +103,12 @@ def main(argv=None) -> int:
     parser.add_argument("--provider-model", default="llama3.2:3b")
     parser.add_argument("--safety-filter", action="store_true",
                         help="enable the optional rules + ML safety filter")
+    parser.add_argument("--reset-demo", action="store_true",
+                        help="delete the demo document DB before seeding")
     args = parser.parse_args(argv)
 
+    if args.reset_demo:
+        reset_demo(args.docs)
     assets = ensure_assets(Path(args.cache), download=not args.no_download)
     chunks = seed_demo(args.docs)
     print(f"demo corpus: {args.docs} ({chunks} chunks)", flush=True)

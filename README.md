@@ -44,6 +44,7 @@ atomzero-quickstart --port 8014
 atomzero-quickstart --safety-filter
 atomzero-quickstart --no-download       # use cached files
 atomzero-quickstart --no-browser
+atomzero-quickstart --reset-demo        # rebuild the demo document DB
 ```
 
 The cache lives at `~/.cache/atomzero/atom-zero-49m`.
@@ -58,6 +59,8 @@ atomzero-doctor --provider --json
 The doctor checks Python, the package version, torch/CUDA, the model cache
 (exact file sizes), document/session write access, the local port and the
 optional Ollama provider. It exits non-zero only on hard failures.
+
+More fixes are in [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
 
 ## What it is
 
