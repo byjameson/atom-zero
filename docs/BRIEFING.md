@@ -157,8 +157,11 @@ find report weekly
 -> Turkish: "rapor ara weekly"
 
 list reports
-show report archive 5
+list reports oldest
+show report archive 5 largest
+find report weekly largest
 -> recent archived reports, optionally limited to N entries
+-> sort by newest, oldest or largest
 
 prune report archive
 keep reports 2

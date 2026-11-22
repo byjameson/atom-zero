@@ -14,7 +14,8 @@ Checks:
 - deleting one archive entry while leaving its report file on disk;
 - filtering the archive with a text query;
 - searching, listing and maintaining the archive from chat with confirmation;
-- sorting archive entries by newest, oldest and largest.
+- sorting archive entries by newest, oldest and largest, including chat sort
+  commands.
 
 Run:
 
@@ -114,6 +115,7 @@ def run(output: str | Path | None = None) -> dict:
                 and 'value="largest"' in page
                 and 'data-q="find report weekly"' in page
                 and 'data-q="list reports"' in page
+                and 'data-q="list reports oldest"' in page
                 and 'data-q="keep reports 2 dry-run"' in page
                 and "refreshWeeklyReports" in page
                 and "pruneWeeklyReports" in page
@@ -336,6 +338,22 @@ def run(output: str | Path | None = None) -> dict:
                 == entry.get("id"),
                 f"oldest={oldest.get('data', [{}])[0].get('id')} "
                 f"newest={newest.get('data', [{}])[0].get('id')}")
+            chat_oldest = _post(base, "/v1/agent/chat", {
+                "session_id": "sort-chat",
+                "message": "list reports oldest"})
+            chat_largest = _post(base, "/v1/agent/chat", {
+                "session_id": "sort-chat",
+                "message": "find report weekly largest"})
+            check(
+                "chat_report_sort",
+                chat_oldest.get("sort") == "oldest"
+                and chat_largest.get("sort") == "largest"
+                and (chat_oldest.get("reports") or [{}])[0].get("id")
+                == (oldest.get("data") or [{}])[0].get("id")
+                and (chat_largest.get("reports") or [{}])[0].get("id")
+                == (largest.get("data") or [{}])[0].get("id"),
+                f"oldest={chat_oldest.get('sort')} "
+                f"largest={chat_largest.get('sort')}")
             preview = _post(
                 base, "/v1/weekly-review/reports/keep",
                 {"keep": 2, "dry_run": True})

@@ -53,9 +53,11 @@
   `show report archive 5`) with an optional recent-entry limit.
 - Added archive ordering: `--reports --sort newest|oldest|largest`,
   `GET /v1/weekly-review/reports?sort=...` and a UI sort selector.
-- Added `benchmarks/weekly_export_regression.py` (19/19 checks: CLI, HTTP, UI,
+- Added chat sort suffixes for archive list/search commands, such as
+  `list reports oldest` and `find report weekly largest`.
+- Added `benchmarks/weekly_export_regression.py` (20/20 checks: CLI, HTTP, UI,
   the report archive, pruning, retention, dry-run preview, deletion, query
-  filtering, chat search/list/maintenance and sorting).
+  filtering, chat search/list/maintenance and chat/HTTP sorting).
 - Fixed BOM-sensitive session loading: `atomzero-brief` and `ChatHuman` now
   accept PowerShell-written UTF-8 session files with a BOM.
 - Extended BOM-tolerant reads to feedback, knowledge-gap, research-queue,

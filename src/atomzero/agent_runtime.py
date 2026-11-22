@@ -332,12 +332,15 @@ class AgentSession:
             "weights_changed": False,
         }
 
-    def _search_weekly_reports(self, query: str) -> dict:
+    def _search_weekly_reports(self, query: str,
+                               order: str = "newest") -> dict:
         query = str(query or "").strip()
-        tool = [{"name": "search_weekly_reports", "query": query}]
+        order = str(order or "newest").strip().lower()
+        tool = [{"name": "search_weekly_reports", "query": query,
+                 "sort": order}]
         try:
             archive = WeeklyReportArchive(self.weekly_reports_path)
-            reports = archive.list(limit=10, query=query)
+            reports = archive.list(limit=10, query=query, order=order)
             total = archive.count()
             matched = archive.count(query=query)
         except (WeeklyReportError, OSError) as exc:
@@ -360,7 +363,7 @@ class AgentSession:
         else:
             lines = [
                 f'Archived weekly reports matching "{query}" '
-                f"({matched} of {total}):"
+                f"({matched} of {total}) | sort: {order}:"
             ]
             for item in reports:
                 marker = "" if item.get("exists", True) else " [missing]"
@@ -382,9 +385,11 @@ class AgentSession:
             "query": query,
             "matched": matched,
             "total": total,
+            "sort": order,
         }
 
-    def _list_weekly_reports(self, limit: int = 10) -> dict:
+    def _list_weekly_reports(self, limit: int = 10,
+                             order: str = "newest") -> dict:
         try:
             limit = int(limit)
         except (TypeError, ValueError):
@@ -394,10 +399,12 @@ class AgentSession:
             return {"reply": "Report limit must be at least 1.",
                     "tool_calls": [], "sources": [], "evidence": []}
         limit = min(limit, 100)
-        tool = [{"name": "list_weekly_reports", "limit": limit}]
+        order = str(order or "newest").strip().lower()
+        tool = [{"name": "list_weekly_reports", "limit": limit,
+                 "sort": order}]
         try:
             archive = WeeklyReportArchive(self.weekly_reports_path)
-            reports = archive.list(limit=limit)
+            reports = archive.list(limit=limit, order=order)
             total = archive.count()
         except (WeeklyReportError, OSError) as exc:
             return {
@@ -407,13 +414,15 @@ class AgentSession:
                 "evidence": [],
                 "reports": [],
                 "limit": limit,
+                "sort": order,
             }
         tool[0]["matches"] = len(reports)
         if not reports:
             reply = ("No archived weekly reports yet. Create one with "
                      "atomzero-brief --weekly --markdown --out PATH.")
         else:
-            lines = [f"Archived weekly reports ({len(reports)} of {total}):"]
+            lines = [f"Archived weekly reports ({len(reports)} of {total}) "
+                     f"| sort: {order}:"]
             for item in reports:
                 marker = "" if item.get("exists", True) else " [missing]"
                 lines.append(
@@ -433,6 +442,7 @@ class AgentSession:
             "reports": reports,
             "limit": limit,
             "total": total,
+            "sort": order,
         }
 
     @staticmethod
@@ -762,36 +772,49 @@ class AgentSession:
             query = re.sub(r"^search (docs|my notes|documents)\s*:?\s*", "",
                            text, flags=re.IGNORECASE)
             return self._search_docs(query)
+        report_sort = "newest"
+        report_text = text
+        if re.match(r"^(?:find|search|show|list)\s+", text,
+                    re.IGNORECASE):
+            sort_match = re.search(
+                r"\s+(newest|oldest|largest)\s*\??$", text,
+                re.IGNORECASE)
+            if sort_match:
+                report_sort = sort_match.group(1).lower()
+                report_text = text[:sort_match.start()].rstrip()
         list_match = re.match(
             r"^(?:list|show)\s+(?:the\s+)?"
             r"(?:reports?|report\s+archive|weekly\s+reports?)"
-            r"(?:\s+(?:limit\s+)?(\d+))?\??$", text, re.IGNORECASE)
+            r"(?:\s+(?:limit\s+)?(\d+))?\??$",
+            report_text, re.IGNORECASE)
         if not list_match:
             list_match = re.match(
                 r"^(?:list|show)\s+(?:the\s+)?(?:last\s+)?(\d+)\s+"
                 r"(?:reports?|weekly\s+reports?)\??$",
-                text, re.IGNORECASE)
+                report_text, re.IGNORECASE)
         if list_match:
             return self._list_weekly_reports(
-                int(list_match.group(1)) if list_match.group(1) else 10)
+                int(list_match.group(1)) if list_match.group(1) else 10,
+                order=report_sort)
         report_query = re.match(
             r"^(?:find|search|show)\s+(?:the\s+)?report\s+archive\s+"
-            r"(?:for\s+)?(.+?)\??$", text, re.IGNORECASE)
+            r"(?:for\s+)?(.+?)\??$", report_text, re.IGNORECASE)
         if not report_query:
             report_query = re.match(
                 r"^(?:find|search|show|list)\s+(?:the\s+)?"
                 r"(?:weekly\s+)?reports?\s+(?:for\s+)?(.+?)\??$",
-                text, re.IGNORECASE)
+                report_text, re.IGNORECASE)
         if not report_query:
             report_query = re.match(
                 r"^(?:rapor|raporlar[ıi])\s+(?:ara|bul)\s+(.+?)\??$",
-                text, re.IGNORECASE)
+                report_text, re.IGNORECASE)
         if not report_query:
             report_query = re.match(
                 r"^(?:haftal[ıi]k\s+)?rapor\s+ar[şs]ivinde\s+"
-                r"(.+?)\s+ara\??$", text, re.IGNORECASE)
+                r"(.+?)\s+ara\??$", report_text, re.IGNORECASE)
         if report_query:
-            return self._search_weekly_reports(report_query.group(1).strip())
+            return self._search_weekly_reports(
+                report_query.group(1).strip(), order=report_sort)
         if low in ("confirm reports", "confirm report changes", "apply reports",
                    "yes reports", "raporları onayla"):
             return self._apply_report_action()

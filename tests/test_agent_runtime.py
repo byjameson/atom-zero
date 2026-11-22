@@ -205,6 +205,15 @@ def test_agent_searches_weekly_report_archive(tmp_path):
     assert len(limited["reports"]) == 1
     invalid_limit = agent.chat("list reports 0")
     assert "at least 1" in invalid_limit["reply"]
+    oldest = agent.chat("list reports oldest")
+    assert oldest["sort"] == "oldest"
+    assert "sort: oldest" in oldest["reply"]
+    assert oldest["reports"][0]["name"] == "alpha-report.md"
+    largest = agent.chat("find report report largest")
+    assert largest["sort"] == "largest"
+    assert "sort: largest" in largest["reply"]
+    assert largest["matched"] == 2
+    assert largest["reports"][0]["name"] == "alpha-report.md"
 
 
 def test_agent_report_archive_maintenance_flow(tmp_path):

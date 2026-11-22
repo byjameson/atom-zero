@@ -191,8 +191,9 @@ short generation. It is **not MMLU, GSM8K or HumanEval**.
   `--reports --delete ID` removes one index entry, `--reports --query TEXT`
   filters the archive and `--reports --sort newest|oldest|largest` orders it.
   `/v1/goals/plan` produces a cited plan skeleton. Chat supports `brief me`,
-  `find report weekly` / `rapor ara weekly`, `list reports` (optional limit),
-  archive `prune/keep/delete` previews with `confirm reports`,
+  `find report weekly` / `rapor ara weekly`, `list reports` (optional limit and
+  newest/oldest/largest sort), archive `prune/keep/delete` previews with
+  `confirm reports`,
   `weekly review` (optionally `for 14 days` / `haftalık özet 14 gün`) and
   `plan goal ...` → `confirm plan` with explicit task creation only after
   confirmation.
