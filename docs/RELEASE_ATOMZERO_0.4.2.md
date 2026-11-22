@@ -1,7 +1,9 @@
 # atomzero 0.4.2 - UI collection scope
 
-Status: **published to PyPI as `atomzero 0.4.2` on 2026-11-22.** No model or runtime
-weights changed; the weights remain `0.8.0`.
+Status: **published to PyPI, GitHub, Hugging Face and ModelScope as `atomzero
+0.4.2` on 2026-11-22.** dev.to intentionally remains at `0.4.1` under the
+batched release cadence and will sync at the next batch boundary. No model or
+runtime weights changed; the weights remain `0.8.0`.
 
 ## What changed
 

@@ -43,7 +43,7 @@ its own. Apache-2.0 code and weights, no hosted service, no telemetry.
 
 | layer | implementation | what it does |
 |---|---|---|
-| UI/API | `src/atomzero/chat_server.py` | browser chat, documents, scoped answers, extractive summaries, evidence panel, constrained plan API, tasks, gaps, queues, teacher notes, adapters, health |
+| UI/API | `src/atomzero/chat_server.py` | browser chat, documents, scoped answers, extractive summaries, second brain graph, evidence panel, constrained plan API, tasks, gaps, queues, teacher notes, adapters, health |
 | agent runtime | `src/atomzero/agent_runtime.py`, `research/chat_human.py` | tool routing, memory, RAG, missing-source path |
 | core model | `src/atomzero/transformer.py` + checkpoint | 49.2M decoder-only transformer |
 | retrieval | `src/atomzero/doc_memory.py`, `neural_embedder.py` | FTS5 + hashed/MiniLM vectors + reranking |
@@ -133,6 +133,12 @@ not a calibrated probability.
 The same index is available without the UI through `atomzero-docs`:
 `add`, `search`, `list`, `evidence` and `forget`. Directory sync is recursive,
 deterministic and can skip files whose extracted content hash is unchanged.
+
+A local **second brain graph** extracts capitalized phrases, code-like
+identifiers and years from chunks, links entities that co-occur in the same
+chunk, and keeps source counts plus evidence lookup. It is statistical
+co-occurrence, not a trained NER or semantic relation model. See
+[`KNOWLEDGE_GRAPH.md`](KNOWLEDGE_GRAPH.md).
 
 Two reranker paths:
 
@@ -286,7 +292,7 @@ whether to enable it.
 | document benchmark (100 authored questions) | **80/80 answerable, 20/20 no-answer** |
 | public SQuAD v2 retrieval (50 contexts) | **hybrid 0.975 top-1; 0.816 answer in snippet** |
 | safety-enabled product | **26/26** |
-| test suite | **249 passed** |
+| test suite | **255 passed** |
 
 The product benchmark is narrow and authored: tools, memory, tasks, retrieval,
 teacher-note review, missing-source detection and one short generation. It is

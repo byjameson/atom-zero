@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased - next batch
+
+Batched release train: accumulate about 10 development increments before
+publishing to PyPI/GitHub releases/Hugging Face/ModelScope/dev.to. Intermediate
+work stays on `main`; see `docs/RELEASING.md`.
+
+- Added a local **second brain graph**: capitalized-phrase/code/year entity
+  extraction, chunk co-occurrence edges, source counts and evidence lookup.
+- Added `atomzero-docs graph` / `entity`, `GET /v1/graph` and
+  `GET /v1/graph/entity`, plus a UI graph panel with entity chips, edges and
+  source/snippet cards.
+- Chat now answers relation queries such as “what is related to Ankara?” with
+  graph evidence and connections.
+- Added graph regression tests and `docs/KNOWLEDGE_GRAPH.md`.
+
 ## atomzero 0.4.2 - UI collection scope (2026-11-22)
 
 - Added a collection-prefix input and **Summarize collection** button to the

@@ -7,8 +7,9 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from atomzero.doc_memory import grounded_answer
+from atomzero.doc_memory import format_citation, grounded_answer
 from atomzero.knowledge_gaps import KnowledgeGapError
+from atomzero.knowledge_graph import entity_sources
 from atomzero.web_research import wikipedia_research
 
 from atomzero.chat_human import ChatHuman
@@ -142,6 +143,51 @@ class AgentSession:
             "confidence": answer["confidence"],
         }
 
+    def _graph_entity(self, name: str) -> dict:
+        if self.docs is None:
+            return {"reply": "no document memory configured",
+                    "tool_calls": [], "sources": []}
+        try:
+            data = entity_sources(self.docs, name, limit=5)
+        except ValueError as exc:
+            return {"reply": str(exc), "tool_calls": [],
+                    "sources": [], "connections": []}
+        tool = [{"name": "graph_entity", "entity": name}]
+        if not data["sources"]:
+            return {"reply": f"I found no local evidence for {name}.",
+                    "tool_calls": tool, "sources": [],
+                    "connections": []}
+        lines = []
+        sources = []
+        for item in data["sources"]:
+            label = ("teacher note" if item.get("kind") == "teacher"
+                     else "source")
+            lines.append(f"- {item.get('snippet', '')} "
+                         f"({label}: {format_citation(item)})")
+            source = {
+                "source": item.get("source", ""),
+                "title": item.get("title", ""),
+                "kind": item.get("kind", "document"),
+                "verified": bool(item.get("verified", True)),
+            }
+            if source not in sources:
+                sources.append(source)
+        reply = f"Local graph evidence for {name}:\n" + "\n".join(lines)
+        connections = [
+            f"{edge['source']} ↔ {edge['target']}"
+            for edge in data.get("connections", [])[:8]]
+        if connections:
+            reply += "\n\nConnections: " + "; ".join(connections)
+        reply += ("\n\nThis is local co-occurrence evidence, not a semantic "
+                  "relation claim.")
+        return {
+            "reply": reply,
+            "tool_calls": tool,
+            "sources": sources,
+            "evidence": data["sources"],
+            "connections": data.get("connections", []),
+        }
+
     def chat(self, text: str) -> dict:
         if self.safety is not None:
             verdict = self.safety.check(text)
@@ -202,6 +248,11 @@ class AgentSession:
             query = re.sub(r"^search (docs|my notes|documents)\s*:?\s*", "",
                            text, flags=re.IGNORECASE)
             return self._search_docs(query)
+        graph_query = re.match(
+            r"^(?:what is related to|what relates to|connections (?:for|of)|"
+            r"graph)\s*:?\s*(.+?)\??$", text, re.IGNORECASE)
+        if graph_query:
+            return self._graph_entity(graph_query.group(1).strip())
         reply = self.human.respond(text)
         return {"reply": reply, "tool_calls": [],
                 "sources": list(getattr(self.human, "last_sources", [])),

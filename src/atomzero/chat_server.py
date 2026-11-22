@@ -11,6 +11,8 @@ Endpoints:
   GET  /v1/documents
   GET  /v1/documents/evidence?source=...&page=...&section=...
   GET  /v1/documents/summary?source=...&source_prefix=...&sentences=8
+  GET  /v1/graph?limit_chunks=...&min_edge=...&max_entities=...
+  GET  /v1/graph/entity?name=...&limit=...
   POST /v1/documents
   POST /v1/documents/upload?source=...&title=...
   POST /v1/documents/search
@@ -250,6 +252,19 @@ weights.</p>
 <div id="docanswer"></div>
 <div id="docresults"></div>
 <div id="evidence"></div>
+<hr>
+<h3>Second brain graph</h3>
+<p class="hint">Local co-occurrence graph over indexed chunks. It links
+capitalized names, code-like identifiers and years that appear together. This
+is a statistical navigation aid, not a trained NER or reasoning model. Click an
+entity to see evidence.</p>
+<div class="row"><button id="graphrefresh">Refresh graph</button>
+<input id="gramentity" placeholder="Entity, e.g. Ankara">
+<button id="graphentitybtn">Show evidence</button></div>
+<p id="graphmsg" class="hint"></p>
+<div id="graphnodes" class="chips"></div>
+<div id="graphedges"></div>
+<div id="graphevidence"></div>
 <hr>
 <h3>Delete data</h3>
 <p class="hint">Delete an indexed source or this browser session's memory. This
@@ -643,7 +658,7 @@ async function searchDocs() {
   try {
     const r = await fetch('/v1/documents/search', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({query, k: 5, ...scope})});
+      body: JSON.stringify({query, k: 5, diverse: true, ...scope})});
     const j = await r.json();
     if (!r.ok) { msg.textContent = 'error: ' + (j.error || r.status); return; }
     const hits = j.data || [];
@@ -847,6 +862,99 @@ async function showEvidence(source, page, section) {
     });
   } catch (e) { box.textContent = 'evidence error: ' + e; }
 }
+async function refreshGraph() {
+  const nodesBox = document.getElementById('graphnodes');
+  const edgesBox = document.getElementById('graphedges');
+  const msg = document.getElementById('graphmsg');
+  nodesBox.textContent = '';
+  edgesBox.textContent = '';
+  msg.textContent = 'building graph...';
+  try {
+    const r = await fetch('/v1/graph?max_entities=40&min_edge=1');
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'graph error: ' + (j.error || r.status);
+      return;
+    }
+    const stats = j.stats || {};
+    msg.textContent = (stats.nodes || 0) + ' entities, ' +
+      (stats.edges || 0) + ' connections over ' +
+      (stats.chunks_scanned || 0) + ' chunk(s)';
+    (j.nodes || []).forEach(node => {
+      const button = document.createElement('button');
+      button.textContent = node.name + ' (' + node.mentions + ')';
+      button.title = 'Show evidence for ' + node.name;
+      button.onclick = () => showEntity(node.name);
+      nodesBox.appendChild(button);
+    });
+    (j.edges || []).slice(0, 30).forEach(edge => {
+      const card = document.createElement('div');
+      card.className = 'qitem';
+      const title = document.createElement('div');
+      title.textContent = edge.source + ' ↔ ' + edge.target + ' | ' +
+        edge.weight + ' shared chunk(s)';
+      card.appendChild(title);
+      edgesBox.appendChild(card);
+    });
+  } catch (e) {
+    msg.textContent = 'graph error: ' + e;
+  }
+}
+async function showEntity(name) {
+  const box = document.getElementById('graphevidence');
+  const msg = document.getElementById('graphmsg');
+  if (!name) name = document.getElementById('gramentity').value.trim();
+  if (!name) { msg.textContent = 'enter an entity'; return; }
+  msg.textContent = 'loading evidence for ' + name + '...';
+  box.textContent = '';
+  try {
+    const query = new URLSearchParams({name, limit: 10});
+    const r = await fetch('/v1/graph/entity?' + query.toString());
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'entity error: ' + (j.error || r.status);
+      return;
+    }
+    msg.textContent = j.entity + ' | ' + (j.matched_chunks || 0) +
+      ' chunk(s) | ' + (j.connections || []).length + ' connection(s)';
+    (j.sources || []).forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'qitem';
+      const title = document.createElement('div');
+      title.textContent = (item.title || item.source) + ' | ' + item.source +
+        (item.page ? ' | p. ' + item.page : '') +
+        (item.section ? ' | ' + item.section : '');
+      card.appendChild(title);
+      const snippet = document.createElement('div');
+      snippet.className = 'src';
+      snippet.textContent = item.snippet || '';
+      card.appendChild(snippet);
+      const actions = document.createElement('div');
+      actions.className = 'actions';
+      actions.appendChild(qbutton('Evidence', () =>
+        showEvidence(item.source, item.page, item.section)));
+      actions.appendChild(qbutton('Copy citation', () =>
+        copyCitation(item.source, item.page, item.section)));
+      card.appendChild(actions);
+      box.appendChild(card);
+    });
+    if ((j.connections || []).length) {
+      const connections = document.createElement('div');
+      connections.className = 'hint';
+      connections.textContent = 'Connections: ' +
+        j.connections.map(item => item.source + ' ↔ ' + item.target)
+          .join('; ');
+      box.appendChild(connections);
+    }
+  } catch (e) {
+    msg.textContent = 'entity error: ' + e;
+  }
+}
+document.getElementById('graphrefresh').onclick = () => refreshGraph();
+document.getElementById('graphentitybtn').onclick = () => showEntity();
+document.getElementById('gramentity').addEventListener('keydown', event => {
+  if (event.key === 'Enter') showEntity();
+});
 document.getElementById('docsearch').onclick = () => searchDocs();
 document.getElementById('docanswerbtn').onclick = () => answerDocs();
 document.getElementById('docsumcollection').onclick = () => summarizeCollection();
@@ -1760,6 +1868,44 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/v1/documents":
             docs = _state.get("docs")
             self._json(200, {"data": docs.sources() if docs else []})
+        elif (self.path == "/v1/graph"
+              or self.path.startswith("/v1/graph?")):
+            docs = _state.get("docs")
+            if docs is None:
+                return self._json(400, {
+                    "error": "no document memory configured"})
+            params = urllib.parse.parse_qs(
+                urllib.parse.urlparse(self.path).query)
+            from atomzero.knowledge_graph import build_graph
+
+            try:
+                result = build_graph(
+                    docs,
+                    limit_chunks=int(params.get(
+                        "limit_chunks", ["500"])[0]),
+                    min_edge=int(params.get("min_edge", ["1"])[0]),
+                    max_entities=int(params.get(
+                        "max_entities", ["80"])[0]))
+            except (TypeError, ValueError) as exc:
+                return self._json(400, {"error": str(exc)})
+            return self._json(200, result)
+        elif (self.path == "/v1/graph/entity"
+              or self.path.startswith("/v1/graph/entity?")):
+            docs = _state.get("docs")
+            if docs is None:
+                return self._json(400, {
+                    "error": "no document memory configured"})
+            params = urllib.parse.parse_qs(
+                urllib.parse.urlparse(self.path).query)
+            from atomzero.knowledge_graph import entity_sources
+
+            try:
+                result = entity_sources(
+                    docs, params.get("name", [""])[0],
+                    limit=int(params.get("limit", ["10"])[0]))
+            except ValueError as exc:
+                return self._json(400, {"error": str(exc)})
+            return self._json(200, result)
         elif (self.path == "/v1/documents/evidence"
               or self.path.startswith("/v1/documents/evidence?")):
             docs = _state.get("docs")
@@ -1993,10 +2139,12 @@ class Handler(BaseHTTPRequestHandler):
                 source_prefix = str(
                     req.get("source_prefix", "") or "").strip()
                 kind = str(req.get("kind", "") or "").strip()
+                diverse = bool(req.get("diverse", False))
                 try:
                     hits = (docs.search(
                         query, k=k, source=source,
-                        source_prefix=source_prefix, kind=kind)
+                        source_prefix=source_prefix, kind=kind,
+                        diverse=diverse)
                         if docs else [])
                 except ValueError as exc:
                     return self._json(400, {"error": str(exc)})

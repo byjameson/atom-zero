@@ -357,6 +357,33 @@ def diverse_hits(hits: list[dict], limit: int = 3,
     return selected
 
 
+def dedupe_hits(hits: list[dict], limit: int | None = None,
+                threshold: float = 0.82) -> list[dict]:
+    """Suppress near-identical chunks while keeping the best-ranked one.
+
+    Long PDFs often repeat the same sentence in a header/footer or on adjacent
+    pages. Showing three copies is noise, not stronger evidence.
+    """
+    selected = []
+    seen_sets: list[set[str]] = []
+    for hit in hits:
+        words = set(_query_terms(hit.get("chunk", "")))
+        duplicate = False
+        if words:
+            for previous in seen_sets:
+                union = words | previous
+                if union and len(words & previous) / len(union) >= threshold:
+                    duplicate = True
+                    break
+        if duplicate:
+            continue
+        selected.append(hit)
+        seen_sets.append(words)
+        if limit is not None and len(selected) >= limit:
+            break
+    return selected
+
+
 def retrieval_confidence(query: str, hits: list[dict]) -> dict:
     """Return a transparent 0..1 retrieval match score and a label.
 
@@ -1422,7 +1449,8 @@ class DocMemory:
     def search(self, query: str, k: int = 5,
                rerank: bool = True,
                reranker=None, source: str = "",
-               source_prefix: str = "", kind: str = "") -> list[dict]:
+               source_prefix: str = "", kind: str = "",
+               diverse: bool = False) -> list[dict]:
         """Search the local index, optionally scoped to a source or kind."""
         source = str(source or "").strip()
         source_prefix = str(source_prefix or "").strip()
@@ -1445,6 +1473,8 @@ class DocMemory:
             return []
         match = " OR ".join(f'"{w}"' for w in words[:12])
         candidates = max(k * 4, 12) if rerank else k
+        if diverse:
+            candidates = max(candidates, k * 6, 24)
         active = reranker if reranker is not None else self.reranker
         neural = self._vector_model_key(active).startswith("neural:")
         clauses = ["docs MATCH ?"]
@@ -1510,7 +1540,7 @@ class DocMemory:
         for hit in embedding_hits:
             hit.update(chunk_metas.get(hit.get("_rowid"), {}))
         if not rerank:
-            return hits
+            return dedupe_hits(hits, limit=k) if diverse else hits[:k]
         # Hybrid candidate pool: FTS rows plus the best embedding rows. A
         # paraphrase with no lexical overlap with any document can now enter
         # the reranker, which was previously capped by FTS recall.
@@ -1533,13 +1563,36 @@ class DocMemory:
                     hit["neural_score"] = similarity
             if hit.get("score") is None:
                 hit["score"] = fallback
+        rerank_limit = max(k * 3, 12) if diverse else k
         if active is not None:
-            ranked = active.rerank(query, merged, k)
+            ranked = active.rerank(query, merged, rerank_limit)
         else:
-            ranked = rerank_hits(query, merged, k)
+            ranked = rerank_hits(query, merged, rerank_limit)
+        if diverse:
+            ranked = dedupe_hits(ranked, limit=k)
         for hit in ranked:
             hit.pop("_rowid", None)
         return ranked
+
+    def chunks(self, limit: int = 500) -> list[dict]:
+        """Return indexed chunks with provenance for graph/analysis jobs."""
+        try:
+            limit = max(1, min(int(limit), 5000))
+        except (TypeError, ValueError):
+            limit = 500
+        with self._lock:
+            rows = self.con.execute(
+                "SELECT d.chunk, d.source, d.title, m.page, m.section, "
+                "COALESCE(meta.kind, 'document'), "
+                "COALESCE(meta.verified, 1) "
+                "FROM docs d "
+                "LEFT JOIN doc_chunk_meta m ON m.doc_rowid = d.rowid "
+                "LEFT JOIN doc_meta meta ON meta.source = d.source "
+                "ORDER BY d.rowid LIMIT ?", (limit,)).fetchall()
+        return [{"chunk": row[0], "source": row[1], "title": row[2],
+                 "page": row[3], "section": row[4] or "",
+                 "kind": row[5], "verified": bool(row[6])}
+                for row in rows]
 
     def sources(self) -> list[dict]:
         with self._lock:
@@ -1894,6 +1947,8 @@ def main(argv=None):
     search.add_argument("--source-prefix", default="")
     search.add_argument("--kind", default="")
     search.add_argument("--no-rerank", action="store_true")
+    search.add_argument("--diverse", action="store_true",
+                        help="suppress near-identical chunks")
     answer = sub.add_parser(
         "answer", help="return a cited answer with evidence and confidence")
     answer.add_argument("query")
@@ -1933,6 +1988,15 @@ def main(argv=None):
     summary_collection.add_argument("--prefix", default="")
     summary_collection.add_argument("--kind", default="")
     summary_collection.add_argument("--sentences", type=int, default=8)
+    graph = sub.add_parser(
+        "graph", help="build a local co-occurrence knowledge graph")
+    graph.add_argument("--limit-chunks", type=int, default=500)
+    graph.add_argument("--min-edge", type=int, default=1)
+    graph.add_argument("--max-entities", type=int, default=80)
+    entity = sub.add_parser(
+        "entity", help="show chunks and connections for one entity")
+    entity.add_argument("name")
+    entity.add_argument("--limit", type=int, default=10)
     export = sub.add_parser(
         "export", help="export the index to portable JSONL")
     export.add_argument("--out", default="atomzero-index.jsonl")
@@ -1947,8 +2011,8 @@ def main(argv=None):
     forget.add_argument("--all", action="store_true")
     # Accept --db on either side of the subcommand; the docs use both forms.
     for parser in (add, search, answer, sync, status, doctor, list_db,
-                   stats_db, evidence, summary, summary_collection, export,
-                   import_cmd, forget):
+                   stats_db, evidence, summary, summary_collection, graph,
+                   entity, export, import_cmd, forget):
         parser.add_argument("--db", dest="db_after", default=None)
     args = ap.parse_args(argv)
     mem = DocMemory(args.db_after or args.db or "data/docs.db")
@@ -1972,7 +2036,7 @@ def main(argv=None):
             hits = mem.search(
                 args.query, k=args.k, rerank=not args.no_rerank,
                 source=args.source, source_prefix=args.source_prefix,
-                kind=args.kind)
+                kind=args.kind, diverse=args.diverse)
             print(json.dumps(hits, indent=2, ensure_ascii=False))
         elif args.cmd == "answer":
             hits = mem.search(
@@ -2028,6 +2092,22 @@ def main(argv=None):
                     source_prefix=args.prefix, kind=args.kind,
                     max_sentences=args.sentences)
             except (ValueError, SourceNotFound) as exc:
+                print(json.dumps({"error": str(exc)}))
+                return 1
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+        elif args.cmd == "graph":
+            from atomzero.knowledge_graph import build_graph
+
+            result = build_graph(
+                mem, limit_chunks=args.limit_chunks,
+                min_edge=args.min_edge, max_entities=args.max_entities)
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+        elif args.cmd == "entity":
+            from atomzero.knowledge_graph import entity_sources
+
+            try:
+                result = entity_sources(mem, args.name, limit=args.limit)
+            except ValueError as exc:
                 print(json.dumps({"error": str(exc)}))
                 return 1
             print(json.dumps(result, indent=2, ensure_ascii=False))

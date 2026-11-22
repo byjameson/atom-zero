@@ -81,6 +81,21 @@ def test_agent_returns_sources_for_grounded_answer(tmp_path):
     docs.close()
 
 
+def test_agent_answers_graph_relation_query(tmp_path):
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text(
+        "geo.txt",
+        "Ankara is the capital of Turkey. Istanbul is in Turkey.",
+        title="Geography")
+    agent = AgentSession("s-graph", tmp_path / "memory.json", docs=docs)
+    result = agent.chat("what is related to Ankara?")
+    assert "Ankara" in result["reply"]
+    assert "Turkey" in result["reply"]
+    assert result["sources"][0]["source"] == "geo.txt"
+    assert result["connections"]
+    docs.close()
+
+
 def test_agent_records_missing_source_as_gap(tmp_path):
     docs = DocMemory(tmp_path / "docs.db")
     gaps = KnowledgeGapStore(tmp_path / "gaps.json")

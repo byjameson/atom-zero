@@ -808,8 +808,13 @@ def test_ui_collection_scope_contract():
     assert 'id="docprefix"' in page
     assert 'id="docsumcollection"' in page
     assert "source_prefix: prefix" in page
+    assert "diverse: true" in page
     assert "summarizeCollection" in page
     assert "collection summary" in page
+    assert "/v1/graph" in page
+    assert "Second brain graph" in page
+    assert 'id="graphrefresh"' in page
+    assert "showEntity" in page
 
 
 def test_doc_answer_returns_evidence_confidence_and_source_scope(tmp_path):
@@ -960,6 +965,54 @@ def test_http_hungry_mode_dry_run_and_learn(tmp_path):
         hits = docs.search("capital of France")
         assert hits[0]["kind"] == "teacher"
         assert hits[0]["verified"] is False
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
+        docs.close()
+
+
+def test_http_graph_and_entity(tmp_path):
+    try:
+        docs = DocMemory(tmp_path / "docs.db")
+    except Exception as exc:
+        pytest.skip(f"sqlite fts5 unavailable: {exc}")
+    docs.add_text(
+        "geo.txt",
+        "Ankara is the capital of Turkey. Istanbul is in Turkey.",
+        title="Geography")
+    old = dict(chat_server._state)
+    chat_server._state.update({
+        "model": None, "tok": None, "docs": docs, "adapter": "",
+        "name": "tiny-test", "params": 1, "config": {}, "step": 0,
+        "api_key": "", "metrics": {"requests": 0, "generated_tokens": 0},
+        "safety": None, "wiki_lang": "en",
+        "session_dir": str(tmp_path / "sessions"), "sessions": {},
+    })
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        graph = json.loads(urllib.request.urlopen(
+            base + "/v1/graph", timeout=10).read().decode("utf-8"))
+        names = {node["name"] for node in graph["nodes"]}
+        assert {"Ankara", "Istanbul", "Turkey"} <= names
+        edges = {(edge["source"], edge["target"])
+                 for edge in graph["edges"]}
+        assert ("Ankara", "Turkey") in edges
+        entity = json.loads(urllib.request.urlopen(
+            base + "/v1/graph/entity?name=Ankara",
+            timeout=10).read().decode("utf-8"))
+        assert entity["sources"][0]["source"] == "geo.txt"
+        assert "Ankara" in entity["sources"][0]["snippet"]
+        assert any(item["target"] == "Turkey"
+                   for item in entity["connections"])
+        with pytest.raises(urllib.error.HTTPError) as missing:
+            urllib.request.urlopen(
+                base + "/v1/graph/entity?name=", timeout=10)
+        assert missing.value.code == 400
     finally:
         httpd.shutdown()
         httpd.server_close()

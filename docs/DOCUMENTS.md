@@ -97,6 +97,8 @@ atomzero-docs answer "what is the warranty period?" --source policy.docx `
 atomzero-docs summary manual.pdf --sentences 5 --db data/docs.db
 atomzero-docs summary-collection --prefix notes/ --sentences 8 `
   --db data/docs.db
+atomzero-docs graph --db data/docs.db
+atomzero-docs entity Ankara --db data/docs.db
 atomzero-docs evidence policy.docx --section Warranty --db data/docs.db
 atomzero-docs export --out backup.jsonl --db data/docs.db
 atomzero-docs import backup.jsonl --db data/docs.db
@@ -131,8 +133,10 @@ the note text, evidence and confidence. `summary` returns an **extractive**
 summary of one source: it selects and orders existing sentences and keeps the
 page/section locators; it does not generate new prose.
 `summary-collection` does the same across a source prefix and/or kind, with a
-locator on every selected sentence. All commands print JSON, so they can be
-piped into other local tools.
+locator on every selected sentence. `graph` builds the local co-occurrence
+knowledge graph; `entity NAME` returns its evidence chunks and connections. See
+[`KNOWLEDGE_GRAPH.md`](KNOWLEDGE_GRAPH.md). All commands print JSON, so they
+can be piped into other local tools.
 `python -m atomzero.doc_memory ...` is the same CLI.
 
 `export` writes one JSONL record per source with its title, teacher/provenance

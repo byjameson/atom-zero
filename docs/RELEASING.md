@@ -3,6 +3,29 @@
 Canonical surfaces: GitHub, Hugging Face, PyPI, dev.to, Medium, LinkedIn and
 ModelScope.
 
+## Release cadence
+
+Atom Zero uses a batched release train: accumulate about **10 development
+increments** on `main` before publishing. Do not upload every patch.
+
+Between batch boundaries:
+
+- keep changes under `CHANGELOG.md` → `Unreleased`;
+- run tests and builds locally;
+- do not update PyPI, GitHub releases, Hugging Face, ModelScope or dev.to;
+- no version bump is required for every commit.
+
+At the batch boundary:
+
+- bump the version;
+- update release notes, model card and current docs;
+- run preflight and `scripts/verify_release.py`;
+- publish every canonical surface once.
+
+`0.4.2` is the transition release after this policy was adopted: PyPI, GitHub,
+Hugging Face and ModelScope are at `0.4.2`; dev.to intentionally remains at
+`0.4.1` and will be synced at the next batch boundary.
+
 ## 1. Preflight
 
 ```powershell
@@ -11,7 +34,7 @@ python -m build
 python -m twine check dist/*
 ```
 
-Expected for 0.4.2: `249 passed` or more.
+Expected for the next batch: `255 passed` or more.
 
 ## 2. PyPI
 

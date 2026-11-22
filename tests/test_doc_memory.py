@@ -39,6 +39,26 @@ def test_best_snippet_selects_query_sentence_and_keeps_teacher_value():
     assert "T-9000" in best_snippet("what is the teacher code?", teacher)
 
 
+def test_search_diverse_suppresses_near_duplicate_chunks(tmp_path):
+    mem = DocMemory(tmp_path / "docs.db")
+    texts = [
+        "The warranty code is W-7781. Keep the receipt.",
+        "The warranty code is W-7781. Keep the receipt safe.",
+        "The warranty code is W-7781. Please keep the receipt.",
+    ]
+    for page, text in enumerate(texts, start=1):
+        mem.add_blocks(
+            "manual.pdf",
+            [{"text": text, "page": page, "section": "Warranty"}],
+            title="Manual", replace=False)
+    plain = mem.search("warranty code", k=5)
+    diverse = mem.search("warranty code", k=5, diverse=True)
+    assert len(plain) >= 2
+    assert len(diverse) == 1
+    assert "W-7781" in diverse[0]["chunk"]
+    mem.close()
+
+
 def test_identifier_terms_and_exact_code_ranking(tmp_path):
     assert "l-7781" in _identifier_terms("Use L-7781 here")
     assert "l-7781" in _query_terms("What is L-7781?")
