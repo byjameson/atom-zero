@@ -373,10 +373,19 @@ def _weekly_report_line(item: dict) -> str:
 
 
 def render_weekly_report_index(entries: list[dict],
-                               index_path: str | Path) -> str:
-    lines = [f"Weekly report archive: {index_path}"]
+                               index_path: str | Path,
+                               query: str = "",
+                               matched: int | None = None,
+                               total: int | None = None) -> str:
+    heading = f"Weekly report archive: {index_path}"
+    if query:
+        heading += (f" | query: {query} | "
+                    f"{matched if matched is not None else len(entries)} "
+                    f"match(es) of {total if total is not None else '?'}")
+    lines = [heading]
     if not entries:
-        lines.append("No archived weekly reports.")
+        lines.append("No archived weekly reports." if not query
+                     else f'No archived reports match "{query}".')
         return "\n".join(lines)
     lines.extend(_weekly_report_line(item) for item in entries)
     return "\n".join(lines)
@@ -568,6 +577,8 @@ def main(argv=None) -> int:
                         help="preview --keep removals without changing the archive")
     parser.add_argument("--delete", metavar="ID", default=None,
                         help="remove one archive entry by report id")
+    parser.add_argument("--query", default="",
+                        help="filter archived reports by text")
     parser.add_argument("--reports-index", default=DEFAULT_REPORTS_PATH,
                         help="weekly report archive JSON path")
     parser.add_argument("--limit", type=int, default=10,
@@ -596,8 +607,14 @@ def main(argv=None) -> int:
     if args.delete is not None and (
             args.prune or args.keep is not None or args.dry_run):
         parser.error("--delete cannot be combined with --prune/--keep")
+    if args.query and not args.reports:
+        parser.error("--query requires --reports")
+    if args.query and (args.prune or args.keep is not None
+                       or args.delete is not None or args.dry_run):
+        parser.error("--query cannot be combined with maintenance options")
     if args.reports:
         index_path = args.reports_index or DEFAULT_REPORTS_PATH
+        query = str(args.query or "").strip()
         removed = 0
         trimmed = 0
         preview = []
@@ -613,8 +630,9 @@ def main(argv=None) -> int:
                     preview = archive.keep_preview(args.keep)
                 else:
                     trimmed = archive.keep(args.keep)
-            entries = archive.list(args.limit)
+            entries = archive.list(args.limit, query=query)
             total = archive.count()
+            matched = archive.count(query=query)
         except (WeeklyReportError, OSError) as exc:
             if args.json:
                 print(json.dumps({"ok": False, "error": str(exc)},
@@ -629,6 +647,9 @@ def main(argv=None) -> int:
                 "total": total,
                 "index": str(archive.path),
             }
+            if query:
+                payload["query"] = query
+                payload["matched"] = matched
             if args.delete is not None:
                 payload["deleted"] = deleted
             if args.prune:
@@ -655,7 +676,9 @@ def main(argv=None) -> int:
             if args.keep is not None:
                 print(f"Removed {trimmed} older report(s) to keep "
                       f"{args.keep}.")
-            print(render_weekly_report_index(entries, archive.path))
+            print(render_weekly_report_index(
+                entries, archive.path, query=query,
+                matched=matched, total=total))
         return 0
     session_path = Path(args.session) if args.session else (
         Path(args.sessions_dir) / f"{args.session_id}.json")

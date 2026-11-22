@@ -252,6 +252,41 @@ def test_cli_reports_delete_entry(tmp_path, capsys):
     assert "weekly report not found" in capsys.readouterr().out
 
 
+def test_cli_reports_query_filter(tmp_path, capsys):
+    index_path = tmp_path / "weekly_reports.json"
+    archive = WeeklyReportArchive(index_path)
+    for number, name in enumerate(("alpha", "beta"), start=1):
+        report = tmp_path / f"{name}.md"
+        report.write_text(f"# {name}\n", encoding="utf-8")
+        archive.record(report, {
+            "generated": f"2026-11-2{number} 09:00", "period_days": 7,
+            "task_counts": {"open": number}, "recent_source_count": 1,
+            "graph": {"entities": [], "connections": []},
+        }, exported_at=f"2026-11-2{number}T09:00:00")
+
+    assert main(["--reports", "--query", "alpha", "--json",
+                 "--reports-index", str(index_path)]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["query"] == "alpha"
+    assert payload["matched"] == 1
+    assert payload["total"] == 2
+    assert payload["data"][0]["name"] == "alpha.md"
+    assert main(["--reports", "--query", "alpha",
+                 "--reports-index", str(index_path)]) == 0
+    output = capsys.readouterr().out
+    assert "query: alpha | 1 match(es) of 2" in output
+    assert "alpha.md" in output
+    assert "beta.md" not in output
+    assert main(["--reports", "--query", "missing", "--json",
+                 "--reports-index", str(index_path)]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["matched"] == 0
+    assert payload["data"] == []
+    with pytest.raises(SystemExit) as exc:
+        main(["--query", "alpha"])
+    assert exc.value.code == 2
+
+
 def test_cli_reports_keep_retention(tmp_path, capsys):
     index_path = tmp_path / "weekly_reports.json"
     archive = WeeklyReportArchive(index_path)

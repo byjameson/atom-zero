@@ -139,19 +139,33 @@ class WeeklyReportArchive:
             self._save()
         return dict(entry)
 
-    def list(self, limit: int = 10) -> list[dict]:
+    @staticmethod
+    def _matches(entry: dict, needle: str) -> bool:
+        if not needle:
+            return True
+        fields = ("id", "title", "name", "path", "generated", "exported_at")
+        haystack = " ".join(
+            str(entry.get(field, "") or "") for field in fields).lower()
+        return needle in haystack
+
+    def list(self, limit: int = 10, query: str = "") -> list[dict]:
         try:
             limit = max(1, min(int(limit), 100))
         except (TypeError, ValueError):
             limit = 10
+        needle = str(query or "").strip().lower()
         with self._lock:
             self._reload()
             items = []
-            for entry in self.reports[:limit]:
+            for entry in self.reports:
+                if not self._matches(entry, needle):
+                    continue
                 item = dict(entry)
                 raw = str(item.get("path", "") or "")
                 item["exists"] = bool(raw) and Path(raw).is_file()
                 items.append(item)
+                if len(items) >= limit:
+                    break
             return items
 
     def _keep_split(self, limit: int) -> tuple[list[dict], list[dict]]:
@@ -201,10 +215,14 @@ class WeeklyReportArchive:
                 self._save()
             return removed
 
-    def count(self) -> int:
+    def count(self, query: str = "") -> int:
+        needle = str(query or "").strip().lower()
         with self._lock:
             self._reload()
-            return len(self.reports)
+            if not needle:
+                return len(self.reports)
+            return sum(1 for entry in self.reports
+                       if self._matches(entry, needle))
 
     def get(self, report_id: str) -> dict:
         report_id = str(report_id or "").strip()

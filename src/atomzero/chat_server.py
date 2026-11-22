@@ -262,7 +262,9 @@ and suggested next actions.</p>
 <button id="goalplan">Plan goal</button></div>
 <p id="briefmsg" class="hint"></p>
 <div id="briefres"></div>
-<div class="row"><button id="weeklyreportsrefresh">Recent reports</button>
+<div class="row"><input id="weeklyreportsearch" placeholder="Search reports...">
+<button id="weeklyreportssearch">Search</button>
+<button id="weeklyreportsrefresh">Recent reports</button>
 <button id="weeklyreportsprune">Prune missing</button>
 <input id="weeklykeep" type="number" min="1" max="500" value="5"
        title="Keep newest N reports" style="width:5em">
@@ -639,20 +641,28 @@ async function refreshWeeklyReports() {
   msg.textContent = 'loading archived reports...';
   box.textContent = '';
   if (previewBox) previewBox.textContent = '';
+  const query = (document.getElementById('weeklyreportsearch').value || '')
+    .trim();
   try {
-    const r = await fetch('/v1/weekly-review/reports?limit=10');
+    const params = new URLSearchParams({limit: '10'});
+    if (query) params.set('query', query);
+    const r = await fetch('/v1/weekly-review/reports?' + params.toString());
     const j = await r.json();
     if (!r.ok) {
       msg.textContent = 'report archive error: ' + (j.error || r.status);
       return;
     }
     const items = j.data || [];
-    msg.textContent = (j.total || items.length) + ' archived report(s)';
+    msg.textContent = query
+      ? ((j.matched || 0) + ' match(es) of ' + (j.total || 0))
+      : ((j.total || items.length) + ' archived report(s)');
     if (!items.length) {
       const none = document.createElement('div');
       none.className = 'hint';
-      none.textContent = 'No archived reports yet. Use atomzero-brief ' +
-        '--weekly --markdown --out PATH.';
+      none.textContent = query
+        ? ('No archived reports match "' + query + '".')
+        : ('No archived reports yet. Use atomzero-brief ' +
+           '--weekly --markdown --out PATH.');
       box.appendChild(none);
       return;
     }
@@ -878,8 +888,16 @@ async function planGoal(confirmCreate) {
 document.getElementById('briefrefresh').onclick = () => getBriefing();
 document.getElementById('briefweekly').onclick = () => getWeeklyReview();
 document.getElementById('weeklymd').onclick = () => downloadWeeklyMarkdown();
-document.getElementById('weeklyreportsrefresh').onclick =
+document.getElementById('weeklyreportssearch').onclick =
   () => refreshWeeklyReports();
+document.getElementById('weeklyreportsearch').addEventListener(
+  'keydown', event => {
+    if (event.key === 'Enter') refreshWeeklyReports();
+  });
+document.getElementById('weeklyreportsrefresh').onclick = () => {
+  document.getElementById('weeklyreportsearch').value = '';
+  refreshWeeklyReports();
+};
 document.getElementById('weeklyreportsprune').onclick =
   () => pruneWeeklyReports();
 document.getElementById('weeklyreportskeep').onclick =
@@ -2644,16 +2662,22 @@ class Handler(BaseHTTPRequestHandler):
                      f'attachment; filename="{filename}"'})
             try:
                 limit = int(params.get("limit", ["10"])[0])
-                entries = archive.list(limit)
+                query = str(params.get("query", [""])[0] or "").strip()
+                entries = archive.list(limit, query=query)
                 total = archive.count()
+                matched = archive.count(query=query)
             except (TypeError, ValueError, WeeklyReportError) as exc:
                 return self._json(400, {"error": str(exc)})
-            return self._json(200, {
+            payload = {
                 "data": entries,
                 "count": len(entries),
                 "total": total,
                 "index": str(archive.path),
-            })
+            }
+            if query:
+                payload["query"] = query
+                payload["matched"] = matched
+            return self._json(200, payload)
         elif (self.path == "/v1/weekly-review/export"
               or self.path.startswith("/v1/weekly-review/export?")):
             params = urllib.parse.parse_qs(

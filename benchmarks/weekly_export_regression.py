@@ -11,7 +11,8 @@ Checks:
 - pruning a missing archive entry through the HTTP/UI flow;
 - previewing and retaining only the newest N reports through the HTTP/UI
   flow;
-- deleting one archive entry while leaving its report file on disk.
+- deleting one archive entry while leaving its report file on disk;
+- filtering the archive with a text query.
 
 Run:
 
@@ -104,10 +105,13 @@ def run(output: str | Path | None = None) -> dict:
                 and 'id="weeklyreportspreview"' in page
                 and "/v1/weekly-review/reports/keep" in page
                 and "/v1/weekly-review/reports/delete" in page
+                and 'id="weeklyreportsearch"' in page
+                and 'id="weeklyreportssearch"' in page
                 and "refreshWeeklyReports" in page
                 and "pruneWeeklyReports" in page
                 and "keepWeeklyReports" in page
                 and "deleteArchivedReport" in page
+                and "params.set('query'" in page
                 and "dry_run" in page
                 and "would_remove" in page,
                 "present")
@@ -199,6 +203,22 @@ def run(output: str | Path | None = None) -> dict:
                 and Path(str(entry.get("path", ""))).resolve()
                 == out_path.resolve(),
                 str(entry))
+            filtered = json.loads(urllib.request.urlopen(
+                base + "/v1/weekly-review/reports"
+                       "?limit=5&query=weekly",
+                timeout=15).read().decode("utf-8"))
+            no_match = json.loads(urllib.request.urlopen(
+                base + "/v1/weekly-review/reports"
+                       "?limit=5&query=missing",
+                timeout=15).read().decode("utf-8"))
+            check(
+                "archive_query",
+                filtered.get("matched") == 1
+                and filtered.get("data", [{}])[0].get("id") == "w0001"
+                and no_match.get("matched") == 0
+                and no_match.get("data") == []
+                and no_match.get("total") == 1,
+                f"matched={filtered.get('matched')}")
             with urllib.request.urlopen(
                     base + f"/v1/weekly-review/reports?id={entry.get('id')}",
                     timeout=15) as response:

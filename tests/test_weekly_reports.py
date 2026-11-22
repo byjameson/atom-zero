@@ -64,6 +64,24 @@ def test_archive_records_dedupes_and_reads_bom_index(tmp_path):
     assert reloaded.list()[0]["task_counts"]["open"] == 4
 
 
+def test_archive_query_filters_entries(tmp_path):
+    index_path = tmp_path / "weekly_reports.json"
+    archive = WeeklyReportArchive(index_path)
+    for number, name in enumerate(("alpha", "beta"), start=1):
+        report = tmp_path / f"{name}.md"
+        report.write_text(f"# {name}\n", encoding="utf-8")
+        archive.record(
+            report, _review(),
+            exported_at=f"2026-11-22T0{number}:00:00")
+    assert archive.count() == 2
+    assert archive.count(query="alpha") == 1
+    assert [item["name"] for item in archive.list(query="alpha")] == [
+        "alpha.md"]
+    assert archive.list(query="missing") == []
+    assert archive.count(query="missing") == 0
+    assert len(archive.list(query="WEEKLY")) == 2
+
+
 def test_archive_delete_removes_one_entry_only(tmp_path):
     index_path = tmp_path / "weekly_reports.json"
     archive = WeeklyReportArchive(index_path)

@@ -852,6 +852,8 @@ def test_ui_collection_scope_contract():
     assert 'id="weeklyreportspreview"' in page
     assert "/v1/weekly-review/reports/keep" in page
     assert "/v1/weekly-review/reports/delete" in page
+    assert 'id="weeklyreportsearch"' in page
+    assert 'id="weeklyreportssearch"' in page
     assert "getWeeklyReview" in page
     assert "downloadWeeklyMarkdown" in page
     assert "refreshWeeklyReports" in page
@@ -859,6 +861,7 @@ def test_ui_collection_scope_contract():
     assert "deleteArchivedReport" in page
     assert "pruneWeeklyReports" in page
     assert "keepWeeklyReports" in page
+    assert "params.set('query'" in page
     assert "dry_run" in page
     assert "would_remove" in page
     assert "planGoal" in page
@@ -1395,6 +1398,16 @@ def test_http_weekly_reports_archive(tmp_path):
             timeout=10).read().decode("utf-8"))
         assert listing["total"] == 1
         assert listing["data"][0]["id"] == entry["id"]
+        filtered = json.loads(urllib.request.urlopen(
+            base + "/v1/weekly-review/reports?limit=5&query=weekly",
+            timeout=10).read().decode("utf-8"))
+        assert filtered["matched"] == 1
+        assert filtered["data"][0]["id"] == entry["id"]
+        empty_filter = json.loads(urllib.request.urlopen(
+            base + "/v1/weekly-review/reports?limit=5&query=missing",
+            timeout=10).read().decode("utf-8"))
+        assert empty_filter["matched"] == 0
+        assert empty_filter["data"] == []
         response = urllib.request.urlopen(
             base + f"/v1/weekly-review/reports?id={entry['id']}",
             timeout=10)

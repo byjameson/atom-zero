@@ -102,6 +102,7 @@ atomzero-brief --reports --prune
 atomzero-brief --reports --keep 10
 atomzero-brief --reports --keep 10 --dry-run
 atomzero-brief --reports --delete w0001
+atomzero-brief --reports --query weekly
 atomzero-brief --reports --reports-index reports\weekly_reports.json --limit 5
 ```
 
@@ -117,10 +118,11 @@ With `--json`, the result includes `removed`, `trimmed`, or
 `would_remove_count`/`would_remove` fields as applicable.
 
 `--delete ID` removes one archive entry atomically and leaves the report file
-on disk.
+on disk. `--query TEXT` filters entries by ID, title, filename, path or date.
 
 ```text
 GET  /v1/weekly-review/reports?limit=10
+GET  /v1/weekly-review/reports?query=weekly
 GET  /v1/weekly-review/reports?id=w0001
 POST /v1/weekly-review/reports/prune
 POST /v1/weekly-review/reports/keep
@@ -130,13 +132,13 @@ POST /v1/weekly-review/reports/delete
 {"id": "w0001"}
 ```
 
-The UI **Recent reports** panel lists the archive, downloads an indexed
-Markdown file, exposes **Delete** for one entry, **Prune missing** for deleted
-files and a **Keep newest** retention control with **Preview only**. A dry-run
-response includes `would_remove` entries and leaves the archive unchanged.
-Keep `--reports-index` pointed at the same file for CLI and the server; both
-default to `data/weekly_reports.json`. `quickstart` and `chat_server` accept
-`--reports-index`.
+The UI **Recent reports** panel has a search box, lists the archive, downloads
+an indexed Markdown file, exposes **Delete** for one entry, **Prune missing**
+for deleted files and a **Keep newest** retention control with **Preview
+only**. A dry-run response includes `would_remove` entries and leaves the
+archive unchanged. Keep `--reports-index` pointed at the same file for CLI and
+the server; both default to `data/weekly_reports.json`. `quickstart` and
+`chat_server` accept `--reports-index`.
 
 ## Chat flow
 
