@@ -13,7 +13,7 @@ ModelScope.
 ## Install
 
 ```powershell
-pip install atomzero==0.1.7
+pip install atomzero==0.1.8
 ```
 
 Optional local MiniLM reranker:
@@ -47,6 +47,17 @@ atomzero-quickstart --no-browser
 ```
 
 The cache lives at `~/.cache/atomzero/atom-zero-49m`.
+
+## Check your install
+
+```powershell
+atomzero-doctor
+atomzero-doctor --provider --json
+```
+
+The doctor checks Python, the package version, torch/CUDA, the model cache
+(exact file sizes), document/session write access, the local port and the
+optional Ollama provider. It exits non-zero only on hard failures.
 
 ## What it is
 
@@ -212,9 +223,9 @@ the exact rules. It is an operator tool, not a hosted content policy.
 
 ## Links
 
-- PyPI: <https://pypi.org/project/atomzero/0.1.7/>
+- PyPI: <https://pypi.org/project/atomzero/0.1.8/>
 - GitHub source: <https://github.com/byjameson/atom-zero>
-- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v0.1.7>
+- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v0.1.8>
 - Quickstart: <https://github.com/byjameson/atom-zero/blob/main/docs/QUICKSTART_ATOMZERO.md>
 - Model card: <https://github.com/byjameson/atom-zero/blob/main/docs/MODEL_CARD.md>
 - Full project map: <https://github.com/byjameson/atom-zero/blob/main/docs/PROJECT_OVERVIEW.md>

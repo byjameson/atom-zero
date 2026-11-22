@@ -1,5 +1,13 @@
 # Changelog
 
+## atomzero 0.1.8 - install doctor (2026-11-22)
+
+- Added `atomzero-doctor`: Python/package/dependency/torch-CUDA/cache/port/
+  write-access/Ollama preflight checks with actionable hints and `--json`.
+- Documented the doctor in the README.
+- No model/runtime behavior changed; weights remain `0.8.0`.
+- Release notes: [`docs/RELEASE_ATOMZERO_0.1.8.md`](docs/RELEASE_ATOMZERO_0.1.8.md).
+
 ## atomzero 0.1.7 - PyPI docs link cleanup (2026-11-22)
 
 - Republished the package description with all documentation links pointing to
