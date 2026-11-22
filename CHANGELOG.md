@@ -35,8 +35,11 @@
 - Added `atomzero-brief --reports --keep N`,
   `POST /v1/weekly-review/reports/keep` and a UI **Keep newest** control for
   atomic retention of the newest N reports.
-- Added `benchmarks/weekly_export_regression.py` (12/12 checks: CLI, HTTP, UI,
-  the report archive, pruning and retention).
+- Added `--keep N --dry-run`, `dry_run: true` for the keep endpoint and a UI
+  **Preview only** option that lists would-be-removed reports without changing
+  the archive.
+- Added `benchmarks/weekly_export_regression.py` (13/13 checks: CLI, HTTP, UI,
+  the report archive, pruning, retention and dry-run preview).
 - Fixed BOM-sensitive session loading: `atomzero-brief` and `ChatHuman` now
   accept PowerShell-written UTF-8 session files with a BOM.
 - Extended BOM-tolerant reads to feedback, knowledge-gap, research-queue,

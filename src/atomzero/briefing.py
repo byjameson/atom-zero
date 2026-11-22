@@ -361,21 +361,36 @@ def render_plan(plan: dict) -> str:
     return "\n".join(lines)
 
 
+def _weekly_report_line(item: dict) -> str:
+    counts = item.get("task_counts", {})
+    marker = "" if item.get("exists", True) else " [missing]"
+    return (
+        f"- {item.get('id', '?')} | {item.get('exported_at', '')} | "
+        f"last {item.get('period_days', 7)} days | "
+        f"{counts.get('open', 0)} open | "
+        f"{item.get('recent_source_count', 0)} source(s) | "
+        f"{item.get('path', '')}{marker}")
+
+
 def render_weekly_report_index(entries: list[dict],
                                index_path: str | Path) -> str:
     lines = [f"Weekly report archive: {index_path}"]
     if not entries:
         lines.append("No archived weekly reports.")
         return "\n".join(lines)
-    for item in entries:
-        counts = item.get("task_counts", {})
-        marker = "" if item.get("exists", True) else " [missing]"
-        lines.append(
-            f"- {item.get('id', '?')} | {item.get('exported_at', '')} | "
-            f"last {item.get('period_days', 7)} days | "
-            f"{counts.get('open', 0)} open | "
-            f"{item.get('recent_source_count', 0)} source(s) | "
-            f"{item.get('path', '')}{marker}")
+    lines.extend(_weekly_report_line(item) for item in entries)
+    return "\n".join(lines)
+
+
+def render_weekly_report_preview(entries: list[dict], keep: int) -> str:
+    lines = [
+        f"Dry run: would remove {len(entries)} older report(s) to keep "
+        f"{keep}."
+    ]
+    if entries:
+        lines.extend(_weekly_report_line(item) for item in entries)
+    else:
+        lines.append("- None")
     return "\n".join(lines)
 
 
@@ -549,6 +564,8 @@ def main(argv=None) -> int:
                         help="remove archived reports whose files are missing")
     parser.add_argument("--keep", type=int, default=None,
                         help="keep only the N newest archived reports")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="preview --keep removals without changing the archive")
     parser.add_argument("--reports-index", default=DEFAULT_REPORTS_PATH,
                         help="weekly report archive JSON path")
     parser.add_argument("--limit", type=int, default=10,
@@ -568,16 +585,24 @@ def main(argv=None) -> int:
         parser.error("--keep requires --reports")
     if args.keep is not None and args.keep < 1:
         parser.error("--keep must be at least 1")
+    if args.dry_run and args.keep is None:
+        parser.error("--dry-run requires --keep")
+    if args.dry_run and args.prune:
+        parser.error("--dry-run cannot be combined with --prune")
     if args.reports:
         index_path = args.reports_index or DEFAULT_REPORTS_PATH
         removed = 0
         trimmed = 0
+        preview = []
         try:
             archive = WeeklyReportArchive(index_path)
             if args.prune:
                 removed = archive.prune()
             if args.keep is not None:
-                trimmed = archive.keep(args.keep)
+                if args.dry_run:
+                    preview = archive.keep_preview(args.keep)
+                else:
+                    trimmed = archive.keep(args.keep)
             entries = archive.list(args.limit)
             total = archive.count()
         except (WeeklyReportError, OSError) as exc:
@@ -597,9 +622,17 @@ def main(argv=None) -> int:
             if args.prune:
                 payload["removed"] = removed
             if args.keep is not None:
-                payload["trimmed"] = trimmed
                 payload["keep"] = args.keep
+                if args.dry_run:
+                    payload["dry_run"] = True
+                    payload["would_remove"] = preview
+                    payload["would_remove_count"] = len(preview)
+                else:
+                    payload["trimmed"] = trimmed
             print(json.dumps(payload, indent=2, ensure_ascii=False))
+        elif args.dry_run:
+            print(render_weekly_report_preview(preview, args.keep))
+            print(f"Archive unchanged: {total} report(s).")
         else:
             if args.prune:
                 print(f"Removed {removed} missing report(s).")

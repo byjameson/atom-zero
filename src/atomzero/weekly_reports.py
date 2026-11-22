@@ -154,8 +154,7 @@ class WeeklyReportArchive:
                 items.append(item)
             return items
 
-    def keep(self, limit: int) -> int:
-        """Keep the newest ``limit`` entries and remove older ones."""
+    def _keep_split(self, limit: int) -> tuple[list[dict], list[dict]]:
         try:
             limit = int(limit)
         except (TypeError, ValueError) as exc:
@@ -168,12 +167,22 @@ class WeeklyReportArchive:
                 self.reports,
                 key=lambda item: str(item.get("exported_at", "")),
                 reverse=True)
-            kept = ordered[:limit]
-            removed = len(ordered) - len(kept)
+            return ordered[:limit], ordered[limit:]
+
+    def keep_preview(self, limit: int) -> list[dict]:
+        """Return the entries ``keep(limit)`` would remove."""
+        with self._lock:
+            _, removed = self._keep_split(limit)
+            return [dict(item) for item in removed]
+
+    def keep(self, limit: int) -> int:
+        """Keep the newest ``limit`` entries and remove older ones."""
+        with self._lock:
+            kept, removed = self._keep_split(limit)
             if removed:
                 self.reports = kept
                 self._save()
-            return removed
+            return len(removed)
 
     def prune(self) -> int:
         """Remove entries whose report file no longer exists."""

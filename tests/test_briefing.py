@@ -230,6 +230,20 @@ def test_cli_reports_keep_retention(tmp_path, capsys):
             "graph": {"entities": [], "connections": []},
         }, exported_at=f"2026-11-2{number}T09:00:00")
 
+    assert main(["--reports", "--keep", "2", "--dry-run", "--json",
+                 "--reports-index", str(index_path)]) == 0
+    preview = json.loads(capsys.readouterr().out)
+    assert preview["dry_run"] is True
+    assert preview["would_remove_count"] == 1
+    assert preview["would_remove"][0]["id"] == "w0001"
+    assert preview["total"] == 3
+    assert WeeklyReportArchive(index_path).count() == 3
+    assert main(["--reports", "--keep", "2", "--dry-run",
+                 "--reports-index", str(index_path)]) == 0
+    dry_text = capsys.readouterr().out
+    assert "Dry run: would remove 1 older report(s) to keep 2." in dry_text
+    assert "Archive unchanged: 3 report(s)." in dry_text
+
     assert main(["--reports", "--keep", "2", "--json", "--reports-index",
                  str(index_path)]) == 0
     payload = json.loads(capsys.readouterr().out)

@@ -73,6 +73,9 @@ def test_archive_keep_trims_oldest_reports(tmp_path):
         archive.record(
             report, _review(), exported_at=f"2026-11-2{number}T09:00:00")
     assert archive.count() == 3
+    preview = archive.keep_preview(2)
+    assert [item["id"] for item in preview] == ["w0001"]
+    assert archive.count() == 3
 
     assert archive.keep(2) == 1
     entries = archive.list()

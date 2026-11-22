@@ -185,8 +185,9 @@ short generation. It is **not MMLU, GSM8K or HumanEval**.
   `/v1/weekly-review` aggregate recent work. `/v1/weekly-review/export`
   produces a portable Markdown report; `--reports` and
   `/v1/weekly-review/reports` list the local report archive with UI download;
-  `--reports --prune` removes entries whose files were deleted and
-  `--reports --keep N` retains only the newest N reports.
+  `--reports --prune` removes entries whose files were deleted,
+  `--reports --keep N` retains only the newest N reports and
+  `--reports --keep N --dry-run` previews the removals without writing.
   `/v1/goals/plan` produces a cited plan skeleton. Chat supports `brief me`,
   `weekly review` (optionally `for 14 days` / `haftalık özet 14 gün`) and
   `plan goal ...` → `confirm plan` with explicit task creation only after

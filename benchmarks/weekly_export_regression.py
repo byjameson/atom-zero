@@ -9,7 +9,8 @@ Checks:
 - `atomzero-brief --weekly --markdown --out PATH` writing a file directly;
 - the CLI report appearing in the HTTP/UI archive and downloading from it;
 - pruning a missing archive entry through the HTTP/UI flow;
-- retaining only the newest N reports through the HTTP/UI flow.
+- previewing and retaining only the newest N reports through the HTTP/UI
+  flow.
 
 Run:
 
@@ -98,10 +99,14 @@ def run(output: str | Path | None = None) -> dict:
                 and 'id="weeklyreportsprune"' in page
                 and 'id="weeklyreportskeep"' in page
                 and 'id="weeklykeep"' in page
+                and 'id="weeklykeepdry"' in page
+                and 'id="weeklyreportspreview"' in page
                 and "/v1/weekly-review/reports/keep" in page
                 and "refreshWeeklyReports" in page
                 and "pruneWeeklyReports" in page
-                and "keepWeeklyReports" in page,
+                and "keepWeeklyReports" in page
+                and "dry_run" in page
+                and "would_remove" in page,
                 "present")
             for message in ("add task buy milk",
                             "add task write report",
@@ -232,6 +237,20 @@ def run(output: str | Path | None = None) -> dict:
                     "pending_gap_count": 0, "recent_source_count": 0,
                     "graph": {"entities": [], "connections": []},
                 }, exported_at=f"2026-11-2{number}T09:00:00")
+            preview = _post(
+                base, "/v1/weekly-review/reports/keep",
+                {"keep": 2, "dry_run": True})
+            after_preview = json.loads(urllib.request.urlopen(
+                base + "/v1/weekly-review/reports?limit=5",
+                timeout=15).read().decode("utf-8"))
+            check(
+                "archive_keep_preview",
+                preview.get("dry_run") is True
+                and preview.get("trimmed") == 0
+                and preview.get("would_remove_count") == 2
+                and preview.get("remaining") == 4
+                and after_preview.get("total") == 4,
+                str(preview))
             kept = _post(
                 base, "/v1/weekly-review/reports/keep", {"keep": 2})
             after_keep = json.loads(urllib.request.urlopen(

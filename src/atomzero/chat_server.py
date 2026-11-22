@@ -265,9 +265,11 @@ and suggested next actions.</p>
 <button id="weeklyreportsprune">Prune missing</button>
 <input id="weeklykeep" type="number" min="1" max="500" value="5"
        title="Keep newest N reports" style="width:5em">
+<label class="hint"><input id="weeklykeepdry" type="checkbox"> Preview only</label>
 <button id="weeklyreportskeep">Keep newest</button></div>
 <p id="weeklyreportsmsg" class="hint"></p>
 <div id="weeklyreports"></div>
+<div id="weeklyreportspreview"></div>
 <hr>
 <h3>Teach a fact</h3>
 <p class="hint">Stored in the local document index with a source. Facts do not
@@ -632,8 +634,10 @@ async function downloadWeeklyMarkdown() {
 async function refreshWeeklyReports() {
   const msg = document.getElementById('weeklyreportsmsg');
   const box = document.getElementById('weeklyreports');
+  const previewBox = document.getElementById('weeklyreportspreview');
   msg.textContent = 'loading archived reports...';
   box.textContent = '';
+  if (previewBox) previewBox.textContent = '';
   try {
     const r = await fetch('/v1/weekly-review/reports?limit=10');
     const j = await r.json();
@@ -681,18 +685,45 @@ async function refreshWeeklyReports() {
 async function keepWeeklyReports() {
   const msg = document.getElementById('weeklyreportsmsg');
   const keep = parseInt(document.getElementById('weeklykeep').value, 10);
+  const dryRun = document.getElementById('weeklykeepdry').checked;
   if (!Number.isInteger(keep) || keep < 1) {
     msg.textContent = 'enter a keep count of at least 1';
     return;
   }
-  msg.textContent = 'applying retention policy...';
+  msg.textContent = dryRun ? 'previewing retention policy...'
+                           : 'applying retention policy...';
   try {
     const r = await fetch('/v1/weekly-review/reports/keep', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({keep})});
+      body: JSON.stringify({keep, dry_run: dryRun})});
     const j = await r.json();
     if (!r.ok) {
       msg.textContent = 'report retention error: ' + (j.error || r.status);
+      return;
+    }
+    const previewBox = document.getElementById('weeklyreportspreview');
+    if (j.dry_run) {
+      previewBox.textContent = '';
+      const head = document.createElement('div');
+      head.className = 'hint';
+      head.textContent = 'Would remove:';
+      previewBox.appendChild(head);
+      (j.would_remove || []).forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'qitem';
+        card.textContent = (item.id || '?') + ' | ' +
+          (item.exported_at || '') + ' | ' + (item.path || '');
+        previewBox.appendChild(card);
+      });
+      if (!(j.would_remove || []).length) {
+        const none = document.createElement('div');
+        none.className = 'hint';
+        none.textContent = 'Nothing would be removed.';
+        previewBox.appendChild(none);
+      }
+      msg.textContent = 'dry run: would remove ' +
+        (j.would_remove_count || 0) + ' older | ' +
+        (j.remaining || 0) + ' remain';
       return;
     }
     const trimmed = j.trimmed || 0;
@@ -3414,7 +3445,20 @@ class Handler(BaseHTTPRequestHandler):
             keep = int(req.get("keep"))
             if keep < 1:
                 raise ValueError("keep must be at least 1")
+            dry_run = req.get("dry_run") is True
             archive = _weekly_reports_archive()
+            if dry_run:
+                preview = archive.keep_preview(keep)
+                remaining = archive.count()
+                return self._json(200, {
+                    "keep": keep,
+                    "dry_run": True,
+                    "trimmed": 0,
+                    "remaining": remaining,
+                    "would_remove": preview,
+                    "would_remove_count": len(preview),
+                    "index": str(archive.path),
+                })
             trimmed = archive.keep(keep)
             remaining = archive.count()
         except (TypeError, ValueError, WeeklyReportError, OSError) as exc:

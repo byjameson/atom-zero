@@ -847,6 +847,8 @@ def test_ui_collection_scope_contract():
     assert 'id="weeklyreportsprune"' in page
     assert 'id="weeklyreportskeep"' in page
     assert 'id="weeklykeep"' in page
+    assert 'id="weeklykeepdry"' in page
+    assert 'id="weeklyreportspreview"' in page
     assert "/v1/weekly-review/reports/keep" in page
     assert "getWeeklyReview" in page
     assert "downloadWeeklyMarkdown" in page
@@ -854,6 +856,8 @@ def test_ui_collection_scope_contract():
     assert "downloadArchivedReport" in page
     assert "pruneWeeklyReports" in page
     assert "keepWeeklyReports" in page
+    assert "dry_run" in page
+    assert "would_remove" in page
     assert "planGoal" in page
     assert 'data-q="plan goal prepare the warranty page"' in page
     assert 'data-q="brief me"' in page
@@ -1402,6 +1406,16 @@ def test_http_weekly_reports_archive(tmp_path):
                 "task_counts": {"open": 0}, "recent_source_count": 0,
                 "graph": {"entities": [], "connections": []},
             }, exported_at=f"2026-11-2{number}T09:00:00")
+        preview = _post(base + "/v1/weekly-review/reports/keep",
+                        {"keep": 2, "dry_run": True})
+        assert preview["dry_run"] is True
+        assert preview["trimmed"] == 0
+        assert preview["would_remove_count"] == 1
+        assert preview["remaining"] == 3
+        listing = json.loads(urllib.request.urlopen(
+            base + "/v1/weekly-review/reports?limit=5",
+            timeout=10).read().decode("utf-8"))
+        assert listing["total"] == 3
         retention = _post(
             base + "/v1/weekly-review/reports/keep", {"keep": 2})
         assert retention["trimmed"] == 1
