@@ -566,6 +566,8 @@ def main(argv=None) -> int:
                         help="keep only the N newest archived reports")
     parser.add_argument("--dry-run", action="store_true",
                         help="preview --keep removals without changing the archive")
+    parser.add_argument("--delete", metavar="ID", default=None,
+                        help="remove one archive entry by report id")
     parser.add_argument("--reports-index", default=DEFAULT_REPORTS_PATH,
                         help="weekly report archive JSON path")
     parser.add_argument("--limit", type=int, default=10,
@@ -589,13 +591,21 @@ def main(argv=None) -> int:
         parser.error("--dry-run requires --keep")
     if args.dry_run and args.prune:
         parser.error("--dry-run cannot be combined with --prune")
+    if args.delete is not None and not args.reports:
+        parser.error("--delete requires --reports")
+    if args.delete is not None and (
+            args.prune or args.keep is not None or args.dry_run):
+        parser.error("--delete cannot be combined with --prune/--keep")
     if args.reports:
         index_path = args.reports_index or DEFAULT_REPORTS_PATH
         removed = 0
         trimmed = 0
         preview = []
+        deleted = None
         try:
             archive = WeeklyReportArchive(index_path)
+            if args.delete is not None:
+                deleted = archive.delete(args.delete)
             if args.prune:
                 removed = archive.prune()
             if args.keep is not None:
@@ -619,6 +629,8 @@ def main(argv=None) -> int:
                 "total": total,
                 "index": str(archive.path),
             }
+            if args.delete is not None:
+                payload["deleted"] = deleted
             if args.prune:
                 payload["removed"] = removed
             if args.keep is not None:
@@ -634,6 +646,10 @@ def main(argv=None) -> int:
             print(render_weekly_report_preview(preview, args.keep))
             print(f"Archive unchanged: {total} report(s).")
         else:
+            if args.delete is not None:
+                print(f"Deleted archive entry {deleted.get('id', '')}: "
+                      f"{deleted.get('path', '')}")
+                print("Report file was left on disk.")
             if args.prune:
                 print(f"Removed {removed} missing report(s).")
             if args.keep is not None:

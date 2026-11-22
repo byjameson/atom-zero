@@ -32,6 +32,7 @@ Endpoints:
   GET  /v1/weekly-review/reports?id=w0001
   POST /v1/weekly-review/reports/prune
   POST /v1/weekly-review/reports/keep
+  POST /v1/weekly-review/reports/delete
   POST /v1/goals/plan
   GET  /v1/teacher/notes
   POST /v1/teacher/notes
@@ -669,13 +670,15 @@ async function refreshWeeklyReports() {
         ((item.task_counts || {}).open || 0) + ' open | ' +
         (item.recent_source_count || 0) + ' source(s)';
       card.appendChild(meta);
+      const actions = document.createElement('div');
+      actions.className = 'actions';
       if (item.exists !== false) {
-        const actions = document.createElement('div');
-        actions.className = 'actions';
         actions.appendChild(qbutton('Download', () =>
           downloadArchivedReport(item.id, item.name)));
-        card.appendChild(actions);
       }
+      actions.appendChild(qbutton('Delete', () =>
+        deleteArchivedReport(item.id)));
+      card.appendChild(actions);
       box.appendChild(card);
     });
   } catch (e) {
@@ -783,6 +786,25 @@ async function downloadArchivedReport(reportId, name) {
     msg.textContent = 'downloaded ' + filename;
   } catch (e) {
     msg.textContent = 'report download error: ' + e;
+  }
+}
+async function deleteArchivedReport(reportId) {
+  const msg = document.getElementById('weeklyreportsmsg');
+  msg.textContent = 'deleting ' + reportId + ' from archive...';
+  try {
+    const r = await fetch('/v1/weekly-review/reports/delete', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({id: reportId})});
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'report delete error: ' + (j.error || r.status);
+      return;
+    }
+    await refreshWeeklyReports();
+    msg.textContent = 'deleted ' + reportId + ' from archive | ' +
+      (j.remaining || 0) + ' remaining';
+  } catch (e) {
+    msg.textContent = 'report delete error: ' + e;
   }
 }
 async function planGoal(confirmCreate) {
@@ -2897,6 +2919,7 @@ class Handler(BaseHTTPRequestHandler):
                          "/v1/briefing", "/v1/weekly-review",
                          "/v1/weekly-review/reports/prune",
                          "/v1/weekly-review/reports/keep",
+                         "/v1/weekly-review/reports/delete",
                          "/v1/goals/plan",
                          "/v1/learn_url", "/v1/research",
                          "/v1/research/queue",
@@ -2968,6 +2991,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._weekly_reports_prune()
             if route == "/v1/weekly-review/reports/keep":
                 return self._weekly_reports_keep(req)
+            if route == "/v1/weekly-review/reports/delete":
+                return self._weekly_reports_delete(req)
             if route == "/v1/goals/plan":
                 return self._goal_plan(req)
             if route == "/v1/research/queue":
@@ -3436,6 +3461,22 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(400, {"error": str(exc)})
         return self._json(200, {
             "removed": removed,
+            "remaining": remaining,
+            "index": str(archive.path),
+        })
+
+    def _weekly_reports_delete(self, req: dict):
+        try:
+            archive = _weekly_reports_archive()
+            deleted = archive.delete(str(req.get("id", "") or ""))
+            remaining = archive.count()
+        except WeeklyReportError as exc:
+            code = 404 if "not found" in str(exc) else 400
+            return self._json(code, {"error": str(exc)})
+        except OSError as exc:
+            return self._json(400, {"error": str(exc)})
+        return self._json(200, {
+            "deleted": deleted,
             "remaining": remaining,
             "index": str(archive.path),
         })

@@ -10,7 +10,8 @@ Checks:
 - the CLI report appearing in the HTTP/UI archive and downloading from it;
 - pruning a missing archive entry through the HTTP/UI flow;
 - previewing and retaining only the newest N reports through the HTTP/UI
-  flow.
+  flow;
+- deleting one archive entry while leaving its report file on disk.
 
 Run:
 
@@ -102,9 +103,11 @@ def run(output: str | Path | None = None) -> dict:
                 and 'id="weeklykeepdry"' in page
                 and 'id="weeklyreportspreview"' in page
                 and "/v1/weekly-review/reports/keep" in page
+                and "/v1/weekly-review/reports/delete" in page
                 and "refreshWeeklyReports" in page
                 and "pruneWeeklyReports" in page
                 and "keepWeeklyReports" in page
+                and "deleteArchivedReport" in page
                 and "dry_run" in page
                 and "would_remove" in page,
                 "present")
@@ -262,6 +265,21 @@ def run(output: str | Path | None = None) -> dict:
                 and kept.get("remaining") == 2
                 and after_keep.get("total") == 2,
                 str(kept))
+            delete_target = (after_keep.get("data") or [{}])[0]
+            deleted = _post(
+                base, "/v1/weekly-review/reports/delete",
+                {"id": delete_target.get("id")})
+            after_delete = json.loads(urllib.request.urlopen(
+                base + "/v1/weekly-review/reports?limit=5",
+                timeout=15).read().decode("utf-8"))
+            check(
+                "archive_delete",
+                deleted.get("deleted", {}).get("id")
+                == delete_target.get("id")
+                and deleted.get("remaining") == 1
+                and after_delete.get("total") == 1
+                and Path(str(delete_target.get("path", ""))).exists(),
+                str(deleted))
         finally:
             httpd.shutdown()
             httpd.server_close()

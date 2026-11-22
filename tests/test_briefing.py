@@ -218,6 +218,40 @@ def test_cli_reports_prune_missing_files(tmp_path, capsys):
     assert exc.value.code == 2
 
 
+def test_cli_reports_delete_entry(tmp_path, capsys):
+    index_path = tmp_path / "weekly_reports.json"
+    report = tmp_path / "kept.md"
+    report.write_text("# Kept\n", encoding="utf-8")
+    second = tmp_path / "deleted.md"
+    second.write_text("# Deleted\n", encoding="utf-8")
+    archive = WeeklyReportArchive(index_path)
+    first_entry = archive.record(report, {
+        "generated": "2026-11-22 09:00", "period_days": 7,
+        "task_counts": {"open": 1}, "recent_source_count": 1,
+        "graph": {"entities": [], "connections": []},
+    })
+    deleted_entry = archive.record(second, {
+        "generated": "2026-11-23 09:00", "period_days": 7,
+        "task_counts": {"open": 0}, "recent_source_count": 0,
+        "graph": {"entities": [], "connections": []},
+    })
+
+    assert main(["--reports", "--delete", deleted_entry["id"], "--json",
+                 "--reports-index", str(index_path)]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["deleted"]["id"] == deleted_entry["id"]
+    assert payload["total"] == 1
+    assert payload["data"][0]["id"] == first_entry["id"]
+    assert second.exists()
+    with pytest.raises(SystemExit) as exc:
+        main(["--reports", "--delete", first_entry["id"], "--keep", "1"])
+    assert exc.value.code == 2
+
+    assert main(["--reports", "--delete", "w9999", "--reports-index",
+                 str(index_path)]) == 1
+    assert "weekly report not found" in capsys.readouterr().out
+
+
 def test_cli_reports_keep_retention(tmp_path, capsys):
     index_path = tmp_path / "weekly_reports.json"
     archive = WeeklyReportArchive(index_path)

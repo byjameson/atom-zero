@@ -38,8 +38,11 @@
 - Added `--keep N --dry-run`, `dry_run: true` for the keep endpoint and a UI
   **Preview only** option that lists would-be-removed reports without changing
   the archive.
-- Added `benchmarks/weekly_export_regression.py` (13/13 checks: CLI, HTTP, UI,
-  the report archive, pruning, retention and dry-run preview).
+- Added `atomzero-brief --reports --delete ID`,
+  `POST /v1/weekly-review/reports/delete` and a UI **Delete** action for one
+  archive entry; the report file is left on disk.
+- Added `benchmarks/weekly_export_regression.py` (14/14 checks: CLI, HTTP, UI,
+  the report archive, pruning, retention, dry-run preview and deletion).
 - Fixed BOM-sensitive session loading: `atomzero-brief` and `ChatHuman` now
   accept PowerShell-written UTF-8 session files with a BOM.
 - Extended BOM-tolerant reads to feedback, knowledge-gap, research-queue,

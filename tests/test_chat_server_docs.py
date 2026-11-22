@@ -4,6 +4,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from http.server import ThreadingHTTPServer
+from pathlib import Path
 
 import pytest
 
@@ -850,10 +851,12 @@ def test_ui_collection_scope_contract():
     assert 'id="weeklykeepdry"' in page
     assert 'id="weeklyreportspreview"' in page
     assert "/v1/weekly-review/reports/keep" in page
+    assert "/v1/weekly-review/reports/delete" in page
     assert "getWeeklyReview" in page
     assert "downloadWeeklyMarkdown" in page
     assert "refreshWeeklyReports" in page
     assert "downloadArchivedReport" in page
+    assert "deleteArchivedReport" in page
     assert "pruneWeeklyReports" in page
     assert "keepWeeklyReports" in page
     assert "dry_run" in page
@@ -1424,6 +1427,17 @@ def test_http_weekly_reports_archive(tmp_path):
             base + "/v1/weekly-review/reports?limit=5",
             timeout=10).read().decode("utf-8"))
         assert listing["total"] == 2
+        delete_target = listing["data"][0]
+        deleted = _post(
+            base + "/v1/weekly-review/reports/delete",
+            {"id": delete_target["id"]})
+        assert deleted["deleted"]["id"] == delete_target["id"]
+        assert deleted["remaining"] == 1
+        assert Path(delete_target["path"]).exists()
+        listing = json.loads(urllib.request.urlopen(
+            base + "/v1/weekly-review/reports?limit=5",
+            timeout=10).read().decode("utf-8"))
+        assert listing["total"] == 1
         with pytest.raises(urllib.error.HTTPError) as missing:
             urllib.request.urlopen(
                 base + "/v1/weekly-review/reports?id=w9999", timeout=10)

@@ -64,6 +64,25 @@ def test_archive_records_dedupes_and_reads_bom_index(tmp_path):
     assert reloaded.list()[0]["task_counts"]["open"] == 4
 
 
+def test_archive_delete_removes_one_entry_only(tmp_path):
+    index_path = tmp_path / "weekly_reports.json"
+    archive = WeeklyReportArchive(index_path)
+    report = tmp_path / "weekly.md"
+    report.write_text("# Weekly\n", encoding="utf-8")
+    first = archive.record(report, _review())
+    second_report = tmp_path / "second.md"
+    second_report.write_text("# Second\n", encoding="utf-8")
+    second = archive.record(second_report, _review())
+
+    deleted = archive.delete(first["id"])
+    assert deleted["id"] == first["id"]
+    assert report.exists()
+    assert archive.count() == 1
+    assert archive.list()[0]["id"] == second["id"]
+    with pytest.raises(WeeklyReportError):
+        archive.delete(first["id"])
+
+
 def test_archive_keep_trims_oldest_reports(tmp_path):
     index_path = tmp_path / "weekly_reports.json"
     archive = WeeklyReportArchive(index_path)

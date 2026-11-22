@@ -217,6 +217,28 @@ class WeeklyReportArchive:
                     return dict(entry)
         raise WeeklyReportError(f"weekly report not found: {report_id}")
 
+    def delete(self, report_id: str) -> dict:
+        """Remove one index entry; the report file is left on disk."""
+        report_id = str(report_id or "").strip()
+        if not report_id:
+            raise WeeklyReportError("report id is required")
+        with self._lock:
+            self._reload()
+            deleted = None
+            kept = []
+            for entry in self.reports:
+                if (deleted is None
+                        and str(entry.get("id", "")) == report_id):
+                    deleted = dict(entry)
+                else:
+                    kept.append(entry)
+            if deleted is None:
+                raise WeeklyReportError(
+                    f"weekly report not found: {report_id}")
+            self.reports = kept
+            self._save()
+            return deleted
+
     def markdown(self, report_id: str) -> tuple[dict, str]:
         entry = self.get(report_id)
         path = Path(str(entry.get("path", "")))
