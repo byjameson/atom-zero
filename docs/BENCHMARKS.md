@@ -20,6 +20,28 @@ Raw means no RAG, no tools and no agent. "Product" adds the runtime. The
 adapter does not add factual knowledge; it is a style/skill layer with a
 reviewed gate. See the [model card](MODEL_CARD.md) for the full distinction.
 
+## Public retrieval benchmark: SQuAD v2
+
+`benchmarks/squad_retrieval.py` runs a public retrieval check on
+`rajpurkar/squad_v2` validation: 20 contexts, 100 questions (50 answerable,
+50 no-answer), up to 5 questions per context.
+
+| mode | top-1 context | top-5 context | top-1 answer in chunk | top-5 answer in chunk | MRR |
+|---|---:|---:|---:|---:|---:|
+| FTS | 0.98 | 1.00 | 0.96 | 1.00 | 0.99 |
+| hybrid | 0.98 | 1.00 | 0.96 | 1.00 | 0.99 |
+
+This is **retrieval**, not generation. SQuAD questions share vocabulary with
+their contexts, and the 20 contexts produce only 25 chunks, so FTS already finds
+the right chunk; the hybrid path ties rather than beating it. The result is a
+public sanity check, not a hard semantic benchmark. Reproduce with:
+
+```powershell
+pip install datasets
+python benchmarks/squad_retrieval.py `
+  --max-contexts 20 --max-questions 100 --per-context 5 --seed 0
+```
+
 ## Product benchmark
 
 ```bash
