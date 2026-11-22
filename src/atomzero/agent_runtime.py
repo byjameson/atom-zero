@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 
 from atomzero.briefing import build_briefing, plan_goal
+from atomzero.contradictions import compare_sources
 from atomzero.doc_memory import format_citation, grounded_answer
 from atomzero.knowledge_gaps import KnowledgeGapError
 from atomzero.knowledge_graph import entity_sources, graph_path
@@ -252,6 +253,67 @@ class AgentSession:
             "path": data,
         }
 
+    def _compare_sources(self, source: str, against: str) -> dict:
+        if self.docs is None:
+            return {"reply": "no document memory configured",
+                    "tool_calls": [], "sources": [], "evidence": []}
+        source = source.strip().strip("\"'")
+        against = against.strip().strip("\"'")
+        try:
+            comparison = compare_sources(self.docs, source, against)
+        except ValueError as exc:
+            return {"reply": str(exc), "tool_calls": [],
+                    "sources": [], "evidence": []}
+        tool = [{"name": "compare_sources", "source": source,
+                 "against": against}]
+        conflicts = comparison.get("conflicts", [])
+        sources = []
+        evidence = []
+        if conflicts:
+            lines = [
+                f"Found {len(conflicts)} conflict hint(s) between "
+                f"{source} and {against}:"
+            ]
+            for conflict in conflicts[:6]:
+                left = conflict["left"]
+                right = conflict["right"]
+                reasons = ", ".join(conflict.get("reasons", []))
+                lines.append(
+                    f"- {reasons}: \"{left['text'][:180]}\" "
+                    f"({left['source']}) ↔ \"{right['text'][:180]}\" "
+                    f"({right['source']})")
+                for side in (left, right):
+                    source_item = {
+                        "source": side.get("source", ""),
+                        "title": side.get("title", ""),
+                        "page": side.get("page"),
+                        "section": side.get("section", ""),
+                    }
+                    if source_item not in sources:
+                        sources.append(source_item)
+                    edge = {
+                        "source": side.get("source", ""),
+                        "title": side.get("title", ""),
+                        "page": side.get("page"),
+                        "section": side.get("section", ""),
+                        "snippet": side.get("text", ""),
+                    }
+                    if edge not in evidence:
+                        evidence.append(edge)
+            lines.append("\nThis is a comparison hint, not a truth verdict.")
+            reply = "\n".join(lines)
+        else:
+            reply = (
+                f"No conflicting overlapping claims found between {source} "
+                f"and {against} (numbers, identifiers, negation).")
+        return {
+            "reply": reply,
+            "tool_calls": tool,
+            "sources": sources,
+            "evidence": evidence,
+            "comparison": comparison,
+        }
+
     def _briefing(self) -> dict:
         brief = build_briefing(
             self.human.data, self.gap_store, self.docs)
@@ -414,6 +476,19 @@ class AgentSession:
             return self._graph_path(
                 path_query.group(1).strip(),
                 path_query.group(2).strip())
+        compare_match = re.match(
+            r"^(?:compare sources|compare)\s+(.+?)\s+"
+            r"(?:and|to|with|vs\.?|versus)\s+(.+?)\??$",
+            text, re.IGNORECASE)
+        if not compare_match:
+            compare_match = re.match(
+                r"^(.+?)\s+(?:ve|ile)\s+(.+?)\s+"
+                r"(?:kaynaklar[ıi]n[ıi]\s+)?karşılaştır\??$",
+                text, re.IGNORECASE)
+        if compare_match:
+            return self._compare_sources(
+                compare_match.group(1).strip(),
+                compare_match.group(2).strip())
         if low in ("brief me", "brief me?", "daily brief", "daily brief?",
                    "what should i do today", "what should i do today?"):
             return self._briefing()

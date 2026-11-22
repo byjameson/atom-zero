@@ -96,8 +96,15 @@ atomzero-docs compare policy_a.txt --db data/docs.db
 GET /v1/documents/compare?source=policy_a.txt&against=policy_b.txt
 ```
 
-The UI has **Compare sources** selects in the documents section. Flags are
-deterministic hints, not a truth verdict:
+The UI has **Compare sources** selects in the documents section. Chat also
+understands the same workflow:
+
+```text
+compare sources policy_a.txt and policy_b.txt
+policy_a.txt ile policy_b.txt kaynaklarını karşılaştır
+```
+
+Flags are deterministic hints, not a truth verdict:
 
 - `numeric_mismatch` — overlapping claims have different numeric values;
 - `identifier_mismatch` — overlapping claims use different code identifiers;

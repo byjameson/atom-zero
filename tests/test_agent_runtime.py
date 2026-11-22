@@ -96,6 +96,37 @@ def test_agent_answers_graph_relation_query(tmp_path):
     docs.close()
 
 
+def test_agent_compare_sources_intent(tmp_path):
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("policy_a.txt",
+                  "The warranty period is 24 months. "
+                  "The warranty covers water damage.", title="Policy A")
+    docs.add_text("policy_b.txt",
+                  "The warranty period is 36 months. "
+                  "The warranty does not cover water damage.",
+                  title="Policy B")
+    docs.add_text("unrelated.txt", "Bananas are yellow.", title="Unrelated")
+    agent = AgentSession("s-compare", tmp_path / "memory.json", docs=docs)
+    result = agent.chat(
+        "compare sources policy_a.txt and policy_b.txt")
+    assert "numeric_mismatch" in result["reply"]
+    assert "24 months" in result["reply"]
+    assert "36 months" in result["reply"]
+    assert "does not cover" in result["reply"]
+    assert result["tool_calls"][0]["name"] == "compare_sources"
+    assert result["comparison"]["summary"]["conflict_count"] >= 2
+    assert len(result["sources"]) == 2
+    turkish = agent.chat(
+        "policy_a.txt ile policy_b.txt kaynaklarını karşılaştır")
+    assert turkish["tool_calls"][0]["name"] == "compare_sources"
+    assert "numeric_mismatch" in turkish["reply"]
+    clean = agent.chat("compare unrelated.txt and policy_a.txt")
+    assert "No conflicting" in clean["reply"]
+    missing = agent.chat("compare missing.txt and policy_a.txt")
+    assert "source not found" in missing["reply"]
+    docs.close()
+
+
 def test_agent_graph_path_query(tmp_path):
     docs = DocMemory(tmp_path / "docs.db")
     docs.add_text("chain1.txt", "Ankara is in Turkey.", title="Chain 1")

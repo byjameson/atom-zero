@@ -13,6 +13,16 @@ python benchmarks/contradiction_regression.py
 Latest result: **5/5 checks pass**. Raw result:
 [`results/contradiction_regression.json`](results/contradiction_regression.json).
 
+`benchmarks/compare_chat_regression.py` checks the chat intent, both snippets,
+tool-call payload, sources, no-conflict behavior and missing-source honesty.
+
+```powershell
+python benchmarks/compare_chat_regression.py
+```
+
+Latest result: **6/6 checks pass**. Raw result:
+[`results/compare_chat_regression.json`](results/compare_chat_regression.json).
+
 ## Weekly-review regression
 
 `benchmarks/weekly_review_regression.py` checks the served weekly-review

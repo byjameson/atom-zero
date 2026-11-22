@@ -16,6 +16,10 @@
   `GET /v1/documents/compare` and UI Compare sources, flagging numeric,
   identifier and negation conflicts with both snippets/locators.
 - Added `benchmarks/contradiction_regression.py` (5/5 checks).
+- Added a chat intent for source comparison
+  (`compare sources A and B`, Turkish equivalent) with the same reasons,
+  snippets and locators, plus `benchmarks/compare_chat_regression.py`
+  (6/6 checks).
 
 ## atomzero 0.5.0 - second brain and skill workflows (2026-11-22)
 

@@ -1,0 +1,39 @@
+{
+  "benchmark": "atomzero-compare-chat-regression",
+  "generated": "2026-11-22T22:38:02",
+  "checks": [
+    {
+      "name": "chat_compare_reasons",
+      "ok": true,
+      "detail": "Found 2 conflict hint(s) between policy_a.txt and policy_b.txt:\n- numeric_mismatch: \"The warranty period is 24 months.\" (policy_a.txt) \u2194 \"The warranty period is 36 months.\" (policy_b.txt)\n- negation_m"
+    },
+    {
+      "name": "chat_compare_snippets",
+      "ok": true,
+      "detail": "Found 2 conflict hint(s) between policy_a.txt and policy_b.txt:\n- numeric_mismatch: \"The warranty period is 24 months.\" (policy_a.txt) \u2194 \"The warranty period is 36 months.\" (policy_b.txt)\n- negation_mismatch: \"The warranty covers water damage.\" (policy_a.txt) \u2194 \"The warranty does not cover water dam"
+    },
+    {
+      "name": "chat_compare_payload",
+      "ok": true,
+      "detail": "{'conflict_count': 2, 'sources_compared': 1, 'numeric_mismatch': 1, 'identifier_mismatch': 0, 'negation_mismatch': 1}"
+    },
+    {
+      "name": "chat_compare_sources",
+      "ok": true,
+      "detail": "[{'source': 'policy_a.txt', 'title': 'Policy A', 'page': None, 'section': ''}, {'source': 'policy_b.txt', 'title': 'Policy B', 'page': None, 'section': ''}]"
+    },
+    {
+      "name": "chat_compare_no_false_positive",
+      "ok": true,
+      "detail": "No conflicting overlapping claims found between unrelated.txt and policy_a.txt (numbers, identifiers, negation)."
+    },
+    {
+      "name": "chat_compare_missing_source",
+      "ok": true,
+      "detail": "source not found: missing.txt"
+    }
+  ],
+  "passed": 6,
+  "failed": 0,
+  "ok": true
+}

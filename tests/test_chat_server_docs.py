@@ -1159,6 +1159,49 @@ def test_http_graph_and_entity(tmp_path):
         docs.close()
 
 
+def test_http_chat_source_comparison(tmp_path):
+    try:
+        docs = DocMemory(tmp_path / "docs.db")
+    except Exception as exc:
+        pytest.skip(f"sqlite fts5 unavailable: {exc}")
+    docs.add_text("policy_a.txt",
+                  "The warranty period is 24 months. "
+                  "The warranty covers water damage.", title="Policy A")
+    docs.add_text("policy_b.txt",
+                  "The warranty period is 36 months. "
+                  "The warranty does not cover water damage.",
+                  title="Policy B")
+    old = dict(chat_server._state)
+    chat_server._state.update({
+        "model": None, "tok": None, "docs": docs, "adapter": "",
+        "name": "tiny-test", "params": 1, "config": {}, "step": 0,
+        "api_key": "", "metrics": {"requests": 0, "generated_tokens": 0},
+        "safety": None, "wiki_lang": "en",
+        "session_dir": str(tmp_path / "sessions"), "sessions": {},
+        "generator": None, "allow_general_chat": False, "skills": None,
+    })
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        result = _post(base + "/v1/agent/chat", {
+            "session_id": "compare-1",
+            "message": "compare sources policy_a.txt and policy_b.txt"})
+        assert "numeric_mismatch" in result["reply"]
+        assert "24 months" in result["reply"]
+        assert "36 months" in result["reply"]
+        assert result["tool_calls"][0]["name"] == "compare_sources"
+        assert result["comparison"]["summary"]["conflict_count"] >= 2
+        assert len(result["sources"]) == 2
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
+        docs.close()
+
+
 def test_http_source_comparison(tmp_path):
     try:
         docs = DocMemory(tmp_path / "docs.db")
