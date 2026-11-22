@@ -576,6 +576,54 @@ class AgentSession:
                 f"{item.get('path', '')}{marker}")
         return "\n".join(lines)
 
+    def _preview_repair_reports(self) -> dict:
+        self.pending_report_action = None
+        try:
+            archive = WeeklyReportArchive(self.weekly_reports_path)
+            verification = archive.verify()
+        except (WeeklyReportError, OSError) as exc:
+            return {"reply": f"report archive error: {exc}",
+                    "tool_calls": [], "sources": [], "evidence": []}
+        repairable = [item for item in verification["entries"]
+                      if item["status"] == "failed"]
+        missing = [item for item in verification["entries"]
+                   if item["status"] == "missing"]
+        tool = [{"name": "preview_weekly_reports", "action": "repair",
+                 "repairable": len(repairable), "missing": len(missing)}]
+        if not repairable:
+            if missing:
+                reply = (f"No repairable metadata; {len(missing)} missing "
+                         "report file(s) cannot be repaired.")
+            else:
+                reply = "No report metadata needs repair."
+            return {
+                "reply": reply, "tool_calls": tool, "sources": [],
+                "evidence": [], "reports": repairable + missing,
+            }
+        self.pending_report_action = {"action": "repair"}
+        lines = [
+            f"Report metadata repair preview: {len(repairable)} repairable, "
+            f"{len(missing)} missing ({verification['summary']['total']} total)",
+        ]
+        for item in repairable:
+            problems = ", ".join(item.get("problems", []))
+            lines.append(
+                f"- {item.get('id', '?')} | repairable | "
+                f"{item.get('path', '')} [{problems}]")
+        for item in missing:
+            lines.append(
+                f"- {item.get('id', '?')} | missing | "
+                f"{item.get('path', '')}")
+        lines.append('Reply "confirm reports" to repair metadata, or '
+                     '"cancel reports".')
+        return {
+            "reply": "\n".join(lines),
+            "tool_calls": tool,
+            "sources": [],
+            "evidence": [],
+            "reports": repairable + missing,
+        }
+
     def _preview_prune_reports(self) -> dict:
         self.pending_report_action = None
         try:
@@ -717,6 +765,17 @@ class AgentSession:
                 tool = {"name": "delete_weekly_report",
                         "id": report_id,
                         "path": deleted.get("path", "")}
+            elif action == "repair":
+                repair = archive.repair()
+                remaining = archive.count()
+                summary = repair["summary"]
+                reply = (f"Repaired {summary['repaired']} report metadata; "
+                         f"{summary['ok']} unchanged; "
+                         f"{summary['missing']} missing. "
+                         f"Archive now has {remaining} report(s).")
+                tool = {"name": "repair_weekly_reports",
+                        "repaired": summary["repaired"],
+                        "missing": summary["missing"]}
             else:
                 return {"reply": "Unknown report action.",
                         "tool_calls": [], "sources": [], "evidence": []}
@@ -969,6 +1028,16 @@ class AgentSession:
         if report_query:
             return self._search_weekly_reports(
                 report_query.group(1).strip(), order=report_sort)
+        repair_match = re.match(
+            r"^(?:repair|fix)\s+(?:the\s+)?"
+            r"(?:report\s+archive|reports?|report\s+metadata)"
+            r"(?:\s+metadata)?\??$", text, re.IGNORECASE)
+        if not repair_match:
+            repair_match = re.match(
+                r"^(?:rapor|raporlar[ıi])\s+ar[şs]ivini\s+"
+                r"onar\??$", text, re.IGNORECASE)
+        if repair_match:
+            return self._preview_repair_reports()
         if low in ("confirm reports", "confirm report changes", "apply reports",
                    "yes reports", "raporları onayla"):
             return self._apply_report_action()

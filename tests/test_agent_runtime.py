@@ -260,6 +260,41 @@ def test_agent_verifies_report_archive_integrity(tmp_path):
     assert "not found" in missing_check["reply"]
 
 
+def test_agent_repairs_report_metadata_with_confirmation(tmp_path):
+    index_path = tmp_path / "weekly_reports.json"
+    archive = WeeklyReportArchive(index_path)
+    changed = tmp_path / "changed.md"
+    changed.write_text("# Alpha\n", encoding="utf-8")
+    missing = tmp_path / "missing.md"
+    missing.write_text("# Missing\n", encoding="utf-8")
+    for number, path in enumerate((changed, missing), start=1):
+        archive.record(path, {
+            "generated": f"2026-11-2{number} 09:00", "period_days": 7,
+            "task_counts": {}, "recent_source_count": 0,
+            "graph": {"entities": [], "connections": []},
+        }, exported_at=f"2026-11-2{number}T09:00:00")
+    changed.write_text("# Bravo changed\n", encoding="utf-8")
+    missing.unlink()
+    agent = AgentSession(
+        "s-repair", tmp_path / "memory.json",
+        weekly_reports_path=str(index_path))
+
+    preview = agent.chat("repair report archive")
+    assert 'Reply "confirm reports"' in preview["reply"]
+    assert preview["tool_calls"][0]["action"] == "repair"
+    before = archive.verify()
+    assert before["summary"]["failed"] == 2
+    assert before["summary"]["missing"] == 1
+
+    applied = agent.chat("confirm reports")
+    assert "Repaired 1 report metadata; 0 unchanged; 1 missing." in (
+        applied["reply"])
+    assert applied["tool_calls"][0]["name"] == "repair_weekly_reports"
+    after = archive.verify()
+    assert after["summary"]["ok"] == 1
+    assert after["summary"]["missing"] == 1
+
+
 def test_agent_report_archive_maintenance_flow(tmp_path):
     index_path = tmp_path / "weekly_reports.json"
     archive = WeeklyReportArchive(index_path)

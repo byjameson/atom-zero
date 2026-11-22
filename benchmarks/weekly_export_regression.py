@@ -19,7 +19,8 @@ Checks:
 - opening an archived report by id from chat;
 - verifying stored size and SHA-256 against archived files, including chat
   verification commands;
-- repairing changed report metadata atomically.
+- repairing changed report metadata atomically, including a confirmed chat
+  repair flow.
 
 Run:
 
@@ -128,6 +129,7 @@ def run(output: str | Path | None = None) -> dict:
                 and 'data-q="list reports"' in page
                 and 'data-q="list reports oldest"' in page
                 and 'data-q="verify report archive"' in page
+                and 'data-q="repair report archive"' in page
                 and 'data-q="keep reports 2 dry-run"' in page
                 and "refreshWeeklyReports" in page
                 and "pruneWeeklyReports" in page
@@ -366,6 +368,22 @@ def run(output: str | Path | None = None) -> dict:
                     "pending_gap_count": 0, "recent_source_count": 0,
                     "graph": {"entities": [], "connections": []},
                 }, exported_at=f"2026-11-2{number}T09:00:00")
+            extra_one = Path(folder) / "extra-1.md"
+            extra_one.write_text("# Changed extra\n", encoding="utf-8")
+            repair_preview = _post(base, "/v1/agent/chat", {
+                "session_id": "repair-chat",
+                "message": "repair report archive"})
+            repair_apply = _post(base, "/v1/agent/chat", {
+                "session_id": "repair-chat",
+                "message": "confirm reports"})
+            check(
+                "chat_report_repair",
+                'Reply "confirm reports"' in repair_preview.get("reply", "")
+                and "Repaired 1 report metadata" in repair_apply.get(
+                    "reply", "")
+                and (repair_apply.get("tool_calls") or [{}])[0].get("name")
+                == "repair_weekly_reports",
+                repair_apply.get("reply", "")[:200])
             oldest = json.loads(urllib.request.urlopen(
                 base + "/v1/weekly-review/reports?limit=5&sort=oldest",
                 timeout=15).read().decode("utf-8"))

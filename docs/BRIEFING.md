@@ -184,6 +184,10 @@ verify report w0001
 -> size/SHA-256 integrity for all entries or one id
 -> Turkish: "rapor arşivini doğrula", "rapor w0001 doğrula"
 
+repair report archive
+-> preview of changed metadata and missing files
+-> requires "confirm reports"; Turkish: "rapor arşivini onar"
+
 prune report archive
 keep reports 2
 keep reports 1 dry-run
