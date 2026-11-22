@@ -86,6 +86,7 @@ atomzero-docs search "warranty code" --db data/docs.db
 atomzero-docs search "warranty" --db data/docs.db --source policy.docx
 atomzero-docs answer "what is the warranty period?" --source policy.docx `
   --db data/docs.db
+atomzero-docs summary manual.pdf --sentences 5 --db data/docs.db
 atomzero-docs evidence policy.docx --section Warranty --db data/docs.db
 atomzero-docs list --db data/docs.db
 atomzero-docs forget policy.docx --db data/docs.db
@@ -114,9 +115,11 @@ when the index is not clean.
 `search` and `answer` accept `--source` (exact), `--source-prefix` and
 `--kind` (`document` or `teacher`); `search` also accepts `--no-rerank`.
 `answer` runs the same grounded-answer path as the HTTP endpoint and returns
-the note text, evidence and confidence. All commands print JSON, so they can
-be piped into other local tools. `python -m atomzero.doc_memory ...` is the
-same CLI.
+the note text, evidence and confidence. `summary` returns an **extractive**
+summary of one source: it selects and orders existing sentences and keeps the
+page/section locators; it does not generate new prose. All commands print
+JSON, so they can be piped into other local tools.
+`python -m atomzero.doc_memory ...` is the same CLI.
 
 ### HTTP
 
@@ -169,6 +172,17 @@ term coverage and the runner-up margin. It is **not** a calibrated probability
 and it does not replace reading the cited source. When nothing matches, the
 endpoint returns the no-source answer with an empty source list rather than
 inventing a fact.
+
+### Extractive summary API
+
+```text
+GET /v1/documents/summary?source=manual.pdf&sentences=5
+```
+
+The response contains the selected sentences in source order, the combined
+`text`, `method: "extractive"`, candidate/chunk counts and page/section
+citations. It scores existing sentences for content-word frequency, position
+and length; it does not call a model or add facts.
 
 Re-adding the same `source` replaces its chunks, page/section metadata and
 cached vectors. Directory sync with `--skip-unchanged` avoids that work when

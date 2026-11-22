@@ -43,7 +43,7 @@ its own. Apache-2.0 code and weights, no hosted service, no telemetry.
 
 | layer | implementation | what it does |
 |---|---|---|
-| UI/API | `src/atomzero/chat_server.py` | browser chat, documents, evidence panel, constrained plan API, tasks, gaps, queues, teacher notes, adapters, health |
+| UI/API | `src/atomzero/chat_server.py` | browser chat, documents, scoped answers, extractive summaries, evidence panel, constrained plan API, tasks, gaps, queues, teacher notes, adapters, health |
 | agent runtime | `src/atomzero/agent_runtime.py`, `research/chat_human.py` | tool routing, memory, RAG, missing-source path |
 | core model | `src/atomzero/transformer.py` + checkpoint | 49.2M decoder-only transformer |
 | retrieval | `src/atomzero/doc_memory.py`, `neural_embedder.py` | FTS5 + hashed/MiniLM vectors + reranking |
@@ -278,7 +278,7 @@ whether to enable it.
 | document benchmark (100 authored questions) | **80/80 answerable, 20/20 no-answer** |
 | public SQuAD v2 retrieval (50 contexts) | **hybrid 0.975 top-1; 0.816 answer in snippet** |
 | safety-enabled product | **26/26** |
-| test suite | **228 passed** |
+| test suite | **230 passed** |
 
 The product benchmark is narrow and authored: tools, memory, tasks, retrieval,
 teacher-note review, missing-source detection and one short generation. It is

@@ -18,6 +18,7 @@ import sqlite3
 import threading
 import time
 import zlib
+from collections import Counter
 from pathlib import Path
 
 try:
@@ -369,6 +370,62 @@ def retrieval_confidence(query: str, hits: list[dict]) -> dict:
         label = "low"
     return {"score": round(score, 3), "label": label,
             "coverage": round(coverage, 3), "margin": round(margin, 3)}
+
+
+def extractive_summary(chunks: list[str], max_sentences: int = 5,
+                       max_chars: int = 1200) -> dict:
+    """Return an extractive summary without generating new facts.
+
+    Sentences are scored by content-word frequency, with a mild early-position
+    bonus and a length penalty. The selected sentences are returned in their
+    original order, so the summary reads like the source rather than a bag of
+    quotes.
+    """
+    try:
+        max_sentences = int(max_sentences)
+    except (TypeError, ValueError):
+        max_sentences = 5
+    max_sentences = max(1, min(max_sentences, 20))
+    text = "\n".join(str(chunk) for chunk in chunks if str(chunk).strip())
+    if not text:
+        return {"text": "", "sentences": [], "method": "extractive",
+                "candidates": 0}
+    sentences = [part.strip() for part in
+                 re.split(r"(?<=[.!?])\s+|\n+", text) if part.strip()]
+    seen = set()
+    unique = []
+    for sentence in sentences:
+        key = re.sub(r"\s+", " ", sentence).strip().lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(sentence)
+    sentences = unique
+    if len(sentences) <= max_sentences:
+        summary = " ".join(sentences)
+        return {"text": summary[:max_chars], "sentences": sentences,
+                "method": "extractive", "candidates": len(sentences)}
+    frequency = Counter(
+        word for word in re.findall(r"[^\W_]+", text.lower())
+        if len(word) > 2 and word not in STOPWORDS)
+    scores = []
+    for index, sentence in enumerate(sentences):
+        terms = _query_terms(sentence)
+        if not terms:
+            score = 0.0
+        else:
+            score = sum(frequency[term] for term in terms) / math.sqrt(
+                len(terms))
+        score += 0.5 / (index + 1)
+        score /= 1.0 + len(sentence) / 400.0
+        scores.append(score)
+    chosen = sorted(
+        sorted(range(len(sentences)),
+               key=lambda i: (-scores[i], i))[:max_sentences])
+    selected = [sentences[index] for index in chosen]
+    summary = " ".join(selected)
+    return {"text": summary[:max_chars], "sentences": selected,
+            "method": "extractive", "candidates": len(sentences)}
 
 
 def format_citation(hit: dict) -> str:
@@ -1411,6 +1468,28 @@ class DocMemory:
             "data": data,
         }
 
+    def summarize_source(self, source: str,
+                         max_sentences: int = 5) -> dict:
+        """Extractive summary of one indexed source with its locators."""
+        evidence = self.source_evidence(source, limit=50)
+        data = evidence["data"]
+        result = extractive_summary(
+            [item["chunk"] for item in data], max_sentences=max_sentences)
+        citations = []
+        for item in data:
+            citation = {"page": item.get("page"),
+                        "section": item.get("section", "")}
+            if citation not in citations and (citation["page"] is not None
+                                              or citation["section"]):
+                citations.append(citation)
+        result.update({
+            "source": evidence["source"],
+            "title": data[0].get("title", "") if data else "",
+            "chunks": len(data),
+            "citations": citations,
+        })
+        return result
+
     def verify_source(self, source: str, reviewer: str) -> dict:
         """Mark a teacher note verified with reviewer and timestamp."""
         source = str(source or "").strip()
@@ -1650,12 +1729,16 @@ def main(argv=None):
     evidence.add_argument("source")
     evidence.add_argument("--page", type=int, default=None)
     evidence.add_argument("--section", default="")
+    summary = sub.add_parser(
+        "summary", help="extractive summary of one indexed source")
+    summary.add_argument("source")
+    summary.add_argument("--sentences", type=int, default=5)
     forget = sub.add_parser("forget", help="delete one source or everything")
     forget.add_argument("source", nargs="?")
     forget.add_argument("--all", action="store_true")
     # Accept --db on either side of the subcommand; the docs use both forms.
     for parser in (add, search, answer, sync, status, doctor, list_db,
-                   stats_db, evidence, forget):
+                   stats_db, evidence, summary, forget):
         parser.add_argument("--db", dest="db_after", default=None)
     args = ap.parse_args(argv)
     mem = DocMemory(args.db_after or args.db or "data/docs.db")
@@ -1717,6 +1800,14 @@ def main(argv=None):
             try:
                 result = mem.source_evidence(
                     args.source, page=args.page, section=args.section)
+            except (ValueError, SourceNotFound) as exc:
+                print(json.dumps({"error": str(exc)}))
+                return 1
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+        elif args.cmd == "summary":
+            try:
+                result = mem.summarize_source(
+                    args.source, max_sentences=args.sentences)
             except (ValueError, SourceNotFound) as exc:
                 print(json.dumps({"error": str(exc)}))
                 return 1

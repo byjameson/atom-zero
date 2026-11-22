@@ -10,6 +10,7 @@ Endpoints:
   GET  /v1/models
   GET  /v1/documents
   GET  /v1/documents/evidence?source=...&page=...&section=...
+  GET  /v1/documents/summary?source=...&sentences=5
   POST /v1/documents
   POST /v1/documents/upload?source=...&title=...
   POST /v1/documents/search
@@ -595,6 +596,7 @@ async function refreshDocs() {
         if (select) select.value = item.source;
         document.getElementById('docq').focus();
       }));
+      actions.appendChild(qbutton('Summary', () => showSummary(item.source)));
       actions.appendChild(qbutton('Evidence', () => showEvidence(item.source)));
       actions.appendChild(qbutton('Copy citation', () =>
         copyCitation(item.source)));
@@ -700,6 +702,37 @@ function copyCitation(source, page, section) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).catch(() => {});
   }
+}
+async function showSummary(source) {
+  const box = document.getElementById('docanswer');
+  box.textContent = 'summarizing...';
+  try {
+    const query = new URLSearchParams({source, sentences: 5});
+    const r = await fetch('/v1/documents/summary?' + query.toString());
+    const j = await r.json();
+    box.textContent = '';
+    if (!r.ok) {
+      box.textContent = 'summary error: ' + (j.error || r.status);
+      return;
+    }
+    const head = document.createElement('div');
+    head.className = 'hint';
+    head.textContent = 'Extractive summary: ' + source + ' | ' +
+      (j.chunks || 0) + ' chunk(s) | ' + (j.candidates || 0) +
+      ' candidate sentence(s)';
+    box.appendChild(head);
+    const text = document.createElement('div');
+    text.className = 'qitem';
+    text.textContent = j.text || '';
+    box.appendChild(text);
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+    const citation = (j.citations || [])[0] || {};
+    actions.appendChild(qbutton('Evidence', () => showEvidence(source)));
+    actions.appendChild(qbutton('Copy citation', () =>
+      copyCitation(source, citation.page, citation.section)));
+    box.appendChild(actions);
+  } catch (e) { box.textContent = 'summary error: ' + e; }
 }
 async function showEvidence(source, page, section) {
   const box = document.getElementById('evidence');
@@ -1605,6 +1638,26 @@ class Handler(BaseHTTPRequestHandler):
                 result = docs.source_evidence(
                     source, page=page, section=section,
                     limit=int(params.get("limit", ["20"])[0]))
+            except SourceNotFound as exc:
+                return self._json(404, {"error": str(exc)})
+            except (TypeError, ValueError) as exc:
+                return self._json(400, {"error": str(exc)})
+            return self._json(200, result)
+        elif (self.path == "/v1/documents/summary"
+              or self.path.startswith("/v1/documents/summary?")):
+            docs = _state.get("docs")
+            if docs is None:
+                return self._json(400, {
+                    "error": "no document memory configured"})
+            params = urllib.parse.parse_qs(
+                urllib.parse.urlparse(self.path).query)
+            source = params.get("source", [""])[0]
+            if not source:
+                return self._json(400, {"error": "source is required"})
+            try:
+                result = docs.summarize_source(
+                    source,
+                    max_sentences=int(params.get("sentences", ["5"])[0]))
             except SourceNotFound as exc:
                 return self._json(404, {"error": str(exc)})
             except (TypeError, ValueError) as exc:

@@ -58,7 +58,9 @@ def test_demo_page_uses_daily_agent_endpoint():
     assert "/v1/documents/forget" in page
     assert "/v1/documents/evidence" in page
     assert "/v1/documents/answer" in page
+    assert "/v1/documents/summary" in page
     assert "grounded answer" in page
+    assert "summary" in page
     assert 'id="docsrc"' in page
     assert "all sources" in page
     assert "copy citation" in page
@@ -183,6 +185,11 @@ def test_http_document_endpoints_and_grounded_chat(tmp_path, monkeypatch):
         search = _post(base + "/v1/documents/search",
                        {"query": "capital France"})
         assert "Paris" in search["data"][0]["chunk"]
+        summary = json.loads(urllib.request.urlopen(
+            base + "/v1/documents/summary?source=law.txt&sentences=2",
+            timeout=10).read().decode("utf-8"))
+        assert "Paris" in summary["text"]
+        assert summary["method"] == "extractive"
         chat = _post(base + "/v1/chat/completions", {
             "messages": [{"role": "user",
                           "content": "what is the capital of France?"}],

@@ -4,7 +4,7 @@ import pytest
 
 from atomzero.doc_memory import (
     DocMemory, SourceNotFound, _chunks, ann_topk, best_snippet, diverse_hits,
-    embed_text, main, retrieval_confidence)
+    embed_text, extractive_summary, main, retrieval_confidence)
 
 
 def test_doc_memory_indexes_and_searches_with_source(tmp_path):
@@ -462,3 +462,47 @@ def test_integrity_reports_clean_index_and_orphans(tmp_path):
     assert broken["orphan_chunk_meta"] == 1
     assert len(broken["issues"]) >= 4
     mem.close()
+
+
+def test_extractive_summary_selects_sentences_in_order():
+    chunks = [
+        "Launch policy. The launch code is L-7781. "
+        "The launch window is 06:30. Warranty lasts 24 months. "
+        "Visitors need a badge."
+    ]
+    result = extractive_summary(chunks, max_sentences=3)
+    assert result["method"] == "extractive"
+    assert result["candidates"] == 5
+    assert len(result["sentences"]) == 3
+    assert "L-7781" in result["text"]
+    assert result["text"].index("L-7781") < result["text"].index("06:30")
+    assert extractive_summary([], max_sentences=3)["text"] == ""
+
+
+def test_summarize_source_and_cli_summary(tmp_path, capsys):
+    mem = DocMemory(tmp_path / "docs.db")
+    mem.add_blocks(
+        "manual.pdf",
+        [{"text": "The launch code is L-7781. The launch window is 06:30.",
+          "page": 4, "section": "Launch"}],
+        title="Manual")
+    result = mem.summarize_source("manual.pdf", max_sentences=2)
+    assert result["source"] == "manual.pdf"
+    assert result["title"] == "Manual"
+    assert result["chunks"] == 1
+    assert result["citations"] == [{"page": 4, "section": "Launch"}]
+    assert "L-7781" in result["text"]
+    with pytest.raises(SourceNotFound):
+        mem.summarize_source("missing.pdf")
+    mem.close()
+
+    note = tmp_path / "note.txt"
+    note.write_text("The launch code is L-7781. The launch window is 06:30.",
+                    encoding="utf-8")
+    db = tmp_path / "cli.db"
+    main(["add", str(note), "--db", str(db)])
+    capsys.readouterr()
+    main(["summary", str(note), "--db", str(db), "--sentences", "1"])
+    output = json.loads(capsys.readouterr().out)
+    assert "launch" in output["text"].lower()
+    assert output["method"] == "extractive"
