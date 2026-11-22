@@ -40,6 +40,10 @@ work stays on `main`; see `docs/RELEASING.md`.
   `POST /v1/skills/run` and UI Run skill controls, sharing `execute_skill`.
 - Added `benchmarks/skills_run_regression.py` (9/9 checks) for explicit
   provider, template, fallback and unknown-skill paths.
+- Added multi-skill chains: `atomzero-skills chain`, `POST /v1/skills/chain`
+  and a UI Run chain control, with explicit `{previous}` context passing,
+  no-carry mode and merged sources.
+- Added `benchmarks/skills_chain_regression.py` (6/6 checks).
 
 ## atomzero 0.4.2 - UI collection scope (2026-11-22)
 

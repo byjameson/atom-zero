@@ -144,6 +144,66 @@ def test_execute_skill_provider_template_and_fallback(tmp_path):
     docs.close()
 
 
+def test_execute_chain_passes_previous_output(tmp_path):
+    from atomzero.skills import execute_chain
+
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("notes/launch.txt", "The launch code is L-7781.")
+    write_skill(tmp_path, "first", provider=False, triggers=["first"],
+                prompt="A: {context}")
+    write_skill(tmp_path, "second", provider=False, triggers=["second"],
+                prompt="B previous: {previous}")
+    registry = SkillRegistry.from_dir(tmp_path)
+    result = execute_chain(
+        registry, ["first", "second"], "launch code", docs)
+    assert result["chain"] == ["first", "second"]
+    assert "L-7781" in result["steps"][0]["reply"]
+    assert "B previous: A:" in result["steps"][1]["reply"]
+    assert "L-7781" in result["steps"][1]["reply"]
+    assert result["provider_calls"] == 0
+    assert result["weights_changed"] is False
+    docs.close()
+
+
+def test_execute_chain_no_carry_and_validates(tmp_path):
+    from atomzero.skills import execute_chain
+
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("notes/launch.txt", "The launch code is L-7781.")
+    write_skill(tmp_path, "first", provider=False, triggers=["first"],
+                prompt="A: {context}")
+    write_skill(tmp_path, "second", provider=False, triggers=["second"],
+                prompt="B previous: {previous}")
+    registry = SkillRegistry.from_dir(tmp_path)
+    result = execute_chain(
+        registry, ["first", "second"], "launch code", docs,
+        carry_context=False)
+    assert "L-7781" not in result["steps"][1]["reply"]
+    with pytest.raises(SkillError):
+        execute_chain(registry, ["missing"], "launch code", docs)
+    with pytest.raises(SkillError):
+        execute_chain(registry, [], "launch code", docs)
+    docs.close()
+
+
+def test_skills_cli_chain(tmp_path, capsys):
+    write_skill(tmp_path, "first", provider=False, triggers=["first"],
+                prompt="A: {context}")
+    write_skill(tmp_path, "second", provider=False, triggers=["second"],
+                prompt="B previous: {previous}")
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("notes/launch.txt", "The launch code is L-7781.")
+    docs.close()
+    code = main([
+        "--dir", str(tmp_path), "chain", "launch code",
+        "--skills", "first,second", "--docs", str(tmp_path / "docs.db")])
+    assert code == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["chain"] == ["first", "second"]
+    assert "B previous: A:" in result["reply"]
+    assert "L-7781" in result["reply"]
+
+
 def test_skills_cli_run_template(tmp_path, capsys):
     write_skill(tmp_path, "template", provider=False,
                 triggers=["template"], prompt="CLI template: {context}")

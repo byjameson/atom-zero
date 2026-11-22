@@ -128,7 +128,7 @@ class SkillRegistry:
 
 
 def render_skill(skill: dict, query: str, hits: list[dict],
-                 max_chars: int = 6000) -> str:
+                 max_chars: int = 6000, previous: str = "") -> str:
     context = []
     for hit in hits[:int(skill.get("max_chunks", 4))]:
         context.append(
@@ -138,11 +138,12 @@ def render_skill(skill: dict, query: str, hits: list[dict],
     prompt = str(skill.get("prompt", ""))
     prompt = prompt.replace("{query}", str(query))
     prompt = prompt.replace("{context}", block)
+    prompt = prompt.replace("{previous}", str(previous or ""))
     return prompt[:max_chars]
 
 
 def execute_skill(skill: dict, query: str, docs=None,
-                  generator=None) -> dict:
+                  generator=None, previous: str = "") -> dict:
     """Execute one skill by explicit name/query.
 
     Provider, template and no-provider fallback all share this function so the
@@ -155,7 +156,7 @@ def execute_skill(skill: dict, query: str, docs=None,
     if skill.get("use_context", True) and docs is not None:
         hits = docs.search(
             query, k=int(skill.get("max_chunks", 4)), diverse=True)
-    prompt = render_skill(skill, query, hits)
+    prompt = render_skill(skill, query, hits, previous=previous)
     system = str(skill.get("system") or "").strip()
     if system:
         prompt = f"{system}\n\n{prompt}"
@@ -204,6 +205,95 @@ def execute_skill(skill: dict, query: str, docs=None,
     return {"reply": str(answer), **base, "provider_called": True}
 
 
+def _normalize_chain_steps(steps) -> list[dict]:
+    if not isinstance(steps, list) or not steps:
+        raise SkillError("steps must be a non-empty list")
+    if len(steps) > 6:
+        raise SkillError("a chain supports at most 6 steps")
+    normalized = []
+    for step in steps:
+        if isinstance(step, str):
+            name = step.strip()
+            query = ""
+        elif isinstance(step, dict):
+            name = str(step.get("name") or step.get("skill") or "").strip()
+            query = str(step.get("query") or "").strip()
+        else:
+            raise SkillError("each step must be a skill name or object")
+        if not name:
+            raise SkillError("each step needs a skill name")
+        normalized.append({"name": name, "query": query})
+    return normalized
+
+
+def execute_chain(registry, steps, query: str, docs=None, generator=None,
+                   carry_context: bool = True) -> dict:
+    """Run skills in order, explicitly passing the previous reply forward.
+
+    If a later step query contains ``{previous}``, the placeholder is replaced
+    with the previous reply. Otherwise the previous reply is appended as a
+    labelled block when ``carry_context`` is true.
+    """
+    if registry is None:
+        raise SkillError("skills are not configured")
+    query = str(query or "").strip()
+    if not query:
+        raise SkillError("query is required")
+    normalized = _normalize_chain_steps(steps)
+    by_name = {skill["name"]: skill for skill in registry.skills}
+    missing = [step["name"] for step in normalized
+               if step["name"] not in by_name]
+    if missing:
+        raise SkillError("unknown skill(s): " + ", ".join(missing))
+    results = []
+    sources = []
+    evidence = []
+    provider_calls = 0
+    previous = ""
+    for index, step in enumerate(normalized):
+        skill = by_name[step["name"]]
+        step_query = step["query"] or query
+        uses_previous = "{previous}" in str(skill.get("prompt", ""))
+        if index and carry_context and not uses_previous:
+            if "{previous}" in step_query:
+                step_query = step_query.replace("{previous}", previous)
+            else:
+                step_query += (
+                    f"\n\nPrevious step ({results[-1]['skill']}) output:\n"
+                    f"{previous}")
+        elif "{previous}" in step_query:
+            step_query = step_query.replace("{previous}", "")
+        result = execute_skill(
+            skill, step_query, docs, generator,
+            previous=previous if carry_context else "")
+        provider_calls += 1 if result.get("provider_called") else 0
+        for source in result.get("sources", []):
+            if source not in sources:
+                sources.append(source)
+        for item in result.get("evidence", []):
+            if item not in evidence:
+                evidence.append(item)
+        results.append({
+            "skill": skill["name"],
+            "query": step_query,
+            "reply": result.get("reply", ""),
+            "provider_called": bool(result.get("provider_called")),
+            "sources": result.get("sources", []),
+            "evidence": result.get("evidence", []),
+        })
+        previous = result.get("reply", "")
+    return {
+        "chain": [step["name"] for step in normalized],
+        "steps": results,
+        "reply": results[-1]["reply"] if results else "",
+        "sources": sources,
+        "evidence": evidence,
+        "provider_calls": provider_calls,
+        "carry_context": bool(carry_context),
+        "weights_changed": False,
+    }
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
         prog="atomzero-skills",
@@ -224,6 +314,17 @@ def main(argv=None) -> int:
     run.add_argument("--provider-model", default="")
     run.add_argument("--provider-label", default="openai-compatible")
     run.add_argument("--provider-timeout", type=int, default=60)
+    chain = sub.add_parser(
+        "chain", help="run several skills in order with context passing")
+    chain.add_argument("query")
+    chain.add_argument("--skills", required=True,
+                       help="comma-separated skill names")
+    chain.add_argument("--docs", default="data/atomzero_demo.db")
+    chain.add_argument("--no-carry-context", action="store_true")
+    chain.add_argument("--provider-url", default="")
+    chain.add_argument("--provider-model", default="")
+    chain.add_argument("--provider-label", default="openai-compatible")
+    chain.add_argument("--provider-timeout", type=int, default=60)
     args = parser.parse_args(argv)
     try:
         registry = SkillRegistry.from_dir(args.dir)
@@ -244,6 +345,37 @@ def main(argv=None) -> int:
                 return 0
         print(json.dumps({"ok": False, "error": "skill not found"}, indent=2))
         return 1
+    if args.cmd == "chain":
+        names = [item.strip() for item in args.skills.split(",")
+                 if item.strip()]
+        docs = None
+        try:
+            if Path(args.docs).exists():
+                from atomzero.doc_memory import DocMemory
+                docs = DocMemory(args.docs)
+            generator = None
+            if args.provider_url and args.provider_model:
+                from atomzero.teacher_provider import TeacherProvider
+                provider = TeacherProvider(
+                    args.provider_url, args.provider_model,
+                    timeout=args.provider_timeout,
+                    label=args.provider_label)
+                generator = lambda prompt: provider.ask(
+                    prompt, max_tokens=512)
+            try:
+                result = execute_chain(
+                    registry, names, args.query, docs, generator,
+                    carry_context=not args.no_carry_context)
+            except SkillError as exc:
+                print(json.dumps({"ok": False, "error": str(exc)},
+                                 indent=2))
+                return 1
+            print(json.dumps({"ok": True, **result}, indent=2,
+                             ensure_ascii=False))
+            return 0
+        finally:
+            if docs is not None:
+                docs.close()
     if args.cmd == "run":
         skill = next(
             (item for item in registry.skills

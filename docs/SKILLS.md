@@ -86,6 +86,33 @@ button. Responses include `provider_called`, `sources`, `evidence` and the
 rendered `prompt`. Provider, template and no-provider fallback all use the same
 `execute_skill` core.
 
+## Skill chains
+
+Run skills in order with explicit context passing:
+
+```powershell
+atomzero-skills --dir data\skills chain "launch code" `
+  --skills study-tutor,brainstorm --docs data\atomzero_demo.db
+```
+
+```text
+POST /v1/skills/chain
+{"skills": ["study-tutor", "brainstorm"], "query": "launch code",
+ "carry_context": true}
+```
+
+Semantics:
+
+- later steps receive the previous reply as a labelled block, or via the
+  `{previous}` placeholder if their prompt contains it;
+- `carry_context: false` (or `--no-carry-context`) removes the hand-off;
+- a chain supports at most six steps;
+- a response includes every step, the final reply, merged sources/evidence and
+  `provider_calls`;
+- provider, template and no-provider fallback steps can be mixed.
+
+The UI **Custom skills** panel has a chain field and **Run chain** button.
+
 ## UI and API
 
 - `GET /v1/skills` lists enabled skills and the skills directory.

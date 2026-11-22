@@ -1,0 +1,39 @@
+{
+  "benchmark": "atomzero-skills-chain-regression",
+  "generated": "2026-11-22T22:06:04",
+  "checks": [
+    {
+      "name": "chain_context_passed",
+      "ok": true,
+      "detail": "Chain previous: Provider answer L-7781."
+    },
+    {
+      "name": "chain_steps_and_provider_calls",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "chain_source_union",
+      "ok": true,
+      "detail": "[{'source': 'notes/launch.txt', 'title': 'Launch', 'kind': 'document', 'verified': True}]"
+    },
+    {
+      "name": "chain_provider_step_flags",
+      "ok": true,
+      "detail": "[True, False]"
+    },
+    {
+      "name": "no_carry_does_not_leak",
+      "ok": true,
+      "detail": "Chain previous: "
+    },
+    {
+      "name": "unknown_chain_skill_400",
+      "ok": true,
+      "detail": "HTTP 400"
+    }
+  ],
+  "passed": 6,
+  "failed": 0,
+  "ok": true
+}

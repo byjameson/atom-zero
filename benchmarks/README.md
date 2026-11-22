@@ -38,6 +38,19 @@ python benchmarks/skills_flow_regression.py
 Latest result: **9/9 checks pass**. Raw result:
 [`results/skills_flow_regression.json`](results/skills_flow_regression.json).
 
+## Skill-chain regression
+
+`benchmarks/skills_chain_regression.py` calls `POST /v1/skills/chain` and
+checks provider -> template hand-off, source merging, per-step provider flags,
+no-carry mode and the unknown-skill 400 path.
+
+```powershell
+python benchmarks/skills_chain_regression.py
+```
+
+Latest result: **6/6 checks pass**. Raw result:
+[`results/skills_chain_regression.json`](results/skills_chain_regression.json).
+
 ## Explicit skill-run regression
 
 `benchmarks/skills_run_regression.py` calls `POST /v1/skills/run` by explicit

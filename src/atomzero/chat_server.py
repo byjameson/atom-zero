@@ -15,6 +15,7 @@ Endpoints:
   GET  /v1/graph/entity?name=...&limit=...
   GET  /v1/skills
   POST /v1/skills/run
+  POST /v1/skills/chain
   POST /v1/documents
   POST /v1/documents/upload?source=...&title=...
   POST /v1/documents/search
@@ -386,6 +387,9 @@ Atom Zero after adding files.</p>
 <input id="skillquery" placeholder="Query for the skill">
 <button id="skillrun">Run skill</button></div>
 <div id="skillresult"></div>
+<div class="row"><input id="skillchain" placeholder="Chain skills, e.g. study-tutor,brainstorm">
+<button id="skillchainrun">Run chain</button></div>
+<div id="chainresult"></div>
 <script>
 function getSessionId() {
   try {
@@ -1158,6 +1162,62 @@ async function runSkill() {
     msg.textContent = 'skill error: ' + e;
   }
 }
+async function runSkillChain() {
+  const names = document.getElementById('skillchain').value
+    .split(',').map(item => item.trim()).filter(Boolean);
+  const query = document.getElementById('skillquery').value.trim();
+  const msg = document.getElementById('skmsg');
+  const box = document.getElementById('chainresult');
+  box.textContent = '';
+  if (!names.length || !query) {
+    msg.textContent = 'enter comma-separated skill names and a query';
+    return;
+  }
+  msg.textContent = 'running skill chain...';
+  try {
+    const r = await fetch('/v1/skills/chain', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        skills: names, query, carry_context: true})});
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'chain error: ' + (j.error || r.status);
+      return;
+    }
+    msg.textContent = 'chain: ' + (j.chain || []).join(' -> ') +
+      ' | provider calls: ' + j.provider_calls;
+    const finalCard = document.createElement('div');
+    finalCard.className = 'qitem';
+    finalCard.textContent = 'Final: ' + (j.reply || '');
+    box.appendChild(finalCard);
+    (j.steps || []).forEach(step => {
+      const card = document.createElement('div');
+      card.className = 'qitem';
+      card.textContent = step.skill + ': ' + step.reply;
+      box.appendChild(card);
+    });
+    (j.evidence || []).forEach(item => {
+      const evidence = document.createElement('div');
+      evidence.className = 'qitem';
+      const title = document.createElement('div');
+      title.textContent = (item.title || item.source) + ' | ' + item.source +
+        (item.page ? ' | p. ' + item.page : '') +
+        (item.section ? ' | ' + item.section : '');
+      evidence.appendChild(title);
+      const snippet = document.createElement('div');
+      snippet.className = 'src';
+      snippet.textContent = item.snippet || '';
+      evidence.appendChild(snippet);
+      box.appendChild(evidence);
+    });
+  } catch (e) {
+    msg.textContent = 'chain error: ' + e;
+  }
+}
+document.getElementById('skillchainrun').onclick = () => runSkillChain();
+document.getElementById('skillchain').addEventListener('keydown', event => {
+  if (event.key === 'Enter') runSkillChain();
+});
 document.getElementById('skillrun').onclick = () => runSkill();
 document.getElementById('skillquery').addEventListener('keydown', event => {
   if (event.key === 'Enter') runSkill();
@@ -2271,7 +2331,8 @@ class Handler(BaseHTTPRequestHandler):
                          "/v1/learning/gaps/propose",
                          "/v1/learning/gaps/dismiss",
                          "/v1/curiosity/propose", "/v1/hungry/run",
-                         "/v1/skills/run", "/v1/briefing", "/v1/goals/plan",
+                         "/v1/skills/run", "/v1/skills/chain",
+                         "/v1/briefing", "/v1/goals/plan",
                          "/v1/learn_url", "/v1/research",
                          "/v1/research/queue",
                          "/v1/research/queue/approve",
@@ -2330,6 +2391,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._hungry_run(req)
             if route == "/v1/skills/run":
                 return self._skills_run(req)
+            if route == "/v1/skills/chain":
+                return self._skills_chain(req)
             if route == "/v1/briefing":
                 return self._briefing(req)
             if route == "/v1/goals/plan":
@@ -2697,6 +2760,41 @@ class Handler(BaseHTTPRequestHandler):
             result = execute_skill(
                 skill, query, _state.get("docs"),
                 _state.get("generator"))
+        except ValueError as exc:
+            return self._json(400, {"error": str(exc)})
+        if safety is not None:
+            safe, verdict = safety.filter_reply(result.get("reply", ""))
+            if verdict is not None:
+                result = {**result, "reply": safe, "safety": verdict}
+        return self._json(200, result)
+
+    def _skills_chain(self, req: dict):
+        registry = _state.get("skills")
+        if registry is None:
+            return self._json(400, {"error": "no skills configured"})
+        steps = req.get("steps") or req.get("skills")
+        if isinstance(steps, str):
+            steps = [item.strip() for item in steps.split(",")
+                     if item.strip()]
+        query = str(req.get("query", "")).strip()
+        if not steps or not query:
+            return self._json(400, {
+                "error": "steps/skills and query are required"})
+        safety = _state.get("safety")
+        if safety is not None:
+            verdict = safety.check(query)
+            if verdict is not None:
+                return self._json(400, {
+                    "error": safety.refusal(verdict["category"]),
+                    "safety": verdict,
+                })
+        try:
+            from atomzero.skills import execute_chain
+
+            result = execute_chain(
+                registry, steps, query, _state.get("docs"),
+                _state.get("generator"),
+                carry_context=bool(req.get("carry_context", True)))
         except ValueError as exc:
             return self._json(400, {"error": str(exc)})
         if safety is not None:
