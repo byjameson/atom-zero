@@ -41,8 +41,9 @@ benchmarks and release — is
 | privacy | localhost, no telemetry, SSRF guard, upload caps, deletion |
 | UI | chat, documents, gaps, research queue, teacher notes, adapters, health |
 | packaging | standalone `atomzero` package (assistant deps only), `atomzero`/`atomzero-quickstart` entry points, GitHub release, HF/ModelScope weights |
-| tests | 412 passed; product 21/21; behavior 16/16; retrieval 1.000 |
+| tests | 215 passed; product 21/21; behavior 16/16; retrieval 1.000 |
 | document benchmark | 100 authored questions: 80/80 answerable, 20/20 no-answer |
+| public retrieval benchmark | SQuAD v2: 0.970 top-1, 1.000 top-5 (50 contexts, hybrid) |
 
 ## Model
 
@@ -105,6 +106,20 @@ Language-model fit on the clean scaled validation shard:
 
 The raw-model probe is **2/10** for both base and product. That is the honest
 reason for the architecture: put facts in RAG, not in 50M weights.
+
+### Public retrieval check (SQuAD v2)
+
+`benchmarks/squad_retrieval.py` measures retrieval on the public
+`rajpurkar/squad_v2` validation split; it does not measure generation. On 50
+contexts / 200 questions (103 answerable, 97 no-answer):
+
+| mode | top-1 context | top-5 context | top-1 answer in chunk | MRR |
+|---|---:|---:|---:|---:|
+| FTS | 0.960 | 1.000 | 0.922 | 0.974 |
+| hybrid | **0.970** | 1.000 | **0.951** | **0.980** |
+
+SQuAD questions share vocabulary with their contexts, so this is a public
+sanity check, not a hard semantic benchmark.
 
 ## Teacher -> RAG "learning" demo
 

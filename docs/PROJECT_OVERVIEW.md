@@ -266,7 +266,7 @@ whether to enable it.
 | source-cited retrieval top-1 | **1.000** (FTS 0.850) |
 | document benchmark (100 authored questions) | **80/80 answerable, 20/20 no-answer** |
 | safety-enabled product | **26/26** |
-| test suite | **412 passed** |
+| test suite | **215 passed** |
 
 The product benchmark is narrow and authored: tools, memory, tasks, retrieval,
 teacher-note review, missing-source detection and one short generation. It is
