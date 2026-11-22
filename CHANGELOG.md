@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased - install diagnostics
+
+- `atomzero-doctor` now validates an existing document index (chunk/source
+  counts, orphan rows and FTS5 integrity) in addition to file write access.
+- Added doctor tests for absent, clean and orphaned indexes.
+
 ## atomzero 0.3.0 - document workflow and grounded answers (2026-11-22)
 
 - Added `atomzero-docs`, a headless CLI for add/sync/status/doctor/search/

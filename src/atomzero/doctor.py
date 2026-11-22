@@ -133,6 +133,45 @@ def check_writable(path: Path, label: str) -> Check:
         return Check(label, "fail", f"not writable: {path.parent} ({exc})", "choose another path")
 
 
+def check_docs_index(path: Path) -> Check:
+    """Validate an existing document index without creating one."""
+    path = Path(path).expanduser()
+    if not path.exists():
+        return Check(
+            "docs-index",
+            "ok",
+            f"no index yet: {path}",
+            "created by `atomzero-quickstart` or `atomzero-docs add`",
+        )
+    try:
+        from atomzero.doc_memory import DocMemory
+
+        memory = DocMemory(path)
+        try:
+            result = memory.integrity()
+        finally:
+            memory.close()
+    except Exception as exc:
+        return Check(
+            "docs-index",
+            "fail",
+            f"could not open {path}: {exc}",
+            "check file permissions or move/rebuild the index",
+        )
+    if not result["ok"]:
+        return Check(
+            "docs-index",
+            "fail",
+            f"{path} | " + "; ".join(result["issues"]),
+            "run `atomzero-docs doctor --db <path>` for details",
+        )
+    return Check(
+        "docs-index",
+        "ok",
+        f"{path} | {result['chunks']} chunks, {result['sources']} sources",
+    )
+
+
 def check_port(host: str, port: int) -> Check:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         try:
@@ -185,7 +224,8 @@ def run_checks(args) -> list[Check]:
     checks.extend(check_deps())
     checks.append(check_torch())
     checks.extend(check_cache(Path(args.cache)))
-    checks.append(check_writable(Path(args.docs), "docs"))
+    checks.append(check_writable(Path(args.docs), "docs-path"))
+    checks.append(check_docs_index(Path(args.docs)))
     checks.append(check_writable(Path(args.sessions) / "session.json", "sessions"))
     checks.append(check_port(args.host, args.port))
     checks.append(check_provider(args.provider_url if args.provider else ""))

@@ -1,7 +1,8 @@
 import socket
 from pathlib import Path
 
-from atomzero.doctor import check_cache, check_port, render
+from atomzero.doctor import check_cache, check_docs_index, check_port, render
+from atomzero.doc_memory import DocMemory
 
 
 def test_cache_exact_sizes(tmp_path: Path):
@@ -25,6 +26,32 @@ def test_free_port_is_ok():
         sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]
     assert check_port("127.0.0.1", port).status == "ok"
+
+
+def test_docs_index_absent_is_ok(tmp_path):
+    check = check_docs_index(tmp_path / "missing.db")
+    assert check.status == "ok"
+    assert "no index yet" in check.detail
+
+
+def test_docs_index_clean_and_orphan(tmp_path):
+    db = tmp_path / "docs.db"
+    memory = DocMemory(db)
+    memory.add_text("a.txt", "The launch code is L-7781.")
+    memory.close()
+    clean = check_docs_index(db)
+    assert clean.status == "ok"
+    assert "1 chunks, 1 sources" in clean.detail
+
+    memory = DocMemory(db)
+    memory.con.execute(
+        "INSERT INTO doc_vectors(doc_rowid, model, dim, vec) "
+        "VALUES (9999, 'x', 1, ?)", (b"\x00",))
+    memory.con.commit()
+    memory.close()
+    broken = check_docs_index(db)
+    assert broken.status == "fail"
+    assert "orphan vector" in broken.detail
 
 
 def test_render_summarizes():
