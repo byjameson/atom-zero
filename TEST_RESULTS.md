@@ -1,8 +1,8 @@
 # Atom Zero and AISC Test Results
 
-- Date: 2026-11-23 02:50:26
+- Date: 2026-11-23 02:51:53
 - Atom Zero repository: `C:\Users\biris\AppData\Local\Temp\opencode\atom-zero-clean`
-- Tested Atom Zero commit: `dcb6a4abff38a5dae77e629219557033fc258ee4`
+- Tested Atom Zero commit: `6c76d91ea02b2b81e6b58efa62284bc1c3e0c431`
 - Atom Zero working tree at test start: clean
 - AISC path: `C:\Users\biris\Desktop\opencode\yeni dal\ai-systems-algebra`
 - AISC source status: directory is not a Git repository; no commit hash is available
@@ -12,7 +12,7 @@
 
 | Suite | Passed | Failed | Exit | Duration |
 |---|---:|---:|---:|---:|
-| Atom Zero `pytest tests -v` | **364** | **0** | 0 | 42.14s |
+| Atom Zero `pytest tests -v` | **364** | **0** | 0 | 42.05s |
 | AISC `pytest tests -v` | **132** (+6 subtests) | **0** | 0 | 12.21s |
 
 **Failed tests: none.**
@@ -48,7 +48,7 @@ the current repos.
   assistant)" parenthetical and the model card said 412 at that time.
 - The current text says "364 passed in the assistant package".
 - Current Atom Zero reports **364 passed**.
-- Current AISC reports **132 passed** (plus 6 pytest subtests).
+- Current AISC reports **132 passed** (+6 subtests).
 - 364 + 132 = **496**. Neither repo reports 403 today.
 - A search of current docs found no live `403 test` / `403 passed` claim.
 
@@ -439,7 +439,7 @@ tests/test_weekly_reports.py::test_archive_markdown_download_and_missing_files P
 tests/test_weekly_reports.py::test_archive_rejects_bad_index PASSED      [ 99%]
 tests/test_weekly_review_regression.py::test_weekly_review_regression_passes PASSED [100%]
 
-============================ 364 passed in 42.14s =============================
+============================ 364 passed in 42.05s =============================
 ~~~
 
 ## AISC full pytest output
