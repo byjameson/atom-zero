@@ -1,18 +1,22 @@
 # Changelog
 
-## Unreleased - install diagnostics
+## atomzero 0.4.0 - hungry mode and install diagnostics (2026-11-22)
 
-- `atomzero-doctor` now validates an existing document index (chunk/source
-  counts, orphan rows and FTS5 integrity) in addition to file write access.
-- Added doctor tests for absent, clean and orphaned indexes.
-- Added `atomzero-docs summary-collection` and collection mode on
-  `GET /v1/documents/summary`; every selected sentence keeps its source,
-  page and section.
 - Added **hungry mode**: `atomzero-hungry`, `POST /v1/hungry/run` and a UI
   section. It generates bounded questions, checks local knowledge, asks the
   configured teacher only for unknowns, stores unverified notes and writes an
-  audit ledger. Weights never change.
-- Added `atomzero-quickstart --teacher` and gap states `known`/`learned`.
+  audit ledger. It never fetches web pages and never changes weights.
+- Added `atomzero-quickstart --teacher`, gap states `known`/`learned` and a
+  dry-run/provider-call budget for hungry mode.
+- Added `atomzero-docs summary-collection` and collection mode on
+  `GET /v1/documents/summary`; every selected sentence keeps its source,
+  page and section.
+- `atomzero-doctor` now validates an existing document index (chunk/source
+  counts, orphan rows and FTS5 integrity) in addition to file write access.
+- Added doctor tests for absent, clean and orphaned indexes.
+- 246 tests pass.
+- Release notes:
+  [`docs/RELEASE_ATOMZERO_0.4.0.md`](docs/RELEASE_ATOMZERO_0.4.0.md).
 
 ## atomzero 0.3.0 - document workflow and grounded answers (2026-11-22)
 
