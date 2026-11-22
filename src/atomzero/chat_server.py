@@ -289,7 +289,8 @@ and suggested next actions.</p>
 <div id="weeklyreports"></div>
 <div id="weeklyreportspreview"></div>
 <div id="weeklyreportscheck"></div>
-<p class="hint">Chat: <code>show report w0001</code> opens an archived report.</p>
+<p class="hint">Chat: <code>show report w0001</code> opens an archived report;
+<code>repair report w0001</code> repairs its metadata.</p>
 <hr>
 <h3>Teach a fact</h3>
 <p class="hint">Stored in the local document index with a source. Facts do not

@@ -871,6 +871,7 @@ def test_ui_collection_scope_contract():
     assert 'data-q="repair report archive"' in page
     assert 'data-q="keep reports 2 dry-run"' in page
     assert "show report w0001" in page
+    assert "repair report w0001" in page
     assert "getWeeklyReview" in page
     assert "downloadWeeklyMarkdown" in page
     assert "refreshWeeklyReports" in page
@@ -1683,6 +1684,18 @@ def test_http_weekly_reports_repair(tmp_path):
         chat_repair = _post(base + "/v1/agent/chat", {
             "session_id": "repair-chat", "message": "confirm reports"})
         assert "Repaired 1 report metadata" in chat_repair["reply"]
+        assert archive.verify()["summary"]["ok"] == 2
+
+        changed.write_text("# Changed single\n", encoding="utf-8")
+        single_preview = _post(base + "/v1/agent/chat", {
+            "session_id": "repair-chat", "message": "repair report w0002"})
+        assert "Report w0002 metadata repair preview" in single_preview[
+            "reply"]
+        assert archive.verify()["summary"]["failed"] == 2
+        single_repair = _post(base + "/v1/agent/chat", {
+            "session_id": "repair-chat", "message": "confirm reports"})
+        assert "Report w0002 metadata repair: 1 repaired" in single_repair[
+            "reply"]
         assert archive.verify()["summary"]["ok"] == 2
     finally:
         httpd.shutdown()

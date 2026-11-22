@@ -309,14 +309,22 @@ class WeeklyReportArchive:
                 "ok": summary["failed"] == 0,
             }
 
-    def repair(self) -> dict:
+    def repair(self, report_id: str = "") -> dict:
         """Recompute size/SHA-256 metadata for existing report files."""
+        report_id = str(report_id or "").strip()
         stamp = time.strftime("%Y-%m-%dT%H:%M:%S")
         with self._lock:
             self._reload()
+            targets = self.reports
+            if report_id:
+                targets = [entry for entry in self.reports
+                           if str(entry.get("id", "")) == report_id]
+                if not targets:
+                    raise WeeklyReportError(
+                        f"weekly report not found: {report_id}")
             entries = []
             counts = {"repaired": 0, "ok": 0, "missing": 0}
-            for entry in self.reports:
+            for entry in targets:
                 raw = str(entry.get("path", "") or "")
                 try:
                     old_size = int(entry.get("size_bytes"))

@@ -185,8 +185,11 @@ verify report w0001
 -> Turkish: "rapor arşivini doğrula", "rapor w0001 doğrula"
 
 repair report archive
+repair report w0001
 -> preview of changed metadata and missing files
--> requires "confirm reports"; Turkish: "rapor arşivini onar"
+-> single-id form only touches that entry
+-> requires "confirm reports"; Turkish: "rapor arşivini onar",
+   "rapor w0001 onar"
 
 prune report archive
 keep reports 2

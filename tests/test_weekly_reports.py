@@ -171,6 +171,29 @@ def test_archive_repair_updates_changed_metadata_atomically(tmp_path):
     assert archive.repair()["summary"]["repaired"] == 0
 
 
+def test_archive_repair_single_report(tmp_path):
+    index_path = tmp_path / "weekly_reports.json"
+    archive = WeeklyReportArchive(index_path)
+    first = tmp_path / "first.md"
+    first.write_text("# First\n", encoding="utf-8")
+    second = tmp_path / "second.md"
+    second.write_text("# Second\n", encoding="utf-8")
+    archive.record(first, _review(), exported_at="2026-11-21T09:00:00")
+    archive.record(second, _review(), exported_at="2026-11-22T09:00:00")
+    second.write_text("# Second changed\n", encoding="utf-8")
+
+    result = archive.repair("w0002")
+    assert result["summary"] == {
+        "total": 1, "repaired": 1, "ok": 0, "missing": 0, "failed": 0,
+    }
+    assert result["entries"][0]["id"] == "w0002"
+    assert result["entries"][0]["status"] == "repaired"
+    verification = archive.verify()
+    assert verification["summary"]["ok"] == 2
+    with pytest.raises(WeeklyReportError):
+        archive.repair("w9999")
+
+
 def test_archive_delete_removes_one_entry_only(tmp_path):
     index_path = tmp_path / "weekly_reports.json"
     archive = WeeklyReportArchive(index_path)

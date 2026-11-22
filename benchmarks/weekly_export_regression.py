@@ -19,8 +19,8 @@ Checks:
 - opening an archived report by id from chat;
 - verifying stored size and SHA-256 against archived files, including chat
   verification commands;
-- repairing changed report metadata atomically, including a confirmed chat
-  repair flow.
+- repairing changed report metadata atomically, including confirmed all-report
+  and single-report chat repair flows.
 
 Run:
 
@@ -384,6 +384,23 @@ def run(output: str | Path | None = None) -> dict:
                 and (repair_apply.get("tool_calls") or [{}])[0].get("name")
                 == "repair_weekly_reports",
                 repair_apply.get("reply", "")[:200])
+            extra_two = Path(folder) / "extra-2.md"
+            extra_two.write_text("# Changed extra two\n", encoding="utf-8")
+            single_preview = _post(base, "/v1/agent/chat", {
+                "session_id": "repair-chat",
+                "message": "repair report w0003"})
+            single_apply = _post(base, "/v1/agent/chat", {
+                "session_id": "repair-chat",
+                "message": "confirm reports"})
+            check(
+                "chat_report_repair_single",
+                "Report w0003 metadata repair preview" in single_preview.get(
+                    "reply", "")
+                and "Report w0003 metadata repair: 1 repaired" in (
+                    single_apply.get("reply", ""))
+                and (single_apply.get("tool_calls") or [{}])[0].get("id")
+                == "w0003",
+                single_apply.get("reply", "")[:200])
             oldest = json.loads(urllib.request.urlopen(
                 base + "/v1/weekly-review/reports?limit=5&sort=oldest",
                 timeout=15).read().decode("utf-8"))

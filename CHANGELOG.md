@@ -67,10 +67,12 @@
   with atomic index updates for changed files.
 - Added confirmed chat repair (`repair report archive`, `rapor arşivini onar`)
   with a preview and `confirm reports` gate.
-- Added `benchmarks/weekly_export_regression.py` (25/25 checks: CLI, HTTP, UI,
+- Added single-entry chat repair (`repair report w0001`, `rapor w0001 onar`)
+  with the same confirmation flow.
+- Added `benchmarks/weekly_export_regression.py` (26/26 checks: CLI, HTTP, UI,
   the report archive, pruning, retention, dry-run preview, deletion, query
   filtering, chat search/list/maintenance, chat/HTTP sorting, report viewing,
-  integrity verification and CLI/HTTP/chat metadata repair).
+  integrity verification and all/single-entry metadata repair).
 - Fixed BOM-sensitive session loading: `atomzero-brief` and `ChatHuman` now
   accept PowerShell-written UTF-8 session files with a BOM.
 - Extended BOM-tolerant reads to feedback, knowledge-gap, research-queue,

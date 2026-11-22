@@ -295,6 +295,50 @@ def test_agent_repairs_report_metadata_with_confirmation(tmp_path):
     assert after["summary"]["missing"] == 1
 
 
+def test_agent_repairs_single_report_with_confirmation(tmp_path):
+    index_path = tmp_path / "weekly_reports.json"
+    archive = WeeklyReportArchive(index_path)
+    first = tmp_path / "first.md"
+    first.write_text("# First\n", encoding="utf-8")
+    second = tmp_path / "second.md"
+    second.write_text("# Second\n", encoding="utf-8")
+    missing = tmp_path / "missing.md"
+    missing.write_text("# Missing\n", encoding="utf-8")
+    for number, path in enumerate((first, second, missing), start=1):
+        archive.record(path, {
+            "generated": f"2026-11-2{number} 09:00", "period_days": 7,
+            "task_counts": {}, "recent_source_count": 0,
+            "graph": {"entities": [], "connections": []},
+        }, exported_at=f"2026-11-2{number}T09:00:00")
+    first.write_text("# First changed\n", encoding="utf-8")
+    second.write_text("# Second changed\n", encoding="utf-8")
+    missing.unlink()
+    agent = AgentSession(
+        "s-single-repair", tmp_path / "memory.json",
+        weekly_reports_path=str(index_path))
+
+    preview = agent.chat("repair report w0001")
+    assert "Report w0001 metadata repair preview" in preview["reply"]
+    assert 'Reply "confirm reports"' in preview["reply"]
+    assert archive.verify()["summary"]["size_mismatch"] == 2
+    applied = agent.chat("confirm reports")
+    assert "Report w0001 metadata repair: 1 repaired" in applied["reply"]
+    after_first = archive.verify()
+    assert after_first["summary"]["size_mismatch"] == 1
+    assert after_first["summary"]["ok"] == 1
+
+    preview_second = agent.chat("repair report w0002")
+    assert "Report w0002 metadata repair preview" in preview_second["reply"]
+    assert "Report w0002 metadata repair: 1 repaired" in (
+        agent.chat("confirm reports")["reply"])
+    assert archive.verify()["summary"]["ok"] == 2
+
+    missing_check = agent.chat("repair report w0003")
+    assert "file is missing and cannot be repaired" in missing_check["reply"]
+    unknown = agent.chat("repair report w9999")
+    assert "not found" in unknown["reply"]
+
+
 def test_agent_report_archive_maintenance_flow(tmp_path):
     index_path = tmp_path / "weekly_reports.json"
     archive = WeeklyReportArchive(index_path)

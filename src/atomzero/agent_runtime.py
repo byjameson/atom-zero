@@ -576,20 +576,41 @@ class AgentSession:
                 f"{item.get('path', '')}{marker}")
         return "\n".join(lines)
 
-    def _preview_repair_reports(self) -> dict:
+    def _preview_repair_reports(self, report_id: str = "") -> dict:
         self.pending_report_action = None
+        report_id = str(report_id or "").strip()
         try:
             archive = WeeklyReportArchive(self.weekly_reports_path)
             verification = archive.verify()
         except (WeeklyReportError, OSError) as exc:
             return {"reply": f"report archive error: {exc}",
                     "tool_calls": [], "sources": [], "evidence": []}
-        repairable = [item for item in verification["entries"]
+        entries = verification["entries"]
+        if report_id:
+            entries = [item for item in entries
+                       if str(item.get("id", "")) == report_id]
+            if not entries:
+                return {"reply": f"weekly report not found: {report_id}",
+                        "tool_calls": [], "sources": [], "evidence": []}
+        repairable = [item for item in entries
                       if item["status"] == "failed"]
-        missing = [item for item in verification["entries"]
+        missing = [item for item in entries
                    if item["status"] == "missing"]
         tool = [{"name": "preview_weekly_reports", "action": "repair",
                  "repairable": len(repairable), "missing": len(missing)}]
+        if report_id:
+            tool[0]["id"] = report_id
+            if not repairable:
+                if missing:
+                    reply = (f"Report {report_id} file is missing and "
+                             "cannot be repaired.")
+                else:
+                    reply = (f"Report {report_id} metadata is already "
+                             "valid.")
+                return {
+                    "reply": reply, "tool_calls": tool, "sources": [],
+                    "evidence": [], "reports": entries,
+                }
         if not repairable:
             if missing:
                 reply = (f"No repairable metadata; {len(missing)} missing "
@@ -601,15 +622,27 @@ class AgentSession:
                 "evidence": [], "reports": repairable + missing,
             }
         self.pending_report_action = {"action": "repair"}
-        lines = [
-            f"Report metadata repair preview: {len(repairable)} repairable, "
-            f"{len(missing)} missing ({verification['summary']['total']} total)",
-        ]
+        if report_id:
+            self.pending_report_action["id"] = report_id
+            lines = [
+                f"Report {report_id} metadata repair preview:",
+            ]
+            for item in repairable:
+                problems = ", ".join(item.get("problems", []))
+                lines.append(
+                    f"- {item.get('path', '')} [{problems}]")
+        else:
+            lines = [
+                f"Report metadata repair preview: "
+                f"{len(repairable)} repairable, {len(missing)} missing "
+                f"({verification['summary']['total']} total)",
+            ]
         for item in repairable:
-            problems = ", ".join(item.get("problems", []))
-            lines.append(
-                f"- {item.get('id', '?')} | repairable | "
-                f"{item.get('path', '')} [{problems}]")
+            if not report_id:
+                problems = ", ".join(item.get("problems", []))
+                lines.append(
+                    f"- {item.get('id', '?')} | repairable | "
+                    f"{item.get('path', '')} [{problems}]")
         for item in missing:
             lines.append(
                 f"- {item.get('id', '?')} | missing | "
@@ -766,16 +799,27 @@ class AgentSession:
                         "id": report_id,
                         "path": deleted.get("path", "")}
             elif action == "repair":
-                repair = archive.repair()
+                report_id = str(pending.get("id", "") or "")
+                repair = archive.repair(report_id)
                 remaining = archive.count()
                 summary = repair["summary"]
-                reply = (f"Repaired {summary['repaired']} report metadata; "
-                         f"{summary['ok']} unchanged; "
-                         f"{summary['missing']} missing. "
-                         f"Archive now has {remaining} report(s).")
+                if report_id:
+                    reply = (f"Report {report_id} metadata repair: "
+                             f"{summary['repaired']} repaired; "
+                             f"{summary['ok']} unchanged; "
+                             f"{summary['missing']} missing. "
+                             f"Archive now has {remaining} report(s).")
+                else:
+                    reply = (
+                        f"Repaired {summary['repaired']} report metadata; "
+                        f"{summary['ok']} unchanged; "
+                        f"{summary['missing']} missing. "
+                        f"Archive now has {remaining} report(s).")
                 tool = {"name": "repair_weekly_reports",
                         "repaired": summary["repaired"],
                         "missing": summary["missing"]}
+                if report_id:
+                    tool["id"] = report_id
             else:
                 return {"reply": "Unknown report action.",
                         "tool_calls": [], "sources": [], "evidence": []}
@@ -1031,13 +1075,24 @@ class AgentSession:
         repair_match = re.match(
             r"^(?:repair|fix)\s+(?:the\s+)?"
             r"(?:report\s+archive|reports?|report\s+metadata)"
-            r"(?:\s+metadata)?\??$", text, re.IGNORECASE)
+            r"(?:\s+metadata)?(?:\s+(w\d+))?\??$",
+            text, re.IGNORECASE)
+        if not repair_match:
+            repair_match = re.match(
+                r"^(?:repair|fix)\s+(w\d+)\??$",
+                text, re.IGNORECASE)
         if not repair_match:
             repair_match = re.match(
                 r"^(?:rapor|raporlar[ıi])\s+ar[şs]ivini\s+"
                 r"onar\??$", text, re.IGNORECASE)
+        if not repair_match:
+            repair_match = re.match(
+                r"^(?:rapor|raporu)\s+(w\d+)\s+onar\??$",
+                text, re.IGNORECASE)
         if repair_match:
-            return self._preview_repair_reports()
+            report_id = (repair_match.group(1)
+                         if repair_match.lastindex else "")
+            return self._preview_repair_reports(report_id or "")
         if low in ("confirm reports", "confirm report changes", "apply reports",
                    "yes reports", "raporları onayla"):
             return self._apply_report_action()
