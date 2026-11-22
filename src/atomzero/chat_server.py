@@ -44,6 +44,7 @@ from pathlib import Path
 
 import torch
 
+from atomzero import __version__
 from atomzero.doc_memory import (
     SourceNotFound, add_citation_source, best_snippet, format_citation)
 from atomzero.curiosity import (
@@ -2428,6 +2429,7 @@ def serve(model_path: str, tokenizer_path: str, host: str = "127.0.0.1",
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--version", action="version", version=f"atomzero {__version__}")
     ap.add_argument("--model",
                     default="checkpoints/transformer_behavior_50m_scaled")
     ap.add_argument("--tokenizer", default="data/chat_en_bpe8k.json")

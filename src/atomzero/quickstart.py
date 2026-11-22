@@ -13,6 +13,7 @@ import urllib.request
 import webbrowser
 from pathlib import Path
 
+from atomzero import __version__
 from atomzero.chat_server import serve
 from atomzero.doc_memory import DocMemory
 
@@ -89,6 +90,7 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
         prog="atomzero-quickstart",
         description="Download Atom Zero weights, seed a demo corpus and serve.")
+    parser.add_argument("--version", action="version", version=f"atomzero {__version__}")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8013)
     parser.add_argument("--cache", default=str(
