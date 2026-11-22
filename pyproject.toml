@@ -33,6 +33,7 @@ atomzero-quickstart = "atomzero.quickstart:main"
 atomzero-doctor = "atomzero.doctor:main"
 atomzero-docs = "atomzero.doc_memory:main"
 atomzero-hungry = "atomzero.hungry:main"
+atomzero-skills = "atomzero.skills:main"
 
 [project.urls]
 Homepage = "https://github.com/byjameson/atom-zero"

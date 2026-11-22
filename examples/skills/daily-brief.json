@@ -1,0 +1,10 @@
+{
+  "name": "daily-brief",
+  "description": "Turn local notes and tasks into a short daily brief.",
+  "triggers": ["daily brief", "brief me", "what should I do today"],
+  "system": "You are a concise local planning assistant. Use only the provided context and say when something is missing.",
+  "prompt": "Create a short daily brief from the local context. Include: three priorities, any open questions, and one small next action. Do not invent facts.\n\nContext:\n{context}\n\nRequest:\n{query}",
+  "use_context": true,
+  "max_chunks": 5,
+  "provider": true
+}

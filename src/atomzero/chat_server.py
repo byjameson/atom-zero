@@ -13,6 +13,7 @@ Endpoints:
   GET  /v1/documents/summary?source=...&source_prefix=...&sentences=8
   GET  /v1/graph?limit_chunks=...&min_edge=...&max_entities=...
   GET  /v1/graph/entity?name=...&limit=...
+  GET  /v1/skills
   POST /v1/documents
   POST /v1/documents/upload?source=...&title=...
   POST /v1/documents/search
@@ -357,6 +358,15 @@ run is bounded by a question/provider-call budget.</p>
 </div>
 <p id="hmsg" class="hint"></p>
 <div id="hres"></div>
+<hr>
+<h3>Custom skills</h3>
+<p class="hint">Drop JSON skill files into <code>data/skills</code>. A skill
+matches trigger phrases, can retrieve local context and can call the configured
+provider. Skills are declarative: they cannot execute arbitrary code. Restart
+Atom Zero after adding files.</p>
+<div class="row"><button id="skrefresh">Refresh skills</button></div>
+<p id="skmsg" class="hint"></p>
+<div id="sklist"></div>
 <script>
 function getSessionId() {
   try {
@@ -950,6 +960,38 @@ async function showEntity(name) {
     msg.textContent = 'entity error: ' + e;
   }
 }
+async function refreshSkills() {
+  const msg = document.getElementById('skmsg');
+  const box = document.getElementById('sklist');
+  msg.textContent = 'loading skills...';
+  box.textContent = '';
+  try {
+    const r = await fetch('/v1/skills');
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'skills error: ' + (j.error || r.status);
+      return;
+    }
+    const data = j.data || [];
+    msg.textContent = data.length + ' skill(s) from ' + (j.dir || '');
+    data.forEach(skill => {
+      const card = document.createElement('div');
+      card.className = 'qitem';
+      const title = document.createElement('div');
+      title.textContent = skill.name + (skill.provider ? '' : ' [template]');
+      card.appendChild(title);
+      const detail = document.createElement('div');
+      detail.className = 'src';
+      detail.textContent = (skill.description || '') + ' | triggers: ' +
+        (skill.triggers || []).join(', ');
+      card.appendChild(detail);
+      box.appendChild(card);
+    });
+  } catch (e) {
+    msg.textContent = 'skills error: ' + e;
+  }
+}
+document.getElementById('skrefresh').onclick = () => refreshSkills();
 document.getElementById('graphrefresh').onclick = () => refreshGraph();
 document.getElementById('graphentitybtn').onclick = () => showEntity();
 document.getElementById('gramentity').addEventListener('keydown', event => {
@@ -1868,6 +1910,12 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/v1/documents":
             docs = _state.get("docs")
             self._json(200, {"data": docs.sources() if docs else []})
+        elif self.path == "/v1/skills":
+            registry = _state.get("skills")
+            self._json(200, {
+                "dir": _state.get("skills_dir", ""),
+                "data": registry.list() if registry else [],
+            })
         elif (self.path == "/v1/graph"
               or self.path.startswith("/v1/graph?")):
             docs = _state.get("docs")
@@ -2702,7 +2750,8 @@ class Handler(BaseHTTPRequestHandler):
                 gap_store=_state.get("gaps"),
                 safety=_state.get("safety"),
                 generator=_state.get("generator"),
-                allow_general_chat=_state.get("allow_general_chat", False))
+                allow_general_chat=_state.get("allow_general_chat", False),
+                skills=_state.get("skills"))
         return sessions[session_id]
 
     def _agent_plan(self, req: dict):
@@ -2796,7 +2845,8 @@ def serve(model_path: str, tokenizer_path: str, host: str = "127.0.0.1",
           chat_provider_api_key: str = "",
           chat_provider_timeout: int = 60,
           chat_provider_label: str = "openai-compatible",
-          allow_general_chat: bool = False) -> int:
+          allow_general_chat: bool = False,
+          skills_dir: str = "data/skills") -> int:
     adapter = resolve_adapter(adapter, active_adapter_file)
     root = Path(model_path)
     ck = torch.load(root / "model.pt", map_location="cpu", weights_only=False)
@@ -2849,6 +2899,16 @@ def serve(model_path: str, tokenizer_path: str, host: str = "127.0.0.1",
             gaps = KnowledgeGapStore(gap_store_path)
         except KnowledgeGapError as exc:
             print(f"warning: knowledge-gap store disabled: {exc}", flush=True)
+    skills = None
+    try:
+        from atomzero.skills import SkillRegistry
+
+        skills = SkillRegistry.from_dir(skills_dir)
+        if skills.skills:
+            print(f"skills: {len(skills.skills)} loaded from "
+                  f"{skills.directory}", flush=True)
+    except Exception as exc:
+        print(f"warning: skills disabled: {exc}", flush=True)
     teacher = None
     if teacher_url or teacher_model:
         try:
@@ -2897,6 +2957,8 @@ def serve(model_path: str, tokenizer_path: str, host: str = "127.0.0.1",
         "gaps": gaps,
         "gap_store_path": gap_store_path,
         "hungry_ledger_path": hungry_ledger_path,
+        "skills": skills,
+        "skills_dir": skills_dir,
         "adapter_history_path": "data/adapter_history.jsonl",
         "active_adapter_file": active_adapter_file,
         "safety": safety,
@@ -2954,6 +3016,7 @@ def main():
     ap.add_argument("--feedback-export", default="data/feedback_training.jsonl")
     ap.add_argument("--gap-store", default="data/knowledge_gaps.json")
     ap.add_argument("--hungry-ledger", default="data/hungry_ledger.jsonl")
+    ap.add_argument("--skills-dir", default="data/skills")
     ap.add_argument("--safety-filter", action="store_true")
     ap.add_argument("--no-safety-ml", dest="safety_ml",
                     action="store_false", default=True,
@@ -2998,7 +3061,8 @@ def main():
                  args.prewarm_vectors, args.vector_index, args.safety_ml,
                  args.chat_provider_url, args.chat_provider_model,
                  args.chat_provider_api_key, args.chat_provider_timeout,
-                 args.chat_provider_label, args.allow_general_chat)
+                 args.chat_provider_label, args.allow_general_chat,
+                 skills_dir=args.skills_dir)
 
 
 if __name__ == "__main__":

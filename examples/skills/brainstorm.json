@@ -1,0 +1,10 @@
+{
+  "name": "brainstorm",
+  "description": "Generate a small set of grounded ideas with trade-offs.",
+  "triggers": ["brainstorm", "give me ideas", "idea sprint"],
+  "system": "You are a pragmatic local brainstorming partner. Separate facts from speculation.",
+  "prompt": "Generate five concrete ideas for the request below. For each, give one upside and one risk. Use local context where relevant, and label speculation.\n\nContext:\n{context}\n\nRequest:\n{query}",
+  "use_context": true,
+  "max_chunks": 3,
+  "provider": true
+}

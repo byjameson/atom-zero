@@ -815,6 +815,10 @@ def test_ui_collection_scope_contract():
     assert "Second brain graph" in page
     assert 'id="graphrefresh"' in page
     assert "showEntity" in page
+    assert "/v1/skills" in page
+    assert "Custom skills" in page
+    assert 'id="skrefresh"' in page
+    assert "refreshSkills" in page
 
 
 def test_doc_answer_returns_evidence_confidence_and_source_scope(tmp_path):
@@ -971,6 +975,40 @@ def test_http_hungry_mode_dry_run_and_learn(tmp_path):
         chat_server._state.clear()
         chat_server._state.update(old)
         docs.close()
+
+
+def test_http_skills_endpoint(tmp_path):
+    from atomzero.skills import SkillRegistry
+
+    skill = {
+        "name": "demo-skill",
+        "triggers": ["demo skill"],
+        "prompt": "Demo: {query}",
+        "provider": False,
+    }
+    skills_dir = tmp_path / "skills"
+    skills_dir.mkdir()
+    (skills_dir / "demo.json").write_text(
+        json.dumps(skill), encoding="utf-8")
+    registry = SkillRegistry.from_dir(skills_dir)
+    old = dict(chat_server._state)
+    chat_server._state.update({
+        "skills": registry, "skills_dir": str(skills_dir),
+    })
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        data = json.loads(urllib.request.urlopen(
+            base + "/v1/skills", timeout=10).read().decode("utf-8"))
+        assert data["dir"] == str(skills_dir)
+        assert data["data"][0]["name"] == "demo-skill"
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
 
 
 def test_http_graph_and_entity(tmp_path):

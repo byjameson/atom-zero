@@ -14,6 +14,12 @@ work stays on `main`; see `docs/RELEASING.md`.
 - Chat now answers relation queries such as “what is related to Ankara?” with
   graph evidence and connections.
 - Added graph regression tests and `docs/KNOWLEDGE_GRAPH.md`.
+- Added declarative **custom skills**: JSON trigger phrases, local-context
+  prompts, provider workflows and deterministic templates.
+- Added `atomzero-skills list/validate/show`, `GET /v1/skills`, a UI skills
+  panel, three example skills and `docs/SKILLS.md`.
+- Added skill regression tests for loading, matching, context rendering,
+  provider/template modes and the CLI.
 
 ## atomzero 0.4.2 - UI collection scope (2026-11-22)
 

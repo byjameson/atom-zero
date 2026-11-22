@@ -52,6 +52,7 @@ its own. Apache-2.0 code and weights, no hosted service, no telemetry.
 | curiosity | `src/atomzero/curiosity.py` | gaps -> pending research, approval required |
 | learning | `research/learning_loop.py`, LoRA | reviewed feedback -> gated adapter -> rollback |
 | provider | `src/atomzero/teacher_provider.py`, `--chat-provider-*` | optional local OpenAI-compatible chat |
+| customization | `src/atomzero/skills.py` | declarative JSON skills: triggers, local context, provider/template modes |
 | safety | `src/atomzero/safety.py`, `ml_safety.py` | optional rules + local linear ML head |
 
 ## 4. Model and training
@@ -292,7 +293,7 @@ whether to enable it.
 | document benchmark (100 authored questions) | **80/80 answerable, 20/20 no-answer** |
 | public SQuAD v2 retrieval (50 contexts) | **hybrid 0.975 top-1; 0.816 answer in snippet** |
 | safety-enabled product | **26/26** |
-| test suite | **255 passed** |
+| test suite | **261 passed** |
 
 The product benchmark is narrow and authored: tools, memory, tasks, retrieval,
 teacher-note review, missing-source detection and one short generation. It is

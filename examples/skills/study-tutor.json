@@ -1,0 +1,10 @@
+{
+  "name": "study-tutor",
+  "description": "Explain a topic from local notes with a short check for understanding.",
+  "triggers": ["study tutor", "tutor me", "explain my notes"],
+  "system": "You are a patient local tutor. Ground explanations in the provided context and mark uncertainty.",
+  "prompt": "Explain the requested topic in three short steps using the local context. Then ask one check-for-understanding question.\n\nContext:\n{context}\n\nTopic/request:\n{query}",
+  "use_context": true,
+  "max_chunks": 4,
+  "provider": true
+}
