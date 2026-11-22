@@ -67,8 +67,9 @@ More fixes are in [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
 
 - **A local, single-user daily assistant:** short chat, tasks with optional due
   dates and overdue/due-soon focus in brief/review/chat, task rescheduling,
-  confirmed deletion and text search, CLI/HTTP/UI overdue and due-soon task
-  views, notes, arithmetic, time and source-cited document lookup.
+  confirmed deletion and filtered text search (status/due), CLI/HTTP/UI
+  overdue and due-soon task views, notes, arithmetic, time and source-cited
+  document lookup.
 - **A source-cited RAG system** over your own text, Markdown, HTML, PDF and DOCX
   files.
 - **A deterministic tool runtime:** arithmetic, time, tasks, name/likes memory and

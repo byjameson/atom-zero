@@ -81,6 +81,37 @@ def math_query(text: str) -> str | None:
     return candidate
 
 
+def parse_task_search_filters(raw: str) -> tuple[str, str, str]:
+    """Split trailing task-search filters from the text query."""
+    tokens = str(raw or "").strip().split()
+    status = "all"
+    due = "all"
+    status_words = {"open", "done"}
+    due_words = {"overdue", "today", "week", "none"}
+    while tokens:
+        last = tokens[-1].lower()
+        if (len(tokens) >= 2 and tokens[-2].lower() == "status"
+                and last in status_words):
+            status = last
+            tokens = tokens[:-2]
+            continue
+        if (len(tokens) >= 2 and tokens[-2].lower() == "due"
+                and last in due_words):
+            due = last
+            tokens = tokens[:-2]
+            continue
+        if last in status_words and status == "all":
+            status = last
+            tokens.pop()
+            continue
+        if last in due_words and due == "all":
+            due = last
+            tokens.pop()
+            continue
+        break
+    return " ".join(tokens).strip(), status, due
+
+
 class AgentSession:
     def __init__(self, session_id: str, memory_path: str | Path,
                  model=None, tokenizer=None, device=None, docs=None,
@@ -911,12 +942,22 @@ class AgentSession:
             "tool_calls": [], "sources": [], "evidence": [],
         }
 
-    def _search_tasks(self, query: str) -> dict:
-        view = task_search_view(self.human.data, query)
+    def _search_tasks(self, raw_query: str) -> dict:
+        query, status, due = parse_task_search_filters(raw_query)
+        if not query:
+            return {
+                "reply": ("Tell me task text to search, for example "
+                          "'search tasks report open due week'."),
+                "tool_calls": [], "sources": [], "evidence": [],
+            }
+        view = task_search_view(
+            self.human.data, query, status=status, due=due)
         return {
             "reply": render_task_search_view(view),
             "tool_calls": [{"name": "search_tasks",
                             "query": view["query"],
+                            "status": view["status"],
+                            "due": view["due"],
                             "matches": view["count"]}],
             "sources": [],
             "evidence": [],

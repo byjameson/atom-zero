@@ -851,11 +851,18 @@ def test_ui_collection_scope_contract():
     assert 'data-q="due soon"' in page
     assert 'data-q="search tasks report"' in page
     assert 'id="tasksearch"' in page
+    assert 'id="tasksearchstatus"' in page
+    assert 'id="tasksearchdue"' in page
     assert 'id="tasksearchbtn"' in page
     assert 'id="tasksearchres"' in page
     assert 'id="tasksearchmsg"' in page
+    assert '<option value="overdue">' in page
+    assert '<option value="week">' in page
+    assert '<option value="none">' in page
     assert "searchTasks" in page
     assert "/v1/tasks/search" in page
+    assert "tasksearchstatus" in page
+    assert "tasksearchdue" in page
     assert 'id="rescheduletaskid"' in page
     assert 'id="rescheduledue"' in page
     assert 'id="rescheduletaskbtn"' in page
@@ -1887,25 +1894,66 @@ def test_http_search_tasks(tmp_path):
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     thread.start()
     base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    today = date.today()
+    week = (today + timedelta(days=3)).isoformat()
+    overdue = (today - timedelta(days=1)).isoformat()
     try:
-        for text in ("submit quarterly report", "submit expenses",
-                     "plan launch"):
+        for text, due in (
+                ("submit quarterly report", week),
+                ("submit expenses", overdue),
+                ("plan launch", ""),
+                ("submit archived report", ""),
+                ("submit today report", today.isoformat())):
+            message = f"add task {text}"
+            if due:
+                message += f" due {due}"
             _post(base + "/v1/agent/chat", {
-                "session_id": "task-search-http", "message": f"add task {text}"})
-        query = urllib.parse.quote("submit report")
-        result = json.loads(urllib.request.urlopen(
-            base + "/v1/tasks/search?session_id=task-search-http&q=" + query,
-            timeout=10).read().decode("utf-8"))
+                "session_id": "task-search-http", "message": message})
+        _post(base + "/v1/agent/chat", {
+            "session_id": "task-search-http", "message": "complete task 4"})
+
+        def search(**filters):
+            params = {
+                "session_id": "task-search-http",
+                "q": "submit",
+                "today": today.isoformat(),
+            }
+            params.update(filters)
+            return json.loads(urllib.request.urlopen(
+                base + "/v1/tasks/search?" + urllib.parse.urlencode(params),
+                timeout=10).read().decode("utf-8"))
+
+        result = search(q="submit report")
         assert result["query"] == "submit report"
-        assert result["count"] == 1
-        assert result["open_task_count"] == 3
-        assert result["tasks"][0]["text"] == "submit quarterly report"
+        assert result["status"] == "all"
+        assert result["due"] == "all"
+        assert result["count"] == 3
+        assert [task["id"] for task in result["tasks"]] == [1, 4, 5]
+        assert result["open_task_count"] == 4
         assert result["weights_changed"] is False
-        empty = json.loads(urllib.request.urlopen(
-            base + "/v1/tasks/search?session_id=task-search-http&q=missing",
-            timeout=10).read().decode("utf-8"))
+        open_only = search(status="open")
+        assert open_only["status"] == "open"
+        assert [task["id"] for task in open_only["tasks"]] == [1, 2, 5]
+        week_only = search(due="week")
+        assert week_only["due"] == "week"
+        assert [task["id"] for task in week_only["tasks"]] == [1, 5]
+        today_only = search(due="today")
+        assert [task["id"] for task in today_only["tasks"]] == [5]
+        overdue_only = search(due="overdue")
+        assert [task["id"] for task in overdue_only["tasks"]] == [2]
+        done_only = search(status="done")
+        assert [task["id"] for task in done_only["tasks"]] == [4]
+        undated = search(due="none")
+        assert [task["id"] for task in undated["tasks"]] == [4]
+        combined = search(status="open", due="week")
+        assert [task["id"] for task in combined["tasks"]] == [1, 5]
+        empty = search(q="missing")
         assert empty["count"] == 0
         assert empty["tasks"] == []
+        for bad in ({"status": "blocked"}, {"due": "month"}):
+            with pytest.raises(urllib.error.HTTPError) as invalid:
+                search(**bad)
+            assert invalid.value.code == 400
         with pytest.raises(urllib.error.HTTPError) as missing_query:
             urllib.request.urlopen(
                 base + "/v1/tasks/search?session_id=task-search-http",

@@ -91,6 +91,9 @@
 - Added task text search (`search tasks TEXT`, `find task TEXT` or
   `task search TEXT`), `GET /v1/tasks/search?q=TEXT`,
   `atomzero-brief --search-tasks TEXT` and a UI search field/button.
+- Added task-search status/due filters: chat suffixes (`open`, `done`,
+  `overdue`, `today`, `week`, `none`), HTTP `status`/`due` query parameters,
+  `--search-status`/`--search-due` CLI flags and UI selectors.
 - Added `benchmarks/weekly_export_regression.py` (29/29 checks: CLI, HTTP, UI,
   the report archive, pruning, retention, dry-run preview, deletion, query
   filtering, chat search/list/maintenance, chat/HTTP sorting, report viewing,

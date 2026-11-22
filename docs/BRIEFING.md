@@ -42,12 +42,20 @@ requires `confirm task delete`; the UI has a **Confirm delete** checkbox and
 `POST /v1/tasks/delete` requires `"confirm": true`.
 
 Task text is searchable with `search tasks report`, `find task report` or
-`task search report`. The HTTP endpoint is
-`GET /v1/tasks/search?q=report`, the CLI form is
-`atomzero-brief --session ... --search-tasks report [--json]` and the UI has a
-**Search tasks** field/button. Search is case-insensitive and requires every
-query word to appear in the task text; completed tasks are included with their
-status.
+`task search report`. Search is case-insensitive and requires every query word
+to appear in the task text; completed tasks are included with their status.
+
+Filters are appended after the query: `search tasks report open`,
+`search tasks report done`, `search tasks report due week` or
+`search tasks report open due overdue`. Status filters are `open` and `done`;
+due filters are `overdue`, `today`, `week` and `none`. `week` means today
+through the next seven days, and `overdue` applies to open tasks only.
+
+The HTTP endpoint is
+`GET /v1/tasks/search?q=report&status=open&due=week`, the CLI form is
+`atomzero-brief --session ... --search-tasks report --search-status open
+--search-due week [--json]` and the UI has a **Search tasks** field with status
+and due selectors.
 
 The daily brief and weekly review add overdue/due-soon counts, a focus item,
 due-date labels and dedicated Markdown sections. Chat understands `due soon`

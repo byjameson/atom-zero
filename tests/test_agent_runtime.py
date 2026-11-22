@@ -206,8 +206,12 @@ def test_agent_deletes_task_with_confirmation(tmp_path):
 
 
 def test_agent_searches_task_text(tmp_path):
+    today = date.today()
+    soon = (today + timedelta(days=2)).isoformat()
+    overdue = (today - timedelta(days=1)).isoformat()
     agent = AgentSession("s-search-tasks", tmp_path / "memory.json")
-    agent.chat("add task submit quarterly report")
+    agent.chat(f"add task submit quarterly report due {soon}")
+    agent.chat(f"add task submit expenses due {overdue}")
     agent.chat("add task plan launch")
     found = agent.chat("search tasks report")
     assert found["tool_calls"][0]["name"] == "search_tasks"
@@ -219,9 +223,35 @@ def test_agent_searches_task_text(tmp_path):
     by_find = agent.chat("find task launch")
     assert by_find["task_search"]["count"] == 1
     assert "plan launch" in by_find["reply"]
+    open_only = agent.chat("search tasks submit open")
+    assert open_only["tool_calls"][0]["status"] == "open"
+    assert open_only["tool_calls"][0]["due"] == "all"
+    assert open_only["task_search"]["count"] == 2
+    week = agent.chat("search tasks submit open due week")
+    assert week["task_search"]["status"] == "open"
+    assert week["task_search"]["due"] == "week"
+    assert week["task_search"]["count"] == 1
+    assert "status=open" in week["reply"]
+    assert "due=week" in week["reply"]
+    overdue_only = agent.chat("search tasks submit overdue")
+    assert overdue_only["task_search"]["due"] == "overdue"
+    assert overdue_only["task_search"]["tasks"][0]["text"] == "submit expenses"
+    undated = agent.chat("task search launch none")
+    assert undated["task_search"]["due"] == "none"
+    assert undated["task_search"]["count"] == 1
+    agent.chat("complete task 1")
+    done = agent.chat("search tasks submit done")
+    assert done["task_search"]["status"] == "done"
+    assert done["task_search"]["count"] == 1
+    assert done["task_search"]["tasks"][0]["id"] == 1
+    explicit = agent.chat("search tasks report status done")
+    assert explicit["task_search"]["status"] == "done"
+    assert explicit["task_search"]["count"] == 1
     missing = agent.chat("task search missing")
     assert missing["task_search"]["count"] == 0
     assert "None" in missing["reply"]
+    no_text = agent.chat("search tasks open")
+    assert "Tell me task text to search" in no_text["reply"]
 
 
 def test_agent_brief_me_returns_local_brief(tmp_path):

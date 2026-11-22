@@ -30,7 +30,7 @@ Endpoints:
   GET  /v1/weekly-review/export?session_id=...&days=7
   GET  /v1/tasks/overdue?session_id=default
   GET  /v1/tasks/due-soon?session_id=default&days=7
-  GET  /v1/tasks/search?session_id=default&q=report
+  GET  /v1/tasks/search?session_id=default&q=report&status=open&due=week
   POST /v1/tasks/reschedule
   POST /v1/tasks/delete
   GET  /v1/weekly-review/reports?limit=10
@@ -280,6 +280,18 @@ and suggested next actions.</p>
 <button id="duesoonbtn">Due soon</button>
 <button id="weeklymd">Download .md</button>
 <input id="tasksearch" placeholder="Search tasks..." style="width:12em">
+<select id="tasksearchstatus" title="Task status">
+<option value="all" selected>Any status</option>
+<option value="open">Open</option>
+<option value="done">Done</option>
+</select>
+<select id="tasksearchdue" title="Task due date">
+<option value="all" selected>Any due date</option>
+<option value="overdue">Overdue</option>
+<option value="today">Today</option>
+<option value="week">Next 7 days</option>
+<option value="none">No due date</option>
+</select>
 <button id="tasksearchbtn">Search tasks</button>
 <input id="rescheduletaskid" type="number" min="1" placeholder="task ID"
        style="width:5em">
@@ -707,6 +719,8 @@ async function searchTasks() {
   const msg = document.getElementById('tasksearchmsg');
   const box = document.getElementById('tasksearchres');
   const query = document.getElementById('tasksearch').value.trim();
+  const status = document.getElementById('tasksearchstatus').value;
+  const due = document.getElementById('tasksearchdue').value;
   if (!query) {
     msg.textContent = 'enter text to search tasks';
     return;
@@ -714,15 +728,24 @@ async function searchTasks() {
   msg.textContent = 'searching tasks...';
   box.textContent = '';
   try {
-    const r = await fetch('/v1/tasks/search?session_id=' +
-      encodeURIComponent(sessionId) + '&q=' + encodeURIComponent(query));
+    const params = new URLSearchParams({
+      session_id: sessionId, q: query, status, due});
+    const r = await fetch('/v1/tasks/search?' + params.toString());
     const j = await r.json();
     if (!r.ok) {
       msg.textContent = 'task search error: ' + (j.error || r.status);
       return;
     }
+    const filters = [];
+    if ((j.status || status) !== 'all') {
+      filters.push('status=' + (j.status || status));
+    }
+    if ((j.due || due) !== 'all') {
+      filters.push('due=' + (j.due || due));
+    }
     msg.textContent = 'task search "' + (j.query || query) + '" | ' +
-      (j.count || 0) + ' match(es)';
+      (j.count || 0) + ' match(es)' +
+      (filters.length ? ' | ' + filters.join(' | ') : '');
     const tasks = j.tasks || [];
     if (!tasks.length) {
       const none = document.createElement('div');
@@ -3054,6 +3077,8 @@ class Handler(BaseHTTPRequestHandler):
             session_id = (params.get("session_id", ["default"])[0]
                           or "default")
             query = str(params.get("q", [""])[0] or "").strip()
+            status = str(params.get("status", ["all"])[0] or "all").strip()
+            due = str(params.get("due", ["all"])[0] or "all").strip()
             if not query:
                 return self._json(400, {"error": "q is required"})
             try:
@@ -3061,7 +3086,7 @@ class Handler(BaseHTTPRequestHandler):
                 from atomzero.briefing import task_search_view
 
                 result = task_search_view(
-                    session.human.data, query,
+                    session.human.data, query, status=status, due=due,
                     now=params.get("today", [None])[0])
             except Exception as exc:
                 return self._json(400, {"error": str(exc)})

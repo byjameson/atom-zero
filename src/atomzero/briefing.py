@@ -24,6 +24,22 @@ from atomzero.weekly_reports import (
     DEFAULT_REPORTS_PATH, WeeklyReportArchive, WeeklyReportError)
 
 
+TASK_SEARCH_STATUSES = ("all", "open", "done")
+TASK_SEARCH_DUE_FILTERS = ("all", "overdue", "today", "week", "none")
+
+
+def _normalize_search_filters(status="all", due="all") -> tuple[str, str]:
+    status = str(status or "all").strip().lower()
+    due = str(due or "all").strip().lower()
+    if status not in TASK_SEARCH_STATUSES:
+        raise ValueError(
+            "status must be one of: " + ", ".join(TASK_SEARCH_STATUSES))
+    if due not in TASK_SEARCH_DUE_FILTERS:
+        raise ValueError(
+            "due must be one of: " + ", ".join(TASK_SEARCH_DUE_FILTERS))
+    return status, due
+
+
 def _open_tasks(session_data: dict | None) -> list[dict]:
     data = session_data if isinstance(session_data, dict) else {}
     tasks = data.get("tasks", [])
@@ -149,11 +165,16 @@ def render_due_soon_view(view: dict) -> str:
     return "\n".join(lines)
 
 
-def search_tasks(session_data: dict | None, query: str) -> list[dict]:
+def search_tasks(session_data: dict | None, query: str,
+                 status: str = "all", due: str = "all",
+                 today=None) -> list[dict]:
     tokens = [token for token in str(query or "").strip().lower().split()
               if token]
     if not tokens:
         return []
+    status, due = _normalize_search_filters(status, due)
+    today = _today_from_now(today)
+    week_end = (date.fromisoformat(today) + timedelta(days=7)).isoformat()
     data = session_data if isinstance(session_data, dict) else {}
     tasks = data.get("tasks", [])
     if not isinstance(tasks, list):
@@ -163,20 +184,44 @@ def search_tasks(session_data: dict | None, query: str) -> list[dict]:
         if not isinstance(task, dict):
             continue
         text = str(task.get("text", "")).lower()
-        if all(token in text for token in tokens):
-            matches.append(task)
+        if not all(token in text for token in tokens):
+            continue
+        task_status = str(task.get("status", "open") or "open")
+        if status != "all" and task_status != status:
+            continue
+        task_due = str(task.get("due", "") or "").strip()
+        if due == "overdue":
+            if task_status != "open" or not task_due or task_due >= today:
+                continue
+        elif due == "today":
+            if task_due != today:
+                continue
+        elif due == "week":
+            if not task_due or task_due < today or task_due > week_end:
+                continue
+        elif due == "none":
+            if task_due:
+                continue
+        matches.append(task)
     return matches
 
 
 def task_search_view(session_data: dict | None, query: str,
+                     status: str = "all", due: str = "all",
                      now=None) -> dict:
     query = str(query or "").strip()
-    matches = search_tasks(session_data, query)
+    status, due = _normalize_search_filters(status, due)
+    today = _today_from_now(now)
+    matches = search_tasks(
+        session_data, query, status=status, due=due, today=today)
     return {
         "generated": (now.strftime("%Y-%m-%d %H:%M")
                       if isinstance(now, datetime)
                       else str(now or time.strftime("%Y-%m-%d %H:%M"))),
+        "today": today,
         "query": query,
+        "status": status,
+        "due": due,
         "count": len(matches),
         "tasks": matches,
         "open_task_count": len(_open_tasks(session_data)),
@@ -186,7 +231,15 @@ def task_search_view(session_data: dict | None, query: str,
 
 def render_task_search_view(view: dict) -> str:
     query = view.get("query", "")
-    lines = [f'Task search "{query}" ({view.get("count", 0)} match(es))']
+    header = f'Task search "{query}" ({view.get("count", 0)} match(es))'
+    filters = []
+    if view.get("status", "all") != "all":
+        filters.append(f"status={view['status']}")
+    if view.get("due", "all") != "all":
+        filters.append(f"due={view['due']}")
+    if filters:
+        header += " | " + " | ".join(filters)
+    lines = [header]
     tasks = view.get("tasks", [])
     if not tasks:
         lines.append("- None")
@@ -907,6 +960,12 @@ def main(argv=None) -> int:
                         help="due-soon window in days (default 7)")
     parser.add_argument("--search-tasks", default=None,
                         help="search task text in the session")
+    parser.add_argument("--search-status", choices=TASK_SEARCH_STATUSES,
+                        default="all",
+                        help="filter task search by status")
+    parser.add_argument("--search-due", choices=TASK_SEARCH_DUE_FILTERS,
+                        default="all",
+                        help="filter task search by due date")
     parser.add_argument("--days", type=int, default=7)
     parser.add_argument("--max-steps", type=int, default=3)
     parser.add_argument("--json", action="store_true")
@@ -958,6 +1017,9 @@ def main(argv=None) -> int:
         parser.error("--due-days requires --due-soon")
     if args.due_days is not None and args.due_days < 1:
         parser.error("--due-days must be at least 1")
+    if args.search_tasks is None and (
+            args.search_status != "all" or args.search_due != "all"):
+        parser.error("--search-status/--search-due require --search-tasks")
     if args.search_tasks is not None:
         if not args.search_tasks.strip():
             parser.error("--search-tasks needs a query")
@@ -1137,7 +1199,9 @@ def main(argv=None) -> int:
             from atomzero.knowledge_gaps import KnowledgeGapStore
             gaps = KnowledgeGapStore(args.gaps)
         if args.search_tasks is not None:
-            result = task_search_view(session, args.search_tasks)
+            result = task_search_view(
+                session, args.search_tasks,
+                status=args.search_status, due=args.search_due)
         elif args.overdue:
             result = overdue_view(session)
         elif args.due_soon:
