@@ -139,7 +139,7 @@ short generation. It is **not MMLU, GSM8K or HumanEval**.
 - **Per-source delete:** Forget removes chunks, page/section metadata, source
   metadata and cached vectors.
 
-See [DOCUMENTS.md](https://github.com/byjameson/stream-finetune/blob/main/docs/DOCUMENTS.md).
+See [DOCUMENTS.md](https://github.com/byjameson/atom-zero/blob/main/docs/DOCUMENTS.md).
 
 ## Tools and constrained plans
 
@@ -152,7 +152,7 @@ See [DOCUMENTS.md](https://github.com/byjameson/stream-finetune/blob/main/docs/D
 
 The 49.2M model does not choose tools freely. This is a constrained executor,
 not model-driven planning. See
-[TOOL_PLANNING.md](https://github.com/byjameson/stream-finetune/blob/main/docs/TOOL_PLANNING.md).
+[TOOL_PLANNING.md](https://github.com/byjameson/atom-zero/blob/main/docs/TOOL_PLANNING.md).
 
 ## Research, curiosity and learning
 
@@ -215,10 +215,12 @@ the exact rules. It is an operator tool, not a hosted content policy.
 - PyPI: <https://pypi.org/project/atomzero/0.1.6/>
 - GitHub source: <https://github.com/byjameson/atom-zero>
 - GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v0.1.6>
-- Full project map: <https://github.com/byjameson/stream-finetune/blob/main/docs/PROJECT_OVERVIEW.md>
-- Documents: <https://github.com/byjameson/stream-finetune/blob/main/docs/DOCUMENTS.md>
-- Tool plans: <https://github.com/byjameson/stream-finetune/blob/main/docs/TOOL_PLANNING.md>
-- Benchmarks: <https://github.com/byjameson/stream-finetune/blob/main/docs/BENCHMARKS.md>
+- Quickstart: <https://github.com/byjameson/atom-zero/blob/main/docs/QUICKSTART_ATOMZERO.md>
+- Model card: <https://github.com/byjameson/atom-zero/blob/main/docs/MODEL_CARD.md>
+- Full project map: <https://github.com/byjameson/atom-zero/blob/main/docs/PROJECT_OVERVIEW.md>
+- Documents: <https://github.com/byjameson/atom-zero/blob/main/docs/DOCUMENTS.md>
+- Tool plans: <https://github.com/byjameson/atom-zero/blob/main/docs/TOOL_PLANNING.md>
+- Benchmarks: <https://github.com/byjameson/atom-zero/blob/main/docs/BENCHMARKS.md>
 - Hugging Face: <https://huggingface.co/byjameson/atom-zero-49m>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-49m>
 - dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-a-49m-local-assistant-that-says-i-dont-know-1p7m>
