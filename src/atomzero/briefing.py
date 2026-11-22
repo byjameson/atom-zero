@@ -47,7 +47,8 @@ def _task_due_label(task: dict, today: str) -> str:
     due = str(task.get("due", "") or "").strip()
     if not due:
         return ""
-    marker = " [overdue]" if due < today else ""
+    is_open = task.get("status", "open") == "open"
+    marker = " [overdue]" if due < today and is_open else ""
     return f" (due {due}{marker})"
 
 
@@ -145,6 +146,56 @@ def render_due_soon_view(view: dict) -> str:
         lines.append(
             f"- {task.get('id')}: {task.get('text', '')} | "
             f"due {task.get('due', '')}")
+    return "\n".join(lines)
+
+
+def search_tasks(session_data: dict | None, query: str) -> list[dict]:
+    tokens = [token for token in str(query or "").strip().lower().split()
+              if token]
+    if not tokens:
+        return []
+    data = session_data if isinstance(session_data, dict) else {}
+    tasks = data.get("tasks", [])
+    if not isinstance(tasks, list):
+        return []
+    matches = []
+    for task in tasks:
+        if not isinstance(task, dict):
+            continue
+        text = str(task.get("text", "")).lower()
+        if all(token in text for token in tokens):
+            matches.append(task)
+    return matches
+
+
+def task_search_view(session_data: dict | None, query: str,
+                     now=None) -> dict:
+    query = str(query or "").strip()
+    matches = search_tasks(session_data, query)
+    return {
+        "generated": (now.strftime("%Y-%m-%d %H:%M")
+                      if isinstance(now, datetime)
+                      else str(now or time.strftime("%Y-%m-%d %H:%M"))),
+        "query": query,
+        "count": len(matches),
+        "tasks": matches,
+        "open_task_count": len(_open_tasks(session_data)),
+        "weights_changed": False,
+    }
+
+
+def render_task_search_view(view: dict) -> str:
+    query = view.get("query", "")
+    lines = [f'Task search "{query}" ({view.get("count", 0)} match(es))']
+    tasks = view.get("tasks", [])
+    if not tasks:
+        lines.append("- None")
+        return "\n".join(lines)
+    today = _today_from_now(view.get("generated"))
+    for task in tasks:
+        lines.append(
+            f"- {task.get('id')} [{task.get('status', '?')}] "
+            f"{task.get('text', '')}{_task_due_label(task, today)}")
     return "\n".join(lines)
 
 
@@ -854,6 +905,8 @@ def main(argv=None) -> int:
                         help="list tasks due in the next N days")
     parser.add_argument("--due-days", type=int, default=None,
                         help="due-soon window in days (default 7)")
+    parser.add_argument("--search-tasks", default=None,
+                        help="search task text in the session")
     parser.add_argument("--days", type=int, default=7)
     parser.add_argument("--max-steps", type=int, default=3)
     parser.add_argument("--json", action="store_true")
@@ -905,6 +958,12 @@ def main(argv=None) -> int:
         parser.error("--due-days requires --due-soon")
     if args.due_days is not None and args.due_days < 1:
         parser.error("--due-days must be at least 1")
+    if args.search_tasks is not None:
+        if not args.search_tasks.strip():
+            parser.error("--search-tasks needs a query")
+        if (args.weekly or args.goal or args.reports or args.markdown
+                or args.out or args.overdue or args.due_soon):
+            parser.error("--search-tasks cannot be combined with other views")
     if args.reports and (
             args.weekly or (args.markdown and not args.compare)
             or args.out or args.goal):
@@ -1077,7 +1136,9 @@ def main(argv=None) -> int:
         if Path(args.gaps).exists():
             from atomzero.knowledge_gaps import KnowledgeGapStore
             gaps = KnowledgeGapStore(args.gaps)
-        if args.overdue:
+        if args.search_tasks is not None:
+            result = task_search_view(session, args.search_tasks)
+        elif args.overdue:
             result = overdue_view(session)
         elif args.due_soon:
             result = due_soon_view(
@@ -1101,6 +1162,8 @@ def main(argv=None) -> int:
             docs.close()
     if args.json:
         print(json.dumps(result, indent=2, ensure_ascii=False))
+    elif args.search_tasks is not None:
+        print(render_task_search_view(result))
     elif args.overdue:
         print(render_overdue_view(result))
     elif args.due_soon:

@@ -173,6 +173,49 @@ def test_cli_due_soon_tasks(tmp_path, capsys):
     assert exc.value.code == 2
 
 
+def test_cli_search_tasks(tmp_path, capsys):
+    session_path = tmp_path / "session.json"
+    session_path.write_text(json.dumps({"tasks": [
+        {"id": 1, "text": "Submit quarterly report", "status": "open",
+         "created": "2026-11-01T09:00:00", "completed": "",
+         "due": "2099-01-01"},
+        {"id": 2, "text": "submit expenses", "status": "done",
+         "created": "2026-11-01T09:00:00", "completed": "2026-11-02",
+         "due": "2000-01-01"},
+        {"id": 3, "text": "plan launch", "status": "open",
+         "created": "2026-11-01T09:00:00", "completed": ""},
+    ]}), encoding="utf-8")
+    common = [
+        "--session", str(session_path),
+        "--docs", str(tmp_path / "missing.db"),
+        "--gaps", str(tmp_path / "missing-gaps.json")]
+    assert main(common + ["--search-tasks", "SUBMIT", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["query"] == "SUBMIT"
+    assert payload["count"] == 2
+    assert [task["id"] for task in payload["tasks"]] == [1, 2]
+    assert payload["open_task_count"] == 2
+
+    assert main(common + ["--search-tasks", "submit"]) == 0
+    output = capsys.readouterr().out
+    assert 'Task search "submit" (2 match(es))' in output
+    assert "- 1 [open] Submit quarterly report (due 2099-01-01)" in output
+    assert "- 2 [done] submit expenses (due 2000-01-01)" in output
+    assert "[overdue]" not in output
+    assert "plan launch" not in output
+
+    assert main(common + ["--search-tasks", "missing", "--json"]) == 0
+    empty = json.loads(capsys.readouterr().out)
+    assert empty["count"] == 0
+    assert empty["tasks"] == []
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--search-tasks", " "])
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--search-tasks", "submit", "--weekly"])
+    assert exc.value.code == 2
+
+
 def test_cli_weekly_markdown_export(tmp_path, capsys):
     session_path = tmp_path / "session.json"
     now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")

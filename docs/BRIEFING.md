@@ -39,10 +39,20 @@ rescheduled with `reschedule task 1 due 2026-12-10`; the HTTP endpoint is
 `POST /v1/tasks/reschedule` and the UI has a task ID/date form. Tasks can be
 deleted only after explicit confirmation: chat previews `delete task 1` and
 requires `confirm task delete`; the UI has a **Confirm delete** checkbox and
-`POST /v1/tasks/delete` requires `"confirm": true`. The daily brief and weekly
-review add overdue/due-soon counts, a focus item, due-date labels and dedicated
-Markdown sections. Chat understands `due soon` and `due soon in 14 days`. The UI **Overdue tasks** and **Due soon** buttons expose
-the same session views; HTTP equivalents are `/v1/tasks/overdue` and
+`POST /v1/tasks/delete` requires `"confirm": true`.
+
+Task text is searchable with `search tasks report`, `find task report` or
+`task search report`. The HTTP endpoint is
+`GET /v1/tasks/search?q=report`, the CLI form is
+`atomzero-brief --session ... --search-tasks report [--json]` and the UI has a
+**Search tasks** field/button. Search is case-insensitive and requires every
+query word to appear in the task text; completed tasks are included with their
+status.
+
+The daily brief and weekly review add overdue/due-soon counts, a focus item,
+due-date labels and dedicated Markdown sections. Chat understands `due soon`
+and `due soon in 14 days`. The UI **Overdue tasks** and **Due soon** buttons
+expose the same session views; HTTP equivalents are `/v1/tasks/overdue` and
 `/v1/tasks/due-soon?days=7`. CLI equivalents are
 `atomzero-brief --session ... --overdue [--json]` and
 `atomzero-brief --session ... --due-soon --due-days 7 [--json]`.

@@ -849,6 +849,13 @@ def test_ui_collection_scope_contract():
     assert 'id="duesoonbtn"' in page
     assert 'id="duedays"' in page
     assert 'data-q="due soon"' in page
+    assert 'data-q="search tasks report"' in page
+    assert 'id="tasksearch"' in page
+    assert 'id="tasksearchbtn"' in page
+    assert 'id="tasksearchres"' in page
+    assert 'id="tasksearchmsg"' in page
+    assert "searchTasks" in page
+    assert "/v1/tasks/search" in page
     assert 'id="rescheduletaskid"' in page
     assert 'id="rescheduledue"' in page
     assert 'id="rescheduletaskbtn"' in page
@@ -1859,6 +1866,51 @@ def test_http_due_soon_tasks(tmp_path):
                 base + "/v1/tasks/due-soon?session_id=due-soon-http&days=0",
                 timeout=10)
         assert invalid_days.value.code == 400
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
+
+
+def test_http_search_tasks(tmp_path):
+    old = dict(chat_server._state)
+    chat_server._state.update({
+        "model": None, "tok": None, "docs": None, "adapter": "",
+        "name": "tiny-test", "params": 1, "config": {}, "step": 0,
+        "api_key": "", "metrics": {"requests": 0, "generated_tokens": 0},
+        "safety": None, "wiki_lang": "en",
+        "session_dir": str(tmp_path / "sessions"), "sessions": {},
+        "generator": None, "allow_general_chat": False, "skills": None,
+    })
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        for text in ("submit quarterly report", "submit expenses",
+                     "plan launch"):
+            _post(base + "/v1/agent/chat", {
+                "session_id": "task-search-http", "message": f"add task {text}"})
+        query = urllib.parse.quote("submit report")
+        result = json.loads(urllib.request.urlopen(
+            base + "/v1/tasks/search?session_id=task-search-http&q=" + query,
+            timeout=10).read().decode("utf-8"))
+        assert result["query"] == "submit report"
+        assert result["count"] == 1
+        assert result["open_task_count"] == 3
+        assert result["tasks"][0]["text"] == "submit quarterly report"
+        assert result["weights_changed"] is False
+        empty = json.loads(urllib.request.urlopen(
+            base + "/v1/tasks/search?session_id=task-search-http&q=missing",
+            timeout=10).read().decode("utf-8"))
+        assert empty["count"] == 0
+        assert empty["tasks"] == []
+        with pytest.raises(urllib.error.HTTPError) as missing_query:
+            urllib.request.urlopen(
+                base + "/v1/tasks/search?session_id=task-search-http",
+                timeout=10)
+        assert missing_query.value.code == 400
     finally:
         httpd.shutdown()
         httpd.server_close()

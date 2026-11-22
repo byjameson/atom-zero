@@ -9,7 +9,8 @@ from pathlib import Path
 
 from atomzero.briefing import (
     build_briefing, build_weekly_review, due_soon_view, plan_goal,
-    render_due_soon_view, render_weekly_report_comparison)
+    render_due_soon_view, render_task_search_view,
+    render_weekly_report_comparison, task_search_view)
 from atomzero.contradictions import compare_sources
 from atomzero.doc_memory import format_citation, grounded_answer
 from atomzero.knowledge_gaps import KnowledgeGapError
@@ -910,6 +911,19 @@ class AgentSession:
             "tool_calls": [], "sources": [], "evidence": [],
         }
 
+    def _search_tasks(self, query: str) -> dict:
+        view = task_search_view(self.human.data, query)
+        return {
+            "reply": render_task_search_view(view),
+            "tool_calls": [{"name": "search_tasks",
+                            "query": view["query"],
+                            "matches": view["count"]}],
+            "sources": [],
+            "evidence": [],
+            "task_search": view,
+            "weights_changed": False,
+        }
+
     def _due_soon(self, days: int = 7) -> dict:
         view = due_soon_view(self.human.data, days=days)
         return {
@@ -1272,6 +1286,14 @@ class AgentSession:
         if low in ("brief me", "brief me?", "daily brief", "daily brief?",
                    "what should i do today", "what should i do today?"):
             return self._briefing()
+        task_search = re.match(
+            r"^(?:search|find)\s+tasks?\s+(.+?)\??$",
+            text, re.IGNORECASE)
+        if not task_search:
+            task_search = re.match(
+                r"^task\s+search\s+(.+?)\??$", text, re.IGNORECASE)
+        if task_search:
+            return self._search_tasks(task_search.group(1).strip())
         due_match = re.match(
             r"^(?:due soon|tasks due soon|what(?:'s| is) due soon|"
             r"show due soon)(?:\s+(?:in\s+)?(\d+)\s+days?)?\??$",

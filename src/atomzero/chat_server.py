@@ -30,6 +30,7 @@ Endpoints:
   GET  /v1/weekly-review/export?session_id=...&days=7
   GET  /v1/tasks/overdue?session_id=default
   GET  /v1/tasks/due-soon?session_id=default&days=7
+  GET  /v1/tasks/search?session_id=default&q=report
   POST /v1/tasks/reschedule
   POST /v1/tasks/delete
   GET  /v1/weekly-review/reports?limit=10
@@ -257,6 +258,7 @@ hr{border:0;border-top:1px solid #ddd;margin:22px 0}
 <button data-q="what is the population of Paris?">no-source demo</button>
 <button data-q="brief me">brief me</button>
 <button data-q="due soon">due soon</button>
+<button data-q="search tasks report">search tasks</button>
 <button data-q="find report weekly">find report</button>
 <button data-q="list reports">list reports</button>
 <button data-q="list reports oldest">reports oldest</button>
@@ -277,6 +279,8 @@ and suggested next actions.</p>
        title="Due-soon window in days" style="width:4em">
 <button id="duesoonbtn">Due soon</button>
 <button id="weeklymd">Download .md</button>
+<input id="tasksearch" placeholder="Search tasks..." style="width:12em">
+<button id="tasksearchbtn">Search tasks</button>
 <input id="rescheduletaskid" type="number" min="1" placeholder="task ID"
        style="width:5em">
 <input id="rescheduledue" placeholder="new due date" style="width:9em">
@@ -292,6 +296,8 @@ Confirm delete</label>
 <div id="briefres"></div>
 <div id="overdueres"></div>
 <div id="dueres"></div>
+<div id="tasksearchres"></div>
+<p id="tasksearchmsg" class="hint"></p>
 <p id="reschedulemsg" class="hint"></p>
 <p id="deletetaskmsg" class="hint"></p>
 <div class="row"><input id="weeklyreportsearch" placeholder="Search reports...">
@@ -695,6 +701,47 @@ async function getDueSoonTasks() {
     });
   } catch (e) {
     msg.textContent = 'due-soon error: ' + e;
+  }
+}
+async function searchTasks() {
+  const msg = document.getElementById('tasksearchmsg');
+  const box = document.getElementById('tasksearchres');
+  const query = document.getElementById('tasksearch').value.trim();
+  if (!query) {
+    msg.textContent = 'enter text to search tasks';
+    return;
+  }
+  msg.textContent = 'searching tasks...';
+  box.textContent = '';
+  try {
+    const r = await fetch('/v1/tasks/search?session_id=' +
+      encodeURIComponent(sessionId) + '&q=' + encodeURIComponent(query));
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'task search error: ' + (j.error || r.status);
+      return;
+    }
+    msg.textContent = 'task search "' + (j.query || query) + '" | ' +
+      (j.count || 0) + ' match(es)';
+    const tasks = j.tasks || [];
+    if (!tasks.length) {
+      const none = document.createElement('div');
+      none.className = 'hint';
+      none.textContent = 'No matching tasks.';
+      box.appendChild(none);
+      return;
+    }
+    tasks.forEach(task => {
+      const card = document.createElement('div');
+      card.className = 'qitem';
+      let line = '#' + task.id + ' [' + (task.status || '?') + '] ' +
+        (task.text || '');
+      if (task.due) line += ' | due ' + task.due;
+      card.textContent = line;
+      box.appendChild(card);
+    });
+  } catch (e) {
+    msg.textContent = 'task search error: ' + e;
   }
 }
 async function rescheduleTask() {
@@ -1242,6 +1289,7 @@ document.getElementById('briefrefresh').onclick = () => getBriefing();
 document.getElementById('briefweekly').onclick = () => getWeeklyReview();
 document.getElementById('overduebtn').onclick = () => getOverdueTasks();
 document.getElementById('duesoonbtn').onclick = () => getDueSoonTasks();
+document.getElementById('tasksearchbtn').onclick = () => searchTasks();
 document.getElementById('rescheduletaskbtn').onclick = () => rescheduleTask();
 document.getElementById('deletetaskbtn').onclick = () => deleteTask();
 document.getElementById('weeklymd').onclick = () => downloadWeeklyMarkdown();
@@ -2999,6 +3047,25 @@ class Handler(BaseHTTPRequestHandler):
             }]})
         elif self.path == "/metrics":
             self._json(200, _state["metrics"])
+        elif (self.path == "/v1/tasks/search"
+              or self.path.startswith("/v1/tasks/search?")):
+            params = urllib.parse.parse_qs(
+                urllib.parse.urlparse(self.path).query)
+            session_id = (params.get("session_id", ["default"])[0]
+                          or "default")
+            query = str(params.get("q", [""])[0] or "").strip()
+            if not query:
+                return self._json(400, {"error": "q is required"})
+            try:
+                session = self._session(session_id)
+                from atomzero.briefing import task_search_view
+
+                result = task_search_view(
+                    session.human.data, query,
+                    now=params.get("today", [None])[0])
+            except Exception as exc:
+                return self._json(400, {"error": str(exc)})
+            return self._json(200, result)
         elif (self.path == "/v1/tasks/due-soon"
               or self.path.startswith("/v1/tasks/due-soon?")):
             params = urllib.parse.parse_qs(

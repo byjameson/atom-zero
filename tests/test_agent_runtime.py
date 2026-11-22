@@ -205,6 +205,25 @@ def test_agent_deletes_task_with_confirmation(tmp_path):
     assert "could not find that task" in missing["reply"]
 
 
+def test_agent_searches_task_text(tmp_path):
+    agent = AgentSession("s-search-tasks", tmp_path / "memory.json")
+    agent.chat("add task submit quarterly report")
+    agent.chat("add task plan launch")
+    found = agent.chat("search tasks report")
+    assert found["tool_calls"][0]["name"] == "search_tasks"
+    assert found["task_search"]["count"] == 1
+    assert found["task_search"]["tasks"][0]["text"] == "submit quarterly report"
+    assert "Task search" in found["reply"]
+    assert "submit quarterly report" in found["reply"]
+    assert "plan launch" not in found["reply"]
+    by_find = agent.chat("find task launch")
+    assert by_find["task_search"]["count"] == 1
+    assert "plan launch" in by_find["reply"]
+    missing = agent.chat("task search missing")
+    assert missing["task_search"]["count"] == 0
+    assert "None" in missing["reply"]
+
+
 def test_agent_brief_me_returns_local_brief(tmp_path):
     docs = DocMemory(tmp_path / "docs.db")
     docs.add_text("notes/launch.txt", "The launch code is L-7781.",

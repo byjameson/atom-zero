@@ -88,6 +88,9 @@
   `POST /v1/tasks/reschedule` and a UI reschedule form.
 - Added confirmed task deletion (`delete task ID` → `confirm task delete`),
   `POST /v1/tasks/delete` with `"confirm": true`, and a UI delete form.
+- Added task text search (`search tasks TEXT`, `find task TEXT` or
+  `task search TEXT`), `GET /v1/tasks/search?q=TEXT`,
+  `atomzero-brief --search-tasks TEXT` and a UI search field/button.
 - Added `benchmarks/weekly_export_regression.py` (29/29 checks: CLI, HTTP, UI,
   the report archive, pruning, retention, dry-run preview, deletion, query
   filtering, chat search/list/maintenance, chat/HTTP sorting, report viewing,
