@@ -1225,14 +1225,23 @@ class AgentSession:
             "weights_changed": False,
         }
 
-    def _tag_audit(self, limit: int = 10) -> dict:
-        view = task_tag_audit_view(self.human.data, limit=limit)
+    def _tag_audit(self, limit: int = 10, tag: str = "all",
+                   action: str = "all") -> dict:
+        try:
+            view = task_tag_audit_view(
+                self.human.data, limit=limit, tag=tag, action=action)
+        except ValueError as exc:
+            return {"reply": str(exc), "tool_calls": [],
+                    "sources": [], "evidence": []}
+        tool = {"name": "tag_audit", "count": view["count"],
+                "total": view["total"], "limit": view["limit"]}
+        if view["tag"] != "all":
+            tool["tag"] = view["tag"]
+        if view["action"] != "all":
+            tool["action"] = view["action"]
         return {
             "reply": view["text"],
-            "tool_calls": [{"name": "tag_audit",
-                            "count": view["count"],
-                            "total": view["total"],
-                            "limit": view["limit"]}],
+            "tool_calls": [tool],
             "sources": [],
             "evidence": [],
             "tag_audit": view,
@@ -1730,12 +1739,51 @@ class AgentSession:
                 groups.get("sort") or "default",
                 tag=groups.get("tag") or "all")
         tag_audit_match = re.match(
-            r"^(?:list|show)?\s*tag\s+audit"
-            r"(?:\s+(?:limit\s+)?(\d+))?\??$", text, re.IGNORECASE)
+            r"^(?:list|show)?\s*tag\s+audit(?P<rest>.*?)\??$",
+            text, re.IGNORECASE)
         if tag_audit_match:
+            tokens = tag_audit_match.group("rest").split()
+            limit = 10
+            tag = "all"
+            action = "all"
+            index = 0
+            error = ""
+            while index < len(tokens):
+                token = tokens[index].lower()
+                if token == "action":
+                    if index + 1 >= len(tokens):
+                        error = "Action filter needs delete or undo."
+                        break
+                    action = tokens[index + 1]
+                    index += 2
+                    continue
+                if token == "tag":
+                    if index + 1 >= len(tokens):
+                        error = "Tag filter needs a tag name."
+                        break
+                    tag = tokens[index + 1]
+                    index += 2
+                    continue
+                if token == "limit":
+                    if (index + 1 >= len(tokens)
+                            or not tokens[index + 1].isdigit()):
+                        error = "Limit filter needs a number."
+                        break
+                    limit = int(tokens[index + 1])
+                    index += 2
+                    continue
+                if tokens[index].isdigit():
+                    limit = int(tokens[index])
+                    index += 1
+                    continue
+                if tag == "all":
+                    tag = tokens[index]
+                index += 1
+            if error:
+                return {"reply": error, "tool_calls": [],
+                        "sources": [], "evidence": []}
             return self._tag_audit(
-                int(tag_audit_match.group(1))
-                if tag_audit_match.group(1) else 10)
+                limit=limit, tag=tag, action=action)
         if (re.match(r"^(?:list|show)\s+(?:task\s+)?tags\??$", text,
                      re.IGNORECASE)
                 or low.rstrip("?") in ("tags", "task tags")):

@@ -52,6 +52,7 @@ after `0.5.0`.
   from a per-task snapshot stored in the session.
 - Local tag audit trail of the last 20 delete/undo events in chat, CLI, HTTP,
   UI and weekly Markdown/archive output.
+- Tag audit supports tag/action filters across chat, CLI, HTTP and UI.
 - Tag parity in the legacy `research/chat_human.py` runtime: add/tag/list
   filters, inventory, confirmed rename and delete, undo and tag audit with
   persistence.

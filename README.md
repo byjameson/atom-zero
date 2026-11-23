@@ -73,7 +73,7 @@ More fixes are in [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
   (`brief me priority`, `weekly review priority`, `list tasks priority`,
   filtered `list tasks` status/due/priority/tag views with structured tool
   calls, task tags, `list tags` counts, confirmed `rename tag` /
-  `delete tag` with undo and a local tag audit, matching
+  `delete tag` with undo and a filterable tag audit, matching
   `/v1/tasks/list` + UI panels and CSV/Markdown export via `/v1/tasks/export`,
   tag-aware `search tasks report sort priority`, `overdue tasks tag work`,
   `due soon tag work`), notes, arithmetic, time, optional AISC architecture

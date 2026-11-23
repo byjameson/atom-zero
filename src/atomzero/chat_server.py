@@ -31,7 +31,7 @@ Endpoints:
   GET  /v1/weekly-review/export?session_id=...&days=7&tag=work
   GET  /v1/tasks/list?session_id=default&status=open&due=week&priority=high&sort=priority
   GET  /v1/tasks/tags?session_id=default
-  GET  /v1/tasks/tags/audit?session_id=default&limit=10
+  GET  /v1/tasks/tags/audit?session_id=default&limit=10&tag=work&action=delete_tag
   POST /v1/tasks/tags/rename  (add "confirm": true to apply)
   POST /v1/tasks/tags/delete  (add "confirm": true to apply)
   POST /v1/tasks/tags/undo-delete
@@ -355,6 +355,12 @@ and suggested next actions.</p>
 <button id="tasklistmd">Download .md</button>
 <button id="tasktagsbtn">Tags</button>
 <button id="tagauditbtn">Tag audit</button>
+<input id="tagaudittag" placeholder="tag" style="width:7em">
+<select id="tagauditaction" title="Audit action">
+<option value="all" selected>All actions</option>
+<option value="delete_tag">Delete</option>
+<option value="undo_tag_delete">Undo</option>
+</select>
 <input id="renameoldtag" placeholder="old tag" style="width:7em">
 <input id="renamenewtag" placeholder="new tag" style="width:7em">
 <label class="hint"><input id="renametagconfirm" type="checkbox">
@@ -987,18 +993,26 @@ async function getTaskTags() {
 async function getTagAudit() {
   const msg = document.getElementById('tagauditmsg');
   const box = document.getElementById('tagauditres');
+  const tag = document.getElementById('tagaudittag').value.trim();
+  const action = document.getElementById('tagauditaction').value;
   msg.textContent = 'loading tag audit...';
   box.textContent = '';
   try {
     const params = new URLSearchParams({session_id: sessionId, limit: '10'});
+    if (tag) params.set('tag', tag);
+    if (action !== 'all') params.set('action', action);
     const r = await fetch('/v1/tasks/tags/audit?' + params.toString());
     const j = await r.json();
     if (!r.ok) {
       msg.textContent = 'tag audit error: ' + (j.error || r.status);
       return;
     }
+    const filters = [];
+    if ((j.tag || 'all') !== 'all') filters.push('tag=' + j.tag);
+    if ((j.action || 'all') !== 'all') filters.push('action=' + j.action);
     msg.textContent = 'tag audit | ' + (j.count || 0) + ' of ' +
-      (j.total || 0) + ' event(s)';
+      (j.total || 0) + ' event(s)' +
+      (filters.length ? ' | ' + filters.join(' | ') : '');
     const events = j.events || [];
     if (!events.length) {
       const none = document.createElement('div');
@@ -3608,11 +3622,15 @@ class Handler(BaseHTTPRequestHandler):
                 limit = int(params.get("limit", ["10"])[0])
                 if limit < 1:
                     raise ValueError("limit must be at least 1")
+                tag = str(params.get("tag", ["all"])[0] or "all").strip()
+                action = str(params.get("action", ["all"])[0]
+                             or "all").strip()
                 session = self._session(session_id)
                 from atomzero.briefing import task_tag_audit_view
 
                 result = task_tag_audit_view(
-                    session.human.data, limit=limit,
+                    session.human.data, limit=limit, tag=tag,
+                    action=action,
                     now=params.get("today", [None])[0])
             except (TypeError, ValueError) as exc:
                 return self._json(400, {"error": str(exc)})

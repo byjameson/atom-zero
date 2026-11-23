@@ -899,6 +899,8 @@ def test_ui_collection_scope_contract():
     assert 'id="deletetagmsg"' in page
     assert 'id="undotagdeletebtn"' in page
     assert 'id="tagauditbtn"' in page
+    assert 'id="tagaudittag"' in page
+    assert 'id="tagauditaction"' in page
     assert 'id="tagauditmsg"' in page
     assert 'id="tagauditres"' in page
     assert "deleteTag" in page
@@ -2361,6 +2363,39 @@ def test_http_delete_tag(tmp_path):
             timeout=10).read().decode("utf-8"))
         assert limited_audit["count"] == 1
         assert limited_audit["total"] == 2
+        filtered_audit = json.loads(urllib.request.urlopen(
+            base + "/v1/tasks/tags/audit?session_id=" + session_id
+                   + "&tag=work&action=delete_tag",
+            timeout=10).read().decode("utf-8"))
+        assert filtered_audit["tag"] == "work"
+        assert filtered_audit["action"] == "delete_tag"
+        assert filtered_audit["count"] == 1
+        assert filtered_audit["total"] == 1
+        assert filtered_audit["events"][0]["action"] == "delete_tag"
+        undo_audit = json.loads(urllib.request.urlopen(
+            base + "/v1/tasks/tags/audit?session_id=" + session_id
+                   + "&action=undo",
+            timeout=10).read().decode("utf-8"))
+        assert undo_audit["action"] == "undo_tag_delete"
+        assert undo_audit["count"] == 1
+        missing_audit = json.loads(urllib.request.urlopen(
+            base + "/v1/tasks/tags/audit?session_id=" + session_id
+                   + "&tag=missing",
+            timeout=10).read().decode("utf-8"))
+        assert missing_audit["count"] == 0
+        assert missing_audit["total"] == 0
+        with pytest.raises(urllib.error.HTTPError) as invalid_audit_tag:
+            urllib.request.urlopen(
+                base + "/v1/tasks/tags/audit?session_id=" + session_id
+                       + "&tag=bad%20tag%21",
+                timeout=10)
+        assert invalid_audit_tag.value.code == 400
+        with pytest.raises(urllib.error.HTTPError) as invalid_audit_action:
+            urllib.request.urlopen(
+                base + "/v1/tasks/tags/audit?session_id=" + session_id
+                       + "&action=random",
+                timeout=10)
+        assert invalid_audit_action.value.code == 400
         with pytest.raises(urllib.error.HTTPError) as invalid_limit:
             urllib.request.urlopen(
                 base + "/v1/tasks/tags/audit?session_id=" + session_id

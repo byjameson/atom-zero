@@ -866,6 +866,24 @@ def test_tag_audit_and_weekly_archive(tmp_path, capsys):
     assert limited["count"] == 1
     assert limited["total"] == 2
     assert limited["events"][0]["action"] == "undo_tag_delete"
+    tagged_view = task_tag_audit_view(session, tag="work")
+    assert tagged_view["tag"] == "work"
+    assert tagged_view["count"] == 2
+    assert tagged_view["total"] == 2
+    assert "| tag=work:" in tagged_view["text"]
+    delete_view = task_tag_audit_view(session, action="delete_tag")
+    assert delete_view["action"] == "delete_tag"
+    assert delete_view["count"] == 1
+    assert delete_view["total"] == 1
+    assert delete_view["events"][0]["action"] == "delete_tag"
+    assert "| action=delete_tag:" in delete_view["text"]
+    undo_view = task_tag_audit_view(session, action="undo")
+    assert undo_view["action"] == "undo_tag_delete"
+    assert undo_view["count"] == 1
+    assert task_tag_audit_view(
+        session, tag="home")["total"] == 0
+    assert task_tag_audit_view(
+        session, tag="work", action="undo_tag_delete")["count"] == 1
 
     review = build_weekly_review(session, None, None, days=7)
     assert review["tag_audit_total"] == 2
@@ -921,6 +939,28 @@ def test_tag_audit_and_weekly_archive(tmp_path, capsys):
     assert payload["total"] == 2
     assert main(common + ["--tag-audit"]) == 0
     assert "Tag audit (2 of 2 event(s))" in capsys.readouterr().out
+    assert main(common + [
+        "--tag-audit", "--tag-audit-tag", "work",
+        "--tag-audit-action", "delete_tag", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["tag"] == "work"
+    assert payload["action"] == "delete_tag"
+    assert payload["count"] == 1
+    assert payload["total"] == 1
+    assert main(common + [
+        "--tag-audit", "--tag-audit-tag", "home", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["count"] == 0
+    assert payload["total"] == 0
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--tag-audit-tag", "work"])
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--tag-audit-action", "delete_tag"])
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--tag-audit", "--tag-audit-tag", "bad tag!"])
+    assert exc.value.code == 2
     assert main(common + ["--weekly", "--markdown"]) == 0
     assert "## Tag audit (2)" in capsys.readouterr().out
     with pytest.raises(SystemExit) as exc:

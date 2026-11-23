@@ -158,14 +158,19 @@ Tag delete and undo events are also kept in a local audit trail (last 20):
 ```text
 tag audit
 tag audit 5
+tag audit work
+tag audit action delete
+tag audit tag work action undo 1
 # Tag audit (2 of 2 event(s)):
 # - 2026-11-23T10:00:00 | undo delete tag 'work' | restored 2 task(s) [#1, #2]
 # - 2026-11-23T09:59:00 | delete tag 'work' | 2 task(s) (1 open, 1 done) [#1, #2]
 ```
 
-CLI uses `--tag-audit [--tag-audit-limit N]`, HTTP uses
-`GET /v1/tasks/tags/audit?limit=10`, and the UI has a **Tag audit** button. The
-weekly review JSON includes `tag_audit`/`tag_audit_total`, and its Markdown
+CLI uses `--tag-audit [--tag-audit-limit N] [--tag-audit-tag TAG]
+[--tag-audit-action delete_tag|undo_tag_delete]`, HTTP uses
+`GET /v1/tasks/tags/audit?limit=10&tag=work&action=delete_tag`, and the UI has
+a **Tag audit** button with tag and action fields. The weekly review JSON
+includes `tag_audit`/`tag_audit_total`, and its Markdown
 export adds a `## Tag audit` section, so archived reports keep the trail.
 
 Priority can also be updated outside chat:

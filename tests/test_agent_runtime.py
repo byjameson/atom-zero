@@ -469,6 +469,25 @@ def test_agent_deletes_tag_with_confirmation(tmp_path):
     limited_audit = agent.chat("tag audit 1")
     assert limited_audit["tag_audit"]["count"] == 1
     assert limited_audit["tag_audit"]["total"] == 2
+    tagged_audit = agent.chat("tag audit work")
+    assert tagged_audit["tool_calls"][0]["tag"] == "work"
+    assert tagged_audit["tag_audit"]["count"] == 2
+    assert tagged_audit["tag_audit"]["total"] == 2
+    assert "| tag=work" in tagged_audit["reply"]
+    delete_audit = agent.chat("tag audit action delete")
+    assert delete_audit["tool_calls"][0]["action"] == "delete_tag"
+    assert delete_audit["tag_audit"]["count"] == 1
+    assert delete_audit["tag_audit"]["total"] == 1
+    assert "| action=delete_tag" in delete_audit["reply"]
+    combined_audit = agent.chat(
+        "tag audit tag work action undo 1")
+    assert combined_audit["tool_calls"][0] == {
+        "name": "tag_audit", "count": 1, "total": 1, "limit": 1,
+        "tag": "work", "action": "undo_tag_delete"}
+    assert "| tag=work | action=undo_tag_delete" in combined_audit["reply"]
+    invalid_audit = agent.chat("tag audit work action bad")
+    assert "action must be" in invalid_audit["reply"]
+    assert invalid_audit["tool_calls"] == []
 
     tags = agent.chat("tags")
     assert tags["task_tags"]["tag_count"] == 2
