@@ -1,0 +1,54 @@
+name = "AtomZeroClaims"
+version = "0.1.0"
+description = "Deterministic claim extraction, evidence linking and phrase-level contradiction audit."
+min_assurance = 0.90
+max_context_tokens = 8000
+
+[[components]]
+name = "ClaimExtractor"
+input_type = "Text"
+output_type = "Claims"
+kind = "evaluator"
+assurance = 0.97
+verified = true
+evidence = "tests/test_claims.py sentence extraction, source offsets and deterministic claim IDs"
+assumptions = ["sentence boundaries are detected by punctuation and newlines"]
+guarantees = ["claim offsets refer to the original text", "claim IDs are stable for the same input"]
+context_tokens = 512
+
+[[components]]
+name = "EvidenceLinker"
+input_type = "Claims"
+output_type = "LinkedClaims"
+kind = "evaluator"
+assurance = 0.95
+verified = true
+evidence = "tests/test_claims.py best-hit linking plus supported, weak and unsupported cases"
+assumptions = ["retrieval hits carry a text chunk and optional locators"]
+guarantees = ["each claim receives at most one evidence item", "support stays in 0..1", "unsupported claims have null evidence"]
+context_tokens = 2048
+
+[[components]]
+name = "ContradictionEvaluator"
+input_type = "LinkedClaims"
+output_type = "CheckedClaims"
+kind = "evaluator"
+assurance = 0.93
+verified = true
+evidence = "tests/test_claims.py numeric mismatch and unrelated-claim non-conflict cases"
+assumptions = ["conflicts are phrase-level hints, not truth verdicts"]
+guarantees = ["unrelated claims are not reported as contradictions", "conflict counts and pairs are deterministic"]
+context_tokens = 512
+
+[[components]]
+name = "AnswerBuilder"
+input_type = "CheckedClaims"
+output_type = "ClaimAudit"
+kind = "tool"
+reversible = true
+assurance = 0.96
+verified = true
+evidence = "tests/test_claims.py audit composition, empty input and deterministic output cases"
+assumptions = ["the audit is consumed by a human or a later gate"]
+guarantees = ["audit includes claims, summary and method", "weights_changed is always false"]
+context_tokens = 1024
