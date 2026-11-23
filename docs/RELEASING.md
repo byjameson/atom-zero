@@ -10,13 +10,13 @@ has `223` tests and `benchmarks/self_improvement_regression.py` passes 12/12.
 
 ## Release cadence
 
-Releases follow **0.3 minor steps**, not every 0.1. The current batch is
-`0.19.0`; the next release boundary is **`0.22.0`**. Do not publish `0.20.x` or
-`0.21.x`.
+Releases follow **one major version per release** now, not every 0.1 or 0.3.
+`0.19.0` is the current published version; the next release boundary is
+**`1.0.0`**, then `2.0.0`. Do not publish `0.20.x`–`0.99.x`.
 
-Intermediate commits stay local. A release batch can contain roughly ten
-development increments, but it is only published when the minor version has
-advanced by 0.3. A hotfix is the only exception and still gets one push.
+Intermediate commits stay local. A release batch can contain many development
+increments, but it is only published at a major boundary. A hotfix is the only
+exception and still gets one push.
 
 At the batch boundary: bump the version, update release notes/model cards/docs,
 run preflight and `scripts/verify_release.py`, and publish every canonical

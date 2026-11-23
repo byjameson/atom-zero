@@ -21,7 +21,8 @@
   reports **0 failures**; release commit `a6ad17c`, annotated tag `v0.19.0`.
   LinkedIn remains blocked/unverified. The `publish.yml` trusted-publisher run
   remains a historical failed attempt; uploads use a project token from the
-  owner's local token file. The next boundary is **0.22.0** (0.3 cadence).
+  owner's local token file. The next boundary is **1.0.0**; release only at a
+  major version boundary, not every 0.1 or 0.3.
 
 ## Completed in this session
 
