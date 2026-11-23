@@ -99,3 +99,5 @@ It never merges, pushes, tags or publishes.
 - `docs/LOOP_CYCLE_6.md`: the first measured cycle fed by this audit; the
   external agent narrowed `agent_runner.verify`'s broad handler and added two
   regression tests (`gate_id cac82f022c879258`, `855/0 -> 857/0`).
+- `docs/aisc/atomzero-self-improve.toml` covers the loop itself; the AISC
+  coverage report is clean (5/5 verified components).

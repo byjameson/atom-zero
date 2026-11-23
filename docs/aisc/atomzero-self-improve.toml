@@ -1,0 +1,68 @@
+name = "AtomZeroSelfImprove"
+version = "0.1.0"
+description = "Opt-in bounded self-improvement loop: live signals to planner to packet to runner to gate to human decision to scoreboard."
+min_assurance = 0.90
+max_context_tokens = 8000
+
+[[components]]
+name = "LoopPlanner"
+input_type = "SignalInputs"
+output_type = "HumanGatedPlan"
+kind = "evaluator"
+assurance = 0.95
+verified = true
+evidence = "tests/test_self_improve.py and tests/test_improvement.py plan and proposal-selection cases"
+assumptions = ["signals or a self-code audit are supplied locally"]
+guarantees = ["every action requires human approval", "auto_apply and weights_changed are false", "planning is deterministic and content-free"]
+context_tokens = 1024
+
+[[components]]
+name = "OptInApprovalGate"
+input_type = "HumanGatedPlan"
+output_type = "ApprovedPacket"
+kind = "evaluator"
+assurance = 0.98
+verified = true
+evidence = "tests/test_self_improve.py approval, veto and no-action cases"
+assumptions = ["opt-in and approval are supplied by a human"]
+guarantees = ["no worktree without opt-in and approval", "veto stops before work", "the packet is built from the selected proposal"]
+context_tokens = 512
+
+[[components]]
+name = "LoopRunnerBridge"
+input_type = "ApprovedPacket"
+output_type = "GateReport"
+kind = "tool"
+reversible = true
+assurance = 0.94
+verified = true
+evidence = "tests/test_self_improve.py completed and gate-failure cases; tests/test_agent_runner.py scope cases"
+assumptions = ["an external runner command is explicitly supplied"]
+guarantees = ["scope is checked against allowed_files", "gate runs inside the worktree", "no merge, push, tag or publish occurs"]
+context_tokens = 2048
+
+[[components]]
+name = "GatedDecisionRecorder"
+input_type = "GateReport"
+output_type = "ContentFreeDecision"
+kind = "tool"
+reversible = true
+assurance = 0.97
+verified = true
+evidence = "tests/test_self_improve.py decision-note hash and no-record-on-failure cases"
+assumptions = ["the gate passed before recording"]
+guarantees = ["a decision is recorded only after a passing gate", "note_id binds the action id and gate id", "no source text, prompt or query is stored"]
+context_tokens = 512
+
+[[components]]
+name = "ScoreboardLink"
+input_type = "ContentFreeDecision"
+output_type = "MeasuredTrend"
+kind = "tool"
+reversible = true
+assurance = 0.95
+verified = true
+evidence = "tests/test_self_improve.py scoreboard and trend cases; tests/test_scoreboard.py and tests/test_trend.py"
+assumptions = ["scoreboard counts are measured outside the loop"]
+guarantees = ["the loop writes only the supplied counts", "trend alerts are reported, not hidden", "no model weights change"]
+context_tokens = 1024

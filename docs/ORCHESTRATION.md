@@ -85,18 +85,22 @@ spec generator; the LinkedIn activity feed contains the `0.6.1` post.
 ## Current cycle
 
 - Planner: main agent.
-- Released: `0.6.1` with claim/evidence algebra and the evidence-to-AISC spec
-  generator. `0.6.0` remains the previous tag.
-- Post-release: cross-source consensus algebra
-  (`atomzero-consensus`, `POST /v1/consensus`), merged on `main` with the
-  claims HTTP route and the aggregate `atomzero-audit --summary`.
-- AISC side: version `0.5.0` adds native `batch` and `diff`; 223 tests pass.
-- Reviewer gate: 617 Atom Zero tests, 11 passing AISC specs, 2 expected
-  answerability failures.
-- In progress: freshness Implementer in `feat/freshness-algebra`, source
-  reliability Implementer in `feat/source-reliability`, and an AISC
-  `batch --baseline` Implementer. The `0.6.1` Release agent gate is PASS
-  (Medium and LinkedIn verified by the Planner browser).
+- Published: `0.19.0` (bounded self-improve loop, committed-change scope,
+  fifth measured cycle). Work after it is accumulating for **`1.0.0`**.
+- Self-code branch: `atomzero-self-code` AST audit, bounded proposals,
+  `self_code_high`/`self_code_medium` planner signals, proposal-derived runner
+  scope and the sixth measured cycle (`gate_id cac82f022c879258`,
+  `855/0 -> 857/0`). AISC spec `AtomZeroSelfImprove` is added.
+- Parallel 1.0.0 Implementers (isolated worktrees, no push):
+  - `feat/self-code-policy` in `%TEMP%\opencode\atom-zero-policy`:
+    inline suppression markers and `--target-path` selection.
+  - `feat/planner-feedback` in `%TEMP%\opencode\atom-zero-feedback`:
+    bounded history-aware signal priorities from the decision ledger.
+  - `feat/scoreboard-collect` in `%TEMP%\opencode\atom-zero-score`:
+    content-free count extraction from pytest/benchmark/AISC output.
+- Reviewer gate on `main`: **857 Atom Zero tests**, **223 AISC tests**,
+  **23 strict AISC specs (21 PASS, 2 expected answerability FAIL)** and
+  **13/13** self-improvement benchmark checks.
 - Release agent: releases follow **one major version per release** now.
   `0.19.0` is the current published version; the next boundary is `1.0.0`,
   then `2.0.0`. Hold accumulated work until the major boundary; then one push
