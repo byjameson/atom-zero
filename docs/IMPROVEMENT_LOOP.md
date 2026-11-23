@@ -203,11 +203,14 @@ record_decision(ledger, plan["actions"][0], "defer",
 `feedback`, `freshness`, `reliability` and `limit`. With a `session_id` it reads
 only the content-free `claim_audit` counts stored on that local session.
 
-`POST /v1/improvement/decision` accepts `{action, decision, note}` and appends a
-decision record to the local JSONL ledger at `improvement_ledger_path`
-(default `data/improvement_ledger.jsonl`). The file stores action id, kind,
-decision, timestamp and a 16-hex note hash; the note text is never written.
-The existing ledger is verified before and after the append.
+`POST /v1/improvement/decision` accepts `{action, decision, note, gate}` and
+appends a decision record to the local JSONL ledger at
+`improvement_ledger_path` (default `data/improvement_ledger.jsonl`). An
+`approve` decision is rejected unless `gate` is a passing evaluation-gate
+report; reject/defer may carry a failed gate. The file stores action id, kind,
+decision, timestamp, a 16-hex note hash and the gate counts/method only; the
+note text and command output are never written. The existing ledger is verified
+before and after the append.
 
 ```powershell
 $plan = Invoke-RestMethod -Method Post `
@@ -218,6 +221,11 @@ $body = @{
   action = $plan.actions[0]
   decision = "approve"
   note = "reviewed locally"
+  gate = @{
+    ok = $true
+    summary = @{ total = 2; passed = 2; failed = 0 }
+    method = "allowlisted_evaluation_gate_v1"
+  }
 } | ConvertTo-Json -Depth 5
 Invoke-RestMethod -Method Post `
   -Uri http://127.0.0.1:8000/v1/improvement/decision `

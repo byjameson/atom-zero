@@ -6039,14 +6039,19 @@ class Handler(BaseHTTPRequestHandler):
         return self._json(200, result)
 
     def _improvement_decision(self, req: dict):
-        from atomzero.improvement import record_decision, verify_ledger
+        from atomzero.improvement import (
+            record_decision, record_gated_decision, verify_ledger)
         action = req.get("action")
         decision = req.get("decision")
         note = req.get("note", "")
+        gate = req.get("gate")
         if not isinstance(action, dict):
             return self._json(400, {"error": "action must be an object"})
         if not isinstance(note, str):
             return self._json(400, {"error": "note must be a string"})
+        if decision == "approve" and not isinstance(gate, dict):
+            return self._json(400, {
+                "error": "approval requires an evaluation gate report"})
         try:
             path, ledger = self._improvement_ledger()
             before = verify_ledger(ledger)
@@ -6054,8 +6059,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(400, {
                     "error": "existing ledger is invalid",
                     "verify": before})
-            record = record_decision(
-                ledger, action, decision, note=note)
+            if isinstance(gate, dict):
+                record = record_gated_decision(
+                    ledger, action, decision, gate, note=note)
+            else:
+                record = record_decision(
+                    ledger, action, decision, note=note)
             after = verify_ledger(ledger)
             if not after["ok"]:
                 return self._json(400, {"error": "ledger verification failed"})

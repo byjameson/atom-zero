@@ -1,5 +1,13 @@
 # Changelog
 
+## atomzero 0.9.0 - unreleased
+
+- **Gated approval**: `record_gated_decision` rejects an `approve` decision
+  unless the evaluation gate passed every check. The ledger stores only
+  `gate_ok`, `gate_total`, `gate_passed` and `gate_method`; command output is
+  not copied. `POST /v1/improvement/decision` now requires a `gate` report for
+  approval. Reject/defer may carry a failed gate.
+
 ## atomzero 0.8.0 - human-gated self-improvement loop (2026-11-23)
 
 This batch turns local weakness signals into a prioritized plan, requires human

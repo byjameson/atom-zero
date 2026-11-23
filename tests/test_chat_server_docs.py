@@ -3382,10 +3382,20 @@ def test_http_improvement_plan_and_decision(tmp_path):
             "session_id": "improve-plan", "ack": True})
         assert tick["due"] is True
         assert tick["reason"] == "improvement_plan"
+        with pytest.raises(urllib.error.HTTPError) as no_gate:
+            _post(base + "/v1/improvement/decision", {
+                "action": action, "decision": "approve"})
+        assert no_gate.value.code == 400
+        gate = {
+            "ok": True,
+            "summary": {"total": 2, "passed": 2, "failed": 0},
+            "method": "allowlisted_evaluation_gate_v1",
+        }
         decision = _post(base + "/v1/improvement/decision", {
             "action": action, "decision": "approve",
-            "note": "private review note"})
+            "note": "private review note", "gate": gate})
         assert decision["record"]["decision"] == "approve"
+        assert decision["record"]["gate_ok"] is True
         assert len(decision["record"]["note_id"]) == 16
         assert decision["verify"]["ok"] is True
         text = ledger_path.read_text(encoding="utf-8")

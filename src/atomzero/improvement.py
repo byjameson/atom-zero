@@ -34,6 +34,7 @@ __all__ = [
     "build_plan",
     "plan_from_inputs",
     "record_decision",
+    "record_gated_decision",
     "summarize_ledger",
     "verify_ledger",
     "main",
@@ -103,9 +104,12 @@ FORBIDDEN_KEYS = frozenset({
     "text", "query", "answer", "chunk", "content", "note", "session",
     "source",
 })
+GATE_KEYS = frozenset({
+    "gate_ok", "gate_total", "gate_passed", "gate_method",
+})
 RECORD_KEYS = frozenset({
     "version", "at", "action_id", "kind", "decision", "note_id",
-})
+}) | GATE_KEYS
 _INPUT_KEYS = frozenset({
     "claim_audit", "gaps", "feedback", "freshness", "reliability",
     "aisc_coverage",
@@ -517,6 +521,52 @@ def record_decision(ledger, action, decision, note="", now=None) -> dict:
     return record
 
 
+def _gate_fields(gate) -> dict:
+    if not isinstance(gate, dict):
+        raise ValueError("gate must be an evaluation-gate report")
+    ok = gate.get("ok")
+    if not isinstance(ok, bool):
+        raise ValueError("gate.ok must be a boolean")
+    summary = gate.get("summary")
+    if not isinstance(summary, dict):
+        raise ValueError("gate.summary must be a mapping")
+    total = _non_negative_int(summary.get("total"), "gate.summary.total")
+    passed = _non_negative_int(
+        summary.get("passed"), "gate.summary.passed")
+    failed = _non_negative_int(
+        summary.get("failed"), "gate.summary.failed")
+    if passed + failed != total:
+        raise ValueError("gate.summary passed + failed must equal total")
+    if passed != total:
+        ok = False
+    method = str(gate.get("method") or "").strip()
+    if not method:
+        raise ValueError("gate.method is required")
+    return {
+        "gate_ok": ok,
+        "gate_total": total,
+        "gate_passed": passed,
+        "gate_method": method[:80],
+    }
+
+
+def record_gated_decision(ledger, action, decision, gate, note="",
+                          now=None) -> dict:
+    """Record a decision that carries an evaluation-gate summary.
+
+    An ``approve`` decision is rejected unless the gate passed every check.
+    ``reject`` and ``defer`` may carry a failed gate, because the failure is
+    the reason for the decision. Only gate counts and a method label are stored;
+    command output is not copied into the ledger.
+    """
+    gate_fields = _gate_fields(gate)
+    if decision == "approve" and not gate_fields["gate_ok"]:
+        raise ValueError("cannot approve without a passing evaluation gate")
+    record = record_decision(ledger, action, decision, note=note, now=now)
+    record.update(gate_fields)
+    return record
+
+
 def summarize_ledger(ledger) -> dict:
     """Summarize a valid decision ledger without exposing note text.
 
@@ -590,6 +640,28 @@ def verify_ledger(ledger) -> dict:
         if not isinstance(note_id, str) or not _NOTE_ID_RE.fullmatch(note_id):
             errors.append(
                 f"{where}: note_id must be empty or a lowercase hex prefix")
+        present_gate = set(entry) & GATE_KEYS
+        if present_gate:
+            if present_gate != GATE_KEYS:
+                errors.append(
+                    f"{where}: gate fields must be present together")
+            else:
+                if not isinstance(entry["gate_ok"], bool):
+                    errors.append(f"{where}: gate_ok must be a boolean")
+                for key in ("gate_total", "gate_passed"):
+                    value = entry[key]
+                    if (isinstance(value, bool)
+                            or not isinstance(value, int) or value < 0):
+                        errors.append(
+                            f"{where}: {key} must be a non-negative integer")
+                if (not isinstance(entry["gate_method"], str)
+                        or not entry["gate_method"].strip()):
+                    errors.append(
+                        f"{where}: gate_method must be a non-empty string")
+                if (entry.get("decision") == "approve"
+                        and entry.get("gate_ok") is not True):
+                    errors.append(
+                        f"{where}: approval requires a passing gate")
     return {
         "ok": not errors,
         "entries": len(ledger),

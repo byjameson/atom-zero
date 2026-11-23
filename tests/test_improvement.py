@@ -16,6 +16,7 @@ from atomzero.improvement import (
     main,
     plan_from_inputs,
     record_decision,
+    record_gated_decision,
     summarize_ledger,
     verify_ledger,
 )
@@ -410,6 +411,54 @@ def test_aisc_coverage_signal_and_action():
     plan = build_plan(signals)
     assert plan["actions"][0]["kind"] == "aisc_coverage_gaps"
     assert "AISC coverage" in plan["actions"][0]["acceptance"]
+
+
+GATE_PASS = {
+    "ok": True,
+    "summary": {"total": 2, "passed": 2, "failed": 0},
+    "method": "allowlisted_evaluation_gate_v1",
+}
+GATE_FAIL = {
+    "ok": False,
+    "summary": {"total": 2, "passed": 1, "failed": 1},
+    "method": "allowlisted_evaluation_gate_v1",
+}
+
+
+def test_gated_approval_requires_passing_gate():
+    ledger = []
+    record = record_gated_decision(
+        ledger, ACTION, "approve", GATE_PASS, note="reviewed", now=NOW)
+    assert record["gate_ok"] is True
+    assert record["gate_total"] == 2
+    assert verify_ledger(ledger)["ok"] is True
+    with pytest.raises(ValueError, match="passing evaluation gate"):
+        record_gated_decision([], ACTION, "approve", GATE_FAIL, now=NOW)
+
+
+def test_reject_can_carry_failed_gate():
+    ledger = []
+    record = record_gated_decision(ledger, ACTION, "reject", GATE_FAIL, now=NOW)
+    assert record["gate_ok"] is False
+    assert verify_ledger(ledger)["ok"] is True
+
+
+def test_gate_summary_is_validated():
+    with pytest.raises(ValueError):
+        record_gated_decision([], ACTION, "approve", {
+            "ok": True, "summary": {"total": 2, "passed": 1, "failed": 0},
+            "method": "gate"}, now=NOW)
+    with pytest.raises(ValueError):
+        record_gated_decision([], ACTION, "approve", {
+            "ok": True, "summary": {"total": 1, "passed": 1, "failed": 0}},
+            now=NOW)
+
+
+def test_verify_ledger_rejects_tampered_gate():
+    ledger = []
+    record_gated_decision(ledger, ACTION, "approve", GATE_PASS, now=NOW)
+    ledger[0]["gate_ok"] = False
+    assert verify_ledger(ledger)["ok"] is False
 
 
 def test_summarize_ledger_is_content_free():

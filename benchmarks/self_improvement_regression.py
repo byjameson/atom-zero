@@ -24,6 +24,7 @@ from atomzero.improvement import (
     collect_signals,
     plan_from_inputs,
     record_decision,
+    record_gated_decision,
     summarize_ledger,
     verify_ledger,
 )
@@ -71,6 +72,30 @@ def check_decision_is_hash_only():
     assert len(record["note_id"]) == 16
     assert "private review note" not in json.dumps(record)
     assert verify_ledger(ledger)["ok"] is True
+
+
+def check_gated_approval():
+    gate = {
+        "ok": True,
+        "summary": {"total": 2, "passed": 2, "failed": 0},
+        "method": "allowlisted_evaluation_gate_v1",
+    }
+    ledger = []
+    record = record_gated_decision(
+        ledger, _plan()["actions"][0], "approve", gate, now=NOW)
+    assert record["gate_ok"] is True
+    assert verify_ledger(ledger)["ok"] is True
+    try:
+        record_gated_decision(
+            [], _plan()["actions"][0], "approve",
+            {"ok": False,
+             "summary": {"total": 2, "passed": 1, "failed": 1},
+             "method": "allowlisted_evaluation_gate_v1"},
+            now=NOW)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("failed gate must not approve")
 
 
 def check_tampered_ledger_is_rejected():
@@ -160,6 +185,7 @@ CHECKS = [
     check_plan_priority_and_human_gate,
     check_plan_does_not_auto_apply,
     check_decision_is_hash_only,
+    check_gated_approval,
     check_tampered_ledger_is_rejected,
     check_ledger_summary,
     check_aisc_coverage_signal,
