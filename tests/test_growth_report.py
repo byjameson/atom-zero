@@ -84,6 +84,25 @@ def test_verification_ledger_is_counted():
     assert report["capability"]["promotable_teacher_notes"] == 1
 
 
+def test_adapter_ledger_is_counted():
+    event = {
+        "candidate_id": "ad-1", "train_examples": 8, "eval_examples": 2,
+        "status": "pass", "promotable": True, "loss_delta": -0.1,
+        "ppl_ratio": 0.95, "method": "content_free_adapter_candidate_event_v1",
+    }
+    report = build_report(
+        scoreboard=[_run()], adapter_ledger=[event, dict(event, status="fail",
+                                                         promotable=False)])
+    assert report["adapter"]["total"] == 2
+    assert report["adapter"]["pass"] == 1
+    assert report["adapter"]["fail"] == 1
+    assert report["capability"]["adapter_candidate_exports"] == 2
+    assert report["capability"]["adapter_gate_passed"] == 1
+    assert report["capability"]["adapter_promotable"] == 1
+    assert report["capability"]["adapter_train_examples"] == 16
+    assert report["capability"]["adapter_eval_examples"] == 4
+
+
 def test_invalid_inputs_raise():
     with pytest.raises(ValueError):
         build_report(escalation_ledger={})
@@ -93,6 +112,10 @@ def test_invalid_inputs_raise():
         build_report(verification_ledger={})
     with pytest.raises(ValueError):
         build_report(verification_ledger=["bad"])
+    with pytest.raises(ValueError):
+        build_report(adapter_ledger={})
+    with pytest.raises(ValueError):
+        build_report(adapter_ledger=[{"status": "pass", "text": "secret"}])
     with pytest.raises(ValueError):
         build_report(self_code_diff=[])
 

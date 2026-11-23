@@ -57,6 +57,17 @@ the self-code branch and its planner/runner integration.
 - Eighth measured cycle: fully autonomous, no per-change human approval;
   sandbox full suite 1066 passed, local merge, post-merge 1066 passed,
   cleanup; gate `da83c0302933d484`, scoreboard `1064/0 -> 1066/0`.
+- Added **`atomzero-adapter-candidate`**: verified teacher traces ->
+  deterministic train/held-out split -> candidate metadata + local train/eval
+  files -> external evaluator -> held-out loss/perplexity gate ->
+  content-free candidate event. It never trains, applies or publishes an
+  adapter, and `promotable` requires a matching held-out count plus a loss
+  improvement and no perplexity regression.
+- `atomzero-improve` emits `adapter_candidate_ready` when promotable teacher
+  notes exist and no candidate has been exported; `atomzero-self-improve`
+  executes that action autonomously when adapter inputs are supplied.
+- `atomzero-growth --adapter-jsonl` reports candidate exports, gate passes and
+  promotable candidates.
 - Added **prevalence-corrected isotonic calibration** for the answerability
   signal: hybrid Brier `0.2443 -> 0.2326`, ECE `0.1299 -> 0.0642`; feature-only
   Brier `0.2703 -> 0.2535`, ECE `0.1407 -> 0.0519`; AUC unchanged. The Brier

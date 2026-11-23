@@ -183,6 +183,16 @@ def run_loop(
     auto_merge: bool = True,
     test_command=None,
     test_timeout: int = 900,
+    adapter_examples=None,
+    adapter_out_dir=None,
+    adapter_comparison=None,
+    adapter_evaluator_command=None,
+    adapter_ledger_path=None,
+    adapter_eval_ratio=0.2,
+    adapter_seed=13,
+    adapter_min_loss_delta=None,
+    adapter_max_ppl_ratio=None,
+    adapter_timeout: int = 900,
 ) -> dict:
     """Run one bounded loop, returning every stage and its evidence."""
     normalized = dict(signals) if isinstance(signals, dict) else {}
@@ -247,6 +257,45 @@ def run_loop(
                 f"{target_severity}")
     else:
         action = plan["actions"][0]
+    if action["kind"] == "adapter_candidate_ready":
+        result = {
+            "status": "awaiting_human",
+            "plan": plan,
+            "autonomous": bool(autonomous),
+            "auto_apply": False,
+            "weights_changed": False,
+        }
+        if veto:
+            result["status"] = "vetoed"
+            return result
+        if not opt_in:
+            result["status"] = "awaiting_opt_in"
+            return result
+        if not autonomous and not approve:
+            return result
+        if not adapter_examples or not adapter_out_dir:
+            result["status"] = "adapter_input_missing"
+            result["error"] = (
+                "adapter_examples and adapter_out_dir are required for "
+                "adapter_candidate_ready")
+            return result
+        from atomzero.adapter_candidates import run_adapter_loop
+        adapter = run_adapter_loop(
+            adapter_examples, adapter_out_dir,
+            comparison=adapter_comparison,
+            evaluator_command=adapter_evaluator_command,
+            eval_ratio=adapter_eval_ratio, seed=adapter_seed,
+            min_loss_delta=adapter_min_loss_delta,
+            max_ppl_ratio=adapter_max_ppl_ratio,
+            ledger_path=adapter_ledger_path, timeout=adapter_timeout)
+        result["adapter"] = adapter
+        result["status"] = {
+            "pass": "completed",
+            "fail": "adapter_gate_failed",
+            "awaiting_evaluation": "adapter_awaiting_evaluation",
+            "invalid": "adapter_gate_failed",
+        }.get(adapter.get("status"), "adapter_gate_failed")
+        return result
     if target:
         proposal = next(
             (item for item in normalized["self_code"]["proposals"]
@@ -412,6 +461,18 @@ def main(argv=None) -> int:
         "--test-command", default="",
         help="full verification command (default: python -m pytest tests -q)")
     parser.add_argument("--test-timeout", type=int, default=900)
+    parser.add_argument("--adapter-examples-jsonl", default="")
+    parser.add_argument("--adapter-out", default="")
+    parser.add_argument("--adapter-comparison-json", default="")
+    parser.add_argument("--adapter-evaluator-command", default="")
+    parser.add_argument("--adapter-ledger", default="")
+    parser.add_argument("--adapter-eval-ratio", type=float, default=0.2)
+    parser.add_argument("--adapter-seed", type=int, default=13)
+    parser.add_argument("--adapter-min-loss-delta", type=float, default=None)
+    parser.add_argument("--adapter-max-ppl-ratio", type=float, default=None)
+    parser.add_argument("--adapter-timeout", type=int, default=900)
+    parser.add_argument("--adapter-promotable", type=int, default=0)
+    parser.add_argument("--adapter-candidates", type=int, default=0)
     parser.add_argument("--sandbox-info", action="store_true")
     parser.add_argument("--repo", default=".")
     parser.add_argument("--runner", default="")
@@ -437,8 +498,24 @@ def main(argv=None) -> int:
     autonomous = not args.require_approval
     try:
         signals = _load_signals(args.signal) if args.signal else {}
-        if not signals and not args.self_code_root:
-            raise RunnerError("--signal or --self-code-root is required")
+        if (args.adapter_promotable and "adapter" not in signals):
+            signals["adapter"] = {
+                "promotable": args.adapter_promotable,
+                "candidates": args.adapter_candidates,
+            }
+        if (not signals and not args.self_code_root
+                and not args.adapter_examples_jsonl):
+            raise RunnerError(
+                "--signal, --self-code-root or --adapter-examples-jsonl is "
+                "required")
+        adapter_examples = None
+        if args.adapter_examples_jsonl:
+            from atomzero.adapter_candidates import load_examples
+            adapter_examples = load_examples(args.adapter_examples_jsonl)
+        adapter_comparison = None
+        if args.adapter_comparison_json:
+            adapter_comparison = _load_signals(
+                args.adapter_comparison_json)
         after = None
         if args.after_commit:
             after = {
@@ -466,7 +543,17 @@ def main(argv=None) -> int:
             autonomous=autonomous,
             auto_merge=not args.no_auto_merge,
             test_command=args.test_command or None,
-            test_timeout=args.test_timeout)
+            test_timeout=args.test_timeout,
+            adapter_examples=adapter_examples,
+            adapter_out_dir=args.adapter_out or None,
+            adapter_comparison=adapter_comparison,
+            adapter_evaluator_command=args.adapter_evaluator_command or None,
+            adapter_ledger_path=args.adapter_ledger or None,
+            adapter_eval_ratio=args.adapter_eval_ratio,
+            adapter_seed=args.adapter_seed,
+            adapter_min_loss_delta=args.adapter_min_loss_delta,
+            adapter_max_ppl_ratio=args.adapter_max_ppl_ratio,
+            adapter_timeout=args.adapter_timeout)
     except (OSError, ValueError, RunnerError, json.JSONDecodeError) as exc:
         print(f"input error: {exc}", file=sys.stderr)
         return 2

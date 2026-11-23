@@ -16,6 +16,7 @@ import json
 import sys
 from pathlib import Path
 
+from atomzero.adapter_candidates import summarize_adapter_ledger
 from atomzero.escalation import summarize_growth
 from atomzero.scoreboard import summarize_runs
 
@@ -60,7 +61,8 @@ def _load_json(path: str) -> dict:
 
 
 def build_report(*, escalation_ledger=None, scoreboard=None,
-                 self_code_diff=None, verification_ledger=None) -> dict:
+                 self_code_diff=None, verification_ledger=None,
+                 adapter_ledger=None) -> dict:
     """Build one deterministic, content-free growth report."""
     if escalation_ledger is None:
         escalation_ledger = []
@@ -68,12 +70,16 @@ def build_report(*, escalation_ledger=None, scoreboard=None,
         scoreboard = []
     if verification_ledger is None:
         verification_ledger = []
+    if adapter_ledger is None:
+        adapter_ledger = []
     if not isinstance(escalation_ledger, list):
         raise ValueError("escalation_ledger must be a list")
     if not isinstance(scoreboard, list):
         raise ValueError("scoreboard must be a list")
     if not isinstance(verification_ledger, list):
         raise ValueError("verification_ledger must be a list")
+    if not isinstance(adapter_ledger, list):
+        raise ValueError("adapter_ledger must be a list")
     for index, event in enumerate(verification_ledger):
         if not isinstance(event, dict):
             raise ValueError(
@@ -82,6 +88,7 @@ def build_report(*, escalation_ledger=None, scoreboard=None,
         raise ValueError("self_code_diff must be an object")
 
     growth = summarize_growth(escalation_ledger)
+    adapter = summarize_adapter_ledger(adapter_ledger)
     measured = summarize_runs(scoreboard)
     verified_notes = sum(
         1 for event in verification_ledger if event.get("verified") is True)
@@ -119,6 +126,7 @@ def build_report(*, escalation_ledger=None, scoreboard=None,
             "verified": verified_notes,
             "promotable": promotable_notes,
         },
+        "adapter": adapter,
         "scoreboard": {
             "runs": measured["runs"],
             "green": measured["green"],
@@ -136,6 +144,11 @@ def build_report(*, escalation_ledger=None, scoreboard=None,
             "verified_teacher_notes": verified_notes,
             "promotable_teacher_notes": promotable_notes,
             "adapter_candidates": growth["adapter_candidates"],
+            "adapter_candidate_exports": adapter["total"],
+            "adapter_gate_passed": adapter["pass"],
+            "adapter_promotable": adapter["promotable"],
+            "adapter_train_examples": adapter["train_examples"],
+            "adapter_eval_examples": adapter["eval_examples"],
             "agent_handoffs": growth["agent_handoffs"],
             "tests_passed": latest.get("tests_passed", 0),
             "benchmark_passed": latest.get("benchmark_passed", 0),
@@ -156,11 +169,13 @@ def main(argv=None) -> int:
     parser.add_argument("--escalation-jsonl", default="")
     parser.add_argument("--scoreboard-jsonl", default="")
     parser.add_argument("--verification-jsonl", default="")
+    parser.add_argument("--adapter-jsonl", default="")
     parser.add_argument("--self-code-diff-json", default="")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
     paths = [args.escalation_jsonl, args.scoreboard_jsonl,
-             args.verification_jsonl, args.self_code_diff_json]
+             args.verification_jsonl, args.adapter_jsonl,
+             args.self_code_diff_json]
     if not any(paths):
         print("input error: at least one source is required", file=sys.stderr)
         return 2
@@ -175,6 +190,8 @@ def main(argv=None) -> int:
                         if args.scoreboard_jsonl else []),
             verification_ledger=(_load_jsonl(args.verification_jsonl)
                                  if args.verification_jsonl else []),
+            adapter_ledger=(_load_jsonl(args.adapter_jsonl)
+                            if args.adapter_jsonl else []),
             self_code_diff=(_load_json(args.self_code_diff_json)
                             if args.self_code_diff_json else None))
     except (OSError, ValueError) as exc:
@@ -191,6 +208,9 @@ def main(argv=None) -> int:
         print(f"- verified teacher notes: {cap['verified_teacher_notes']}")
         print(f"- promotable teacher notes: {cap['promotable_teacher_notes']}")
         print(f"- adapter candidates: {cap['adapter_candidates']}")
+        print(f"- adapter exports: {cap['adapter_candidate_exports']}")
+        print(f"- adapter gate passed: {cap['adapter_gate_passed']}")
+        print(f"- adapter promotable: {cap['adapter_promotable']}")
         print(f"- tests passed: {cap['tests_passed']}")
         print(f"- code findings resolved: {cap['code_findings_resolved']}")
         print("- parameter growth: 0 (unchanged)")
