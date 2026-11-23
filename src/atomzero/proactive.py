@@ -63,7 +63,8 @@ _DONE_STATUSES = {
 }
 _GAP_OPEN_STATUSES = {"pending", "open", "new"}
 _SOURCE_TIME_KEYS = ("created", "added", "ts", "timestamp", "created_at")
-_BRIEF_TIME_KEYS = ("last_brief_at", "brief_at", "briefed_at")
+_BRIEF_TIME_KEYS = (
+    "last_brief_at", "last_brief", "brief_at", "briefed_at")
 _TIME_RE = re.compile(r"^(\d{1,2}):(\d{2})$")
 
 
@@ -389,7 +390,8 @@ def _gap_rows(session) -> list[dict]:
             if callable(method):
                 try:
                     rows = method()
-                except (OSError, TypeError, ValueError):
+                except Exception:
+                    # An optional local gap store must never break a tick.
                     rows = None
                 if isinstance(rows, (list, tuple)):
                     break
@@ -418,8 +420,14 @@ def _gap_name(gap: dict) -> str:
 
 
 def _source_rows(value) -> list[dict]:
-    if isinstance(value, list):
-        return [dict(row) for row in value if isinstance(row, dict)]
+    if isinstance(value, (list, tuple)):
+        rows = []
+        for row in value:
+            if isinstance(row, dict):
+                rows.append(dict(row))
+            elif isinstance(row, str) and row.strip():
+                rows.append({"source": row.strip(), "title": row.strip()})
+        return rows
     if isinstance(value, dict):
         if any(key in value for key in ("source", "title", "created")):
             return [dict(value)]
@@ -445,7 +453,8 @@ def _all_sources(session) -> list[dict]:
     if callable(source_method):
         try:
             rows.extend(_source_rows(source_method()))
-        except (OSError, TypeError, ValueError):
+        except Exception:
+            # An optional local source store must never break a tick.
             pass
     # De-duplicate by source/title while preserving order.
     seen = set()
@@ -491,11 +500,17 @@ def _brief_stamps(session) -> list[datetime]:
     values = [state.get("last_brief_at")]
     data = _human_data(session)
     for key in _BRIEF_TIME_KEYS:
-        values.append(data.get(key))
+        value = data.get(key)
+        values.append(value)
+        if isinstance(value, dict):
+            for field in ("at", "created", "ts", "timestamp", "shown_at"):
+                values.append(value.get(field))
         if not isinstance(session, dict):
             values.append(getattr(session, key, None))
-    for key in ("briefs", "brief_history"):
+    for key in ("brief", "briefs", "brief_history"):
         rows = data.get(key)
+        if isinstance(rows, dict):
+            rows = [rows]
         if not isinstance(rows, list):
             continue
         for row in rows:
