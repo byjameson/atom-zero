@@ -102,7 +102,9 @@ def run_audit(specs, aisc_path: str = "", strict: bool = False,
             definition = load_spec(path)
             results.append(audit_definition(
                 definition, strict, require_calibration))
-        except Exception as exc:
+        except (OSError, ValueError, TypeError, KeyError) as exc:
+            # Expected bad-spec failures are reported per spec; unexpected
+            # programming errors are allowed to propagate.
             results.append({
                 "source": str(path),
                 "ok": False,
