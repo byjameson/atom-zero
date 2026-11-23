@@ -28,6 +28,11 @@ At the batch boundary:
 - run preflight and `scripts/verify_release.py`;
 - publish every canonical surface once.
 
+**Push policy:** do not `git push` each increment. Accumulate local commits and
+push `main` once at the batch boundary, together with the version tag and
+release. A hotfix is the only exception, and it still gets one push, not one per
+commit.
+
 `0.5.0` was the first batched release under this policy. It included the graph,
 skills, chains, recipes, daily brief and goal planner accumulated after 0.4.2.
 
