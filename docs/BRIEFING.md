@@ -181,6 +181,15 @@ Chat uses the same sort option: `brief me priority`, `daily brief priority`,
 `brief me` / `weekly review` keep session order, and chat tool calls expose the
 selected `sort` value.
 
+The daily brief also accepts a tag filter: CLI `--brief-tag work`, HTTP
+`POST /v1/briefing` with `{"tag": "work"}` or
+`GET /v1/briefing?session_id=default&tag=work`, chat `brief me tag work`
+(also `brief me priority tag work`) and the UI tag field next to **Get daily
+brief**. It scopes open/overdue/due-soon tasks, tag counts and next actions to
+matching tasks; gaps, index stats and graph stay global. The title shows
+`| tag=work`, the text adds `Tags for #work`, and JSON includes `tag`, `tags`,
+`tag_count`, `tagged_task_count` and `untagged_task_count`.
+
 This is local metadata only: there are no background reminders, notifications
 or calendar sync.
 

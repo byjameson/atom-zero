@@ -889,6 +889,29 @@ def test_agent_weekly_review_intent(tmp_path):
     assert result["sources"][0]["source"] == "notes/launch.txt"
     assert result["weights_changed"] is False
 
+    brief = agent.chat("brief me tag work")
+    assert brief["tool_calls"] == [
+        {"name": "briefing", "sort": "default", "tag": "work"}]
+    assert brief["brief"]["tag"] == "work"
+    assert brief["brief"]["open_task_count"] == 1
+    assert [task["id"] for task in brief["brief"]["tasks"]] == [2]
+    assert brief["brief"]["tags"] == [
+        {"tag": "home", "open": 1, "done": 0, "total": 1},
+        {"tag": "work", "open": 1, "done": 0, "total": 1},
+    ]
+    assert "| tag=work" in brief["reply"]
+    assert "Tags for #work: 2 distinct" in brief["reply"]
+    assert "write report" in brief["reply"]
+    assert "buy milk" not in brief["reply"]
+    priority_brief = agent.chat("brief me priority tag home")
+    assert priority_brief["tool_calls"] == [
+        {"name": "briefing", "sort": "priority", "tag": "home"}]
+    assert priority_brief["brief"]["tag"] == "home"
+    assert [task["id"] for task in priority_brief["brief"]["tasks"]] == [2]
+    invalid_brief = agent.chat("brief me tag bad!")
+    assert "letters, numbers" in invalid_brief["reply"]
+    assert invalid_brief["tool_calls"] == []
+
     filtered = agent.chat("weekly review tag work")
     assert filtered["tool_calls"][0] == {
         "name": "weekly_review", "days": 7, "sort": "default",

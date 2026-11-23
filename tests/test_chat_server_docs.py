@@ -846,7 +846,9 @@ def test_ui_collection_scope_contract():
     assert "Daily brief" in page
     assert 'id="briefrefresh"' in page
     assert 'id="briefweekly"' in page
+    assert 'id="brieftag"' in page
     assert 'id="weeklytag"' in page
+    assert "brieftag" in page
     assert "weeklytag" in page
     assert 'id="overduebtn"' in page
     assert 'id="overdueres"' in page
@@ -2589,10 +2591,38 @@ def test_http_briefing_and_goal_plan(tmp_path):
         assert brief["open_task_count"] == 0
         assert "Daily brief" in brief["text"]
         _post(base + "/v1/agent/chat", {
-            "session_id": "brief-1", "message": "add task buy milk"})
+            "session_id": "brief-1", "message": "add task buy milk tags home"})
+        _post(base + "/v1/agent/chat", {
+            "session_id": "brief-1",
+            "message": "add task write report tags work,home"})
         brief = _post(base + "/v1/briefing", {"session_id": "brief-1"})
-        assert brief["open_task_count"] == 1
+        assert brief["open_task_count"] == 2
         assert "buy milk" in brief["text"]
+        assert "write report" in brief["text"]
+        filtered = _post(base + "/v1/briefing", {
+            "session_id": "brief-1", "tag": "work"})
+        assert filtered["tag"] == "work"
+        assert filtered["open_task_count"] == 1
+        assert [task["id"] for task in filtered["tasks"]] == [2]
+        assert filtered["tags"] == [
+            {"tag": "home", "open": 1, "done": 0, "total": 1},
+            {"tag": "work", "open": 1, "done": 0, "total": 1},
+        ]
+        assert "| tag=work" in filtered["text"]
+        assert "Tags for #work: 2 distinct" in filtered["text"]
+        assert "write report" in filtered["text"]
+        assert "buy milk" not in filtered["text"]
+        fetched = json.loads(urllib.request.urlopen(
+            base + "/v1/briefing?session_id=brief-1&tag=work",
+            timeout=10).read().decode("utf-8"))
+        assert fetched["tag"] == "work"
+        assert fetched["open_task_count"] == 1
+        assert [task["id"] for task in fetched["tasks"]] == [2]
+        with pytest.raises(urllib.error.HTTPError) as invalid_tag:
+            urllib.request.urlopen(
+                base + "/v1/briefing?session_id=brief-1&tag=bad%20tag%21",
+                timeout=10)
+        assert invalid_tag.value.code == 400
         plan = _post(base + "/v1/goals/plan", {
             "session_id": "brief-1", "goal": "warranty page"})
         assert plan["context"][0]["source"] == "notes/warranty.txt"
@@ -2603,7 +2633,7 @@ def test_http_briefing_and_goal_plan(tmp_path):
             "confirm": True})
         assert len(confirmed["created_tasks"]) == 3
         after = _post(base + "/v1/briefing", {"session_id": "brief-1"})
-        assert after["open_task_count"] == 4
+        assert after["open_task_count"] == 5
     finally:
         httpd.shutdown()
         httpd.server_close()

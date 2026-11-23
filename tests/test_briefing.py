@@ -38,6 +38,82 @@ def test_build_briefing_with_tasks_gaps_and_docs(tmp_path):
     docs.close()
 
 
+def test_brief_tag_filter_scopes_tasks_and_tags(tmp_path, capsys):
+    today = date.today()
+    soon = (today + timedelta(days=2)).isoformat()
+    overdue = (today - timedelta(days=1)).isoformat()
+    session = {"tasks": [
+        {"id": 1, "text": "write report", "status": "open",
+         "due": soon, "tags": ["work"]},
+        {"id": 2, "text": "buy milk", "status": "open",
+         "due": overdue, "tags": ["home"]},
+        {"id": 3, "text": "pay invoice", "status": "open",
+         "due": "", "tags": ["work", "home"]},
+        {"id": 4, "text": "old task", "status": "done",
+         "tags": ["archive"]},
+    ]}
+    brief = build_briefing(
+        session, None, None, now="2026-11-23 09:00", tag="work")
+    assert brief["tag"] == "work"
+    assert brief["open_task_count"] == 2
+    assert [task["id"] for task in brief["tasks"]] == [1, 3]
+    assert brief["overdue_task_count"] == 0
+    assert brief["due_soon_count"] == 1
+    assert [task["id"] for task in brief["due_soon_tasks"]] == [1]
+    assert brief["tags"] == [
+        {"tag": "work", "open": 2, "done": 0, "total": 2},
+        {"tag": "home", "open": 1, "done": 0, "total": 1},
+    ]
+    assert brief["tag_count"] == 2
+    assert brief["tagged_task_count"] == 2
+    assert brief["untagged_task_count"] == 0
+    assert "| tag=work" in brief["text"]
+    assert "Focus: due soon: task 1: write report" in brief["text"]
+    assert ("Tags for #work: 2 distinct | work (2 open) | "
+            "home (1 open)") in brief["text"]
+    assert "write report" in brief["text"]
+    assert "pay invoice" in brief["text"]
+    assert "buy milk" not in brief["text"]
+    assert "archive" not in brief["text"]
+
+    unfiltered = build_briefing(
+        session, None, None, now="2026-11-23 09:00")
+    assert unfiltered["tag"] == "all"
+    assert unfiltered["open_task_count"] == 3
+    assert unfiltered["overdue_task_count"] == 1
+    assert "Focus: overdue task 2: buy milk" in unfiltered["text"]
+    assert ("Tags: 2 distinct | home (2 open) | work (2 open)"
+            in unfiltered["text"])
+    assert "archive" not in unfiltered["text"]
+
+    session_path = tmp_path / "session.json"
+    session_path.write_text(json.dumps(session), encoding="utf-8")
+    common = [
+        "--session", str(session_path),
+        "--docs", str(tmp_path / "missing.db"),
+        "--gaps", str(tmp_path / "missing-gaps.json")]
+    assert main(common + ["--brief-tag", "work", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["tag"] == "work"
+    assert payload["open_task_count"] == 2
+    assert payload["tag_count"] == 2
+    assert [task["id"] for task in payload["tasks"]] == [1, 3]
+    assert main(common + ["--brief-tag", "work"]) == 0
+    output = capsys.readouterr().out
+    assert "Daily brief - " in output
+    assert "| tag=work" in output
+    assert "Tags for #work" in output
+    assert "buy milk" not in output
+    assert main(common + ["--brief-tag", "bad tag!"]) == 1
+    assert "letters, numbers" in capsys.readouterr().out
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--brief-tag", "work", "--weekly"])
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--brief-tag", "work", "--task-list"])
+    assert exc.value.code == 2
+
+
 def test_weekly_review_aggregates_tasks_sources_gaps_and_graph(tmp_path):
     docs = DocMemory(tmp_path / "docs.db")
     docs.add_text("notes/launch.txt", "The launch code is L-7781.",

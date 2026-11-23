@@ -388,13 +388,22 @@ class AgentSession:
             "comparison": comparison,
         }
 
-    def _briefing(self, sort: str = "default") -> dict:
-        brief = build_briefing(
-            self.human.data, self.gap_store, self.docs, sort=sort)
+    def _briefing(self, sort: str = "default",
+                  tag: str = "all") -> dict:
+        try:
+            brief = build_briefing(
+                self.human.data, self.gap_store, self.docs,
+                sort=sort, tag=tag)
+        except ValueError as exc:
+            return {"reply": str(exc), "tool_calls": [],
+                    "sources": [], "evidence": []}
         sources = brief.get("documents", {}).get("items", [])
+        tool = {"name": "briefing", "sort": brief["sort"]}
+        if brief.get("tag", "all") != "all":
+            tool["tag"] = brief["tag"]
         return {
             "reply": brief["text"],
-            "tool_calls": [{"name": "briefing", "sort": brief["sort"]}],
+            "tool_calls": [tool],
             "sources": sources,
             "brief": brief,
             "weights_changed": False,
@@ -1505,10 +1514,13 @@ class AgentSession:
                 compare_match.group(2).strip())
         brief_match = re.match(
             r"^(?:brief me|daily brief|what should i do today)"
-            r"(?:\s+(?P<sort>priority))?\??$", text, re.IGNORECASE)
+            r"(?:\s+(?P<sort>priority))?"
+            r"(?:\s+tag\s+(?P<tag>\S+))?\??$", text, re.IGNORECASE)
         if brief_match:
+            groups = brief_match.groupdict()
             return self._briefing(
-                brief_match.groupdict().get("sort") or "default")
+                groups.get("sort") or "default",
+                tag=groups.get("tag") or "all")
         if (re.match(r"^(?:list|show)\s+(?:task\s+)?tags\??$", text,
                      re.IGNORECASE)
                 or low.rstrip("?") in ("tags", "task tags")):

@@ -26,6 +26,7 @@ Endpoints:
   POST /v1/documents/answer
   POST /v1/hungry/run
   POST /v1/briefing
+  GET  /v1/briefing?session_id=default&tag=work
   POST /v1/weekly-review
   GET  /v1/weekly-review/export?session_id=...&days=7&tag=work
   GET  /v1/tasks/list?session_id=default&status=open&due=week&priority=high&sort=priority
@@ -287,6 +288,7 @@ hr{border:0;border-top:1px solid #ddd;margin:22px 0}
 graph entities. No provider is required. A goal plan adds cited local context
 and suggested next actions.</p>
 <div class="row"><button id="briefrefresh">Get daily brief</button>
+<input id="brieftag" placeholder="tag" style="width:7em">
 <button id="briefweekly">Weekly review</button>
 <input id="weeklytag" placeholder="tag" style="width:7em">
 <button id="overduebtn">Overdue tasks</button>
@@ -694,12 +696,15 @@ async function getBriefing() {
   const msg = document.getElementById('briefmsg');
   const box = document.getElementById('briefres');
   const sort = document.getElementById('tasksort').value;
+  const tag = document.getElementById('brieftag').value.trim();
   msg.textContent = 'building local brief...';
   box.textContent = '';
   try {
+    const payload = {session_id: sessionId, sort};
+    if (tag) payload.tag = tag;
     const r = await fetch('/v1/briefing', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({session_id: sessionId, sort})});
+      body: JSON.stringify(payload)});
     const j = await r.json();
     if (!r.ok) {
       msg.textContent = 'brief error: ' + (j.error || r.status);
@@ -707,7 +712,8 @@ async function getBriefing() {
     }
     msg.textContent = 'daily brief | ' + (j.open_task_count || 0) +
       ' open task(s) | ' + (j.pending_gap_count || 0) + ' pending gap(s)' +
-      ((j.sort || sort) !== 'default' ? ' | sort=' + (j.sort || sort) : '');
+      ((j.sort || sort) !== 'default' ? ' | sort=' + (j.sort || sort) : '') +
+      ((j.tag || 'all') !== 'all' ? ' | tag=' + j.tag : '');
     const card = document.createElement('div');
     card.className = 'qitem';
     card.textContent = j.text || '';
@@ -3631,6 +3637,26 @@ class Handler(BaseHTTPRequestHandler):
                 payload["query"] = query
                 payload["matched"] = matched
             return self._json(200, payload)
+        elif (self.path == "/v1/briefing"
+              or self.path.startswith("/v1/briefing?")):
+            params = urllib.parse.parse_qs(
+                urllib.parse.urlparse(self.path).query)
+            session_id = (params.get("session_id", ["default"])[0]
+                          or "default")
+            try:
+                session = self._session(session_id)
+                from atomzero.briefing import build_briefing
+
+                result = build_briefing(
+                    session.human.data, _state.get("gaps"),
+                    _state.get("docs"),
+                    sort=str(params.get("sort", ["default"])[0]
+                             or "default").strip(),
+                    tag=str(params.get("tag", ["all"])[0]
+                            or "all").strip())
+            except Exception as exc:
+                return self._json(400, {"error": str(exc)})
+            return self._json(200, result)
         elif (self.path == "/v1/weekly-review/export"
               or self.path.startswith("/v1/weekly-review/export?")):
             params = urllib.parse.parse_qs(
@@ -4442,7 +4468,8 @@ class Handler(BaseHTTPRequestHandler):
 
             result = build_briefing(
                 session.human.data, _state.get("gaps"), _state.get("docs"),
-                sort=str(req.get("sort", "default") or "default").strip())
+                sort=str(req.get("sort", "default") or "default").strip(),
+                tag=str(req.get("tag", "all") or "all").strip())
         except Exception as exc:
             return self._json(400, {"error": str(exc)})
         return self._json(200, result)

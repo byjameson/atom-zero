@@ -669,21 +669,38 @@ def _graph_snapshot(docs) -> dict:
 
 
 def build_briefing(session_data: dict | None, gaps, docs,
-                   now=None, sort="default") -> dict:
+                   now=None, sort="default", tag="all") -> dict:
     """Build a compact local brief from tasks, gaps, docs and the graph."""
     sort = _normalize_task_sort(sort)
+    tag = str(tag or "all").strip().lower().lstrip("#")
+    if tag in ("", "all"):
+        tag = "all"
+    else:
+        tag = normalize_task_tag(tag)
     tasks = sort_tasks(_open_tasks(session_data), sort)
+    if tag != "all":
+        tasks = [task for task in tasks if tag in _task_tags(task)]
     today = _today_from_now(now)
-    overdue = sort_tasks(_overdue_tasks(session_data, today), sort)
+    week_end = (date.fromisoformat(today) + timedelta(days=7)).isoformat()
+    overdue = sort_tasks(
+        [task for task in tasks
+         if str(task.get("due", "") or "").strip()
+         and str(task["due"]) < today], sort)
     due_soon = sort_tasks(
-        due_soon_tasks(session_data, days=7, today=today), sort)
+        [task for task in tasks
+         if str(task.get("due", "") or "").strip()
+         and today <= str(task["due"]) <= week_end], sort)
+    brief_tags = _tag_counts(tasks)
+    tagged_tasks = sum(1 for task in tasks if _task_tags(task))
     pending = _pending_gaps(gaps)
     sources = docs.sources() if docs is not None else []
     chunks = docs.stats().get("chunks", 0) if docs is not None else 0
     graph = _graph_snapshot(docs)
     nodes = graph.get("nodes", [])
     edges = graph.get("edges", [])
-    if overdue:
+    if tag != "all" and not tasks:
+        focus = f"no open tasks tagged #{tag}"
+    elif overdue:
         focus = (f"overdue task {overdue[0].get('id')}: "
                  f"{overdue[0].get('text', '')}")
     elif due_soon:
@@ -730,11 +747,22 @@ def build_briefing(session_data: dict | None, gaps, docs,
     title = f"Daily brief - {stamp}"
     if sort != "default":
         title += f" | sort={sort}"
+    if tag != "all":
+        title += f" | tag={tag}"
     lines = [
         title,
         f"Focus: {focus}",
         task_summary,
     ]
+    tag_scope = f" for #{tag}" if tag != "all" else ""
+    if brief_tags:
+        preview = " | ".join(
+            f"{item['tag']} ({item['open']} open)"
+            for item in brief_tags[:5])
+        lines.append(f"Tags{tag_scope}: {len(brief_tags)} distinct | "
+                     f"{preview}")
+    elif tag != "all":
+        lines.append(f"Tags{tag_scope}: none")
     lines.extend(
         f"- {task.get('id')}: {task.get('text', '')}"
         f"{_task_priority_label(task)}"
@@ -753,6 +781,7 @@ def build_briefing(session_data: dict | None, gaps, docs,
     return {
         "generated": stamp,
         "sort": sort,
+        "tag": tag,
         "focus": focus,
         "tasks": tasks[:5],
         "open_task_count": len(tasks),
@@ -760,6 +789,10 @@ def build_briefing(session_data: dict | None, gaps, docs,
         "overdue_task_count": len(overdue),
         "due_soon_tasks": due_soon[:5],
         "due_soon_count": len(due_soon),
+        "tags": brief_tags[:8],
+        "tag_count": len(brief_tags),
+        "tagged_task_count": tagged_tasks,
+        "untagged_task_count": len(tasks) - tagged_tasks,
         "pending_gaps": pending[:5],
         "pending_gap_count": len(pending),
         "documents": {
@@ -1439,6 +1472,8 @@ def main(argv=None) -> int:
                         help="build a weekly review instead of a daily brief")
     parser.add_argument("--weekly-tag", default=None,
                         help="filter a weekly review to one task tag")
+    parser.add_argument("--brief-tag", default=None,
+                        help="filter the daily brief to one task tag")
     parser.add_argument("--overdue", action="store_true",
                         help="list overdue tasks from the session")
     parser.add_argument("--due-soon", action="store_true",
@@ -1537,6 +1572,14 @@ def main(argv=None) -> int:
         parser.error("--due-days must be at least 1")
     if args.weekly_tag is not None and not args.weekly:
         parser.error("--weekly-tag requires --weekly")
+    if args.brief_tag is not None and (
+            args.weekly or args.task_list or args.list_tags
+            or args.rename_tag is not None
+            or args.search_tasks is not None
+            or args.set_task_priority is not None
+            or args.overdue or args.due_soon or args.goal
+            or args.reports or args.markdown or args.out):
+        parser.error("--brief-tag cannot be combined with other views")
     if args.task_sort != "default" and (args.goal or args.reports):
         parser.error("--task-sort cannot be combined with goal/report views")
     if not args.task_list:
@@ -1905,7 +1948,8 @@ def main(argv=None) -> int:
                 args.goal, docs, gaps, session, args.max_steps)
         else:
             result = build_briefing(
-                session, gaps, docs, sort=args.task_sort)
+                session, gaps, docs, sort=args.task_sort,
+                tag=args.brief_tag or "all")
     except (ValueError, OSError) as exc:
         if args.json:
             print(json.dumps({"ok": False, "error": str(exc)}, indent=2))

@@ -146,7 +146,7 @@ LoRA adapters.
 | document benchmark, 100 authored questions | **80/80 answerable, 20/20 no-answer** |
 | public SQuAD v2 retrieval (20 contexts) | **0.98 top-1 context (FTS), 1.00 top-5** |
 | public SQuAD v2 retrieval (50 contexts) | **hybrid 0.975 top-1; 0.816 answer in visible snippet** |
-| test suite | **372 passed** |
+| test suite | **373 passed** |
 
 The raw-model probe asks ten simple general questions with no documents, no
 calculator and no agent. The 49.2M model gets **2/10**. The product gets
@@ -193,7 +193,8 @@ short generation. It is **not MMLU, GSM8K or HumanEval**.
   `POST /v1/skills/chains/run`; end-to-end benchmarks cover provider, template,
   fallback, chain and recipe modes.
 - **Daily brief + weekly review + goal planner:** local tasks, pending gaps,
-  index stats and graph entities in one brief; `atomzero-brief` (including
+  index stats and graph entities in one brief (with `--brief-tag`, `brief me
+  tag work` and HTTP/UI tag filters); `atomzero-brief` (including
   `--weekly --days 7 --markdown --out reports\weekly.md`) and
   `/v1/weekly-review` aggregate recent work with active task-tag counts,
   optional `--weekly-tag` filtering and a Markdown Tags table.

@@ -21,6 +21,9 @@
 - Added weekly-review tag filters: CLI `--weekly-tag`, HTTP `tag`, chat
   `weekly review tag work` and a UI tag field. Task sections, counts, Markdown
   and archive metadata are scoped; archive listings show `tag=work`.
+- Added daily-brief tag filters: CLI `--brief-tag`, GET/POST `/v1/briefing`
+  `tag`, chat `brief me tag work` and a UI field. Tasks, tag counts and next
+  actions are scoped; gaps, index and graph stay global.
 - Added `benchmarks/weekly_chat_regression.py` (6/6 checks).
 - Added weekly-review **Markdown export**:
   `atomzero-brief --weekly --markdown`, `GET /v1/weekly-review/export` and a UI

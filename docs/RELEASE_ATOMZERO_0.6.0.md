@@ -18,6 +18,8 @@ after `0.5.0`.
   in Markdown exports.
 - Optional weekly-review tag filters through `--weekly-tag`, HTTP/UI `tag` and
   chat `weekly review tag work`, with scoped counts and archive metadata.
+- Optional daily-brief tag filters through `--brief-tag`, GET/POST `/v1/briefing`
+  `tag`, chat `brief me tag work` and a UI field, with scoped tasks and counts.
 - Weekly Markdown export through `--weekly --markdown [--out PATH]`,
   `GET /v1/weekly-review/export` and a UI download.
 - Local report archive with report metadata, size and SHA-256.
@@ -66,7 +68,7 @@ after `0.5.0`.
 
 ## Verified regressions
 
-- `372 passed` in the assistant test suite.
+- `373 passed` in the assistant test suite.
 - Weekly chat regression: 7/7.
 - Weekly export/archive regression: 29/29.
 - Weekly review regression: 6/6.
