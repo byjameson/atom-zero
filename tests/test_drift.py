@@ -195,6 +195,198 @@ def test_tiny_threshold_change_is_ignored():
     assert report["alerts"] == []
 
 
+def _policy_profile(brier=0.24, ece=0.13, **policy):
+    profile = _profile(brier, ece)
+    profile.update(policy)
+    return profile
+
+
+def _aisc_point(**policy):
+    return {"aisc": {"policy": {"recommendation": {"point": policy}}}}
+
+
+def test_policy_metrics_are_reported():
+    baseline = _policy_profile(
+        refusal_recall=0.80, refusal_precision=0.75,
+        answerable_coverage=0.70)
+    current = _policy_profile(
+        refusal_recall=0.79, refusal_precision=0.74,
+        answerable_coverage=0.69)
+    report = compare_profiles(baseline, current)
+    assert report["policy"]["baseline"] == {
+        "refusal_recall": 0.80, "refusal_precision": 0.75,
+        "answerable_coverage": 0.70}
+    assert report["policy"]["current"] == {
+        "refusal_recall": 0.79, "refusal_precision": 0.74,
+        "answerable_coverage": 0.69}
+    assert report["policy"]["delta"] == {
+        "refusal_recall": -0.01, "refusal_precision": -0.01,
+        "answerable_coverage": -0.01}
+    assert report["alerts"] == []
+
+
+@pytest.mark.parametrize("metric,alert", [
+    ("refusal_recall", "refusal_recall_decreased"),
+    ("refusal_precision", "refusal_precision_decreased"),
+    ("answerable_coverage", "answerable_coverage_decreased"),
+])
+def test_policy_metric_decrease_alerts(metric, alert):
+    report = compare_profiles(
+        _policy_profile(**{metric: 0.80}),
+        _policy_profile(**{metric: 0.70}))
+    assert report["status"] == "drifted"
+    assert report["ok"] is False
+    assert alert in report["alerts"]
+    assert report["policy"]["delta"][metric] == -0.1
+
+
+def test_nested_policy_metrics_from_aisc_recommendation():
+    baseline = _profile(0.24, 0.13)
+    baseline.update(_aisc_point(
+        refusal_recall=0.80, refusal_precision=0.75,
+        answerable_coverage=0.70))
+    current = _profile(0.24, 0.13)
+    current.update(_aisc_point(
+        refusal_recall=0.70, refusal_precision=0.65,
+        answerable_coverage=0.60))
+    report = compare_profiles(baseline, current)
+    assert report["policy"]["baseline"]["refusal_recall"] == 0.80
+    assert report["policy"]["current"]["refusal_precision"] == 0.65
+    assert report["policy"]["current"]["answerable_coverage"] == 0.60
+    assert "refusal_recall_decreased" in report["alerts"]
+    assert "refusal_precision_decreased" in report["alerts"]
+    assert "answerable_coverage_decreased" in report["alerts"]
+
+
+def test_nested_refusal_recall_accepts_aisc_no_answer_refusal_name():
+    profile = _profile(0.24, 0.13)
+    profile.update(_aisc_point(
+        no_answer_refusal=0.60, refusal_precision=0.50,
+        answerable_coverage=0.40))
+    report = compare_profiles(profile, profile)
+    assert report["policy"]["baseline"]["refusal_recall"] == 0.60
+    assert report["policy"]["baseline"]["refusal_precision"] == 0.50
+    assert report["policy"]["baseline"]["answerable_coverage"] == 0.40
+
+
+def test_top_level_policy_metrics_take_precedence():
+    profile = _profile(0.24, 0.13)
+    profile.update(
+        refusal_recall=0.90,
+        **_aisc_point(
+            refusal_precision=0.80, answerable_coverage=0.75))
+    report = compare_profiles(profile, profile)
+    assert report["policy"]["baseline"] == {
+        "refusal_recall": 0.90, "refusal_precision": 0.80,
+        "answerable_coverage": 0.75}
+
+
+def test_policy_metrics_fall_back_per_metric():
+    profile = _profile(0.24, 0.13)
+    profile["refusal_recall"] = 0.90
+    profile.update(_aisc_point(
+        refusal_precision=0.80, answerable_coverage=0.75))
+    report = compare_profiles(profile, profile)
+    assert report["policy"]["baseline"]["refusal_recall"] == 0.90
+    assert report["policy"]["baseline"]["refusal_precision"] == 0.80
+    assert report["policy"]["baseline"]["answerable_coverage"] == 0.75
+
+
+@pytest.mark.parametrize("metric,param,alert", [
+    ("refusal_recall", "max_refusal_recall_drop",
+     "refusal_recall_decreased"),
+    ("refusal_precision", "max_refusal_precision_drop",
+     "refusal_precision_decreased"),
+    ("answerable_coverage", "max_coverage_drop",
+     "answerable_coverage_decreased"),
+])
+def test_policy_drop_tolerance_boundary(metric, param, alert):
+    baseline = _policy_profile(**{metric: 0.80})
+    current = _policy_profile(**{metric: 0.70})
+    exact_drop = 0.80 - 0.70
+    at_boundary = compare_profiles(
+        baseline, current, **{param: exact_drop})
+    assert alert not in at_boundary["alerts"]
+    assert at_boundary["tolerances"][param] == exact_drop
+    just_over = compare_profiles(
+        baseline, current, **{param: exact_drop - 1e-9})
+    assert alert in just_over["alerts"]
+    suppressed = compare_profiles(baseline, current, **{param: 0.2})
+    assert alert not in suppressed["alerts"]
+
+
+@pytest.mark.parametrize("param", [
+    "max_refusal_recall_drop",
+    "max_refusal_precision_drop",
+    "max_coverage_drop",
+])
+def test_policy_tolerances_must_be_non_negative(param):
+    with pytest.raises(ValueError):
+        compare_profiles(
+            _profile(0.24, 0.13), _profile(0.24, 0.13),
+            **{param: -0.01})
+
+
+def test_missing_policy_metrics_do_not_alert():
+    report = compare_profiles(_profile(0.24, 0.13), _profile(0.24, 0.13))
+    assert report["policy"]["baseline"] == {
+        "refusal_recall": None, "refusal_precision": None,
+        "answerable_coverage": None}
+    assert report["policy"]["current"] == {
+        "refusal_recall": None, "refusal_precision": None,
+        "answerable_coverage": None}
+    assert report["policy"]["delta"] == {
+        "refusal_recall": None, "refusal_precision": None,
+        "answerable_coverage": None}
+    assert report["alerts"] == []
+
+
+def test_policy_metric_missing_on_one_side_does_not_alert():
+    baseline = _policy_profile(
+        refusal_recall=0.80, refusal_precision=0.75,
+        answerable_coverage=0.70)
+    report = compare_profiles(baseline, _profile(0.24, 0.13))
+    assert report["policy"]["current"]["refusal_recall"] is None
+    assert report["policy"]["delta"]["refusal_recall"] is None
+    assert "refusal_recall_decreased" not in report["alerts"]
+    assert "refusal_precision_decreased" not in report["alerts"]
+    assert "answerable_coverage_decreased" not in report["alerts"]
+
+
+def test_malformed_nested_policy_metrics_are_treated_as_missing():
+    profile = _profile(0.24, 0.13)
+    profile["aisc"] = {"policy": {"recommendation": {
+        "point": {"refusal_recall": "high",
+                  "refusal_precision": None,
+                  "answerable_coverage": True}}}}
+    report = compare_profiles(profile, profile)
+    assert report["policy"]["baseline"]["refusal_recall"] is None
+    assert report["policy"]["baseline"]["answerable_coverage"] is None
+    assert report["alerts"] == []
+
+
+def test_cli_reports_policy_metrics_and_tolerance(tmp_path):
+    baseline = tmp_path / "baseline.json"
+    current = tmp_path / "current.json"
+    baseline.write_text(json.dumps(_policy_profile(
+        refusal_recall=0.80, refusal_precision=0.75,
+        answerable_coverage=0.70)), encoding="utf-8")
+    current.write_text(json.dumps(_policy_profile(
+        refusal_recall=0.70, refusal_precision=0.65,
+        answerable_coverage=0.60)), encoding="utf-8")
+    result = run_cli("--baseline", str(baseline),
+                     "--profile", str(current), "--json",
+                     "--max-refusal-recall-drop", "0.2")
+    assert result.returncode == 1
+    data = json.loads(result.stdout)
+    assert data["policy"]["baseline"]["refusal_recall"] == 0.80
+    assert data["policy"]["current"]["answerable_coverage"] == 0.60
+    assert data["tolerances"]["max_refusal_recall_drop"] == 0.2
+    assert "refusal_recall_decreased" not in data["alerts"]
+    assert "refusal_precision_decreased" in data["alerts"]
+    assert "answerable_coverage_decreased" in data["alerts"]
+
+
 def test_real_answerability_profiles():
     if not SIGNAL_PROFILE.is_file() or not TRANSFORMER_PROFILE.is_file():
         pytest.skip("stored answerability profiles are not available")
@@ -208,6 +400,14 @@ def test_real_answerability_profiles():
     assert report["ok"] is False
     assert "brier_increased" in report["alerts"]
     assert "ece_increased" in report["alerts"]
+    assert any(alert in report["alerts"] for alert in (
+        "refusal_recall_decreased", "refusal_precision_decreased",
+        "answerable_coverage_decreased"))
+    assert "refusal_precision_decreased" in report["alerts"]
+    assert "answerable_coverage_decreased" in report["alerts"]
+    assert report["policy"]["baseline"]["refusal_recall"] == 0.433
+    # The transformer stores the same ratio as no_answer_refusal at 0.7.
+    assert report["policy"]["current"]["refusal_recall"] == 0.752577
     assert report["baseline"]["n"] == 200
     assert report["current"]["n"] == 200
     assert report["current"]["threshold"] == 0.6
