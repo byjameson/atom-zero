@@ -2,9 +2,9 @@
 
 ## Current state
 
-- Last feature commit: `efad585` (`feat: add calibrated citation gate`)
+- Last feature commit: `8ccfc2c` (`feat: add citation calibration utility`)
 - Working tree after the handoff commit: clean
-- Atom Zero tests: **400 passed**
+- Atom Zero tests: **405 passed**
 - AISC tests: **163 passed** (+6 subtests)
 - AISC strict audit: **not claimed as passing**; the AISC spec/report update is
   owned by the AISC side. Atom Zero files were not modified in that repo.
@@ -30,20 +30,21 @@
   `squad_v2_stress` at **0.5**. SQuAD v2 policy simulation: **92/103**
   answerable retained, **18/97** no-answer refused, precision **0.479**.
   Answerability is still a separate open problem.
+- Local isotonic calibration utility (`python -m atomzero.calibrate`) fits a
+  PAVA map, reports Brier/ECE and recommends a threshold from score/label CSV
+  for `ATOMZERO_CITATION_CALIBRATION`.
 - Answerability experiment: 5-fold context-grouped CV AUC ~**0.56**. This is
   too weak to ship as a gate or classifier; it is not part of the product.
 
 ## Next tasks (tomorrow)
 
-1. Add a target-distribution calibration utility that fits an isotonic map and
-   recommends a threshold from labelled `score,label` data.
-2. Add typed-relations chat intent and UI parity (CLI/HTTP already work).
-3. Decide whether to improve answerability with stronger features or drop it.
-4. Explore a small local adapter with `streamft`/`continual-lora` as external
+1. Add typed-relations chat intent and UI parity (CLI/HTTP already work).
+2. Decide whether to improve answerability with stronger features or drop it.
+3. Explore a small local adapter with `streamft`/`continual-lora` as external
    trainers. Keep the repos separate; Atom Zero must not import `streamft`.
    Model weights are still `0.8.0` and unchanged.
-5. Prepare the `0.6.0` batch release once fresh credentials are available.
-6. After the next code commit, re-run full pytest, AISC, build/twine and
+4. Prepare the `0.6.0` batch release once fresh credentials are available.
+5. After the next code commit, re-run full pytest, AISC, build/twine and
    refresh `TEST_RESULTS.md`.
 
 ## Resume commands
