@@ -79,15 +79,17 @@ It is generated from the current hybrid profile. That profile reports:
 
 | metric | measured | target | result |
 |---|---:|---:|---|
-| answerability Brier | 0.244274 | ≤0.15 | fail |
-| answerability ECE | 0.129867 | ≤0.10 | fail |
+| answerability Brier | 0.232601 | ≤0.15 | fail |
+| answerability ECE | 0.064205 | ≤0.10 | pass |
 | refusal precision | 0.631000 | ≥0.90 | fail |
 | refusal recall | 0.546400 | ≥0.90 | fail |
 | answerable coverage | 0.699000 | ≥0.80 | fail |
 
-AISC therefore still reports `ANSWERABILITY_POOR` and
-`REFUSAL_POLICY_MISMATCH`. That is the intended outcome until the signal and
-refusal policy actually improve.
+The profile now uses prior-weighted isotonic calibration; ECE passes its
+diagnostic target, but Brier and the refusal policy still fail. AISC is
+therefore expected to keep reporting `ANSWERABILITY_POOR` (for Brier) and
+`REFUSAL_POLICY_MISMATCH`. The strict check was not re-executed in this
+environment; the targets were not weakened.
 
 ## Usage
 

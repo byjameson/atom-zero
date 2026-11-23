@@ -79,7 +79,10 @@ current post-release evidence is the clean `1035 passed` run.
   AUC **0.5375** / Brier **0.2762** / ECE **0.1612**; best hybrid AUC
   **0.6627** / Brier **0.2443** / ECE **0.1299**. The hybrid still misses the
   recall/precision/coverage targets; AISC strict is **FAIL** with
-  `ANSWERABILITY_POOR` and `REFUSAL_POLICY_MISMATCH`.
+  `ANSWERABILITY_POOR` and `REFUSAL_POLICY_MISMATCH`. A later
+  prior-weighted-isotonic calibration update moved the hybrid to Brier
+  **0.2326** / ECE **0.0642** with the same AUC; the Brier and policy targets
+  still fail. See [`docs/ANSWERABILITY.md`](docs/ANSWERABILITY.md).
 - External adapter holdout: base loss **3.853** -> adapter **3.139** (-18.5%)
   on the two-row feedback holdout; 368,640 LoRA parameters.
 - A 20-step external behavior-mix adapter loaded and passed the compatibility

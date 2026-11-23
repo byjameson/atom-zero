@@ -4,12 +4,12 @@ description = "Generated from measured held-out answerability and refusal-policy
 min_assurance = 0.80
 max_context_tokens = 50000
 answerability_n = 200
-answerability_brier = 0.244274
-answerability_ece = 0.129867
+answerability_brier = 0.232601
+answerability_ece = 0.064205
 refusal_precision = 0.631000
 refusal_recall = 0.546400
 answerable_coverage = 0.699000
-refusal_threshold = 0.600000
+refusal_threshold = 0.400000
 min_refusal_precision = 0.90
 min_refusal_recall = 0.90
 min_answerable_coverage = 0.80
@@ -21,6 +21,6 @@ output_type = "Decision"
 kind = "model"
 assurance = 0.80
 verified = true
-evidence = "held-out answerability experiment; source=benchmarks/results/answerability_hybrid/answerability_profile.json; generated_on=2026-11-23; n=200; commit=b4b68b18b5d7122d182e387527f4f54d8a59b094; dataset_hash=d5f6a89dca4ccfb1e44d0b10b5270a7e7e8acbf367d8dd04b4b94487958de15f; calibration_date=2026-11-23; recalibration_due=2027-02-21"
+evidence = "held-out answerability experiment; source=benchmarks/results/answerability_hybrid/answerability_profile.json; generated_on=2026-11-24; n=200; commit=099ca539f1849fd576beb935b4f70f52bbb55edc; dataset_hash=d5f6a89dca4ccfb1e44d0b10b5270a7e7e8acbf367d8dd04b4b94487958de15f; calibration_date=2026-11-24; recalibration_due=2027-02-22"
 guarantees = ["calibrated answerability probability"]
 context_tokens = 2000

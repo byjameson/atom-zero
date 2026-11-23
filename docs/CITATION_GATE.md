@@ -144,10 +144,11 @@ matches.
 SQuAD v2 no-answer questions deliberately share entities and vocabulary with
 the paragraph, so lexical overlap cannot separate them reliably. A later
 42-feature logistic model and a hybrid with a tiny local QA confidence signal
-were also tested; the best hybrid reached held-out AUC 0.663, Brier 0.244 and
-ECE 0.130, but still missed the refusal recall/precision and coverage targets.
-See [`ANSWERABILITY.md`](ANSWERABILITY.md) for the full experiment, split,
-AISC policy output and strict-check failure. The product therefore keeps:
+were also tested; the best hybrid reached held-out AUC 0.663, Brier 0.233 and
+ECE 0.064 after prior-weighted isotonic calibration, but still missed the
+Brier target and the refusal recall/precision and coverage targets. See
+[`ANSWERABILITY.md`](ANSWERABILITY.md) for the full experiment, split and
+calibration method. The product therefore keeps:
 
 - the calibrated citation gate and its configurable threshold;
 - the optional answerability gate, off by default and available in shadow or

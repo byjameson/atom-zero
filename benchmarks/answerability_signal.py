@@ -1,9 +1,10 @@
 """Measure an independent answerability signal and select a refusal policy.
 
 This is an experiment, not a production gate. It trains a local logistic model
-on SQuAD v2 train contexts, calibrates it with isotonic regression on a
-held-out calibration split, and evaluates answer/refuse policy on the same
-200-question SQuAD v2 validation sample used by the citation-gate benchmark.
+on SQuAD v2 train contexts, calibrates it with prior-weighted isotonic
+regression on a held-out calibration split, and evaluates answer/refuse policy
+on the same 200-question SQuAD v2 validation sample used by the citation-gate
+benchmark.
 
 The signal uses retrieval distribution, query coverage, question type,
 answer-type candidates, entity/number alignment and retrieval confidence. It
@@ -37,6 +38,17 @@ from pathlib import Path
 
 from atomzero.answerability import FEATURE_NAMES, extract_features, vectorize
 from atomzero.doc_memory import DocMemory
+
+try:
+    from benchmarks.answerability_calibration import (
+        CALIBRATION_METHOD, DEFAULT_TARGET_PREVALENCE, brier_score,
+        expected_calibration_error, grouped_out_of_fold_calibration,
+        isotonic_curve, prior_weighted_isotonic)
+except ImportError:  # running as `python benchmarks/answerability_signal.py`
+    from answerability_calibration import (
+        CALIBRATION_METHOD, DEFAULT_TARGET_PREVALENCE, brier_score,
+        expected_calibration_error, grouped_out_of_fold_calibration,
+        isotonic_curve, prior_weighted_isotonic)
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUT = "benchmarks/results/answerability_signal"
@@ -130,32 +142,6 @@ def _calibrated(profile: dict, features: dict) -> float:
         __import__("numpy").interp(value, x_values, y_values))))
 
 
-def brier_score(labels: list[int], probabilities: list[float]) -> float:
-    if not labels:
-        return 0.0
-    return sum((probability - label) ** 2
-               for probability, label in zip(probabilities, labels)) / len(labels)
-
-
-def expected_calibration_error(labels: list[int], probabilities: list[float],
-                               bins: int = 10) -> float:
-    total = len(probabilities)
-    if total == 0:
-        return 0.0
-    error = 0.0
-    for index in range(bins):
-        low, high = index / bins, (index + 1) / bins
-        members = [i for i, probability in enumerate(probabilities)
-                   if (low <= probability < high
-                       or (index == bins - 1 and probability == 1.0))]
-        if not members:
-            continue
-        mean_prediction = sum(probabilities[i] for i in members) / len(members)
-        accuracy = sum(labels[i] for i in members) / len(members)
-        error += (len(members) / total) * abs(mean_prediction - accuracy)
-    return error
-
-
 def roc_auc(labels: list[int], probabilities: list[float]) -> float:
     try:
         from sklearn.metrics import roc_auc_score
@@ -245,10 +231,12 @@ def select_threshold(labels: list[int], probabilities: list[float]) -> dict:
     return {"feasible": False, "point": selected, "misses": misses}
 
 
-def fit_logistic(train: list[dict], calibration: list[dict]) -> dict:
+def fit_logistic(train: list[dict], calibration: list[dict],
+                 target_prevalence: float | None = None) -> dict:
+    if target_prevalence is None:
+        target_prevalence = DEFAULT_TARGET_PREVALENCE
     try:
         import numpy as np
-        from sklearn.isotonic import IsotonicRegression
         from sklearn.linear_model import LogisticRegression
         from sklearn.preprocessing import StandardScaler
     except ImportError as exc:
@@ -282,10 +270,10 @@ def fit_logistic(train: list[dict], calibration: list[dict]) -> dict:
         }
         if best is None or (brier, ece) < (best["brier"], best["ece"]):
             best = candidate
-    isotonic = IsotonicRegression(y_min=0.0, y_max=1.0, out_of_bounds="clip")
-    isotonic.fit(best["raw_cal"], y_cal)
-    grid = np.unique(np.concatenate(([0.0, 1.0], best["raw_cal"])))
-    calibrated = isotonic.predict(grid)
+    observed_prevalence = float(np.mean(y_cal))
+    isotonic = prior_weighted_isotonic(
+        best["raw_cal"].tolist(), y_cal.tolist(), target_prevalence)
+    grid_values, calibrated = isotonic_curve(isotonic, best["raw_cal"])
     coefficients = best["model"].coef_[0] / best["scaler"].scale_
     intercept = (best["model"].intercept_[0]
                  - float(np.dot(coefficients, best["scaler"].mean_)))
@@ -294,8 +282,13 @@ def fit_logistic(train: list[dict], calibration: list[dict]) -> dict:
         "coefficients": [float(value) for value in coefficients],
         "intercept": float(intercept),
         "calibration": {
-            "x": [float(value) for value in grid],
+            "x": [float(value) for value in grid_values],
             "y": [float(value) for value in calibrated],
+        },
+        "calibration_method": CALIBRATION_METHOD,
+        "prevalence": {
+            "calibration": round(observed_prevalence, 6),
+            "target": round(float(target_prevalence), 6),
         },
         "model": {
             "type": "logistic",
@@ -309,20 +302,32 @@ def fit_logistic(train: list[dict], calibration: list[dict]) -> dict:
     return profile
 
 
+def raw_probabilities(rows: list[dict], profile: dict) -> list[float]:
+    return [_sigmoid(_raw(profile, row["features"])) for row in rows]
+
+
 def predict(rows: list[dict], profile: dict) -> list[float]:
     return [_calibrated(profile, row["features"]) for row in rows]
 
 
 def write_observations(path: Path, rows: list[dict],
-                       probabilities: list[float], split: str) -> None:
+                       probabilities: list[float], split: str,
+                       raw_scores: list[float] | None = None) -> None:
+    if len(rows) != len(probabilities):
+        raise ValueError("rows and probabilities must have equal length")
+    if raw_scores is not None and len(raw_scores) != len(rows):
+        raise ValueError("raw_scores and rows must have equal length")
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.writer(handle)
         writer.writerow(
-            ["question_id", "prediction", "outcome", "answerable", "split"])
-        for row, probability in zip(rows, probabilities):
+            ["question_id", "prediction", "outcome", "answerable", "split",
+             "raw_score"])
+        for index, (row, probability) in enumerate(zip(rows, probabilities)):
+            raw = ("" if raw_scores is None
+                   else f"{float(raw_scores[index]):.6f}")
             writer.writerow([
                 row["question_id"], f"{probability:.6f}", row["label"],
-                row["label"], split])
+                row["label"], split, raw])
 
 
 def write_toml(path: Path, profile: dict, test_point: dict) -> None:
@@ -412,6 +417,23 @@ def _metric_summary(labels: list[int], probabilities: list[float]) -> dict:
     }
 
 
+def out_of_fold_metrics(rows: list[dict], raw_scores: list[float],
+                        target_prevalence: float,
+                        n_splits: int = 5) -> dict:
+    labels = [row["label"] for row in rows]
+    groups = ([row["group"] for row in rows]
+              if all(row.get("group") is not None for row in rows) else None)
+    probabilities = grouped_out_of_fold_calibration(
+        raw_scores, labels, groups, target_prevalence, n_splits=n_splits)
+    metrics = _metric_summary(labels, probabilities)
+    metrics.update({
+        "split": "heldout",
+        "method": "grouped_out_of_fold",
+        "target_prevalence": round(float(target_prevalence), 6),
+    })
+    return metrics
+
+
 def write_report(path: Path, payload: dict) -> None:
     lines = [
         "# Answerability signal and refusal policy",
@@ -420,8 +442,11 @@ def write_report(path: Path, payload: dict) -> None:
         f"Dataset / split: {payload['dataset']}",
         f"Signal features: {len(FEATURE_NAMES)} local retrieval and "
         "answer-type features; CitationGate probabilities are not used.",
-        "Calibration method: logistic model + isotonic calibration on a "
-        "context-grouped calibration split.",
+        f"Calibration method: {payload['calibration_method']} "
+        "(prior-weighted isotonic map fitted on the context-grouped "
+        "calibration split).",
+        f"Prevalence: calibration={payload['prevalence']['calibration']:.4f}, "
+        f"target={payload['prevalence']['target']:.4f}",
         f"n: train={payload['train_n']}, calibration={payload['calibration_n']}, "
         f"held-out test={payload['test']['n']}",
         f"Brier / ECE: {payload['test']['brier']:.4f} / "
@@ -457,6 +482,25 @@ def write_report(path: Path, payload: dict) -> None:
         f"{payload['test_point']['refusal_recall_wilson_95']}",
         f"- answerable coverage: "
         f"{payload['test_point']['answerable_coverage_wilson_95']}",
+        "",
+        "## Calibration report",
+        "",
+        "| report | split | n | Brier | ECE | AUC |",
+        "|---|---|---:|---:|---:|---:|",
+    ])
+    for label, key in (
+            ("in-sample", "calibration_in_sample"),
+            ("out-of-fold", "calibration_oof")):
+        report = payload[key]
+        lines.append(
+            f"| {label} | {report['split']} | {report['n']} | "
+            f"{report['brier']:.4f} | {report['ece']:.4f} | "
+            f"{report['auc']:.4f} |")
+    lines.extend([
+        "",
+        "`calibration_metrics` in the profile is the out-of-fold report. The "
+        "in-sample row is optimistic because the production map saw those "
+        "rows.",
         "",
         "## Threshold table (held-out)",
         "",
@@ -537,17 +581,24 @@ def main(argv=None) -> int:
     if len(train) < MIN_TRAIN or len(calibration) < MIN_TRAIN:
         raise SystemExit("not enough train/calibration rows")
 
-    print("fitting logistic model and isotonic calibration...", flush=True)
-    profile = fit_logistic(train, calibration)
+    test_labels = [row["label"] for row in test]
+    test_prevalence = sum(test_labels) / len(test_labels)
+    print(
+        f"fitting logistic model and prior-weighted isotonic calibration "
+        f"(target prevalence {test_prevalence:.3f})...", flush=True)
+    profile = fit_logistic(
+        train, calibration, target_prevalence=test_prevalence)
     cal_labels = [row["label"] for row in calibration]
     cal_probabilities = predict(calibration, profile)
-    test_labels = [row["label"] for row in test]
+    cal_raw_scores = raw_probabilities(calibration, profile)
     test_probabilities = predict(test, profile)
+    test_raw_scores = raw_probabilities(test, profile)
 
     selection = select_threshold(cal_labels, cal_probabilities)
     calibration_csv = out / "answerability_calibration.csv"
     write_observations(
-        calibration_csv, calibration, cal_probabilities, "calibration")
+        calibration_csv, calibration, cal_probabilities, "calibration",
+        cal_raw_scores)
     aisc_calibration = {}
     aisc_threshold = None
     if args.aisc_root and not args.skip_aisc:
@@ -569,9 +620,16 @@ def main(argv=None) -> int:
     test_table = policy_table(test_labels, test_probabilities)
     test_metrics = _metric_summary(test_labels, test_probabilities)
     cal_metrics = _metric_summary(cal_labels, cal_probabilities)
+    cal_metrics["split"] = "calibration"
+    oof_metrics = out_of_fold_metrics(
+        test, test_raw_scores, test_prevalence)
     profile["metrics"] = test_metrics
     profile["threshold"] = threshold
-    profile["calibration_metrics"] = cal_metrics
+    profile["calibration_in_sample"] = cal_metrics
+    profile["calibration_oof"] = oof_metrics
+    # Compatibility key: it now reports the out-of-fold estimate, not the
+    # optimistic in-sample fit.
+    profile["calibration_metrics"] = dict(oof_metrics)
     profile.update({
         "n": len(test),
         "brier": test_metrics["brier"],
@@ -623,7 +681,8 @@ def main(argv=None) -> int:
         "%Y-%m-%d", time.localtime(time.time() + 90 * 86400))
 
     observations = out / "answerability_observations.csv"
-    write_observations(observations, test, test_probabilities, "heldout")
+    write_observations(
+        observations, test, test_probabilities, "heldout", test_raw_scores)
     profile_path = out / "answerability_profile.json"
     profile_path.write_text(
         json.dumps(profile, indent=2) + "\n", encoding="utf-8")
@@ -662,6 +721,12 @@ def main(argv=None) -> int:
         "The answerability gate is implemented behind an environment flag "
         "and defaults to off, so this experiment does not change product "
         "behavior.",
+        "Prior weighting corrects the calibration/target prevalence gap but "
+        "does not add discriminative signal; the Brier floor is set by the "
+        "class overlap, so the 0.15 Brier target is not claimed.",
+        "Out-of-fold calibration metrics are a reporting estimate; the "
+        "production map is fitted once on the calibration split and is not "
+        "refitted on held-out rows.",
         "No 0.98 assurance claim is made.",
     ]
     payload = {
@@ -670,6 +735,10 @@ def main(argv=None) -> int:
         "train_n": len(train),
         "calibration_n": len(calibration),
         "calibration": cal_metrics,
+        "calibration_method": profile["calibration_method"],
+        "prevalence": profile["prevalence"],
+        "calibration_in_sample": cal_metrics,
+        "calibration_oof": oof_metrics,
         "test": test_metrics,
         "threshold": threshold,
         "test_point": test_point,
@@ -689,6 +758,8 @@ def main(argv=None) -> int:
         "threshold": threshold,
         "brier": test_metrics["brier"],
         "ece": test_metrics["ece"],
+        "calibration_oof_brier": oof_metrics["brier"],
+        "calibration_oof_ece": oof_metrics["ece"],
         "refusal_precision": test_point["refusal_precision"],
         "refusal_recall": test_point["refusal_recall"],
         "answerable_coverage": test_point["answerable_coverage"],
