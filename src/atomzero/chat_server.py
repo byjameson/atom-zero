@@ -228,28 +228,106 @@ def resolve_adapter(adapter: str,
 
 PAGE = """<!doctype html><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>Atom Zero - local assistant</title>
 <style>
-body{font:16px/1.5 system-ui;max-width:820px;margin:32px auto;padding:0 20px;color:#111}
-h1{margin:0 0 4px}.hint{color:#666;font-size:14px}
-#chat{display:flex;flex-direction:column;gap:10px;min-height:220px;margin:18px 0}
-.msg{max-width:85%;padding:10px 12px;border-radius:10px;white-space:pre-wrap}
-.user{align-self:flex-end;background:#e8f0fe}.bot{align-self:flex-start;background:#f4f4f4}
-.meta{font-size:12px;color:#666;margin-top:4px}.err{background:#fde8e8}
-.row{display:flex;gap:8px}.row input{flex:1;padding:10px;font:inherit}
-textarea{width:100%;min-height:100px;padding:10px;font:inherit;box-sizing:border-box}
-input,button{font:inherit}button{padding:8px 12px;cursor:pointer}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 18px}
-.chips button{font-size:13px;background:#fff;border:1px solid #ccc;border-radius:999px}
-select{padding:8px;font:inherit;max-width:120px}
-#rlimit{flex:0 0 70px;width:70px}
-.row label{display:flex;align-items:center;gap:6px}
-.qitem{border:1px solid #ddd;border-radius:8px;padding:10px;margin:8px 0}
-.qitem .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-.qitem .src{font-size:12px;color:#555;word-break:break-all;margin-top:4px}
-.msg .actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px}
-.msg .actions button{font-size:12px;padding:4px 8px}
-hr{border:0;border-top:1px solid #ddd;margin:22px 0}
+:root{
+  --bg:#f4f7fb; --bg-grad-1:#e9f1ff; --bg-grad-2:#f7efff;
+  --panel:#ffffff; --panel-soft:#f7f9fc; --text:#142033; --muted:#65748b;
+  --border:#d9e2ee; --border-strong:#becbdd;
+  --accent:#2563eb; --accent-2:#7c3aed; --accent-soft:#e8efff;
+  --danger:#dc2626; --danger-soft:#fee2e2; --ok:#059669;
+  --shadow-sm:0 1px 2px rgba(20,32,51,.06);
+  --shadow-md:0 10px 28px rgba(20,32,51,.09);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0b1220; --bg-grad-1:#0f1b31; --bg-grad-2:#1a1230;
+    --panel:#111b2e; --panel-soft:#0e1728; --text:#e6edf7; --muted:#9aa8bd;
+    --border:#26344b; --border-strong:#344563;
+    --accent:#60a5fa; --accent-2:#a78bfa; --accent-soft:#182b4d;
+    --danger:#f87171; --danger-soft:#3a1418; --ok:#34d399;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+    --shadow-md:0 12px 32px rgba(0,0,0,.38);
+    color-scheme: dark;
+  }
+}
+*{box-sizing:border-box}
+body{
+  font:16px/1.55 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  max-width:1120px; margin:0 auto; padding:34px 22px 64px; color:var(--text);
+  background:
+    radial-gradient(1100px 600px at 8% -12%, var(--bg-grad-1), transparent 60%),
+    radial-gradient(900px 520px at 100% 0%, var(--bg-grad-2), transparent 55%),
+    var(--bg);
+  min-height:100vh; -webkit-font-smoothing:antialiased;
+}
+h1{font-size:clamp(2.1rem,4vw,3.1rem); line-height:1.05; letter-spacing:-.04em; margin:0 0 6px; font-weight:800}
+h1 + .hint{font-size:15px; letter-spacing:.02em}
+h3{font-size:1.01rem; letter-spacing:.02em; text-transform:uppercase; margin:30px 0 10px; display:flex; align-items:center; gap:10px}
+h3::before{content:""; width:8px; height:1.05em; border-radius:999px; background:linear-gradient(180deg,var(--accent),var(--accent-2)); box-shadow:0 0 0 4px var(--accent-soft)}
+.hint{color:var(--muted); font-size:13.5px}
+#m{display:inline-flex; align-items:center; gap:8px; padding:7px 12px; border:1px solid var(--border); border-radius:999px; background:var(--panel); box-shadow:var(--shadow-sm)}
+#m::before{content:""; width:8px; height:8px; border-radius:50%; background:var(--ok); box-shadow:0 0 0 4px color-mix(in srgb, var(--ok) 18%, transparent)}
+#chat{display:flex; flex-direction:column; gap:12px; min-height:240px; max-height:520px; overflow-y:auto; margin:18px 0; padding:16px; border:1px solid var(--border); border-radius:18px; background:color-mix(in srgb, var(--panel) 88%, transparent); box-shadow:var(--shadow-md); scroll-behavior:smooth}
+.msg{max-width:min(85%,760px); padding:11px 14px; border-radius:16px; white-space:pre-wrap; border:1px solid transparent; box-shadow:var(--shadow-sm); line-height:1.55}
+.user{align-self:flex-end; background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 65%, var(--accent-2))); color:#fff; border-bottom-right-radius:5px}
+.bot{align-self:flex-start; background:var(--panel); border-color:var(--border); border-bottom-left-radius:5px}
+.meta{font-size:11.5px; color:var(--muted); margin-top:6px}
+.user .meta{color:color-mix(in srgb, #fff 76%, transparent)}
+.err{background:var(--danger-soft)!important; border-color:color-mix(in srgb,var(--danger) 35%, transparent)!important; color:var(--danger)}
+.row{display:flex; flex-wrap:wrap; gap:9px; align-items:center; margin:8px 0}
+.row input{flex:1 1 14em; min-width:0}
+.row label{display:inline-flex; align-items:center; gap:7px; white-space:nowrap}
+input,select,textarea{font:inherit; color:var(--text); background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:9px 11px; transition:border-color .15s, box-shadow .15s, background .15s}
+input:hover,select:hover,textarea:hover{border-color:var(--border-strong)}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%, transparent)}
+textarea{width:100%; min-height:110px; resize:vertical}
+select{max-width:200px}
+input[type=checkbox]{width:auto; accent-color:var(--accent); padding:0}
+input[type=file]{padding:8px}
+button{font:inherit; font-weight:600; padding:9px 13px; color:var(--text); background:var(--panel); border:1px solid var(--border); border-radius:10px; cursor:pointer; box-shadow:var(--shadow-sm); transition:transform .12s, box-shadow .15s, border-color .15s, background .15s}
+button:hover{transform:translateY(-1px); border-color:var(--border-strong); box-shadow:var(--shadow-md)}
+button:active{transform:translateY(0)}
+button:disabled{opacity:.55; cursor:not-allowed; transform:none}
+#g,#newsession{background:linear-gradient(135deg,var(--accent),var(--accent-2)); border-color:transparent; color:#fff; box-shadow:0 8px 20px color-mix(in srgb,var(--accent) 30%, transparent)}
+#forgetdoc,#forgetmem,#deletetagbtn,#deletetaskbtn{color:var(--danger); border-color:color-mix(in srgb,var(--danger) 35%, var(--border))}
+#forgetdoc:hover,#forgetmem:hover,#deletetagbtn:hover,#deletetaskbtn:hover{background:var(--danger-soft)}
+.chips{display:flex; flex-wrap:wrap; gap:7px; margin:10px 0 18px}
+.chips button{font-size:12.5px; font-weight:500; padding:6px 11px; border-radius:999px; background:var(--panel-soft); color:var(--muted); box-shadow:none}
+.chips button:hover{color:var(--accent); border-color:color-mix(in srgb,var(--accent) 40%, var(--border)); background:var(--accent-soft); transform:translateY(-1px)}
+.qitem{border:1px solid var(--border); border-radius:14px; padding:12px 14px; margin:10px 0; background:var(--panel); box-shadow:var(--shadow-sm); transition:border-color .15s, box-shadow .15s, transform .12s}
+.qitem:hover{border-color:var(--border-strong); box-shadow:var(--shadow-md); transform:translateY(-1px)}
+.qitem .actions{display:flex; gap:8px; flex-wrap:wrap; margin-top:9px}
+.qitem .src{font-size:12px; color:var(--muted); word-break:break-word; margin-top:5px; max-height:140px; overflow:auto}
+.msg .actions{display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:8px}
+.msg .actions button{font-size:11.5px; padding:4px 8px; box-shadow:none; font-weight:500}
+#graphnodes button{background:var(--accent-soft); color:var(--accent); border-color:transparent; font-weight:600}
+#graphnodes button:hover{background:var(--accent); color:#fff}
+#docresults,#evidence,#cmpresult,#timeline,#graphnodes,#graphedges,#graphevidence,#relations,#docanswer,#tasklistres,#tasktagsres,#tagauditres,#briefres,#overdueres,#dueres,#tasksearchres,#weeklyreports,#weeklyreportspreview,#weeklyreportscheck,#weeklyreportscompareout{display:flex; flex-direction:column; gap:2px; overflow-x:auto}
+table{width:100%; border-collapse:separate; border-spacing:0; margin:10px 0; font-size:13.5px; border:1px solid var(--border); border-radius:12px; overflow:hidden}
+th,td{padding:9px 11px; text-align:left; border-bottom:1px solid var(--border)}
+th{background:var(--panel-soft); color:var(--muted); font-size:11.5px; text-transform:uppercase; letter-spacing:.05em}
+tr:last-child td{border-bottom:0}
+tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--panel-soft) 55%, transparent)}
+code{font-family:ui-monospace, SFMono-Regular, Consolas, monospace; font-size:.9em; padding:2px 6px; border-radius:6px; background:var(--panel-soft); border:1px solid var(--border)}
+hr{border:0; height:1px; margin:30px 0; background:linear-gradient(90deg,transparent,var(--border),transparent)}
+a{color:var(--accent)}
+::selection{background:var(--accent); color:#fff}
+::-webkit-scrollbar{width:10px; height:10px}
+::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--muted) 35%, transparent); border-radius:999px; border:2px solid transparent; background-clip:padding-box}
+::-webkit-scrollbar-track{background:transparent}
+@media (max-width:720px){
+  body{padding:20px 14px 48px}
+  h1{font-size:2.1rem}
+  .row{align-items:stretch}
+  .row input,.row select{flex:1 1 100%}
+  .row label{white-space:normal}
+  .msg{max-width:95%}
+  #chat{max-height:none; padding:12px}
+  select{max-width:none}
+}
 </style>
 <h1>Atom Zero</h1>
 <p class="hint">local-first personal assistant</p>
