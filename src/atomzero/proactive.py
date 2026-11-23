@@ -764,6 +764,17 @@ def _same_day_as_now(state: dict, moment: datetime) -> bool:
     return False
 
 
+def _has_timing(state: dict) -> bool:
+    if _last_at(state) is not None:
+        return True
+    for key in ("day", "date"):
+        value = state.get(key)
+        if isinstance(value, str) and value.strip():
+            return True
+    return any(_parse_datetime(row.get("at")) is not None
+               for row in _history(state))
+
+
 def should_initiate(session, now=None, config=None) -> dict:
     """Decide whether a local proactive message may be shown now."""
     moment = _now_local(now)
@@ -808,7 +819,7 @@ def should_initiate(session, now=None, config=None) -> dict:
 
     last_reason = str(state.get("last_reason") or "")
     if (reason and last_reason == reason
-            and _same_day_as_now(state, moment)):
+            and (_same_day_as_now(state, moment) or not _has_timing(state))):
         result["blocked_by"] = "duplicate"
         result["next_check_seconds"] = _midnight_seconds(moment)
         return result
