@@ -89,8 +89,9 @@ It does **not** provide:
 - protection from a determined child process escaping a simple timeout.
 
 Docker, WSL or a VM can be added as a stronger backend when installed. This
-machine currently has no Docker/VM backend usable by the loop. WSL is present
-but the project test environment is not installed inside it.
+machine currently has no Docker/VM backend usable by the loop. `wsl.exe` is
+present, but no Linux distribution is installed, so it is not a usable test
+backend.
 
 The first fully autonomous run is documented in `docs/LOOP_CYCLE_8.md`.
 

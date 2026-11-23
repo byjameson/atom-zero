@@ -39,15 +39,27 @@ _SENSITIVE_KEY_RE = re.compile(
 _OUTPUT_LIMIT = 20_000
 
 
+def _wsl_ready() -> bool:
+    if not shutil.which("wsl"):
+        return False
+    try:
+        completed = subprocess.run(
+            ["wsl", "--list", "--quiet"], capture_output=True, text=True,
+            encoding="utf-8", errors="replace", timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return completed.returncode == 0 and bool(completed.stdout.strip())
+
+
 def backend_info() -> dict:
     """Report what isolation is actually available on this machine."""
     docker = shutil.which("docker")
-    wsl = shutil.which("wsl")
+    wsl = _wsl_ready()
     return {
         "backend": "worktree",
         "os_vm": False,
         "docker_available": bool(docker),
-        "wsl_available": bool(wsl),
+        "wsl_available": wsl,
         "isolation": "disposable worktree + sanitized env + timeout",
         "network_isolated": False,
         "guarantees": [
