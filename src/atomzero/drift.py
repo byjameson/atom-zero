@@ -1,0 +1,159 @@
+"""Deterministic calibration-drift monitor.
+
+A local model can stay the same file while its measured calibration changes
+because the evaluation set, retrieval, or thresholds changed. This module
+compares a current profile with a stored baseline and reports the deltas. It is
+a reporting layer: no benchmark is run, no weight is touched and no gate is
+enabled automatically.
+
+    atomzero-drift --profile current.json --baseline baseline.json --json
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+__all__ = ["compare_profiles", "load_profile", "main"]
+
+DEFAULTS = {
+    "max_brier_increase": 0.02,
+    "max_ece_increase": 0.02,
+    "max_n_drop": 0.20,
+}
+
+
+def load_profile(path) -> dict:
+    target = Path(path)
+    data = json.loads(target.read_text(encoding="utf-8-sig"))
+    if not isinstance(data, dict):
+        raise ValueError("profile must be a JSON object")
+    return data
+
+
+def _number(profile: dict, key: str) -> float:
+    value = profile.get(key)
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"profile.{key} must be a number")
+    return float(value)
+
+
+def compare_profiles(
+    baseline: dict,
+    current: dict,
+    *,
+    max_brier_increase: float = 0.02,
+    max_ece_increase: float = 0.02,
+    max_n_drop: float = 0.20,
+) -> dict:
+    """Compare two calibration profiles and return a deterministic report."""
+    if not isinstance(baseline, dict) or not isinstance(current, dict):
+        raise ValueError("baseline and current must be mappings")
+    for name, value in (
+            ("max_brier_increase", max_brier_increase),
+            ("max_ece_increase", max_ece_increase),
+            ("max_n_drop", max_n_drop)):
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError(f"{name} must be a number")
+        if value < 0:
+            raise ValueError(f"{name} must be non-negative")
+
+    old_brier = _number(baseline, "brier")
+    new_brier = _number(current, "brier")
+    old_ece = _number(baseline, "ece")
+    new_ece = _number(current, "ece")
+    old_n = baseline.get("n")
+    new_n = current.get("n")
+    alerts = []
+    if new_brier > old_brier + max_brier_increase:
+        alerts.append("brier_increased")
+    if new_ece > old_ece + max_ece_increase:
+        alerts.append("ece_increased")
+    if (isinstance(old_n, int) and not isinstance(old_n, bool)
+            and isinstance(new_n, int) and not isinstance(new_n, bool)
+            and old_n > 0 and (old_n - new_n) / old_n > max_n_drop):
+        alerts.append("sample_size_dropped")
+    delta_brier = new_brier - old_brier
+    delta_ece = new_ece - old_ece
+    if alerts:
+        status = "drifted"
+    elif delta_brier < 0 and delta_ece < 0:
+        status = "improved"
+    else:
+        status = "stable"
+    return {
+        "status": status,
+        "ok": not alerts,
+        "alerts": alerts,
+        "baseline": {
+            "brier": old_brier, "ece": old_ece, "n": old_n,
+            "threshold": baseline.get("threshold"),
+            "commit": baseline.get("commit"),
+        },
+        "current": {
+            "brier": new_brier, "ece": new_ece, "n": new_n,
+            "threshold": current.get("threshold"),
+            "commit": current.get("commit"),
+        },
+        "delta": {
+            "brier": round(delta_brier, 6),
+            "ece": round(delta_ece, 6),
+            "n": (new_n - old_n
+                  if isinstance(old_n, int) and isinstance(new_n, int)
+                  else None),
+        },
+        "tolerances": {
+            "max_brier_increase": max_brier_increase,
+            "max_ece_increase": max_ece_increase,
+            "max_n_drop": max_n_drop,
+        },
+        "weights_changed": False,
+        "method": "deterministic_calibration_drift_v1",
+    }
+
+
+def _render(report: dict) -> str:
+    delta = report["delta"]
+    lines = [
+        f"Calibration drift: {report['status']}",
+        f"- Brier: {report['baseline']['brier']:.4f} -> "
+        f"{report['current']['brier']:.4f} ({delta['brier']:+.4f})",
+        f"- ECE: {report['baseline']['ece']:.4f} -> "
+        f"{report['current']['ece']:.4f} ({delta['ece']:+.4f})",
+    ]
+    if delta["n"] is not None:
+        lines.append(f"- n: {report['baseline']['n']} -> "
+                     f"{report['current']['n']} ({delta['n']:+d})")
+    lines.append("- alerts: " + (", ".join(report["alerts"])
+                                 if report["alerts"] else "none"))
+    return "\n".join(lines)
+
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--baseline", type=Path, required=True)
+    parser.add_argument("--profile", type=Path, required=True)
+    parser.add_argument("--max-brier-increase", type=float, default=0.02)
+    parser.add_argument("--max-ece-increase", type=float, default=0.02)
+    parser.add_argument("--max-n-drop", type=float, default=0.20)
+    parser.add_argument("--json", action="store_true")
+    args = parser.parse_args(argv)
+    try:
+        report = compare_profiles(
+            load_profile(args.baseline), load_profile(args.profile),
+            max_brier_increase=args.max_brier_increase,
+            max_ece_increase=args.max_ece_increase,
+            max_n_drop=args.max_n_drop)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        print(f"input error: {exc}", file=sys.stderr)
+        return 2
+    if args.json:
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+    else:
+        print(_render(report))
+    return 0 if report["ok"] else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

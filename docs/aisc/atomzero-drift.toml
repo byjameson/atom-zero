@@ -1,0 +1,42 @@
+name = "AtomZeroCalibrationDrift"
+version = "0.1.0"
+description = "Deterministic comparison of current and baseline calibration profiles."
+min_assurance = 0.90
+max_context_tokens = 8000
+
+[[components]]
+name = "ProfileNormalizer"
+input_type = "Profiles"
+output_type = "ValidatedProfiles"
+kind = "evaluator"
+assurance = 0.97
+verified = true
+evidence = "tests/test_drift.py required fields, invalid profile and tolerance cases"
+assumptions = ["profiles are local JSON objects with brier and ece"]
+guarantees = ["missing or non-numeric metrics are rejected", "no profile text is copied"]
+context_tokens = 512
+
+[[components]]
+name = "DriftEvaluator"
+input_type = "ValidatedProfiles"
+output_type = "DriftSignals"
+kind = "evaluator"
+assurance = 0.95
+verified = true
+evidence = "tests/test_drift.py improved, stable, drifted and sample-drop cases"
+assumptions = ["the caller supplies comparable metric definitions"]
+guarantees = ["Brier/ECE increases above tolerance raise alerts", "sample-size drops are visible", "tolerances are configurable"]
+context_tokens = 1024
+
+[[components]]
+name = "DriftReport"
+input_type = "DriftSignals"
+output_type = "DriftReport"
+kind = "tool"
+reversible = true
+assurance = 0.96
+verified = true
+evidence = "tests/test_drift.py delta, CLI JSON and exit-code cases"
+assumptions = ["a human or planner reads the report"]
+guarantees = ["weights_changed is always false", "ok is false when alerts exist", "no benchmark is run by this module"]
+context_tokens = 1024

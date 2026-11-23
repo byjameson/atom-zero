@@ -490,6 +490,21 @@ def test_scoreboard_regression_is_the_highest_priority_signal():
     ]
 
 
+def test_calibration_drift_signal():
+    signals = collect_signals(drift={
+        "alerts": ["brier_increased", "ece_increased"]})
+    assert signals[0]["kind"] == "calibration_drift"
+    assert signals[0]["count"] == 2
+    plan = build_plan(signals)
+    action = plan["actions"][0]
+    assert action["kind"] == "calibration_drift"
+    assert "recalibrate" in action["acceptance"]
+    assert action["suggested_checks"] == [
+        "pytest:tests/test_drift.py",
+        "pytest:tests/test_answerability.py",
+    ]
+
+
 def test_scoreboard_without_regression_adds_no_signal():
     assert collect_signals(scoreboard={
         "latest": {"tests_failed": 0},

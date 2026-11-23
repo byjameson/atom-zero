@@ -34,6 +34,7 @@ def test_aisc_architecture_specs_are_safe_and_verified():
     improvement = _load("atomzero-improvement.toml")
     scoreboard = _load("atomzero-scoreboard.toml")
     trend = _load("atomzero-trend.toml")
+    drift = _load("atomzero-drift.toml")
 
     read_components = read["components"]
     task_components = task["components"]
@@ -75,7 +76,7 @@ def test_aisc_architecture_specs_are_safe_and_verified():
                for item in improvement["components"])
 
     for spec in (claims, consensus, doc_diff, freshness, reliability, temporal,
-                 improvement, scoreboard, trend):
+                 improvement, scoreboard, trend, drift):
         assert spec["min_assurance"] >= 0.90
         assert all(item["verified"] is True for item in spec["components"])
         assert all(item.get("reversible", True) is True

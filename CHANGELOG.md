@@ -1,5 +1,13 @@
 # Changelog
 
+## atomzero 0.10.0 - unreleased
+
+- Added **calibration drift monitor** (`atomzero-drift`): compares a current
+  answerability/calibration profile with a baseline, reports Brier/ECE deltas,
+  raises `brier_increased`, `ece_increased` and `sample_size_dropped` alerts,
+  and never runs a benchmark or changes weights. Calibration drift is also a
+  prioritized signal in the improvement plan.
+
 ## atomzero 0.9.0 - measured self-improvement (2026-11-23)
 
 This batch makes the human-gated loop measured: approval requires a passing

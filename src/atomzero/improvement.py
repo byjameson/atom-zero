@@ -54,6 +54,7 @@ APPROVED_FEEDBACK_STATUSES = frozenset({"approved", "exported"})
 SIGNAL_PRIORITIES = {
     "scoreboard_regression": 85,
     "unsupported_claims": 80,
+    "calibration_drift": 78,
     "conflicts": 75,
     "aisc_coverage_gaps": 72,
     "knowledge_gaps": 70,
@@ -67,6 +68,9 @@ SIGNAL_PRIORITIES = {
 ACCEPTANCE_GATES = {
     "scoreboard_regression": (
         "restore the regressed metric and rerun the scoreboard and gate"),
+    "calibration_drift": (
+        "recalibrate or replace the signal, rerun the answerability profile "
+        "and compare it with the baseline"),
     "unsupported_claims": (
         "add a supporting source and rerun claim audit"),
     "conflicts": (
@@ -94,6 +98,9 @@ NEXT_STEPS = {
     "scoreboard_regression": (
         "run atomzero-scoreboard --summary, identify the regressed metric, "
         "fix it and rerun atomzero-gate"),
+    "calibration_drift": (
+        "run atomzero-drift, recalibrate the signal, then rerun the "
+        "answerability profile and the gate"),
     "weak_sources": (
         "review the source reliability summary, remove or replace weak "
         "sources, then rerun atomzero-reliability and atomzero-gate"),
@@ -115,6 +122,10 @@ SUGGESTED_CHECKS = {
     "scoreboard_regression": [
         "pytest:tests/test_scoreboard.py",
         "pytest:tests/test_improvement.py",
+    ],
+    "calibration_drift": [
+        "pytest:tests/test_drift.py",
+        "pytest:tests/test_answerability.py",
     ],
     "unsupported_claims": ["pytest:tests/test_claims.py"],
     "conflicts": [
@@ -144,7 +155,7 @@ RECORD_KEYS = frozenset({
 }) | GATE_KEYS
 _INPUT_KEYS = frozenset({
     "claim_audit", "gaps", "feedback", "freshness", "reliability",
-    "aisc_coverage", "scoreboard",
+    "aisc_coverage", "scoreboard", "drift",
 })
 _STDIN_ALIASES = {
     "claim_audit": "claim_audit",
@@ -157,6 +168,8 @@ _STDIN_ALIASES = {
     "aisc_coverage": "aisc_coverage",
     "coverage": "aisc_coverage",
     "scoreboard": "scoreboard",
+    "drift": "drift",
+    "calibration_drift": "drift",
 }
 _NOTE_ID_RE = re.compile(r"\A(?:[0-9a-f]{1,64})?\Z")
 
@@ -205,7 +218,8 @@ def _signal(kind: str, count: int, title: str, detail: str,
 
 def collect_signals(*, claim_audit=None, gaps=None, feedback=None,
                     freshness=None, reliability=None,
-                    aisc_coverage=None, scoreboard=None) -> list[dict]:
+                    aisc_coverage=None, scoreboard=None,
+                    drift=None) -> list[dict]:
     """Collect deterministic weakness signals from local summaries.
 
     ``claim_audit`` is the content-free record written by
@@ -230,6 +244,8 @@ def collect_signals(*, claim_audit=None, gaps=None, feedback=None,
         raise ValueError("aisc_coverage must be a mapping")
     if scoreboard is not None and not isinstance(scoreboard, dict):
         raise ValueError("scoreboard must be a mapping")
+    if drift is not None and not isinstance(drift, dict):
+        raise ValueError("drift must be a mapping")
 
     claim = claim_audit if isinstance(claim_audit, dict) else {}
     fresh = _freshness_summary(freshness)
@@ -421,6 +437,20 @@ def collect_signals(*, claim_audit=None, gaps=None, feedback=None,
                 "Measured regression",
                 "The scoreboard shows " + ", ".join(regressions) + ".",
                 ["scoreboard"]))
+
+    if drift is not None:
+        alerts = drift.get("alerts")
+        if alerts is None:
+            alerts = []
+        if not isinstance(alerts, list):
+            raise ValueError("drift.alerts must be a list")
+        if alerts:
+            signals.append(_signal(
+                "calibration_drift", len(alerts),
+                "Calibration drift",
+                "The calibration profile has "
+                + ", ".join(str(alert) for alert in alerts) + ".",
+                ["drift"]))
 
     return sorted(
         signals, key=lambda item: (-item["priority"], item["kind"]))
@@ -753,7 +783,8 @@ def _payload_from_args(args) -> dict:
             ("freshness_json", "freshness"),
             ("reliability_json", "reliability"),
             ("aisc_coverage_json", "aisc_coverage"),
-            ("scoreboard_json", "scoreboard")):
+            ("scoreboard_json", "scoreboard"),
+            ("drift_json", "drift")):
         path = getattr(args, dest)
         if not path:
             continue
@@ -823,6 +854,8 @@ def main(argv=None) -> int:
                         help="JSON file with an AISC coverage report")
     parser.add_argument("--scoreboard-json", default="",
                         help="JSON file with an atomzero-scoreboard summary")
+    parser.add_argument("--drift-json", default="",
+                        help="JSON file with an atomzero-drift report")
     parser.add_argument("--limit", type=int, default=5,
                         help="maximum number of actions (1..20)")
     parser.add_argument("--json", action="store_true",
