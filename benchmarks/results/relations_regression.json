@@ -1,11 +1,11 @@
 {
   "benchmark": "atomzero-relations-regression",
-  "generated": "2026-11-23T06:35:29",
+  "generated": "2026-11-23T06:42:23",
   "checks": [
     {
       "name": "relation_types",
       "ok": true,
-      "detail": "['born_in', 'capital_of', 'ceo_of', 'founded_by', 'located_in']"
+      "detail": "['born_in', 'capital_of', 'ceo_of', 'founded', 'founded_by', 'located_in']"
     },
     {
       "name": "entity_filter",
@@ -33,6 +33,21 @@
       "detail": "404"
     },
     {
+      "name": "relation_path_direct",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "relation_path_multihop",
+      "ok": true,
+      "detail": "['Jane Doe', 'Acme', 'Boston']"
+    },
+    {
+      "name": "relation_path_missing",
+      "ok": true,
+      "detail": "source entity not found"
+    },
+    {
       "name": "ui_relations_control",
       "ok": true,
       "detail": "present"
@@ -48,7 +63,7 @@
       "detail": "Typed relations for Ankara (3):\n- Ankara --capital_of--> Turkey [geo.txt]\n- Ankara --capital_of--> T\u00fcrkiye [tr.txt]\n- Ankara --located_in--> Turkey [geo.txt]\n\nT"
     }
   ],
-  "passed": 9,
+  "passed": 12,
   "failed": 0,
   "ok": true
 }

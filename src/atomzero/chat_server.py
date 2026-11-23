@@ -16,6 +16,7 @@ Endpoints:
   GET  /v1/graph?limit_chunks=...&min_edge=...&max_entities=...
   GET  /v1/graph/entity?name=...&limit=...
   GET  /v1/graph/relations?entity=...&relation=...&limit=100
+  GET  /v1/graph/relations/path?source=...&target=...&max_depth=3
   GET  /v1/graph/path?source=...&target=...&max_depth=4
   GET  /v1/skills
   GET  /v1/skills/chains
@@ -4150,6 +4151,25 @@ class Handler(BaseHTTPRequestHandler):
                     docs, params.get("name", [""])[0],
                     limit=int(params.get("limit", ["10"])[0]))
             except ValueError as exc:
+                return self._json(400, {"error": str(exc)})
+            return self._json(200, result)
+        elif (self.path == "/v1/graph/relations/path"
+              or self.path.startswith("/v1/graph/relations/path?")):
+            docs = _state.get("docs")
+            if docs is None:
+                return self._json(400, {
+                    "error": "no document memory configured"})
+            params = urllib.parse.parse_qs(
+                urllib.parse.urlparse(self.path).query)
+            from atomzero.relations import relation_path
+
+            try:
+                result = relation_path(
+                    docs,
+                    params.get("source", [""])[0],
+                    params.get("target", [""])[0],
+                    max_depth=int(params.get("max_depth", ["3"])[0]))
+            except (TypeError, ValueError) as exc:
                 return self._json(400, {"error": str(exc)})
             return self._json(200, result)
         elif (self.path == "/v1/graph/relations"

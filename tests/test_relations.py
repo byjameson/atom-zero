@@ -1,7 +1,7 @@
 import json
 
 from atomzero.doc_memory import DocMemory, main
-from atomzero.relations import extract_relations
+from atomzero.relations import extract_relations, relation_path
 
 
 def _docs(tmp_path):
@@ -44,6 +44,33 @@ def test_extract_relations_finds_typed_triples(tmp_path):
     assert capitals["count"] >= 1
     assert all(item["relation"] == "capital_of"
                for item in capitals["relations"])
+    docs.close()
+
+
+def test_relation_path_multihop_and_limits(tmp_path):
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("path.txt",
+                  "Jane Doe founded Acme. Acme is in Boston.",
+                  title="Path")
+    docs.add_text("geo.txt", "Ankara is the capital of Turkey.",
+                  title="Geography")
+    direct = relation_path(docs, "Ankara", "Turkey", max_depth=1)
+    assert direct["found"] is True
+    assert direct["hops"] == 1
+    assert direct["path"] == ["Ankara", "Turkey"]
+    multihop = relation_path(docs, "Jane Doe", "Boston", max_depth=2)
+    assert multihop["found"] is True
+    assert multihop["hops"] == 2
+    assert "Acme" in multihop["path"]
+    assert multihop["edges"]
+    assert multihop["sources"]
+    shallow = relation_path(docs, "Jane Doe", "Boston", max_depth=1)
+    assert shallow["found"] is False
+    missing = relation_path(docs, "Atlantis", "Boston")
+    assert missing["found"] is False
+    assert "source entity not found" in missing["reason"]
+    same = relation_path(docs, "Ankara", "Ankara")
+    assert same["found"] is True and same["hops"] == 0
     docs.close()
 
 

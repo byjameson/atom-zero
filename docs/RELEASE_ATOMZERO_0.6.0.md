@@ -53,6 +53,9 @@ after `0.5.0`.
   relation.
 - Chat (`relations for X`, `X ilişkileri`) and the UI Show relations action
   use the same route with evidence and citation buttons.
+- `atomzero-docs relation-path` and `GET /v1/graph/relations/path` find
+  multi-hop paths through explicit relation edges; chat understands
+  `relation path from X to Y`.
 
 ## Weekly review and report archive
 
@@ -145,13 +148,13 @@ after `0.5.0`.
 
 ## Verified regressions
 
-- `406 passed` in the assistant test suite.
+- `408 passed` in the assistant test suite.
 - Weekly chat regression: 7/7.
 - Weekly export/archive regression: 29/29.
 - Weekly review regression: 6/6.
 - Graph-path regression: 6/6.
 - Document timeline regression: 9/9.
-- Typed relations regression: 9/9.
+- Typed relations regression: 12/12.
 - Citation gate SQuAD v2 policy simulation (default 0.5): 92/103 answerable
   retained, 18/97 no-answer refused, precision 0.479.
 - Contradiction regression: 16/16.

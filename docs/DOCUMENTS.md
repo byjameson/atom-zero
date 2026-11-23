@@ -160,6 +160,21 @@ Supported relations are `located_in`, `capital_of`, `founded_by`, `ceo_of` and
 case-insensitive entity substring and an exact relation name. Co-occurrence
 alone is not a relation; every triple keeps the sentence and source locators.
 
+Find a multi-hop path through explicit relation edges:
+
+```powershell
+atomzero-docs relation-path "Jane Doe" Boston --max-depth 2 `
+  --db data/docs.db
+```
+
+```text
+GET /v1/graph/relations/path?source=Jane%20Doe&target=Boston&max_depth=2
+```
+
+Chat understands `relation path from Jane Doe to Boston` and
+`Jane Doe ile Boston arasındaki ilişki yolu`. Each path edge records its
+direction and source locator; the path is explicit extraction, not inference.
+
 ### CLI
 
 ```powershell

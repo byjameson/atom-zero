@@ -59,6 +59,9 @@ def run(output: str | Path | None = None) -> dict:
         docs.add_text("control.txt",
                       "Ankara and Turkey are mentioned together.",
                       title="Control")
+        docs.add_text("path.txt",
+                      "Jane Doe founded Acme. Acme is in Boston.",
+                      title="Path")
         old = dict(chat_server._state)
         chat_server._state.update({
             "model": None, "tok": None, "docs": docs, "adapter": "",
@@ -110,6 +113,29 @@ def run(output: str | Path | None = None) -> dict:
             except urllib.error.HTTPError as exc:
                 missing_ok = exc.code == 404
             check("missing_source", missing_ok, "404")
+            direct_path = _get(
+                base,
+                "/v1/graph/relations/path?source=Ankara&target=Turkey")
+            check("relation_path_direct",
+                  direct_path["found"] is True
+                  and direct_path["hops"] == 1,
+                  str(direct_path["hops"]))
+            multihop = _get(
+                base,
+                "/v1/graph/relations/path?source=Jane%20Doe&target=Boston")
+            check("relation_path_multihop",
+                  multihop["found"] is True
+                  and multihop["hops"] == 2
+                  and "Acme" in multihop["path"],
+                  str(multihop["path"]))
+            missing_path = _get(
+                base,
+                "/v1/graph/relations/path?source=Atlantis&target=Boston")
+            check("relation_path_missing",
+                  missing_path["found"] is False
+                  and "source entity not found"
+                  in missing_path["reason"],
+                  missing_path["reason"])
             with urllib.request.urlopen(base + "/", timeout=15) as response:
                 html = response.read().decode("utf-8", "replace").lower()
             check("ui_relations_control",

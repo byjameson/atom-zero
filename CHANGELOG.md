@@ -23,10 +23,12 @@
   and a UI Show timeline action share the route. The timeline regression
   passes 9/9.
 - Added deterministic **typed relation extraction**: `atomzero-docs relations`,
-  `GET /v1/graph/relations`, chat (`relations for X`, `X ilişkileri`) and a UI
-  Show relations action return explicit `located_in`, `capital_of`,
-  `founded_by`, `ceo_of` and `born_in` triples with locators; English and
-  Turkish patterns are supported. The relations regression passes 9/9.
+  `atomzero-docs relation-path`, `GET /v1/graph/relations`,
+  `GET /v1/graph/relations/path`, chat (`relations for X`, `X ilişkileri`,
+  `relation path from X to Y`) and a UI Show relations action return explicit
+  `located_in`, `capital_of`, `founded_by`, `ceo_of` and `born_in` triples and
+  multi-hop paths with locators; English and Turkish patterns are supported.
+  The relations regression passes 12/12.
 - Added a calibrated **CitationGate** for local answers: rerank score ->
   validity probability, configurable threshold/profile via
   `ATOMZERO_CITATION_*`, citation dropping and explicit refusal on an empty

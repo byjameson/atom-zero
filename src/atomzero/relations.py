@@ -8,6 +8,7 @@ relation model and does not infer missing facts.
 from __future__ import annotations
 
 import re
+from collections import deque
 
 ENTITY = (
     r"[A-ZÇĞİÖŞÜ][\wÇĞİÖŞÜçğıöşü.-]*"
@@ -156,5 +157,116 @@ def extract_relations(docs, entity: str = "", relation: str = "",
         "limit": limit,
         "count": len(ordered),
         "relations": ordered[:limit],
+        "weights_changed": False,
+    }
+
+
+def _node_key(value: str) -> str:
+    return re.sub(r"\s+", " ", str(value or "")).strip().casefold()
+
+
+def relation_path(docs, source: str, target: str,
+                  max_depth: int = 3) -> dict:
+    """Find a shortest path through explicit typed-relation edges."""
+    source = str(source or "").strip()
+    target = str(target or "").strip()
+    if not source or not target:
+        raise ValueError("source and target are required")
+    try:
+        max_depth = max(1, min(int(max_depth), 6))
+    except (TypeError, ValueError):
+        max_depth = 3
+    data = extract_relations(docs, limit=5000)
+    relations = data.get("relations", [])
+    if not relations:
+        return {
+            "source": source, "target": target, "found": False,
+            "reason": "no typed relations indexed", "hops": 0,
+            "path": [], "edges": [], "sources": [],
+            "weights_changed": False,
+        }
+    display = {}
+    adjacency: dict[str, list] = {}
+    for item in relations:
+        subject = _node_key(item["subject"])
+        object_value = _node_key(item["object"])
+        display.setdefault(subject, item["subject"])
+        display.setdefault(object_value, item["object"])
+        edge = {
+            "relation": item["relation"],
+            "subject": item["subject"],
+            "object": item["object"],
+            "source": item["source"],
+            "title": item.get("title", ""),
+            "page": item.get("page"),
+            "section": item.get("section", ""),
+            "text": item.get("text", ""),
+            "kind": item.get("kind", "document"),
+            "verified": bool(item.get("verified", True)),
+        }
+        adjacency.setdefault(subject, []).append(
+            (object_value, "forward", edge))
+        adjacency.setdefault(object_value, []).append(
+            (subject, "reverse", edge))
+    for node in adjacency:
+        adjacency[node].sort(
+            key=lambda entry: (entry[2]["relation"],
+                               entry[0], entry[1]))
+    start = _node_key(source)
+    goal = _node_key(target)
+    if start not in adjacency:
+        return {
+            "source": source, "target": target, "found": False,
+            "reason": "source entity not found", "hops": 0,
+            "path": [], "edges": [], "sources": [],
+            "weights_changed": False,
+        }
+    if goal not in adjacency:
+        return {
+            "source": source, "target": target, "found": False,
+            "reason": "target entity not found", "hops": 0,
+            "path": [], "edges": [], "sources": [],
+            "weights_changed": False,
+        }
+    if start == goal:
+        return {
+            "source": source, "target": target, "found": True,
+            "reason": "", "hops": 0, "path": [display.get(start, source)],
+            "edges": [], "sources": [], "weights_changed": False,
+        }
+    queue = deque([(start, [start], [])])
+    visited = {start}
+    while queue:
+        node, path, edges = queue.popleft()
+        if node == goal:
+            sources = []
+            for edge in edges:
+                item = {
+                    "source": edge["source"],
+                    "title": edge.get("title", ""),
+                    "kind": edge.get("kind", "document"),
+                    "verified": bool(edge.get("verified", True)),
+                }
+                if item not in sources:
+                    sources.append(item)
+            return {
+                "source": source, "target": target, "found": True,
+                "reason": "", "hops": len(edges),
+                "path": [display.get(name, name) for name in path],
+                "edges": edges, "sources": sources,
+                "weights_changed": False,
+            }
+        if len(edges) >= max_depth:
+            continue
+        for neighbor, direction, edge in adjacency.get(node, []):
+            if neighbor in visited:
+                continue
+            visited.add(neighbor)
+            crossed = {**edge, "direction": direction}
+            queue.append((neighbor, path + [neighbor], edges + [crossed]))
+    return {
+        "source": source, "target": target, "found": False,
+        "reason": f"no typed relation path within {max_depth} hop(s)",
+        "hops": 0, "path": [], "edges": [], "sources": [],
         "weights_changed": False,
     }

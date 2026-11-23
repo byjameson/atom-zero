@@ -201,6 +201,25 @@ def test_agent_typed_relation_intent(tmp_path):
     docs.close()
 
 
+def test_agent_relation_path_intent(tmp_path):
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("path.txt",
+                  "Jane Doe founded Acme. Acme is in Boston.",
+                  title="Path")
+    agent = AgentSession("s-rel-path", tmp_path / "memory.json", docs=docs)
+    result = agent.chat("relation path from Jane Doe to Boston")
+    assert result["tool_calls"][0]["name"] == "relation_path"
+    assert result["path"]["hops"] == 2
+    assert "Acme" in result["reply"]
+    assert result["sources"]
+    turkish = agent.chat(
+        "Jane Doe ile Boston arasındaki ilişki yolu")
+    assert turkish["tool_calls"][0]["name"] == "relation_path"
+    missing = agent.chat("relation path from Atlantis to Boston")
+    assert "No typed relation path" in missing["reply"]
+    docs.close()
+
+
 def test_agent_graph_path_query(tmp_path):
     docs = DocMemory(tmp_path / "docs.db")
     docs.add_text("chain1.txt", "Ankara is in Turkey.", title="Chain 1")

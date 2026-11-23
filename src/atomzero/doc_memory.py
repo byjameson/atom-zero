@@ -2112,6 +2112,11 @@ def main(argv=None):
     relations.add_argument("--source", default="")
     relations.add_argument("--source-prefix", default="")
     relations.add_argument("--limit", type=int, default=100)
+    relation_path = sub.add_parser(
+        "relation-path", help="find a typed relation path between two entities")
+    relation_path.add_argument("source")
+    relation_path.add_argument("target")
+    relation_path.add_argument("--max-depth", type=int, default=3)
     export = sub.add_parser(
         "export", help="export the index to portable JSONL")
     export.add_argument("--out", default="atomzero-index.jsonl")
@@ -2127,8 +2132,8 @@ def main(argv=None):
     # Accept --db on either side of the subcommand; the docs use both forms.
     for parser in (add, search, answer, sync, status, doctor, list_db,
                    stats_db, evidence, summary, summary_collection, graph,
-                   entity, path, compare, timeline, relations, export,
-                   import_cmd, forget):
+                   entity, path, compare, timeline, relations, relation_path,
+                   export, import_cmd, forget):
         parser.add_argument("--db", dest="db_after", default=None)
     args = ap.parse_args(argv)
     mem = DocMemory(args.db_after or args.db or "data/docs.db")
@@ -2269,6 +2274,17 @@ def main(argv=None):
                     source=args.source, source_prefix=args.source_prefix,
                     limit=args.limit)
             except (SourceNotFound, ValueError) as exc:
+                print(json.dumps({"error": str(exc)}))
+                return 1
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+        elif args.cmd == "relation-path":
+            from atomzero.relations import relation_path
+
+            try:
+                result = relation_path(
+                    mem, args.source, args.target,
+                    max_depth=args.max_depth)
+            except ValueError as exc:
                 print(json.dumps({"error": str(exc)}))
                 return 1
             print(json.dumps(result, indent=2, ensure_ascii=False))

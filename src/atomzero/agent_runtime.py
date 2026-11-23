@@ -17,7 +17,7 @@ from atomzero.contradictions import compare_sources
 from atomzero.doc_memory import format_citation, grounded_answer
 from atomzero.knowledge_gaps import KnowledgeGapError
 from atomzero.knowledge_graph import entity_sources, graph_path
-from atomzero.relations import extract_relations
+from atomzero.relations import extract_relations, relation_path
 from atomzero.skills import execute_skill
 from atomzero.weekly_reports import (
     DEFAULT_REPORTS_PATH, WeeklyReportArchive, WeeklyReportError)
@@ -330,6 +330,60 @@ class AgentSession:
             "sources": sources,
             "evidence": evidence,
             "relations": items,
+        }
+
+    def _relation_path(self, source: str, target: str) -> dict:
+        if self.docs is None:
+            return {"reply": "no document memory configured",
+                    "tool_calls": [], "sources": [], "evidence": []}
+        source = source.strip().strip("\"'")
+        target = target.strip().strip("\"'")
+        try:
+            data = relation_path(self.docs, source, target)
+        except ValueError as exc:
+            return {"reply": str(exc), "tool_calls": [],
+                    "sources": [], "evidence": []}
+        tool = [{"name": "relation_path", "source": source,
+                 "target": target}]
+        if not data.get("found"):
+            return {
+                "reply": (f"No typed relation path from {source} to {target}: "
+                          f"{data.get('reason', 'not found')}."),
+                "tool_calls": tool,
+                "sources": [], "evidence": [],
+                "path": data,
+            }
+        lines = [f"Typed relation path ({data['hops']} hop(s)):",
+                 " → ".join(data["path"])]
+        sources = []
+        evidence = []
+        for edge in data["edges"]:
+            lines.append(
+                f"- {edge['subject']} --{edge['relation']}--> "
+                f"{edge['object']} [{edge['source']}]")
+            source_item = {
+                "source": edge["source"],
+                "title": edge.get("title", ""),
+                "kind": edge.get("kind", "document"),
+                "verified": bool(edge.get("verified", True)),
+            }
+            if source_item not in sources:
+                sources.append(source_item)
+            evidence.append({
+                "source": edge["source"],
+                "title": edge.get("title", ""),
+                "page": edge.get("page"),
+                "section": edge.get("section", ""),
+                "snippet": edge.get("text", ""),
+                "relation": edge["relation"],
+            })
+        lines.append("\nThis is explicit relation extraction, not inference.")
+        return {
+            "reply": "\n".join(lines),
+            "tool_calls": tool,
+            "sources": sources,
+            "evidence": evidence,
+            "path": data,
         }
 
     def _graph_path(self, source: str, target: str) -> dict:
@@ -1836,6 +1890,21 @@ class AgentSession:
             return self._relations(
                 relations_match.group(1),
                 relations_match.group(2) or "")
+        relation_path_match = re.match(
+            r"^(?:typed\s+)?relation\s+path\s+from\s+(.+?)\s+to\s+(.+?)\??$",
+            text, re.IGNORECASE)
+        if not relation_path_match:
+            relation_path_match = re.match(
+                r"^how is\s+(.+?)\s+related to\s+(.+?)\??$",
+                text, re.IGNORECASE)
+        if not relation_path_match:
+            relation_path_match = re.match(
+                r"^(.+?)\s+ile\s+(.+?)\s+arasındaki\s+ilişki\s+yolu\??$",
+                text, re.IGNORECASE)
+        if relation_path_match:
+            return self._relation_path(
+                relation_path_match.group(1),
+                relation_path_match.group(2))
         graph_query = re.match(
             r"^(?:what is related to|what relates to|connections (?:for|of)|"
             r"graph)\s*:?\s*(.+?)\??$", text, re.IGNORECASE)
