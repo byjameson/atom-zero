@@ -170,6 +170,8 @@
 - Added filtered tag-audit CSV/Markdown export through CLI
   `--tag-audit-format` and `/v1/tasks/tags/audit/export`.
 - Added UI CSV/Markdown download buttons for the filtered tag audit.
+- Weekly review Tag audit section is scoped by `--weekly-tag` and the new
+  `--weekly-audit-action`; HTTP `audit_action` and a UI selector mirror it.
 - Ported tag/action audit filters to the legacy `research/chat_human.py`
   runtime.
 - Ported task tags to the legacy `research/chat_human.py` runtime:

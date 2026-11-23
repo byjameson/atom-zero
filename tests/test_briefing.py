@@ -894,6 +894,21 @@ def test_tag_audit_and_weekly_archive(tmp_path, capsys):
     assert "undo delete tag 'work' | restored 2 task(s)" in markdown
     assert ("delete tag 'work' | 2 task(s) "
             "(1 open, 1 done)") in markdown
+    filtered_review = build_weekly_review(
+        session, None, None, days=7, tag="work",
+        audit_action="delete_tag")
+    assert filtered_review["tag_audit_total"] == 1
+    assert filtered_review["tag_audit_action"] == "delete_tag"
+    assert [event["action"]
+            for event in filtered_review["tag_audit"]] == ["delete_tag"]
+    assert ("Tag audit: 1 event(s) | tag=work | action=delete_tag"
+            in filtered_review["text"])
+    filtered_markdown = render_weekly_markdown(filtered_review)
+    assert ("## Tag audit (1) | tag=work | action=delete_tag"
+            in filtered_markdown)
+    assert ("delete tag 'work' | 2 task(s) "
+            "(1 open, 1 done)") in filtered_markdown
+    assert "undo delete tag 'work'" not in filtered_markdown
 
     brief = build_briefing(
         session, None, None, now="2026-11-23 10:00")
@@ -988,6 +1003,29 @@ def test_tag_audit_and_weekly_archive(tmp_path, capsys):
     assert exc.value.code == 2
     assert main(common + ["--weekly", "--markdown"]) == 0
     assert "## Tag audit (2)" in capsys.readouterr().out
+    assert main(common + [
+        "--weekly", "--weekly-tag", "work",
+        "--weekly-audit-action", "delete_tag", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["tag_audit_total"] == 1
+    assert payload["tag_audit_action"] == "delete_tag"
+    assert [event["action"] for event in payload["tag_audit"]] == [
+        "delete_tag"]
+    assert ("Tag audit: 1 event(s) | tag=work | action=delete_tag"
+            in payload["text"])
+    assert main(common + [
+        "--weekly", "--weekly-tag", "work",
+        "--weekly-audit-action", "delete_tag", "--markdown"]) == 0
+    weekly_markdown = capsys.readouterr().out
+    assert ("## Tag audit (1) | tag=work | action=delete_tag"
+            in weekly_markdown)
+    assert "undo delete tag 'work'" not in weekly_markdown
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--weekly-audit-action", "delete_tag"])
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--weekly", "--weekly-audit-action", "bad"])
+    assert exc.value.code == 2
     with pytest.raises(SystemExit) as exc:
         main(common + ["--tag-audit-limit", "2"])
     assert exc.value.code == 2

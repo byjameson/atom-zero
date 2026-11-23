@@ -18,6 +18,8 @@ after `0.5.0`.
   in Markdown exports.
 - Optional weekly-review tag filters through `--weekly-tag`, HTTP/UI `tag` and
   chat `weekly review tag work`, with scoped counts and archive metadata.
+- Weekly Tag audit section scoped by the same tag and
+  `--weekly-audit-action` / HTTP/UI `audit_action`.
 - Optional daily-brief tag filters through `--brief-tag`, GET/POST `/v1/briefing`
   `tag`, chat `brief me tag work` and a UI field, with scoped tasks and counts.
 - Daily brief includes recent tag audit events in text/JSON, scoped by tag.

@@ -1187,7 +1187,7 @@ def _source_recent(item: dict, cutoff_ts: float) -> bool:
 
 def build_weekly_review(session_data: dict | None, gaps, docs,
                         days: int = 7, now=None, sort="default",
-                        tag="all") -> dict:
+                        tag="all", audit_action="all") -> dict:
     """Aggregate tasks, gaps, recent sources and graph highlights."""
     sort = _normalize_task_sort(sort)
     tag = str(tag or "all").strip().lower().lstrip("#")
@@ -1228,7 +1228,8 @@ def build_weekly_review(session_data: dict | None, gaps, docs,
     active_tasks = open_tasks + completed_recent
     weekly_tags = _tag_counts(active_tasks)
     tagged_active = sum(1 for task in active_tasks if _task_tags(task))
-    tag_audit = task_tag_audit_view(session_data, limit=10, now=now)
+    tag_audit = task_tag_audit_view(
+        session_data, limit=10, tag=tag, action=audit_action, now=now)
     pending = _pending_gaps(gaps)
     sources = docs.sources() if docs is not None else []
     recent_sources = [source for source in sources
@@ -1296,6 +1297,19 @@ def build_weekly_review(session_data: dict | None, gaps, docs,
                      f"{preview}")
     else:
         lines.append(f"Tags{tag_scope}: none")
+    audit_scope = []
+    if tag != "all":
+        audit_scope.append(f"tag={tag}")
+    if tag_audit["action"] != "all":
+        audit_scope.append(f"action={tag_audit['action']}")
+    audit_suffix = (" | " + " | ".join(audit_scope)) if audit_scope else ""
+    if tag_audit["events"]:
+        lines.append(
+            f"Tag audit: {tag_audit['total']} event(s){audit_suffix}")
+        lines.extend(f"- {_tag_audit_event_line(event)}"
+                     for event in tag_audit["events"][:3])
+    elif audit_scope:
+        lines.append(f"Tag audit: none{audit_suffix}")
     lines.append("Open:")
     lines.extend(
         f"- {task.get('id')}: {task.get('text', '')}"
@@ -1343,6 +1357,7 @@ def build_weekly_review(session_data: dict | None, gaps, docs,
         "untagged_task_count": len(active_tasks) - tagged_active,
         "tag_audit": tag_audit["events"],
         "tag_audit_total": tag_audit["total"],
+        "tag_audit_action": tag_audit["action"],
         "pending_gaps": pending[:5],
         "pending_gap_count": len(pending),
         "recent_sources": recent_sources[:8],
@@ -1732,7 +1747,16 @@ def render_weekly_markdown(review: dict) -> str:
         lines.append("- None")
     audit = review.get("tag_audit", [])
     audit_total = review.get("tag_audit_total", len(audit))
-    lines.extend(["", f"## Tag audit ({audit_total})", ""])
+    audit_filters = []
+    if tag != "all":
+        audit_filters.append(f"tag={tag}")
+    audit_action = str(review.get("tag_audit_action", "all") or "all")
+    if audit_action != "all":
+        audit_filters.append(f"action={audit_action}")
+    audit_heading = f"## Tag audit ({audit_total})"
+    if audit_filters:
+        audit_heading += " | " + " | ".join(audit_filters)
+    lines.extend(["", audit_heading, ""])
     if audit:
         for event in audit:
             lines.append(f"- {_tag_audit_event_line(event)}")
@@ -1826,6 +1850,10 @@ def main(argv=None) -> int:
                         help="build a weekly review instead of a daily brief")
     parser.add_argument("--weekly-tag", default=None,
                         help="filter a weekly review to one task tag")
+    parser.add_argument("--weekly-audit-action",
+                        choices=("all", "delete_tag", "undo_tag_delete"),
+                        default="all",
+                        help="filter the weekly tag-audit section by action")
     parser.add_argument("--brief-tag", default=None,
                         help="filter the daily brief to one task tag")
     parser.add_argument("--overdue", action="store_true",
@@ -1956,6 +1984,8 @@ def main(argv=None) -> int:
         parser.error("--due-soon-tag requires --due-soon")
     if args.weekly_tag is not None and not args.weekly:
         parser.error("--weekly-tag requires --weekly")
+    if args.weekly_audit_action != "all" and not args.weekly:
+        parser.error("--weekly-audit-action requires --weekly")
     if args.brief_tag is not None and (
             args.weekly or args.task_list or args.list_tags
             or args.rename_tag is not None
@@ -2488,7 +2518,8 @@ def main(argv=None) -> int:
         elif args.weekly:
             result = build_weekly_review(
                 session, gaps, docs, days=args.days,
-                sort=args.task_sort, tag=args.weekly_tag or "all")
+                sort=args.task_sort, tag=args.weekly_tag or "all",
+                audit_action=args.weekly_audit_action)
         elif args.goal:
             result = plan_goal(
                 args.goal, docs, gaps, session, args.max_steps)

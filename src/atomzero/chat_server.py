@@ -28,7 +28,7 @@ Endpoints:
   POST /v1/briefing
   GET  /v1/briefing?session_id=default&tag=work
   POST /v1/weekly-review
-  GET  /v1/weekly-review/export?session_id=...&days=7&tag=work
+  GET  /v1/weekly-review/export?session_id=...&days=7&tag=work&audit_action=delete_tag
   GET  /v1/tasks/list?session_id=default&status=open&due=week&priority=high&sort=priority
   GET  /v1/tasks/tags?session_id=default
   GET  /v1/tasks/tags/audit?session_id=default&limit=10&tag=work&action=delete_tag
@@ -295,6 +295,11 @@ and suggested next actions.</p>
 <input id="brieftag" placeholder="tag" style="width:7em">
 <button id="briefweekly">Weekly review</button>
 <input id="weeklytag" placeholder="tag" style="width:7em">
+<select id="weeklyauditaction" title="Weekly tag audit action">
+<option value="all" selected>All audit actions</option>
+<option value="delete_tag">Delete</option>
+<option value="undo_tag_delete">Undo</option>
+</select>
 <button id="overduebtn">Overdue tasks</button>
 <input id="duedays" type="number" min="1" max="90" value="7"
        title="Due-soon window in days" style="width:4em">
@@ -1329,11 +1334,13 @@ async function getWeeklyReview() {
   const box = document.getElementById('briefres');
   const sort = document.getElementById('tasksort').value;
   const tag = document.getElementById('weeklytag').value.trim();
+  const auditAction = document.getElementById('weeklyauditaction').value;
   msg.textContent = 'building weekly review...';
   box.textContent = '';
   try {
     const payload = {session_id: sessionId, days: 7, sort};
     if (tag) payload.tag = tag;
+    if (auditAction !== 'all') payload.audit_action = auditAction;
     const r = await fetch('/v1/weekly-review', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(payload)});
@@ -1347,7 +1354,9 @@ async function getWeeklyReview() {
       ' open | ' + (counts.completed_recent || 0) + ' completed | ' +
       (j.recent_source_count || 0) + ' new source(s)' +
       ((j.sort || sort) !== 'default' ? ' | sort=' + (j.sort || sort) : '') +
-      ((j.tag || 'all') !== 'all' ? ' | tag=' + j.tag : '');
+      ((j.tag || 'all') !== 'all' ? ' | tag=' + j.tag : '') +
+      ((j.tag_audit_action || 'all') !== 'all'
+        ? ' | audit=' + j.tag_audit_action : '');
     const card = document.createElement('div');
     card.className = 'qitem';
     card.textContent = j.text || '';
@@ -1362,8 +1371,10 @@ async function downloadWeeklyMarkdown() {
   try {
     const sort = document.getElementById('tasksort').value;
     const tag = document.getElementById('weeklytag').value.trim();
+    const auditAction = document.getElementById('weeklyauditaction').value;
     const query = new URLSearchParams({session_id: sessionId, days: 7, sort});
     if (tag) query.set('tag', tag);
+    if (auditAction !== 'all') query.set('audit_action', auditAction);
     const r = await fetch('/v1/weekly-review/export?' + query.toString());
     if (!r.ok) {
       let detail = r.status;
@@ -3965,7 +3976,10 @@ class Handler(BaseHTTPRequestHandler):
                     sort=str(params.get("sort", ["default"])[0]
                              or "default").strip(),
                     tag=str(params.get("tag", ["all"])[0]
-                            or "all").strip())
+                            or "all").strip(),
+                    audit_action=str(
+                        params.get("audit_action", ["all"])[0]
+                        or "all").strip())
                 markdown = render_weekly_markdown(review)
             except Exception as exc:
                 return self._json(400, {"error": str(exc)})
@@ -4995,7 +5009,9 @@ class Handler(BaseHTTPRequestHandler):
                 session.human.data, _state.get("gaps"), _state.get("docs"),
                 days=req.get("days", 7),
                 sort=str(req.get("sort", "default") or "default").strip(),
-                tag=str(req.get("tag", "all") or "all").strip())
+                tag=str(req.get("tag", "all") or "all").strip(),
+                audit_action=str(
+                    req.get("audit_action", "all") or "all").strip())
         except Exception as exc:
             return self._json(400, {"error": str(exc)})
         return self._json(200, result)

@@ -274,11 +274,17 @@ atomzero-brief --session data/sessions/default.json `
   --docs data/atomzero_demo.db --weekly --days 7
 ```
 
-Add `--weekly-tag work` to scope the review to one tag.
+Add `--weekly-tag work` to scope the review to one tag. The Tag audit
+section is scoped by the same tag; use
+`--weekly-audit-action delete_tag|undo_tag_delete` to filter its events by
+action. The UI has a matching action selector, and HTTP accepts
+`"audit_action": "delete_tag"` or `audit_action=delete_tag` on the export.
+Markdown headings show `## Tag audit (N) | tag=work | action=delete_tag`.
 
 ```text
 POST /v1/weekly-review
-{"session_id": "default", "days": 7, "tag": "work"}
+{"session_id": "default", "days": 7, "tag": "work",
+ "audit_action": "delete_tag"}
 ```
 
 A weekly review aggregates:

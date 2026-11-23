@@ -850,6 +850,7 @@ def test_ui_collection_scope_contract():
     assert 'id="briefweekly"' in page
     assert 'id="brieftag"' in page
     assert 'id="weeklytag"' in page
+    assert 'id="weeklyauditaction"' in page
     assert "brieftag" in page
     assert "weeklytag" in page
     assert 'id="overduebtn"' in page
@@ -2447,6 +2448,24 @@ def test_http_delete_tag(tmp_path):
             "session_id": session_id, "tag": "home"})
         assert home_brief["tag_audit_total"] == 0
         assert "Tag audit" not in home_brief["text"]
+
+        weekly = _post(base + "/v1/weekly-review", {
+            "session_id": session_id, "days": 7, "tag": "work",
+            "audit_action": "delete_tag"})
+        assert weekly["tag_audit_total"] == 1
+        assert weekly["tag_audit_action"] == "delete_tag"
+        assert [event["action"] for event in weekly["tag_audit"]] == [
+            "delete_tag"]
+        assert ("Tag audit: 1 event(s) | tag=work | action=delete_tag"
+                in weekly["text"])
+        with urllib.request.urlopen(
+                base + "/v1/weekly-review/export?session_id=" + session_id
+                       + "&days=7&tag=work&audit_action=delete_tag",
+                timeout=10) as response:
+            weekly_markdown = response.read().decode("utf-8")
+        assert ("## Tag audit (1) | tag=work | action=delete_tag"
+                in weekly_markdown)
+        assert "undo delete tag 'work'" not in weekly_markdown
 
         with pytest.raises(urllib.error.HTTPError) as missing:
             _post(base + "/v1/tasks/tags/delete", {
