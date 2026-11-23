@@ -395,6 +395,8 @@ def test_actions_carry_allowlisted_next_steps():
     assert "/v1/learning/gaps/propose" in by_kind["knowledge_gaps"]["next_step"]
     assert "feedback queue" in by_kind["pending_feedback"]["next_step"]
     assert by_kind["knowledge_gaps"]["requires_human"] is True
+    assert by_kind["knowledge_gaps"]["suggested_checks"] == [
+        "pytest:tests/test_improvement.py"]
 
 
 def test_aisc_coverage_signal_and_action():
@@ -411,6 +413,10 @@ def test_aisc_coverage_signal_and_action():
     plan = build_plan(signals)
     assert plan["actions"][0]["kind"] == "aisc_coverage_gaps"
     assert "AISC coverage" in plan["actions"][0]["acceptance"]
+    assert plan["actions"][0]["suggested_checks"] == [
+        "pytest:tests/test_aisc_coverage.py",
+        "aisc:docs/aisc/atomzero-read.toml",
+    ]
 
 
 GATE_PASS = {

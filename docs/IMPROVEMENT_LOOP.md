@@ -242,6 +242,9 @@ Invoke-RestMethod -Method Post `
 - Every action also carries an allowlisted `next_step`; the gap action points
   at `POST /v1/learning/gaps/propose` and the research queue, and the coverage
   action points at `atomzero-coverage` plus `atomzero-gate`.
+- Every action carries `suggested_checks` in `kind:target` form, ready to pass
+  to `atomzero-gate --check` (for example `pytest:tests/test_claims.py` or
+  `aisc:docs/aisc/atomzero-read.toml`).
 - Signal and plan output is deterministic for identical inputs.
 - Decision records are content-free and verifiable.
 

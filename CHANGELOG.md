@@ -7,6 +7,8 @@
   `gate_ok`, `gate_total`, `gate_passed` and `gate_method`; command output is
   not copied. `POST /v1/improvement/decision` now requires a `gate` report for
   approval. Reject/defer may carry a failed gate.
+- Every improvement action now carries `suggested_checks` in
+  `kind:target` form for `atomzero-gate --check`.
 
 ## atomzero 0.8.0 - human-gated self-improvement loop (2026-11-23)
 

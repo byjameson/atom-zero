@@ -99,6 +99,22 @@ NEXT_STEPS = {
 }
 DEFAULT_NEXT_STEP = (
     "run atomzero-gate with the focused pytest/AISC checks before accepting")
+SUGGESTED_CHECKS = {
+    "unsupported_claims": ["pytest:tests/test_claims.py"],
+    "conflicts": [
+        "pytest:tests/test_claims.py", "pytest:tests/test_consensus.py"],
+    "single_source": ["pytest:tests/test_consensus.py"],
+    "knowledge_gaps": ["pytest:tests/test_improvement.py"],
+    "stale_sources": ["pytest:tests/test_freshness.py"],
+    "undated_sources": ["pytest:tests/test_freshness.py"],
+    "weak_sources": ["pytest:tests/test_reliability.py"],
+    "pending_feedback": ["pytest:tests/test_improvement.py"],
+    "aisc_coverage_gaps": [
+        "pytest:tests/test_aisc_coverage.py",
+        "aisc:docs/aisc/atomzero-read.toml",
+    ],
+}
+DEFAULT_CHECKS = ["pytest:tests/test_improvement.py"]
 
 FORBIDDEN_KEYS = frozenset({
     "text", "query", "answer", "chunk", "content", "note", "session",
@@ -434,6 +450,8 @@ def build_plan(signals, limit=5) -> dict:
             "acceptance": _acceptance(signal["kind"]),
             "next_step": NEXT_STEPS.get(
                 signal["kind"], DEFAULT_NEXT_STEP),
+            "suggested_checks": list(
+                SUGGESTED_CHECKS.get(signal["kind"], DEFAULT_CHECKS)),
         })
 
     summary: dict[str, int] = {}
