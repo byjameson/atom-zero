@@ -199,6 +199,7 @@ POST /v1/weekly-review
 A weekly review aggregates:
 
 - open tasks and tasks completed within the window;
+- active tag counts (open tasks plus completions in the window);
 - undated completed tasks separately;
 - pending gaps;
 - sources indexed within the window;
@@ -208,6 +209,11 @@ A weekly review aggregates:
 Completions carry `completed` timestamps when tasks are finished through
 `ChatHuman`; older undated completions are listed separately rather than
 silently dropped. The UI **Weekly review** button uses the same endpoint.
+
+Tag counts cover open tasks plus tasks completed in the window. Tags on older
+completions are excluded; untagged active tasks are counted separately. The
+JSON review includes `tags`, `tag_count`, `tagged_task_count` and
+`untagged_task_count`, and the Markdown export gains a Tags table.
 
 Chat also runs the review directly:
 

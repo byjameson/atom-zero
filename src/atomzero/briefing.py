@@ -99,6 +99,21 @@ def _task_tags(task: dict) -> list[str]:
             for value in values if str(value).strip()]
 
 
+def _tag_counts(tasks) -> list[dict]:
+    counts = {}
+    for task in tasks or []:
+        if not isinstance(task, dict):
+            continue
+        is_done = str(task.get("status", "open")) == "done"
+        for tag in _task_tags(task):
+            entry = counts.setdefault(
+                tag, {"tag": tag, "open": 0, "done": 0, "total": 0})
+            entry["done" if is_done else "open"] += 1
+            entry["total"] += 1
+    return sorted(counts.values(),
+                  key=lambda item: (-item["total"], item["tag"]))
+
+
 def _task_list_label(task: dict, today: str) -> str:
     due = str(task.get("due", "") or "").strip()
     priority = str(task.get("priority", "normal") or "normal").lower()
@@ -288,7 +303,6 @@ def task_tag_view(session_data: dict | None, now=None) -> dict:
     rows = data.get("tasks", [])
     tasks = ([task for task in rows if isinstance(task, dict)]
              if isinstance(rows, list) else [])
-    counts = {}
     tagged_tasks = 0
     open_tagged = 0
     done_tagged = 0
@@ -301,13 +315,7 @@ def task_tag_view(session_data: dict | None, now=None) -> dict:
                 done_tagged += 1
             else:
                 open_tagged += 1
-        for tag in tags:
-            entry = counts.setdefault(
-                tag, {"tag": tag, "open": 0, "done": 0, "total": 0})
-            entry["done" if is_done else "open"] += 1
-            entry["total"] += 1
-    tags = sorted(counts.values(),
-                  key=lambda item: (-item["total"], item["tag"]))
+    tags = _tag_counts(tasks)
     stamp = (now.strftime("%Y-%m-%d %H:%M")
              if isinstance(now, datetime)
              else str(now or time.strftime("%Y-%m-%d %H:%M")))
@@ -834,6 +842,9 @@ def build_weekly_review(session_data: dict | None, gaps, docs,
                         if _task_recent(task.get("completed"), cutoff)]
     completed_undated = [task for task in done_tasks
                          if not task.get("completed")]
+    active_tasks = open_tasks + completed_recent
+    weekly_tags = _tag_counts(active_tasks)
+    tagged_active = sum(1 for task in active_tasks if _task_tags(task))
     pending = _pending_gaps(gaps)
     sources = docs.sources() if docs is not None else []
     recent_sources = [source for source in sources
@@ -890,6 +901,13 @@ def build_weekly_review(session_data: dict | None, gaps, docs,
         lines.append(f"Overdue: {len(overdue)}")
     if due_soon:
         lines.append(f"Due soon: {len(due_soon)} (next 7 days)")
+    if weekly_tags:
+        preview = " | ".join(
+            f"{item['tag']} ({item['open']} open, {item['done']} done)"
+            for item in weekly_tags[:5])
+        lines.append(f"Tags: {len(weekly_tags)} distinct | {preview}")
+    else:
+        lines.append("Tags: none")
     lines.append("Open:")
     lines.extend(
         f"- {task.get('id')}: {task.get('text', '')}"
@@ -930,6 +948,10 @@ def build_weekly_review(session_data: dict | None, gaps, docs,
             "completed_recent": len(completed_recent),
             "completed_total": len(done_tasks),
         },
+        "tags": weekly_tags[:8],
+        "tag_count": len(weekly_tags),
+        "tagged_task_count": tagged_active,
+        "untagged_task_count": len(active_tasks) - tagged_active,
         "pending_gaps": pending[:5],
         "pending_gap_count": len(pending),
         "recent_sources": recent_sources[:8],
@@ -1277,6 +1299,29 @@ def render_weekly_markdown(review: dict) -> str:
         lines.extend(
             f"- [x] **#{task.get('id')}** {task.get('text', '')}"
             for task in undated)
+    tags = review.get("tags", [])
+    untagged = review.get("untagged_task_count", 0)
+    lines.extend([
+        "",
+        f"## Tags ({review.get('tag_count', len(tags))} tags, "
+        f"{untagged} untagged)",
+        "",
+    ])
+    if tags:
+        lines.extend([
+            "| Tag | Open | Done | Total |",
+            "| --- | ---: | ---: | ---: |",
+        ])
+        lines.extend(
+            f"| {_markdown_cell(item.get('tag'))} | {item.get('open', 0)} "
+            f"| {item.get('done', 0)} | {item.get('total', 0)} |"
+            for item in tags)
+        lines.extend([
+            "",
+            f"- Tagged tasks: {review.get('tagged_task_count', 0)}",
+        ])
+    else:
+        lines.append("- None")
     gaps = review.get("pending_gaps", [])
     lines.extend([
         "",

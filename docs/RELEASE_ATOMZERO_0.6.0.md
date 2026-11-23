@@ -14,6 +14,8 @@ after `0.5.0`.
   `weekly review` / `haftalık özet`.
 - Open/recently completed tasks, pending gaps, sources indexed in the window,
   graph highlights and next actions.
+- Active tag counts across open and recently completed tasks, plus a Tags table
+  in Markdown exports.
 - Weekly Markdown export through `--weekly --markdown [--out PATH]`,
   `GET /v1/weekly-review/export` and a UI download.
 - Local report archive with report metadata, size and SHA-256.

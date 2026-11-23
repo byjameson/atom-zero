@@ -54,24 +54,38 @@ def test_weekly_review_aggregates_tasks_sources_gaps_and_graph(tmp_path):
     now = datetime.now()
     session = {"tasks": [
         {"id": 1, "text": "open task", "status": "open",
-         "created": now.strftime("%Y-%m-%dT%H:%M:%S"), "completed": ""},
+         "created": now.strftime("%Y-%m-%dT%H:%M:%S"), "completed": "",
+         "tags": ["work"]},
         {"id": 2, "text": "recent task", "status": "done",
          "created": now.strftime("%Y-%m-%dT%H:%M:%S"),
-         "completed": now.strftime("%Y-%m-%dT%H:%M:%S")},
+         "completed": now.strftime("%Y-%m-%dT%H:%M:%S"),
+         "tags": ["work", "finance"]},
         {"id": 3, "text": "old task", "status": "done",
          "created": (now - timedelta(days=10)).strftime("%Y-%m-%dT%H:%M:%S"),
-         "completed": (now - timedelta(days=10)).strftime("%Y-%m-%dT%H:%M:%S")},
+         "completed": (now - timedelta(days=10)).strftime(
+             "%Y-%m-%dT%H:%M:%S"),
+         "tags": ["archive"]},
     ]}
     review = build_weekly_review(
         session, gaps, docs, days=7, now="2026-11-22 09:00")
     assert review["task_counts"] == {
         "open": 1, "completed_recent": 1, "completed_total": 2}
+    assert review["tags"] == [
+        {"tag": "work", "open": 1, "done": 1, "total": 2},
+        {"tag": "finance", "open": 0, "done": 1, "total": 1},
+    ]
+    assert review["tag_count"] == 2
+    assert review["tagged_task_count"] == 2
+    assert review["untagged_task_count"] == 0
     assert review["pending_gap_count"] == 1
     assert review["recent_source_count"] == 2
     assert "L-7781" in {node["name"]
                          for node in review["graph"]["entities"]}
     assert "Weekly review - 2026-11-22 09:00 (last 7 days)" in review["text"]
     assert "Completed this week" in review["text"]
+    assert ("Tags: 2 distinct | work (1 open, 1 done) | "
+            "finance (0 open, 1 done)") in review["text"]
+    assert "archive" not in review["text"]
     assert "Recent sources: 2" in review["text"]
     assert review["next_week"]
     assert review["weights_changed"] is False
@@ -635,9 +649,9 @@ def test_cli_weekly_markdown_export(tmp_path, capsys):
     now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     session_path.write_text(json.dumps({"tasks": [
         {"id": 1, "text": "buy milk", "status": "done",
-         "created": now, "completed": now},
+         "created": now, "completed": now, "tags": ["home"]},
         {"id": 2, "text": "write report", "status": "open",
-         "created": now, "completed": ""},
+         "created": now, "completed": "", "tags": ["work", "home"]},
     ]}), encoding="utf-8")
     docs = DocMemory(tmp_path / "docs.db")
     docs.add_text("notes/launch.txt", "The launch code is L-7781.",
@@ -658,6 +672,10 @@ def test_cli_weekly_markdown_export(tmp_path, capsys):
     assert "- [ ] **#2** write report" in markdown
     assert "### Completed in the last 7 days" in markdown
     assert "- [x] **#1** buy milk" in markdown
+    assert "## Tags (2 tags, 0 untagged)" in markdown
+    assert "| home | 1 | 1 | 2 |" in markdown
+    assert "| work | 1 | 0 | 1 |" in markdown
+    assert "- Tagged tasks: 2" in markdown
     assert "## Pending gaps (1)" in markdown
     assert "What is the warranty deadline?" in markdown
     assert "## Recent sources (1)" in markdown

@@ -195,7 +195,8 @@ short generation. It is **not MMLU, GSM8K or HumanEval**.
 - **Daily brief + weekly review + goal planner:** local tasks, pending gaps,
   index stats and graph entities in one brief; `atomzero-brief` (including
   `--weekly --days 7 --markdown --out reports\weekly.md`) and
-  `/v1/weekly-review` aggregate recent work. `/v1/weekly-review/export`
+  `/v1/weekly-review` aggregate recent work with active task-tag counts and a
+  Markdown Tags table. `/v1/weekly-review/export`
   produces a portable Markdown report; `--reports` and
   `/v1/weekly-review/reports` list the local report archive with UI download;
   `--reports --prune` removes entries whose files were deleted,
