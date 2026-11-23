@@ -8,7 +8,7 @@ import pytest
 
 from atomzero.briefing import (
     build_briefing, build_weekly_review, load_session, main, plan_goal,
-    render_weekly_markdown)
+    rename_task_tag, render_weekly_markdown)
 from atomzero.doc_memory import DocMemory
 from atomzero.knowledge_gaps import KnowledgeGapStore
 from atomzero.weekly_reports import WeeklyReportArchive
@@ -403,6 +403,81 @@ def test_cli_task_tags(tmp_path, capsys):
     with pytest.raises(SystemExit) as exc:
         main(common + ["--list-tags", "--task-sort", "priority"])
     assert exc.value.code == 2
+
+
+def test_cli_rename_tag(tmp_path, capsys):
+    session_path = tmp_path / "session.json"
+    session_path.write_text(json.dumps({"tasks": [
+        {"id": 1, "text": "write report", "status": "open",
+         "tags": ["work", "home"]},
+        {"id": 2, "text": "pay invoice", "status": "done",
+         "tags": ["work", "finance"]},
+        {"id": 3, "text": "read book", "status": "open", "tags": []},
+    ]}), encoding="utf-8")
+    common = [
+        "--session", str(session_path),
+        "--docs", str(tmp_path / "missing.db"),
+        "--gaps", str(tmp_path / "missing-gaps.json")]
+
+    assert main(common + ["--rename-tag", "work", "job"]) == 0
+    preview = capsys.readouterr().out
+    assert ("Would rename tag 'work' to 'job' on 2 task(s) "
+            "(1 open, 1 done)") in preview
+    assert "rerun with --confirm-rename-tag to apply" in preview
+    assert json.loads(session_path.read_text(encoding="utf-8"))[
+        "tasks"][0]["tags"] == ["work", "home"]
+
+    assert main(common + [
+        "--rename-tag", "work", "job", "--json"]) == 0
+    preview_json = json.loads(capsys.readouterr().out)
+    assert preview_json["applied"] is False
+    assert preview_json["old"] == "work"
+    assert preview_json["new"] == "job"
+    assert preview_json["would_update"] == 2
+    assert preview_json["open"] == 1
+    assert preview_json["done"] == 1
+
+    assert main(common + [
+        "--rename-tag", "work", "job", "--confirm-rename-tag",
+        "--json"]) == 0
+    applied = json.loads(capsys.readouterr().out)
+    assert applied["applied"] is True
+    assert applied["old"] == "work"
+    assert applied["new"] == "job"
+    assert applied["updated"] == 2
+    assert applied["task_ids"] == [1, 2]
+    saved = json.loads(session_path.read_text(encoding="utf-8"))
+    assert saved["tasks"][0]["tags"] == ["job", "home"]
+    assert saved["tasks"][1]["tags"] == ["job", "finance"]
+    assert saved["tasks"][2]["tags"] == []
+    assert saved["tasks"][0]["renamed"]
+
+    assert main(common + ["--list-tags", "--json"]) == 0
+    tags = json.loads(capsys.readouterr().out)
+    assert [item["tag"] for item in tags["tags"]] == [
+        "job", "finance", "home"]
+
+    assert main(common + ["--rename-tag", "missing", "job"]) == 1
+    assert "tag 'missing' is not used" in capsys.readouterr().out
+    assert main(common + ["--rename-tag", "job", "job"]) == 1
+    assert "must be different" in capsys.readouterr().out
+    assert main(common + ["--rename-tag", "job", "bad tag!"]) == 1
+    assert "letters, numbers" in capsys.readouterr().out
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--confirm-rename-tag"])
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--rename-tag", "job", "office", "--weekly"])
+    assert exc.value.code == 2
+
+    deduped = {"tasks": [
+        {"id": 7, "text": "mixed tags", "status": "open",
+         "tags": ["work", "job", "work"]},
+    ]}
+    result = rename_task_tag(deduped, "work", "job")
+    assert result["updated"] == 1
+    assert result["task_ids"] == [7]
+    assert deduped["tasks"][0]["tags"] == ["job"]
 
 
 def test_cli_priority_sort_views(tmp_path, capsys):

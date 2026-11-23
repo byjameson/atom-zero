@@ -325,6 +325,65 @@ def test_agent_lists_task_tags(tmp_path):
         "Cleared tags on task 2.")
 
 
+def test_agent_renames_tag_with_confirmation(tmp_path):
+    agent = AgentSession("s-rename-tag", tmp_path / "memory.json")
+    agent.chat("add task write report tags work,home")
+    agent.chat("add task pay invoice tags work,finance")
+    agent.chat("add task read book")
+
+    preview = agent.chat("rename tag work job")
+    assert preview["tool_calls"][0]["name"] == "preview_tag_rename"
+    assert preview["tag_rename"]["old"] == "work"
+    assert preview["tag_rename"]["new"] == "job"
+    assert preview["tag_rename"]["tasks"] == 2
+    assert "on 2 task(s)" in preview["reply"]
+    assert "confirm tag rename" in preview["reply"]
+    assert [task["tags"] for task in agent.human.data["tasks"]] == [
+        ["work", "home"], ["work", "finance"], []]
+
+    unrelated = agent.chat("cancel task delete")
+    assert unrelated["reply"] == "There is no pending task delete."
+    assert agent.pending_task_action["action"] == "rename_tag"
+
+    applied = agent.chat("confirm tag rename")
+    assert applied["tool_calls"][0] == {
+        "name": "rename_task_tag", "old": "work", "new": "job",
+        "updated": 2}
+    assert applied["reply"] == "Renamed tag 'work' to 'job' on 2 task(s)."
+    assert [task["tags"] for task in agent.human.data["tasks"]] == [
+        ["job", "home"], ["job", "finance"], []]
+    assert agent.human.data["tasks"][0]["renamed"]
+
+    tags = agent.chat("tags")
+    assert tags["task_tags"]["tag_count"] == 3
+    assert [item["tag"] for item in tags["task_tags"]["tags"]] == [
+        "job", "finance", "home"]
+
+    assert agent.chat("confirm tag rename")["reply"] == (
+        "There is no pending tag rename.")
+    missing = agent.chat("rename tag missing job")
+    assert "Tag 'missing' is not used." == missing["reply"]
+    assert agent.pending_task_action is None
+    same = agent.chat("rename tag job job")
+    assert "must be different" in same["reply"]
+    invalid = agent.chat("rename tag job bad!")
+    assert "letters, numbers" in invalid["reply"]
+
+    second = agent.chat("rename tag job office")
+    assert second["tag_rename"]["tasks"] == 2
+    assert agent.pending_task_action["action"] == "rename_tag"
+    assert agent.chat("cancel tag rename")["reply"] == (
+        "Tag rename cancelled.")
+    assert agent.pending_task_action is None
+    assert [task["tags"] for task in agent.human.data["tasks"]] == [
+        ["job", "home"], ["job", "finance"], []]
+
+    to_form = agent.chat("rename tag job to office")
+    assert to_form["tag_rename"]["new"] == "office"
+    assert agent.chat("cancel tag rename")["reply"] == (
+        "Tag rename cancelled.")
+
+
 def test_agent_priority_sort_task_views(tmp_path):
     today = date.today()
     agent = AgentSession("s-priority-task-views", tmp_path / "memory.json")

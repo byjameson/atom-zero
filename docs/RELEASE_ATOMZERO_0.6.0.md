@@ -32,6 +32,8 @@ after `0.5.0`.
 - Task tags (up to five per task), `tag task` updates, tag filters in task
   lists/search, tags in CSV/Markdown task exports and a `list tags` inventory
   with open/done counts plus clickable UI chips.
+- Confirmed global tag rename in chat, CLI, HTTP and UI; renaming preserves
+  other tags and deduplicates.
 - Rescheduling and confirmed deletion.
 - Task text search plus status/due/priority filters.
 - Priority-first sorting in search, overdue, due-soon, list, brief and review
@@ -58,7 +60,7 @@ after `0.5.0`.
 
 ## Verified regressions
 
-- `366 passed` in the assistant test suite.
+- `369 passed` in the assistant test suite.
 - Weekly chat regression: 7/7.
 - Weekly export/archive regression: 29/29.
 - Weekly review regression: 6/6.

@@ -30,6 +30,7 @@ Endpoints:
   GET  /v1/weekly-review/export?session_id=...&days=7
   GET  /v1/tasks/list?session_id=default&status=open&due=week&priority=high&sort=priority
   GET  /v1/tasks/tags?session_id=default
+  POST /v1/tasks/tags/rename  (add "confirm": true to apply)
   GET  /v1/tasks/export?session_id=default&status=open&due=week&priority=high&sort=priority&format=csv
   GET  /v1/tasks/overdue?session_id=default&sort=priority
   GET  /v1/tasks/due-soon?session_id=default&days=7&sort=priority
@@ -256,6 +257,7 @@ hr{border:0;border-top:1px solid #ddd;margin:22px 0}
 <button data-q="list tasks priority">priority list</button>
 <button data-q="list tasks done">done list</button>
 <button data-q="list tasks due week priority high">filtered list</button>
+<button data-q="list tags">tags</button>
 <button data-q="my name is Alex">remember my name</button>
 <button data-q="what do you remember?">recall</button>
 <button data-q="what is 12 * 7?">calculate</button>
@@ -345,6 +347,11 @@ and suggested next actions.</p>
 <button id="tasklistcsv">Download CSV</button>
 <button id="tasklistmd">Download .md</button>
 <button id="tasktagsbtn">Tags</button>
+<input id="renameoldtag" placeholder="old tag" style="width:7em">
+<input id="renamenewtag" placeholder="new tag" style="width:7em">
+<label class="hint"><input id="renametagconfirm" type="checkbox">
+Confirm tag rename</label>
+<button id="renametagbtn">Rename tag</button>
 <input id="rescheduletaskid" type="number" min="1" placeholder="task ID"
        style="width:5em">
 <input id="rescheduledue" placeholder="new due date" style="width:9em">
@@ -374,6 +381,7 @@ Confirm delete</label>
 <div id="tasklistres"></div>
 <p id="tasktagsmsg" class="hint"></p>
 <div id="tasktagsres"></div>
+<p id="renametagmsg" class="hint"></p>
 <p id="reschedulemsg" class="hint"></p>
 <p id="taskprioritymsg" class="hint"></p>
 <p id="deletetaskmsg" class="hint"></p>
@@ -945,6 +953,49 @@ async function getTaskTags() {
     });
   } catch (e) {
     msg.textContent = 'task tags error: ' + e;
+  }
+}
+async function renameTag() {
+  const msg = document.getElementById('renametagmsg');
+  const oldTag = document.getElementById('renameoldtag').value.trim();
+  const newTag = document.getElementById('renamenewtag').value.trim();
+  const confirmed = document.getElementById('renametagconfirm').checked;
+  if (!oldTag || !newTag) {
+    msg.textContent = 'enter an old and a new tag';
+    return;
+  }
+  if (!confirmed) {
+    msg.textContent = 'check Confirm tag rename first';
+    return;
+  }
+  msg.textContent = 'renaming tag...';
+  try {
+    const r = await fetch('/v1/tasks/tags/rename', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({session_id: sessionId, old: oldTag,
+                            new: newTag, confirm: true})});
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'tag rename error: ' + (j.error || r.status);
+      return;
+    }
+    msg.textContent = "renamed tag '" + j.old + "' to '" + j.new +
+      "' on " + j.updated + ' task(s)';
+    const filter = document.getElementById('tasklisttag');
+    let refreshList = false;
+    if (filter.value.trim().replace(/^#/, '').toLowerCase() === j.old) {
+      filter.value = j.new;
+      refreshList = true;
+    }
+    document.getElementById('renameoldtag').value = '';
+    document.getElementById('renamenewtag').value = '';
+    document.getElementById('renametagconfirm').checked = false;
+    getTaskTags();
+    if (refreshList) {
+      getTaskList();
+    }
+  } catch (e) {
+    msg.textContent = 'tag rename error: ' + e;
   }
 }
 async function downloadTaskList(format) {
@@ -1567,6 +1618,7 @@ document.getElementById('duesoonbtn').onclick = () => getDueSoonTasks();
 document.getElementById('tasksearchbtn').onclick = () => searchTasks();
 document.getElementById('tasklistbtn').onclick = () => getTaskList();
 document.getElementById('tasktagsbtn').onclick = () => getTaskTags();
+document.getElementById('renametagbtn').onclick = () => renameTag();
 document.getElementById('tasklistcsv').onclick = () => downloadTaskList('csv');
 document.getElementById('tasklistmd').onclick = () => downloadTaskList('markdown');
 document.getElementById('rescheduletaskbtn').onclick = () => rescheduleTask();
@@ -3838,7 +3890,7 @@ class Handler(BaseHTTPRequestHandler):
                          "/v1/skills/chains/run",
                          "/v1/briefing", "/v1/weekly-review",
                          "/v1/tasks/reschedule", "/v1/tasks/priority",
-                         "/v1/tasks/delete",
+                         "/v1/tasks/delete", "/v1/tasks/tags/rename",
                          "/v1/weekly-review/reports/prune",
                          "/v1/weekly-review/reports/keep",
                          "/v1/weekly-review/reports/delete",
@@ -3924,6 +3976,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._tasks_priority(req)
             if route == "/v1/tasks/delete":
                 return self._tasks_delete(req)
+            if route == "/v1/tasks/tags/rename":
+                return self._tasks_tags_rename(req)
             if route == "/v1/goals/plan":
                 return self._goal_plan(req)
             if route == "/v1/research/queue":
@@ -4417,6 +4471,43 @@ class Handler(BaseHTTPRequestHandler):
         return self._json(200, {
             "session_id": session_id,
             "deleted": deleted,
+        })
+
+    def _tasks_tags_rename(self, req: dict):
+        session_id = str(req.get("session_id", "default")).strip() or "default"
+        from atomzero.briefing import normalize_tag_rename, task_tag_view
+
+        try:
+            old, new = normalize_tag_rename(req.get("old"), req.get("new"))
+            session = self._session(session_id)
+            view = task_tag_view(session.human.data)
+            entry = next((item for item in view["tags"]
+                          if item["tag"] == old), None)
+        except (TypeError, ValueError) as exc:
+            return self._json(400, {"error": str(exc)})
+        except Exception as exc:
+            return self._json(400, {"error": str(exc)})
+        if entry is None:
+            return self._json(404, {"error": f"tag '{old}' is not used"})
+        if req.get("confirm") is not True:
+            return self._json(400, {
+                "error": "confirmation required",
+                "old": old,
+                "new": new,
+                "would_update": entry["total"],
+                "open": entry["open"],
+                "done": entry["done"],
+            })
+        try:
+            result = session.human.rename_task_tag(old, new)
+        except (TypeError, ValueError) as exc:
+            return self._json(400, {"error": str(exc)})
+        except Exception as exc:
+            return self._json(400, {"error": str(exc)})
+        return self._json(200, {
+            "session_id": session_id,
+            "applied": True,
+            **result,
         })
 
     def _tasks_priority(self, req: dict):

@@ -11,7 +11,7 @@ output_type = "TaskCommand"
 kind = "tool"
 assurance = 0.98
 verified = true
-evidence = "task parsing, due date and priority tests"
+evidence = "task parsing, due date, priority and tag rename tests"
 assumptions = ["request is local session text"]
 guarantees = ["typed task command with parsed metadata"]
 context_tokens = 1024
@@ -35,9 +35,9 @@ output_type = "ApprovedCommand"
 kind = "human"
 assurance = 0.99
 verified = true
-evidence = "confirmed deletion and cancellation regression tests"
-assumptions = ["user confirms irreversible mutations explicitly"]
-guarantees = ["destructive task changes require confirmation"]
+evidence = "confirmed deletion, cancellation and tag rename regression tests"
+assumptions = ["user confirms irreversible or bulk mutations explicitly"]
+guarantees = ["destructive or bulk task changes require confirmation"]
 context_tokens = 32
 
 [[components]]

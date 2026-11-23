@@ -129,6 +129,10 @@
 - Added a task-tag inventory: chat `list tags` / `show tags`, CLI
   `--list-tags`, HTTP `/v1/tasks/tags` and clickable UI tag chips with
   open/done counts.
+- Added confirmed global tag rename: chat `rename tag OLD NEW` then
+  `confirm tag rename`, CLI `--rename-tag OLD NEW --confirm-rename-tag`,
+  HTTP `/v1/tasks/tags/rename` and UI old/new fields with a confirmation
+  checkbox.
 - Added optional AISC architecture specs for the critical read and
   task-action paths, plus `scripts/aisc_audit.py` for external AISC checks.
 - Fixed `add task` priority parsing so task text ending in "priority task" is

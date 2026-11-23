@@ -92,6 +92,29 @@ The CLI form is `atomzero-brief --session ... --list-tags [--json]`, HTTP uses
 `GET /v1/tasks/tags?session_id=default`, and the UI **Tags** button shows
 clickable counts that fill the task-list tag filter.
 
+Tags can be renamed across every task with an explicit confirmation step:
+
+```text
+rename tag work job
+# Rename tag 'work' to 'job' on 3 task(s) (2 open, 1 done)?
+# Reply "confirm tag rename" to apply, or "cancel tag rename".
+confirm tag rename
+# Renamed tag 'work' to 'job' on 3 task(s).
+```
+
+The CLI previews by default and writes only with an explicit flag:
+
+```powershell
+atomzero-brief --session data/sessions/default.json --rename-tag work job
+atomzero-brief --session data/sessions/default.json --rename-tag work job --confirm-rename-tag
+```
+
+HTTP uses `POST /v1/tasks/tags/rename`; without `"confirm": true` it returns
+`400 confirmation required` plus the affected count, and with it applies the
+rename. The UI has old/new tag fields and a **Confirm tag rename** checkbox.
+Renaming preserves other tags, removes duplicates and leaves untagged tasks
+untouched. An unused old tag is reported instead of creating a no-op.
+
 Priority can also be updated outside chat:
 
 ```powershell

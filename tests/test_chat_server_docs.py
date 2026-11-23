@@ -882,9 +882,15 @@ def test_ui_collection_scope_contract():
     assert 'id="tasktagsbtn"' in page
     assert 'id="tasktagsmsg"' in page
     assert 'id="tasktagsres"' in page
+    assert 'id="renameoldtag"' in page
+    assert 'id="renamenewtag"' in page
+    assert 'id="renametagconfirm"' in page
+    assert 'id="renametagbtn"' in page
+    assert 'id="renametagmsg"' in page
     assert '<option value="open" selected>Open</option>' in page
     assert "getTaskList" in page
     assert "getTaskTags" in page
+    assert "renameTag" in page
     assert "downloadTaskList" in page
     assert "task.tags" in page
     assert "tasklisttag" in page
@@ -2057,6 +2063,89 @@ def test_http_search_tasks(tmp_path):
                 base + "/v1/tasks/search?session_id=task-search-http",
                 timeout=10)
         assert missing_query.value.code == 400
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
+
+
+def test_http_rename_tag(tmp_path):
+    old = dict(chat_server._state)
+    chat_server._state.update({
+        "model": None, "tok": None, "docs": None, "adapter": "",
+        "name": "tiny-test", "params": 1, "config": {}, "step": 0,
+        "api_key": "", "metrics": {"requests": 0, "generated_tokens": 0},
+        "safety": None, "wiki_lang": "en",
+        "session_dir": str(tmp_path / "sessions"), "sessions": {},
+        "generator": None, "allow_general_chat": False, "skills": None,
+    })
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    session_id = "task-rename-http"
+    try:
+        for message in (
+                "add task write report tags work,home",
+                "add task pay invoice tags work,finance",
+                "add task read book",
+                "complete task 2"):
+            _post(base + "/v1/agent/chat", {
+                "session_id": session_id, "message": message})
+
+        def tags():
+            return json.loads(urllib.request.urlopen(
+                base + "/v1/tasks/tags?session_id=" + session_id,
+                timeout=10).read().decode("utf-8"))
+
+        before = tags()
+        assert [item["tag"] for item in before["tags"]] == [
+            "work", "finance", "home"]
+        with pytest.raises(urllib.error.HTTPError) as need_confirm:
+            _post(base + "/v1/tasks/tags/rename", {
+                "session_id": session_id, "old": "work", "new": "job"})
+        assert need_confirm.value.code == 400
+        detail = json.loads(need_confirm.value.read().decode("utf-8"))
+        assert detail["error"] == "confirmation required"
+        assert detail["old"] == "work"
+        assert detail["new"] == "job"
+        assert detail["would_update"] == 2
+        assert detail["open"] == 1
+        assert detail["done"] == 1
+        assert [item["tag"] for item in tags()["tags"]] == [
+            "work", "finance", "home"]
+
+        applied = _post(base + "/v1/tasks/tags/rename", {
+            "session_id": session_id, "old": "work", "new": "job",
+            "confirm": True})
+        assert applied["applied"] is True
+        assert applied["old"] == "work"
+        assert applied["new"] == "job"
+        assert applied["updated"] == 2
+        assert applied["task_ids"] == [1, 2]
+        after = tags()
+        assert [item["tag"] for item in after["tags"]] == [
+            "job", "finance", "home"]
+        assert after["tag_count"] == 3
+        assert after["tagged_task_count"] == 2
+        assert after["untagged_task_count"] == 1
+
+        with pytest.raises(urllib.error.HTTPError) as missing:
+            _post(base + "/v1/tasks/tags/rename", {
+                "session_id": session_id, "old": "missing", "new": "job",
+                "confirm": True})
+        assert missing.value.code == 404
+        with pytest.raises(urllib.error.HTTPError) as same:
+            _post(base + "/v1/tasks/tags/rename", {
+                "session_id": session_id, "old": "job", "new": "job",
+                "confirm": True})
+        assert same.value.code == 400
+        with pytest.raises(urllib.error.HTTPError) as invalid:
+            _post(base + "/v1/tasks/tags/rename", {
+                "session_id": session_id, "old": "job", "new": "bad tag!",
+                "confirm": True})
+        assert invalid.value.code == 400
     finally:
         httpd.shutdown()
         httpd.server_close()

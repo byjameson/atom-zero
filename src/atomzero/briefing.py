@@ -341,6 +341,60 @@ def render_task_tag_view(view: dict) -> str:
     return str(view.get("text", ""))
 
 
+def normalize_task_tag(value) -> str:
+    tag = str(value or "").strip().lower().lstrip("#")
+    if not tag:
+        raise ValueError("tag is required")
+    if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,23}", tag):
+        raise ValueError(
+            "tags must use letters, numbers, - or _ (max 24 chars)")
+    return tag
+
+
+def normalize_tag_rename(old, new) -> tuple[str, str]:
+    old = normalize_task_tag(old)
+    new = normalize_task_tag(new)
+    if old == new:
+        raise ValueError("new tag must be different from old tag")
+    return old, new
+
+
+def rename_task_tag(session_data: dict | None, old, new) -> dict:
+    """Rename one tag on every task, preserving other tags and order."""
+    old, new = normalize_tag_rename(old, new)
+    data = session_data if isinstance(session_data, dict) else {}
+    tasks = data.get("tasks", [])
+    if not isinstance(tasks, list):
+        raise ValueError("session tasks must be a list")
+    updated = []
+    stamp = time.strftime("%Y-%m-%dT%H:%M:%S")
+    for task in tasks:
+        if not isinstance(task, dict):
+            continue
+        tags = _task_tags(task)
+        if old not in tags:
+            continue
+        replaced = []
+        for tag in tags:
+            value = new if tag == old else tag
+            if value not in replaced:
+                replaced.append(value)
+        task["tags"] = replaced
+        task["renamed"] = stamp
+        try:
+            updated.append(int(task.get("id")))
+        except (TypeError, ValueError):
+            continue
+    if not updated:
+        raise ValueError(f"tag '{old}' is not used")
+    return {
+        "old": old,
+        "new": new,
+        "updated": len(updated),
+        "task_ids": updated,
+    }
+
+
 def set_task_priority(session_data: dict | None, tid, priority) -> dict:
     """Update one task's priority in a session dict."""
     try:
@@ -1338,6 +1392,11 @@ def main(argv=None) -> int:
                         help="render a filtered task list")
     parser.add_argument("--list-tags", action="store_true",
                         help="count task tags across open and done tasks")
+    parser.add_argument("--rename-tag", nargs=2, metavar=("OLD", "NEW"),
+                        default=None,
+                        help="preview renaming one task tag everywhere")
+    parser.add_argument("--confirm-rename-tag", action="store_true",
+                        help="apply the --rename-tag preview")
     parser.add_argument("--task-status", choices=TASK_SEARCH_STATUSES,
                         default=None, help="task-list status filter")
     parser.add_argument("--task-due", choices=TASK_SEARCH_DUE_FILTERS,
@@ -1426,6 +1485,15 @@ def main(argv=None) -> int:
             or args.set_task_priority is not None
             or args.task_sort != "default"):
         parser.error("--list-tags cannot be combined with other views")
+    if args.confirm_rename_tag and args.rename_tag is None:
+        parser.error("--confirm-rename-tag requires --rename-tag")
+    if args.rename_tag is not None and (
+            args.task_list or args.list_tags or args.weekly or args.goal
+            or args.reports or args.markdown or args.out or args.overdue
+            or args.due_soon or args.search_tasks is not None
+            or args.set_task_priority is not None
+            or args.task_sort != "default"):
+        parser.error("--rename-tag cannot be combined with other views")
     if args.set_task_priority is not None:
         raw_id, raw_priority = args.set_task_priority
         try:
@@ -1617,6 +1685,55 @@ def main(argv=None) -> int:
         return 0
     session_path = Path(args.session) if args.session else (
         Path(args.sessions_dir) / f"{args.session_id}.json")
+    if args.rename_tag is not None:
+        old_raw, new_raw = args.rename_tag
+        try:
+            old, new = normalize_tag_rename(old_raw, new_raw)
+            session = load_session(session_path)
+            if not session:
+                raise ValueError(f"cannot read session: {session_path}")
+            if args.confirm_rename_tag:
+                result = rename_task_tag(session, old, new)
+                write_text_atomic(
+                    session_path,
+                    json.dumps(session, indent=2, ensure_ascii=False) + "\n")
+                payload = {
+                    "applied": True, **result,
+                    "session": str(session_path),
+                }
+            else:
+                view = task_tag_view(session)
+                entry = next((item for item in view["tags"]
+                              if item["tag"] == old), None)
+                if entry is None:
+                    raise ValueError(f"tag '{old}' is not used")
+                payload = {
+                    "applied": False,
+                    "old": old,
+                    "new": new,
+                    "would_update": entry["total"],
+                    "open": entry["open"],
+                    "done": entry["done"],
+                    "session": str(session_path),
+                }
+        except (ValueError, OSError) as exc:
+            if args.json:
+                print(json.dumps({"ok": False, "error": str(exc)},
+                                 indent=2, ensure_ascii=False))
+            else:
+                print(f"briefing error: {exc}")
+            return 1
+        if args.json:
+            print(json.dumps(payload, indent=2, ensure_ascii=False))
+        elif payload["applied"]:
+            print(f"Renamed tag '{old}' to '{new}' on "
+                  f"{payload['updated']} task(s).")
+        else:
+            print(f"Would rename tag '{old}' to '{new}' on "
+                  f"{payload['would_update']} task(s) "
+                  f"({payload['open']} open, {payload['done']} done); "
+                  "rerun with --confirm-rename-tag to apply.")
+        return 0
     if args.list_tags:
         try:
             session = load_session(session_path)

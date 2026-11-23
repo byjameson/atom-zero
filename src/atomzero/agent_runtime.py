@@ -9,8 +9,8 @@ from pathlib import Path
 
 from atomzero.briefing import (
     build_briefing, build_weekly_review, due_soon_view, overdue_view,
-    plan_goal, render_due_soon_view, render_overdue_view,
-    render_task_search_view, render_task_tag_view,
+    normalize_tag_rename, plan_goal, render_due_soon_view,
+    render_overdue_view, render_task_search_view, render_task_tag_view,
     render_weekly_report_comparison, task_search_view, task_tag_view)
 from atomzero.contradictions import compare_sources
 from atomzero.doc_memory import format_citation, grounded_answer
@@ -949,10 +949,10 @@ class AgentSession:
 
     def _apply_task_delete(self) -> dict:
         pending = self.pending_task_action
-        self.pending_task_action = None
         if pending is None or pending.get("action") != "delete":
             return {"reply": "There is no pending task delete.",
                     "tool_calls": [], "sources": [], "evidence": []}
+        self.pending_task_action = None
         deleted = self.human.delete_task(int(pending["id"]))
         if deleted is None:
             return {"reply": "I could not find that task.",
@@ -967,11 +967,79 @@ class AgentSession:
         }
 
     def _cancel_task_delete(self) -> dict:
-        had_action = self.pending_task_action is not None
+        pending = self.pending_task_action
+        if pending is None or pending.get("action") != "delete":
+            return {"reply": "There is no pending task delete.",
+                    "tool_calls": [], "sources": [], "evidence": []}
         self.pending_task_action = None
         return {
-            "reply": ("Task delete cancelled." if had_action
-                      else "There is no pending task delete."),
+            "reply": "Task delete cancelled.",
+            "tool_calls": [], "sources": [], "evidence": [],
+        }
+
+    def _preview_tag_rename(self, old, new) -> dict:
+        try:
+            old, new = normalize_tag_rename(old, new)
+        except ValueError as exc:
+            return {"reply": str(exc), "tool_calls": [],
+                    "sources": [], "evidence": []}
+        view = task_tag_view(self.human.data)
+        entry = next((item for item in view["tags"]
+                      if item["tag"] == old), None)
+        if entry is None:
+            return {"reply": f"Tag '{old}' is not used.",
+                    "tool_calls": [], "sources": [], "evidence": []}
+        self.pending_task_action = {
+            "action": "rename_tag", "old": old, "new": new}
+        return {
+            "reply": (
+                f"Rename tag '{old}' to '{new}' on {entry['total']} task(s) "
+                f"({entry['open']} open, {entry['done']} done)? "
+                'Reply "confirm tag rename" to apply, or '
+                '"cancel tag rename".'),
+            "tool_calls": [{"name": "preview_tag_rename",
+                            "old": old, "new": new,
+                            "tasks": entry["total"]}],
+            "sources": [],
+            "evidence": [],
+            "tag_rename": {"old": old, "new": new,
+                           "tasks": entry["total"],
+                           "open": entry["open"],
+                           "done": entry["done"]},
+        }
+
+    def _apply_tag_rename(self) -> dict:
+        pending = self.pending_task_action
+        if pending is None or pending.get("action") != "rename_tag":
+            return {"reply": "There is no pending tag rename.",
+                    "tool_calls": [], "sources": [], "evidence": []}
+        self.pending_task_action = None
+        try:
+            result = self.human.rename_task_tag(
+                pending["old"], pending["new"])
+        except ValueError as exc:
+            return {"reply": str(exc), "tool_calls": [],
+                    "sources": [], "evidence": []}
+        return {
+            "reply": (f"Renamed tag '{result['old']}' to '{result['new']}' "
+                      f"on {result['updated']} task(s)."),
+            "tool_calls": [{"name": "rename_task_tag",
+                            "old": result["old"],
+                            "new": result["new"],
+                            "updated": result["updated"]}],
+            "sources": [],
+            "evidence": [],
+            "tag_rename": {**result, "applied": True},
+        }
+
+    def _cancel_tag_rename(self) -> dict:
+        pending = self.pending_task_action
+        if pending is None or pending.get("action") != "rename_tag":
+            return {"reply": "There is no pending tag rename.",
+                    "tool_calls": [], "sources": [], "evidence": []}
+        self.pending_task_action = None
+        return {
+            "reply": "Tag rename cancelled.",
             "tool_calls": [], "sources": [], "evidence": [],
         }
 
@@ -1220,6 +1288,21 @@ class AgentSession:
             return self._apply_task_delete()
         if low in ("cancel task delete", "cancel delete task"):
             return self._cancel_task_delete()
+        if low in ("confirm tag rename", "confirm rename tag",
+                   "yes rename tag"):
+            return self._apply_tag_rename()
+        if low in ("cancel tag rename", "cancel rename tag"):
+            return self._cancel_tag_rename()
+        rename_tag = re.match(
+            r"^rename\s+tag\s+(\S+)\s+(?:to\s+|as\s+|->\s*)?(\S+?)\??$",
+            text, re.IGNORECASE)
+        if not rename_tag:
+            rename_tag = re.match(
+                r"^etiket(?:i)?\s+yeniden\s+adland[ıi]r\s+(\S+)\s+"
+                r"(?:olarak\s+)?(\S+?)\??$", text, re.IGNORECASE)
+        if rename_tag:
+            return self._preview_tag_rename(
+                rename_tag.group(1), rename_tag.group(2))
         task_delete = re.match(
             r"^(?:delete|remove)\s+task\s*(\d+)\??$",
             text, re.IGNORECASE)

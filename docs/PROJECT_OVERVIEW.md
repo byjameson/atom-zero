@@ -94,7 +94,7 @@ The agent routes explicit commands without asking the model to choose tools:
 
 - time;
 - arithmetic/calculator (safe AST evaluation);
-- task add/list/complete;
+- task add/list/complete, tags, search and confirmed rename;
 - name and likes memory;
 - document search and source-cited answers;
 - explicit `research` / `look up`;
@@ -294,7 +294,7 @@ whether to enable it.
 | document benchmark (100 authored questions) | **80/80 answerable, 20/20 no-answer** |
 | public SQuAD v2 retrieval (50 contexts) | **hybrid 0.975 top-1; 0.816 answer in snippet** |
 | safety-enabled product | **26/26** |
-| test suite | **366 passed** |
+| test suite | **369 passed** |
 
 The product benchmark is narrow and authored: tools, memory, tasks, retrieval,
 teacher-note review, missing-source detection and one short generation. It is

@@ -359,6 +359,13 @@ class ChatHuman:
                 return task
         return None
 
+    def rename_task_tag(self, old, new) -> dict:
+        from atomzero.briefing import rename_task_tag
+
+        result = rename_task_tag(self.data, old, new)
+        self.save()
+        return result
+
     def reschedule_task(self, tid: int, due: str) -> dict | None:
         normalized = _parse_due(due)
         if not normalized:
