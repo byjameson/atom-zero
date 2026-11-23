@@ -37,6 +37,7 @@ atomzero-skills = "atomzero.skills:main"
 atomzero-brief = "atomzero.briefing:main"
 atomzero-plan = "atomzero.plan_audit:main"
 atomzero-audit = "atomzero.audit:main"
+atomzero-memory-ledger = "atomzero.memory_ledger:main"
 
 [project.urls]
 Homepage = "https://github.com/byjameson/atom-zero"

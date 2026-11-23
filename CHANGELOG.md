@@ -82,6 +82,11 @@
 - Added optional AISC audit integration to `atomzero-doctor --aisc` and the
   `AtomZeroProactive` / `AtomZeroContextBudget` / `AtomZeroMemoryLifecycle`
   specs. Strict calibration warnings remain visible and are not hidden.
+- Added a content-free **memory lifecycle ledger** (`atomzero-memory-ledger`,
+  `GET /v1/memory/ledger`, `POST /v1/memory/ledger/verify`). Successful
+  document/session deletes append counts/scope only; the ledger validator
+  rejects text, query, answer, chunk and session content fields. The AISC
+  memory spec now includes `LedgerWriter` after `MemoryStore`.
 - Added a **weekly review**: open/recently completed tasks, pending gaps,
   sources indexed within the window and graph highlights.
 - Added `atomzero-brief --weekly --days N`, `POST /v1/weekly-review` and a UI

@@ -739,6 +739,8 @@ def test_http_privacy_forget_document_and_session(tmp_path):
         "api_key": "", "metrics": {"requests": 0, "generated_tokens": 0},
         "safety": None, "wiki_lang": "en",
         "session_dir": str(tmp_path / "sessions"), "sessions": {},
+        "memory_ledger_path": str(tmp_path / "memory_ledger.jsonl"),
+        "memory_ledger": None,
     })
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
@@ -757,6 +759,7 @@ def test_http_privacy_forget_document_and_session(tmp_path):
         forgotten = _post(base + "/v1/documents/forget",
                           {"source": "pii.txt", "confirm": True})
         assert forgotten["chunks_deleted"] == 1
+        assert forgotten["ledger_recorded"] is True
         assert _post(base + "/v1/documents/search",
                      {"query": "alice"})["data"] == []
         with pytest.raises(urllib.error.HTTPError) as missing:
@@ -800,6 +803,16 @@ def test_http_privacy_forget_document_and_session(tmp_path):
         cleared = _post(base + "/v1/memory/forget", {
             "session_id": "privacy", "all": True, "confirm": True})
         assert cleared["cleared_all"] is True
+        assert cleared["ledger_recorded"] is True
+        ledger = json.loads(urllib.request.urlopen(
+            base + "/v1/memory/ledger?limit=10", timeout=10).read().decode())
+        assert ledger["summary"]["events"] == 3
+        assert {event["op"] for event in ledger["data"]} == {
+            "document_forget", "session_forget"}
+        assert all("text" not in event and "answer" not in event
+                   for event in ledger["data"])
+        verified = _post(base + "/v1/memory/ledger/verify", {})
+        assert verified["ok"] is True
     finally:
         httpd.shutdown()
         httpd.server_close()

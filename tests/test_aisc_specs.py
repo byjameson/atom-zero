@@ -53,9 +53,10 @@ def test_aisc_architecture_specs_are_safe_and_verified():
         "MessageComposer", "UserChannel"]
     assert [item["name"] for item in memory["components"]] == [
         "MemoryRequestParser", "ScopeResolver", "HumanConfirmation",
-        "MemoryStore"]
-    assert memory["components"][-1]["reversible"] is False
-    assert memory["components"][-2]["kind"] == "human"
+        "MemoryStore", "LedgerWriter"]
+    assert memory["components"][-2]["reversible"] is False
+    assert memory["components"][-3]["kind"] == "human"
+    assert memory["components"][-1]["reversible"] is True
 
     for components in (task_components, plan_components):
         irreversible = [index for index, item in enumerate(components)

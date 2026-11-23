@@ -52,3 +52,16 @@ evidence = "document forget and session forget tests"
 assumptions = ["the local SQLite index or session file is writable"]
 guarantees = ["the confirmed scope is deleted locally"]
 context_tokens = 512
+
+[[components]]
+name = "LedgerWriter"
+input_type = "MemoryResult"
+output_type = "AuditEvent"
+kind = "tool"
+reversible = true
+assurance = 0.98
+verified = true
+evidence = "tests/test_memory_ledger.py and HTTP ledger verification"
+assumptions = ["the local ledger file is writable"]
+guarantees = ["one content-free mutation event is appended"]
+context_tokens = 128

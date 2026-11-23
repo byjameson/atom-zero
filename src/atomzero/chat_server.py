@@ -4383,6 +4383,18 @@ class Handler(BaseHTTPRequestHandler):
                 "text/markdown; charset=utf-8",
                 {"Content-Disposition":
                  f'attachment; filename="{filename}"'})
+        elif self.path.startswith("/v1/memory/ledger"):
+            params = urllib.parse.parse_qs(
+                urllib.parse.urlparse(self.path).query)
+            try:
+                limit = int(params.get("limit", ["50"])[0])
+            except (TypeError, ValueError):
+                limit = 50
+            ledger = self._memory_ledger()
+            self._json(200, {
+                "data": ledger.read(limit),
+                "summary": ledger.summary(),
+            })
         elif self.path == "/v1/documents":
             docs = _state.get("docs")
             self._json(200, {"data": docs.sources() if docs else []})
@@ -4672,6 +4684,7 @@ class Handler(BaseHTTPRequestHandler):
                          "/v1/documents/answer",
                          "/v1/documents/upload", "/v1/documents/forget",
                          "/v1/memory/forget", "/v1/memory/history",
+                         "/v1/memory/ledger/verify",
                          "/v1/memory/export", "/v1/memory/import",
                          "/v1/teacher/notes",
                          "/v1/teacher/notes/verify", "/v1/teacher/ask",
@@ -4806,6 +4819,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._documents_forget(req)
             if route == "/v1/memory/forget":
                 return self._memory_forget(req)
+            if route == "/v1/memory/ledger/verify":
+                return self._json(200, self._memory_ledger().verify())
             if route == "/v1/memory/history":
                 return self._memory_history(req)
             if route == "/v1/memory/export":
@@ -5692,6 +5707,15 @@ class Handler(BaseHTTPRequestHandler):
             metrics["documents"] = metrics.get("documents", 0) + 1
         return self._json(200, result)
 
+    def _memory_ledger(self):
+        from atomzero.memory_ledger import MemoryLedger
+        ledger = _state.get("memory_ledger")
+        if ledger is None:
+            ledger = MemoryLedger(_state.get(
+                "memory_ledger_path", "data/memory_ledger.jsonl"))
+            _state["memory_ledger"] = ledger
+        return ledger
+
     def _documents_forget(self, req: dict):
         confirm = req.get("confirm", None)
         if confirm is None:
@@ -5713,6 +5737,15 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(404, {"error": str(exc)})
         except ValueError as exc:
             return self._json(400, {"error": str(exc)})
+        source = str(req.get("source", ""))
+        try:
+            self._memory_ledger().append(
+                "document_forget", "document", source,
+                before={"chunks": result.get("chunks_deleted", 0)},
+                after={"chunks": 0})
+            result["ledger_recorded"] = True
+        except Exception:
+            result["ledger_recorded"] = False
         return self._json(200, result)
 
     def _memory_forget(self, req: dict):
@@ -5741,6 +5774,16 @@ class Handler(BaseHTTPRequestHandler):
             result = session.forget("" if clear_all else text)
         except Exception as exc:
             return self._json(400, {"error": str(exc)})
+        try:
+            self._memory_ledger().append(
+                "session_forget", "session", session_id,
+                before={"facts": result.get("facts_deleted", 0),
+                        "episodes": result.get("episodes_deleted", 0),
+                        "tasks": result.get("tasks_deleted", 0)},
+                after={"cleared_all": bool(clear_all)})
+            result["ledger_recorded"] = True
+        except Exception:
+            result["ledger_recorded"] = False
         return self._json(200, {"session_id": session_id, **result})
 
     def _memory_export(self, req: dict):

@@ -16,7 +16,7 @@ Atom Zero ships four optional AISC architecture specs:
   consent-gated, rate-limited local proactive conversation.
 - [`docs/aisc/atomzero-memory-lifecycle.toml`](aisc/atomzero-memory-lifecycle.toml):
   scoped memory deletion with explicit confirmation before an irreversible
-  store mutation.
+  store mutation and a content-free ledger writer after it.
 - [`docs/aisc/atomzero-answerability.toml`](aisc/atomzero-answerability.toml):
   the measured answerability/refusal-policy experiment. It is intentionally
   retained with its failing metrics.
@@ -57,7 +57,7 @@ AtomZeroContextBudget    assurance 0.95, verification debt 0, no irreversible
 AtomZeroProactive        assurance 0.95, verification debt 0, no irreversible
                          (ConsentGate precedes UserChannel)
 AtomZeroMemoryLifecycle  assurance 0.98, verification debt 0, 1 irreversible
-                         (HumanConfirmation precedes MemoryStore)
+                         (HumanConfirmation precedes MemoryStore; LedgerWriter follows)
 ```
 
 `--strict --require-calibration` is **not green**:
@@ -68,7 +68,7 @@ AtomZeroTaskActions:     FAIL, CALIBRATION_MISSING on 4 components
 AtomZeroToolPlan:        FAIL, CALIBRATION_MISSING on 3 components
 AtomZeroContextBudget:   FAIL, CALIBRATION_MISSING on 3 components
 AtomZeroProactive:       FAIL, CALIBRATION_MISSING on 5 components
-AtomZeroMemoryLifecycle: FAIL, CALIBRATION_MISSING on 4 components
+AtomZeroMemoryLifecycle: FAIL, CALIBRATION_MISSING on 5 components
 AtomZeroAnswerability:   FAIL, ANSWERABILITY_POOR + REFUSAL_POLICY_MISMATCH
 ```
 
