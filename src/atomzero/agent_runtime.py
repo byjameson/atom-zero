@@ -389,6 +389,66 @@ class AgentSession:
             "comparison": comparison,
         }
 
+    def _timeline(self, source: str = "") -> dict:
+        if self.docs is None:
+            return {"reply": "no document memory configured",
+                    "tool_calls": [], "sources": [], "evidence": []}
+        from atomzero.timeline import extract_timeline
+
+        source = source.strip().strip("\"'")
+        try:
+            data = extract_timeline(self.docs, source=source, limit=20)
+        except ValueError as exc:
+            return {"reply": str(exc), "tool_calls": [],
+                    "sources": [], "evidence": []}
+        tool = [{"name": "document_timeline", "source": source,
+                 "limit": 20}]
+        events = data.get("events", [])
+        if not events:
+            scope = f" in {source}" if source else ""
+            return {"reply": f"No dated events found{scope}.",
+                    "tool_calls": tool, "sources": [], "evidence": [],
+                    "timeline": data}
+        lines = [f"Document timeline ({len(events)} event(s)"
+                 f"{', source ' + source if source else ''}):"]
+        sources = []
+        evidence = []
+        for event in events[:10]:
+            location = event["source"]
+            if event.get("page") is not None:
+                location += f" p.{event['page']}"
+            if event.get("section"):
+                location += f" §{event['section']}"
+            lines.append(
+                f"- {event['date']} ({event['precision']}): "
+                f"{str(event['text'])[:180]} [{location}]")
+            source_item = {
+                "source": event["source"],
+                "title": event.get("title", ""),
+                "kind": event.get("kind", "document"),
+                "verified": bool(event.get("verified", True)),
+            }
+            if source_item not in sources:
+                sources.append(source_item)
+            evidence.append({
+                "source": event["source"],
+                "title": event.get("title", ""),
+                "page": event.get("page"),
+                "section": event.get("section", ""),
+                "snippet": event.get("text", ""),
+                "date": event["date"],
+            })
+        if len(events) > 10:
+            lines.append(f"... {len(events) - 10} more event(s)")
+        lines.append("\nThis is a textual timeline, not inference.")
+        return {
+            "reply": "\n".join(lines),
+            "tool_calls": tool,
+            "sources": sources,
+            "evidence": evidence,
+            "timeline": data,
+        }
+
     def _briefing(self, sort: str = "default",
                   tag: str = "all") -> dict:
         try:
@@ -1692,6 +1752,15 @@ class AgentSession:
                 r"(?:report|archive\s+entry)\??$", text, re.IGNORECASE)
         if delete_match:
             return self._preview_delete_report(delete_match.group(1))
+        timeline_match = re.match(
+            r"^(?:document\s+)?timeline(?:\s+(?:for|of)\s+(.+?))?\??$",
+            text, re.IGNORECASE)
+        if not timeline_match:
+            timeline_match = re.match(
+                r"^(?:zaman\s+çizelgesi|kronoloji)"
+                r"(?:\s+(?:için\s+)?(.+?))?\??$", text, re.IGNORECASE)
+        if timeline_match:
+            return self._timeline(timeline_match.group(1) or "")
         graph_query = re.match(
             r"^(?:what is related to|what relates to|connections (?:for|of)|"
             r"graph)\s*:?\s*(.+?)\??$", text, re.IGNORECASE)

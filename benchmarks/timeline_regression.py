@@ -28,6 +28,14 @@ def _get(base: str, route: str) -> dict:
         return json.loads(response.read().decode("utf-8"))
 
 
+def _post(url: str, payload: dict) -> dict:
+    request = urllib.request.Request(
+        url, data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"}, method="POST")
+    with urllib.request.urlopen(request, timeout=15) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
 def run(output: str | Path | None = None) -> dict:
     checks = []
 
@@ -85,6 +93,26 @@ def run(output: str | Path | None = None) -> dict:
             except urllib.error.HTTPError as exc:
                 missing_ok = exc.code == 404
             check("timeline_missing_source", missing_ok, "404")
+            with urllib.request.urlopen(base + "/", timeout=15) as response:
+                html = response.read().decode("utf-8", "replace").lower()
+            check("ui_timeline_control",
+                  "/v1/documents/timeline" in html
+                  and 'id="timelinebtn"' in html
+                  and "showtimeline" in html,
+                  "present" if "timelinebtn" in html else "missing")
+            chat = _post(base + "/v1/agent/chat", {
+                "session_id": "timeline", "message": "timeline"})
+            calls = chat.get("tool_calls") or [{}]
+            check("chat_timeline",
+                  calls[0].get("name") == "document_timeline"
+                  and "2020-01-05" in chat.get("reply", ""),
+                  chat.get("reply", "")[:160])
+            turkish = _post(base + "/v1/agent/chat", {
+                "session_id": "timeline", "message": "zaman çizelgesi"})
+            turkish_calls = turkish.get("tool_calls") or [{}]
+            check("chat_timeline_turkish",
+                  turkish_calls[0].get("name") == "document_timeline",
+                  turkish.get("reply", "")[:160])
         finally:
             httpd.shutdown()
             httpd.server_close()

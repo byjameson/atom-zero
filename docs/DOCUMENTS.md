@@ -139,6 +139,9 @@ Full dates (`5 January 2020`, `January 5, 2020`, `5 Ocak 2020`,
 Every event keeps source, title, page/section, kind, verified flag and extracted
 entities; results are sorted by date. This is a textual timeline, not inference.
 
+Chat also understands `timeline` and `zaman çizelgesi`; the documents UI has a
+**Show timeline** action with evidence and citation buttons.
+
 ### CLI
 
 ```powershell

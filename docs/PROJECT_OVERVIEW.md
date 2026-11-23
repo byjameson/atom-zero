@@ -294,9 +294,9 @@ whether to enable it.
 | document benchmark (100 authored questions) | **80/80 answerable, 20/20 no-answer** |
 | public SQuAD v2 retrieval (50 contexts) | **hybrid 0.975 top-1; 0.884 answer in snippet** |
 | Turkish morphology retrieval (20 queries) | **hybrid 1.000 top-1; FTS 0.950** (before vowel drop 0.800 / 0.700) |
-| document timeline regression | **6/6** |
+| document timeline regression | **9/9** |
 | safety-enabled product | **26/26** |
-| test suite | **390 passed** |
+| test suite | **391 passed** |
 
 The product benchmark is narrow and authored: tools, memory, tasks, retrieval,
 teacher-note review, missing-source detection and one short generation. It is

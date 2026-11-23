@@ -64,8 +64,11 @@ def test_demo_page_uses_daily_agent_endpoint():
     assert "/v1/documents/answer" in page
     assert "/v1/documents/summary" in page
     assert "/v1/documents/compare" in page
+    assert "/v1/documents/timeline" in page
     assert 'id="cmpbtn"' in page
     assert "comparesources" in page
+    assert 'id="timelinebtn"' in page
+    assert "showtimeline" in page
     assert "/v1/hungry/run" in page
     assert "hungry mode" in page
     assert "grounded answer" in page

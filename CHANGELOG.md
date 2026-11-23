@@ -19,8 +19,9 @@
   to 1.000 and FTS from 0.700 to 0.950; English SQuAD results are unchanged.
 - Added a deterministic **document timeline**: `atomzero-docs timeline` and
   `GET /v1/documents/timeline` extract full dates and year-only mentions with
-  source/title/page/section provenance. `benchmarks/timeline_regression.py`
-  passes 6/6.
+  source/title/page/section provenance. Chat (`timeline`, `zaman çizelgesi`)
+  and a UI Show timeline action share the route. The timeline regression
+  passes 9/9.
 - Added multi-hop **graph paths**: `atomzero-docs path`, `GET /v1/graph/path`,
   chat “how is X connected to Y?” and UI Find path.
 - Added `benchmarks/graph_path_regression.py` (6/6 checks).

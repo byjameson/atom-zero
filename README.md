@@ -149,8 +149,8 @@ LoRA adapters.
 | public SQuAD v2 retrieval (20 contexts) | **0.98 top-1 context (FTS), 1.00 top-5** |
 | public SQuAD v2 retrieval (50 contexts) | **hybrid 0.975 top-1; 0.884 answer in visible snippet** |
 | Turkish morphology retrieval (20 authored queries) | **hybrid 1.000 top-1; FTS 0.950** (before vowel drop 0.800 / 0.700) |
-| document timeline regression | **6/6** |
-| test suite | **390 passed** |
+| document timeline regression | **9/9** |
+| test suite | **391 passed** |
 
 The raw-model probe asks ten simple general questions with no documents, no
 calculator and no agent. The 49.2M model gets **2/10**. The product gets
@@ -191,8 +191,9 @@ short generation. It is **not MMLU, GSM8K or HumanEval**.
   dates, code identifiers or negation, with lexical and topic-paraphrase
   alignment; CLI/API/UI and chat (`compare sources A and B`) keep both snippets
   and locators for review. It is a hint, not a truth verdict.
-- **Document timeline:** `atomzero-docs timeline` and
-  `GET /v1/documents/timeline` extract full dates and year-only mentions with
+- **Document timeline:** `atomzero-docs timeline`,
+  `GET /v1/documents/timeline`, chat `timeline` / `zaman çizelgesi` and the UI
+  Show timeline action extract full dates and year-only mentions with
   source/title/page/section provenance; English and Turkish dates normalize to
   ISO, and year-only events keep `precision=year`.
 - **Custom skills:** drop JSON skills into `data/skills` to add trigger phrases,

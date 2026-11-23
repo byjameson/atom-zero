@@ -131,6 +131,31 @@ def test_agent_compare_sources_intent(tmp_path):
     docs.close()
 
 
+def test_agent_document_timeline_intent(tmp_path):
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("history.txt",
+                  "The launch was on 5 January 2020. "
+                  "A follow-up happened in 2021.", title="History")
+    docs.add_text("toplanti.txt",
+                  "Toplantı 6 Ocak 2020 tarihinde yapıldı.",
+                  title="Toplantı")
+    agent = AgentSession("s-timeline", tmp_path / "memory.json", docs=docs)
+    result = agent.chat("timeline")
+    assert result["tool_calls"][0]["name"] == "document_timeline"
+    assert "2020-01-05" in result["reply"]
+    assert "2021" in result["reply"]
+    assert result["timeline"]["count"] == 3
+    assert result["sources"]
+    filtered = agent.chat("timeline for toplanti.txt")
+    assert filtered["timeline"]["count"] == 1
+    assert filtered["timeline"]["events"][0]["date"] == "2020-01-06"
+    turkish = agent.chat("zaman çizelgesi")
+    assert turkish["tool_calls"][0]["name"] == "document_timeline"
+    missing = agent.chat("timeline for missing.txt")
+    assert "source not found" in missing["reply"]
+    docs.close()
+
+
 def test_agent_graph_path_query(tmp_path):
     docs = DocMemory(tmp_path / "docs.db")
     docs.add_text("chain1.txt", "Ankara is in Turkey.", title="Chain 1")

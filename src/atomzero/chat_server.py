@@ -479,6 +479,9 @@ weights.</p>
 <select id="cmpagainst"><option value="">against all others</option></select>
 <button id="cmpbtn">Compare sources</button></div>
 <div id="cmpresult"></div>
+<div class="row"><button id="timelinebtn">Show timeline</button>
+<span class="hint">Uses the selected source when set.</span></div>
+<div id="timeline"></div>
 <hr>
 <h3>Second brain graph</h3>
 <p class="hint">Local co-occurrence graph over indexed chunks. It links
@@ -2221,6 +2224,49 @@ async function compareSources() {
   }
 }
 document.getElementById('cmpbtn').onclick = () => compareSources();
+async function showTimeline() {
+  const box = document.getElementById('timeline');
+  const msg = document.getElementById('docmsg');
+  const source = document.getElementById('docsrc').value;
+  box.textContent = 'loading timeline...';
+  const params = new URLSearchParams();
+  if (source) params.set('source', source);
+  try {
+    const r = await fetch('/v1/documents/timeline?' + params.toString());
+    const j = await r.json();
+    if (!r.ok) {
+      box.textContent = 'timeline error: ' + (j.error || r.status);
+      return;
+    }
+    box.textContent = '';
+    const head = document.createElement('p');
+    head.textContent = 'Timeline (' + j.count + ' event(s))';
+    box.appendChild(head);
+    (j.events || []).forEach(event => {
+      const card = document.createElement('div');
+      card.className = 'qitem';
+      const title = document.createElement('div');
+      title.textContent = event.date + ' (' + event.precision + ') | ' +
+        event.source + (event.page ? ' p.' + event.page : '') +
+        (event.section ? ' [' + event.section + ']' : '');
+      card.appendChild(title);
+      const text = document.createElement('div');
+      text.className = 'src';
+      text.textContent = event.text || '';
+      card.appendChild(text);
+      const actions = document.createElement('div');
+      actions.className = 'actions';
+      actions.appendChild(qbutton('Evidence', () =>
+        showEvidence(event.source, event.page, event.section)));
+      actions.appendChild(qbutton('Copy citation', () =>
+        copyCitation(event.source, event.page, event.section)));
+      card.appendChild(actions);
+      box.appendChild(card);
+    });
+    if (msg) msg.textContent = j.count + ' timeline event(s)';
+  } catch (e) { box.textContent = 'timeline error: ' + e; }
+}
+document.getElementById('timelinebtn').onclick = () => showTimeline();
 function copyCitation(source, page, section) {
   const text = source + (page ? ' (p. ' + page + ')' : '') +
                (section ? ' [' + section + ']' : '');
