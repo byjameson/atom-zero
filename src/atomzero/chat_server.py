@@ -32,6 +32,7 @@ Endpoints:
   GET  /v1/tasks/list?session_id=default&status=open&due=week&priority=high&sort=priority
   GET  /v1/tasks/tags?session_id=default
   GET  /v1/tasks/tags/audit?session_id=default&limit=10&tag=work&action=delete_tag
+  GET  /v1/tasks/tags/audit/export?session_id=default&format=csv&tag=work
   POST /v1/tasks/tags/rename  (add "confirm": true to apply)
   POST /v1/tasks/tags/delete  (add "confirm": true to apply)
   POST /v1/tasks/tags/undo-delete
@@ -3612,6 +3613,48 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as exc:
                 return self._json(400, {"error": str(exc)})
             return self._json(200, result)
+        elif (self.path == "/v1/tasks/tags/audit/export"
+              or self.path.startswith("/v1/tasks/tags/audit/export?")):
+            params = urllib.parse.parse_qs(
+                urllib.parse.urlparse(self.path).query)
+            session_id = (params.get("session_id", ["default"])[0]
+                          or "default")
+            try:
+                limit = int(params.get("limit", ["10"])[0])
+                if limit < 1:
+                    raise ValueError("limit must be at least 1")
+                tag = str(params.get("tag", ["all"])[0] or "all").strip()
+                action = str(params.get("action", ["all"])[0]
+                             or "all").strip()
+                export_format = str(
+                    params.get("format", ["csv"])[0] or "csv").strip().lower()
+                if export_format not in ("csv", "markdown"):
+                    raise ValueError("format must be csv or markdown")
+                session = self._session(session_id)
+                from atomzero.briefing import (
+                    render_task_tag_audit_csv,
+                    render_task_tag_audit_markdown, task_tag_audit_view)
+
+                view = task_tag_audit_view(
+                    session.human.data, limit=limit, tag=tag,
+                    action=action,
+                    now=params.get("today", [None])[0])
+                if export_format == "csv":
+                    body = render_task_tag_audit_csv(view)
+                    content_type = "text/csv; charset=utf-8"
+                else:
+                    body = render_task_tag_audit_markdown(view)
+                    content_type = "text/markdown; charset=utf-8"
+            except (TypeError, ValueError) as exc:
+                return self._json(400, {"error": str(exc)})
+            except Exception as exc:
+                return self._json(400, {"error": str(exc)})
+            day = str(view.get("generated", ""))[:10] or "latest"
+            suffix = "md" if export_format == "markdown" else "csv"
+            filename = f"atomzero-tag-audit-{day}.{suffix}"
+            return self._send(
+                200, body.encode("utf-8"), content_type,
+                {"Content-Disposition": f'attachment; filename="{filename}"'})
         elif (self.path == "/v1/tasks/tags/audit"
               or self.path.startswith("/v1/tasks/tags/audit?")):
             params = urllib.parse.parse_qs(

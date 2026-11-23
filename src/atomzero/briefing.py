@@ -641,6 +641,65 @@ def task_tag_audit_view(session_data: dict | None, limit: int = 10,
     }
 
 
+def render_task_tag_audit_csv(view: dict) -> str:
+    output = io.StringIO()
+    writer = csv.writer(output, lineterminator="\n")
+    writer.writerow([
+        "ts", "action", "tag", "task_ids", "updated", "open", "done",
+        "restored", "already", "skipped", "deleted_at",
+    ])
+    for event in view.get("events", []):
+        is_delete = event.get("action") == "delete_tag"
+        writer.writerow([
+            event.get("ts", ""),
+            event.get("action", ""),
+            event.get("tag", ""),
+            ",".join(str(value)
+                     for value in event.get("task_ids", [])),
+            event.get("updated", "") if is_delete else "",
+            event.get("open", "") if is_delete else "",
+            event.get("done", "") if is_delete else "",
+            event.get("restored", "") if not is_delete else "",
+            event.get("already", "") if not is_delete else "",
+            event.get("skipped", "") if not is_delete else "",
+            event.get("deleted_at", "") if not is_delete else "",
+        ])
+    return output.getvalue()
+
+
+def render_task_tag_audit_markdown(view: dict) -> str:
+    lines = [
+        f"# Tag audit - {view.get('generated', '')}",
+        "",
+        f"- Tag filter: {view.get('tag', 'all')}",
+        f"- Action filter: {view.get('action', 'all')}",
+        f"- Events: {view.get('count', 0)} of {view.get('total', 0)}",
+        "",
+        "| Time | Action | Tag | Detail | IDs |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    for event in view.get("events", []):
+        ids = ", ".join(f"#{value}"
+                        for value in event.get("task_ids", []))
+        if event.get("action") == "delete_tag":
+            detail = (f"{event.get('updated', 0)} task(s) "
+                      f"({event.get('open', 0)} open, "
+                      f"{event.get('done', 0)} done)")
+        else:
+            detail = (f"restored {event.get('restored', 0)}; "
+                      f"{event.get('already', 0)} already; "
+                      f"{event.get('skipped', 0)} skipped")
+        lines.append(
+            f"| {_markdown_cell(event.get('ts'))} "
+            f"| {_markdown_cell(event.get('action'))} "
+            f"| {_markdown_cell(event.get('tag'))} "
+            f"| {_markdown_cell(detail)} "
+            f"| {_markdown_cell(ids)} |")
+    if not view.get("events"):
+        lines.extend(["", "_No events match these filters._"])
+    return "\n".join(lines) + "\n"
+
+
 def set_task_priority(session_data: dict | None, tid, priority) -> dict:
     """Update one task's priority in a session dict."""
     try:
@@ -1812,6 +1871,10 @@ def main(argv=None) -> int:
                         choices=("all", "delete_tag", "undo_tag_delete"),
                         default="all",
                         help="filter tag audit events by action")
+    parser.add_argument("--tag-audit-format",
+                        choices=("text", "csv", "markdown"),
+                        default="text",
+                        help="tag-audit output: text, csv or markdown")
     parser.add_argument("--rename-tag", nargs=2, metavar=("OLD", "NEW"),
                         default=None,
                         help="preview renaming one task tag everywhere")
@@ -1944,6 +2007,11 @@ def main(argv=None) -> int:
     if ((args.tag_audit_tag is not None
          or args.tag_audit_action != "all") and not args.tag_audit):
         parser.error("--tag-audit-tag/--tag-audit-action require --tag-audit")
+    if (args.tag_audit_format != "text" and not args.tag_audit):
+        parser.error("--tag-audit-format requires --tag-audit")
+    if args.tag_audit_format != "text" and args.json:
+        parser.error(
+            "--json cannot be combined with --tag-audit-format csv/markdown")
     if args.tag_audit_tag is not None:
         try:
             normalize_task_tag(args.tag_audit_tag)
@@ -2339,6 +2407,10 @@ def main(argv=None) -> int:
             return 1
         if args.json:
             print(json.dumps(result, indent=2, ensure_ascii=False))
+        elif args.tag_audit_format == "csv":
+            print(render_task_tag_audit_csv(result), end="")
+        elif args.tag_audit_format == "markdown":
+            print(render_task_tag_audit_markdown(result), end="")
         else:
             print(result["text"])
         return 0

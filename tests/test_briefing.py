@@ -952,6 +952,31 @@ def test_tag_audit_and_weekly_archive(tmp_path, capsys):
     payload = json.loads(capsys.readouterr().out)
     assert payload["count"] == 0
     assert payload["total"] == 0
+    assert main(common + [
+        "--tag-audit", "--tag-audit-tag", "work",
+        "--tag-audit-action", "delete_tag",
+        "--tag-audit-format", "csv"]) == 0
+    csv_output = capsys.readouterr().out
+    assert csv_output.startswith("ts,action,tag,task_ids")
+    assert "delete_tag,work" in csv_output
+    assert "undo_tag_delete" not in csv_output
+    assert main(common + [
+        "--tag-audit", "--tag-audit-tag", "work",
+        "--tag-audit-action", "delete_tag",
+        "--tag-audit-format", "markdown"]) == 0
+    audit_markdown = capsys.readouterr().out
+    assert audit_markdown.startswith("# Tag audit - ")
+    assert "- Tag filter: work" in audit_markdown
+    assert "- Action filter: delete_tag" in audit_markdown
+    assert "| delete_tag | work |" in audit_markdown
+    assert "| undo_tag_delete | work |" not in audit_markdown
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--tag-audit-format", "csv"])
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
+        main(common + [
+            "--tag-audit", "--tag-audit-format", "csv", "--json"])
+    assert exc.value.code == 2
     with pytest.raises(SystemExit) as exc:
         main(common + ["--tag-audit-tag", "work"])
     assert exc.value.code == 2

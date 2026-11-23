@@ -2372,6 +2372,32 @@ def test_http_delete_tag(tmp_path):
         assert filtered_audit["count"] == 1
         assert filtered_audit["total"] == 1
         assert filtered_audit["events"][0]["action"] == "delete_tag"
+        with urllib.request.urlopen(
+                base + "/v1/tasks/tags/audit/export?session_id=" + session_id
+                       + "&tag=work&action=delete_tag&format=csv",
+                timeout=10) as response:
+            assert response.headers.get_content_type() == "text/csv"
+            assert "atomzero-tag-audit-" in response.headers[
+                "Content-Disposition"]
+            csv_audit = response.read().decode("utf-8")
+        assert csv_audit.startswith("ts,action,tag,task_ids")
+        assert "delete_tag,work" in csv_audit
+        assert "undo_tag_delete" not in csv_audit
+        with urllib.request.urlopen(
+                base + "/v1/tasks/tags/audit/export?session_id=" + session_id
+                       + "&tag=work&action=delete_tag&format=markdown",
+                timeout=10) as response:
+            assert response.headers.get_content_type() == "text/markdown"
+            md_audit = response.read().decode("utf-8")
+        assert md_audit.startswith("# Tag audit - ")
+        assert "| delete_tag | work |" in md_audit
+        assert "| undo_tag_delete | work |" not in md_audit
+        with pytest.raises(urllib.error.HTTPError) as invalid_format:
+            urllib.request.urlopen(
+                base + "/v1/tasks/tags/audit/export?session_id=" + session_id
+                       + "&format=xml",
+                timeout=10)
+        assert invalid_format.value.code == 400
         undo_audit = json.loads(urllib.request.urlopen(
             base + "/v1/tasks/tags/audit?session_id=" + session_id
                    + "&action=undo",

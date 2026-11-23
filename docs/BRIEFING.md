@@ -167,9 +167,13 @@ tag audit tag work action undo 1
 ```
 
 CLI uses `--tag-audit [--tag-audit-limit N] [--tag-audit-tag TAG]
-[--tag-audit-action delete_tag|undo_tag_delete]`, HTTP uses
+[--tag-audit-action delete_tag|undo_tag_delete]
+[--tag-audit-format text|csv|markdown]`, HTTP uses
 `GET /v1/tasks/tags/audit?limit=10&tag=work&action=delete_tag`, and the UI has
-a **Tag audit** button with tag and action fields. The weekly review JSON
+a **Tag audit** button with tag and action fields. Filtered exports use
+`GET /v1/tasks/tags/audit/export?format=csv&tag=work&action=delete_tag` (or
+`format=markdown`); CSV columns include `ts,action,tag,task_ids,updated,open,
+done,restored,already,skipped,deleted_at`. The weekly review JSON
 includes `tag_audit`/`tag_audit_total`, and its Markdown
 export adds a `## Tag audit` section, so archived reports keep the trail.
 
