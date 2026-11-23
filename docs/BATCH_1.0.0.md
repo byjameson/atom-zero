@@ -26,6 +26,9 @@ boundary.
 | `feat/scoreboard-collect` | `%TEMP%\opencode\atom-zero-score` | parse pytest/benchmark/AISC summaries into content-free scoreboard counts | `tests/test_scoreboard.py` |
 | `feat/escalation-ladder` | `%TEMP%\opencode\atom-zero-escalation` | local -> teacher -> agent routing with privacy and budgets | `tests/test_escalation.py` |
 | `feat/answerability-calibration` | `%TEMP%\opencode\atom-zero-calibration` | prevalence-corrected calibration and out-of-fold metrics | answerability/drift tests and benchmarks |
+| `feat/teacher-verification` | `%TEMP%\opencode\atom-zero-teacher` | teacher answer -> claim/evidence/conflict verification, content-free event | `tests/test_teacher_verification.py` |
+| `feat/loop-self-code-diff` | `%TEMP%\opencode\atom-zero-loopdiff` | before/after audit gate; blocks a decision on a new high/medium finding | `tests/test_self_improve.py` |
+| `feat/loop-history` | `%TEMP%\opencode\atom-zero-loop-history` | passes the decision ledger to the planner as bounded history | `tests/test_self_improve.py` |
 
 Each Implementer:
 
