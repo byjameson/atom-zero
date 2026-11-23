@@ -12,6 +12,7 @@ Endpoints:
   GET  /v1/documents/evidence?source=...&page=...&section=...
   GET  /v1/documents/summary?source=...&source_prefix=...&sentences=8
   GET  /v1/documents/compare?source=...&against=...&max_claims=200
+  GET  /v1/documents/timeline?source=...&source_prefix=...&limit=100
   GET  /v1/graph?limit_chunks=...&min_edge=...&max_entities=...
   GET  /v1/graph/entity?name=...&limit=...
   GET  /v1/graph/path?source=...&target=...&max_depth=4
@@ -4076,6 +4077,27 @@ class Handler(BaseHTTPRequestHandler):
                     docs, params.get("source", [""])[0],
                     against=params.get("against", [""])[0],
                     max_claims=int(params.get("max_claims", ["200"])[0]))
+            except (TypeError, ValueError) as exc:
+                return self._json(400, {"error": str(exc)})
+            return self._json(200, result)
+        elif (self.path == "/v1/documents/timeline"
+              or self.path.startswith("/v1/documents/timeline?")):
+            docs = _state.get("docs")
+            if docs is None:
+                return self._json(400, {
+                    "error": "no document memory configured"})
+            params = urllib.parse.parse_qs(
+                urllib.parse.urlparse(self.path).query)
+            from atomzero.timeline import extract_timeline
+
+            try:
+                result = extract_timeline(
+                    docs,
+                    source=params.get("source", [""])[0],
+                    source_prefix=params.get("source_prefix", [""])[0],
+                    limit=int(params.get("limit", ["100"])[0]))
+            except SourceNotFound as exc:
+                return self._json(404, {"error": str(exc)})
             except (TypeError, ValueError) as exc:
                 return self._json(400, {"error": str(exc)})
             return self._json(200, result)

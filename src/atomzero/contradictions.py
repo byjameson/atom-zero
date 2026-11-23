@@ -245,16 +245,15 @@ def _measures_by_dimension(measures) -> dict[str, set[str]]:
     return grouped
 
 
-def _dates(text: str) -> set[str]:
-    """Return canonical ISO-like dates found in text.
-
-    Supports ISO dates, ``Month D, YYYY``, ``D Month YYYY`` and Turkish month
-    names. Numeric slash/dot dates are deliberately ignored because their
-    day/month order is locale-dependent and would create false conflicts.
-    """
-    found = set()
+def date_matches(text: str) -> list[dict]:
+    """Return full-date matches with an ISO date, source span and precision."""
+    found = []
+    seen = set()
     for pattern in DATE_PATTERNS:
         for match in pattern.finditer(text):
+            span = (match.start(), match.end())
+            if span in seen:
+                continue
             try:
                 year = int(match.group("year"))
                 day = int(match.group("day"))
@@ -265,9 +264,28 @@ def _dates(text: str) -> set[str]:
                 month = int(raw_month)
             else:
                 month = MONTHS.get(raw_month.lower().rstrip("."), 0)
-            if 1 <= month <= 12 and 1 <= day <= 31 and 1000 <= year <= 2999:
-                found.add(f"{year:04d}-{month:02d}-{day:02d}")
-    return found
+            if not (1 <= month <= 12 and 1 <= day <= 31
+                    and 1000 <= year <= 2999):
+                continue
+            seen.add(span)
+            found.append({
+                "date": f"{year:04d}-{month:02d}-{day:02d}",
+                "precision": "day",
+                "start": span[0],
+                "end": span[1],
+                "text": match.group(0),
+            })
+    return sorted(found, key=lambda item: item["start"])
+
+
+def _dates(text: str) -> set[str]:
+    """Return canonical ISO-like dates found in text.
+
+    Supports ISO dates, ``Month D, YYYY``, ``D Month YYYY`` and Turkish month
+    names. Numeric slash/dot dates are deliberately ignored because their
+    day/month order is locale-dependent and would create false conflicts.
+    """
+    return {match["date"] for match in date_matches(text)}
 
 
 def _without_dates(text: str) -> str:

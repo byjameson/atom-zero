@@ -121,6 +121,24 @@ title/section plus a comparable measure, date or code. Each conflict includes
 
 Every conflict includes both snippets and page/section locators for review.
 
+### Timeline
+
+Extract dated events with provenance:
+
+```powershell
+atomzero-docs timeline --db data/docs.db
+atomzero-docs timeline --source policy_a.txt --limit 20
+```
+
+```text
+GET /v1/documents/timeline?source=policy_a.txt&limit=20
+```
+
+Full dates (`5 January 2020`, `January 5, 2020`, `5 Ocak 2020`,
+`2020-01-05`) become ISO dates. Year-only mentions keep `precision: year`.
+Every event keeps source, title, page/section, kind, verified flag and extracted
+entities; results are sorted by date. This is a textual timeline, not inference.
+
 ### CLI
 
 ```powershell

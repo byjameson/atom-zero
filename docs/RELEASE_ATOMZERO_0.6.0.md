@@ -20,6 +20,13 @@ after `0.5.0`.
   prefix variants. An authored 20-query check improved hybrid top-1 from 0.800
   to 1.000 and FTS from 0.700 to 0.950; English SQuAD results are unchanged.
 
+## Document timeline
+
+- `atomzero-docs timeline` and `GET /v1/documents/timeline` return dated events
+  with source/title/page/section provenance.
+- Full dates (`5 January 2020`, `January 5, 2020`, `5 Ocak 2020`) normalize to
+  ISO; year-only mentions keep `precision: year`.
+
 ## Weekly review and report archive
 
 - `atomzero-brief --weekly --days N`, `POST /v1/weekly-review` and chat
@@ -111,11 +118,12 @@ after `0.5.0`.
 
 ## Verified regressions
 
-- `387 passed` in the assistant test suite.
+- `390 passed` in the assistant test suite.
 - Weekly chat regression: 7/7.
 - Weekly export/archive regression: 29/29.
 - Weekly review regression: 6/6.
 - Graph-path regression: 6/6.
+- Document timeline regression: 6/6.
 - Contradiction regression: 16/16.
 - Source-comparison chat regression: 6/6.
 - Product benchmark remains 21/21; raw-model probe remains 2/10.

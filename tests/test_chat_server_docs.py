@@ -559,6 +559,59 @@ def test_http_knowledge_gaps_propose_and_dismiss(tmp_path):
         chat_server._state.update(old)
 
 
+def test_http_document_timeline(tmp_path):
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("history.txt",
+                  "The launch was on 5 January 2020. "
+                  "A follow-up happened in 2021.", title="History")
+    docs.add_text("toplanti.txt",
+                  "Toplantı 6 Ocak 2020 tarihinde yapıldı.",
+                  title="Toplantı")
+    docs.add_text("notes.txt", "Bananas are yellow.", title="Notes")
+    old = dict(chat_server._state)
+    chat_server._state.update({
+        "model": None, "tok": None, "docs": docs, "adapter": "",
+        "name": "timeline-test", "params": 1, "config": {}, "step": 0,
+        "api_key": "", "metrics": {"requests": 0, "generated_tokens": 0},
+        "safety": None, "wiki_lang": "en",
+        "session_dir": str(tmp_path / "sessions"), "sessions": {},
+    })
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        timeline = json.loads(urllib.request.urlopen(
+            base + "/v1/documents/timeline",
+            timeout=10).read().decode("utf-8"))
+        assert [event["date"] for event in timeline["events"]] == [
+            "2020-01-05", "2020-01-06", "2021"]
+        assert timeline["events"][0]["source"] == "history.txt"
+        assert timeline["events"][-1]["precision"] == "year"
+        filtered = json.loads(urllib.request.urlopen(
+            base + "/v1/documents/timeline?source=toplanti.txt",
+            timeout=10).read().decode("utf-8"))
+        assert filtered["count"] == 1
+        assert filtered["events"][0]["date"] == "2020-01-06"
+        limited = json.loads(urllib.request.urlopen(
+            base + "/v1/documents/timeline?limit=1",
+            timeout=10).read().decode("utf-8"))
+        assert len(limited["events"]) == 1
+        try:
+            urllib.request.urlopen(
+                base + "/v1/documents/timeline?source=missing.txt",
+                timeout=10)
+            raise AssertionError("missing source should return 404")
+        except urllib.error.HTTPError as exc:
+            assert exc.code == 404
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
+        docs.close()
+
+
 def test_http_safety_filter_refuses_agent_and_chat(tmp_path):
     old = dict(chat_server._state)
     chat_server._state.update({

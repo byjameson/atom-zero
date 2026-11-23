@@ -117,6 +117,19 @@ python benchmarks/compare_chat_regression.py
 Current result: **6/6 checks pass**. Raw result:
 [`results/compare_chat_regression.json`](results/compare_chat_regression.json).
 
+## Document timeline regression
+
+`benchmarks/timeline_regression.py` checks the served timeline route, sorted
+dates, source filtering, year-only precision, limits and missing-source
+behavior.
+
+```powershell
+python benchmarks/timeline_regression.py
+```
+
+Current result: **6/6 checks pass**. Raw result:
+[`results/timeline_regression.json`](results/timeline_regression.json).
+
 ## Weekly-review regression
 
 `benchmarks/weekly_review_regression.py` checks the served weekly-review

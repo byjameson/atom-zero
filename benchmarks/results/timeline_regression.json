@@ -1,0 +1,39 @@
+{
+  "benchmark": "atomzero-timeline-regression",
+  "generated": "2026-11-23T06:00:20",
+  "checks": [
+    {
+      "name": "timeline_sorted",
+      "ok": true,
+      "detail": "['2020-01-05', '2020-01-06', '2021']"
+    },
+    {
+      "name": "timeline_provenance",
+      "ok": true,
+      "detail": "{'date': '2020-01-05', 'precision': 'day', 'text': 'The launch was on 5 January 2020.', 'source': 'history.txt', 'title': 'History', 'page': None, 'section': '', 'kind': 'document', 'verified': True, 'entities': ['2020', 'January']}"
+    },
+    {
+      "name": "timeline_year_precision",
+      "ok": true,
+      "detail": "{'date': '2021', 'precision': 'year', 'text': 'A follow-up happened in 2021.', 'source': 'history.txt', 'title': 'History', 'page': None, 'section': '', 'kind': 'document', 'verified': True, 'entities': ['2021']}"
+    },
+    {
+      "name": "timeline_source_filter",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "timeline_limit",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "timeline_missing_source",
+      "ok": true,
+      "detail": "404"
+    }
+  ],
+  "passed": 6,
+  "failed": 0,
+  "ok": true
+}
