@@ -4,9 +4,16 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
+
 from atomzero.drift import compare_profiles
 
 ROOT = Path(__file__).resolve().parents[1]
+SIGNAL_PROFILE = (ROOT / "benchmarks" / "results" / "answerability_signal"
+                  / "answerability_profile.json")
+TRANSFORMER_PROFILE = (ROOT / "benchmarks" / "results"
+                       / "answerability_transformer"
+                       / "answerability_profile.json")
 
 
 def run_cli(*args: str):
@@ -95,3 +102,127 @@ def test_cli_bad_input_exit_two(tmp_path):
                      "--profile", str(tmp_path / "none2.json"))
     assert result.returncode == 2
     assert "input error" in result.stderr
+
+
+def test_nested_metrics_brier_and_ece():
+    baseline = {"metrics": {"brier": 0.24, "ece": 0.13}}
+    current = {"metrics": {"brier": 0.30, "ece": 0.20}}
+    report = compare_profiles(baseline, current)
+    assert report["baseline"]["brier"] == 0.24
+    assert report["current"]["ece"] == 0.20
+    assert "brier_increased" in report["alerts"]
+    assert "ece_increased" in report["alerts"]
+
+
+def test_top_level_metrics_take_precedence():
+    baseline = {"brier": 0.24, "ece": 0.13,
+                "metrics": {"brier": 0.99, "ece": 0.99}}
+    report = compare_profiles(baseline, baseline)
+    assert report["baseline"]["brier"] == 0.24
+    assert report["baseline"]["ece"] == 0.13
+
+
+def test_sample_size_mapping_prefers_heldout():
+    baseline = _profile(0.24, 0.13,
+                        n={"train": 1000, "calibration": 300, "heldout": 200})
+    current = _profile(0.24, 0.13,
+                       n={"train": 1000, "calibration": 300, "heldout": 100})
+    report = compare_profiles(baseline, current)
+    assert report["baseline"]["n"] == 200
+    assert report["current"]["n"] == 100
+    assert report["delta"]["n"] == -100
+    assert "sample_size_dropped" in report["alerts"]
+
+
+def test_sample_size_mapping_falls_back_to_calibration():
+    profile = _profile(0.24, 0.13, n={"train": 1000, "calibration": 289})
+    report = compare_profiles(profile, profile)
+    assert report["baseline"]["n"] == 289
+
+
+def test_sample_size_falls_back_to_metrics_n():
+    profile = {"brier": 0.24, "ece": 0.13, "metrics": {"n": 200}}
+    report = compare_profiles(profile, profile)
+    assert report["baseline"]["n"] == 200
+    assert report["current"]["n"] == 200
+
+
+def test_missing_sample_size_does_not_crash():
+    profile = {"brier": 0.24, "ece": 0.13}
+    report = compare_profiles(profile, profile)
+    assert report["baseline"]["n"] is None
+    assert report["current"]["n"] is None
+    assert report["delta"]["n"] is None
+    assert report["alerts"] == []
+
+
+def test_nested_selection_threshold_is_reported():
+    profile = {"brier": 0.24, "ece": 0.13,
+               "selection": {"threshold": 0.55}}
+    report = compare_profiles(profile, profile)
+    assert report["baseline"]["threshold"] == 0.55
+    assert report["current"]["threshold"] == 0.55
+    assert report["alerts"] == []
+
+
+def test_top_level_threshold_takes_precedence():
+    profile = {"brier": 0.24, "ece": 0.13, "threshold": 0.5,
+               "selection": {"threshold": 0.9}}
+    report = compare_profiles(profile, profile)
+    assert report["baseline"]["threshold"] == 0.5
+
+
+def test_metrics_threshold_fallback_and_change():
+    baseline = {"brier": 0.24, "ece": 0.13, "metrics": {"threshold": 0.5}}
+    current = {"brier": 0.24, "ece": 0.13, "metrics": {"threshold": 0.6}}
+    report = compare_profiles(baseline, current)
+    assert report["baseline"]["threshold"] == 0.5
+    assert report["current"]["threshold"] == 0.6
+    assert "threshold_changed" in report["alerts"]
+
+
+def test_threshold_change_alerts():
+    report = compare_profiles(_profile(0.24, 0.13, threshold=0.5),
+                              _profile(0.24, 0.13, threshold=0.6))
+    assert report["status"] == "drifted"
+    assert report["ok"] is False
+    assert "threshold_changed" in report["alerts"]
+
+
+def test_tiny_threshold_change_is_ignored():
+    report = compare_profiles(_profile(0.24, 0.13, threshold=0.5),
+                              _profile(0.24, 0.13, threshold=0.5 + 1e-10))
+    assert report["alerts"] == []
+
+
+def test_real_answerability_profiles():
+    if not SIGNAL_PROFILE.is_file() or not TRANSFORMER_PROFILE.is_file():
+        pytest.skip("stored answerability profiles are not available")
+    baseline = json.loads(SIGNAL_PROFILE.read_text(encoding="utf-8-sig"))
+    current = json.loads(TRANSFORMER_PROFILE.read_text(encoding="utf-8-sig"))
+    # Tighten the tolerances so the small observed Brier move is surfaced;
+    # the defaults allow +0.02 and would hide it.
+    report = compare_profiles(
+        baseline, current,
+        max_brier_increase=0.001, max_ece_increase=0.001)
+    assert report["ok"] is False
+    assert "brier_increased" in report["alerts"]
+    assert "ece_increased" in report["alerts"]
+    assert report["baseline"]["n"] == 200
+    assert report["current"]["n"] == 200
+    assert report["current"]["threshold"] == 0.6
+    assert len(json.dumps(report)) < 4096  # raw profile arrays are not copied
+
+
+def test_cli_accepts_real_transformer_profile():
+    if not SIGNAL_PROFILE.is_file() or not TRANSFORMER_PROFILE.is_file():
+        pytest.skip("stored answerability profiles are not available")
+    result = run_cli("--baseline", str(SIGNAL_PROFILE),
+                     "--profile", str(TRANSFORMER_PROFILE), "--json")
+    assert "input error" not in result.stderr
+    assert result.returncode == 1
+    data = json.loads(result.stdout)
+    assert data["status"] == "drifted"
+    assert "ece_increased" in data["alerts"]
+    assert data["current"]["brier"] == 0.276168
+    assert data["current"]["n"] == 200
