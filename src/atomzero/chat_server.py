@@ -4739,7 +4739,13 @@ class Handler(BaseHTTPRequestHandler):
         if route == "/v1/documents/upload":
             return self._upload(parsed.query, n)
         if n > MAX_BODY_BYTES:
-            self.close_connection = True
+            if n <= 1_048_576:
+                try:
+                    self.rfile.read(n)
+                except OSError:
+                    pass
+            else:
+                self.close_connection = True
             return self._json(413, {"error": "request body is too large"})
         try:
             req = json.loads(self.rfile.read(n) or b"{}")
@@ -5735,7 +5741,17 @@ class Handler(BaseHTTPRequestHandler):
                   or params.get("filename", [""])[0])
         title = params.get("title", [""])[0]
         if n > MAX_DOC_BYTES:
-            self.close_connection = True
+            # Drain a bounded oversized body before answering. Writing a 413
+            # while unread bytes remain in the receive buffer can make Windows
+            # abort the client connection (WinError 10053) before it reads the
+            # response. Very large bodies still close the connection.
+            if n <= 1_048_576:
+                try:
+                    self.rfile.read(n)
+                except OSError:
+                    pass
+            else:
+                self.close_connection = True
             return self._json(413, {
                 "error": f"document is too large (max {MAX_DOC_BYTES} bytes)"})
         raw = self.rfile.read(n)

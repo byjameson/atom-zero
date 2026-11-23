@@ -198,6 +198,38 @@ def test_ingest_document_validates_source_and_text(tmp_path):
     docs.close()
 
 
+def test_oversized_bodies_return_413_without_connection_reset():
+    old_state = dict(chat_server._state)
+    old_body = chat_server.MAX_BODY_BYTES
+    old_doc = chat_server.MAX_DOC_BYTES
+    chat_server._state.update({"api_key": ""})
+    chat_server.MAX_BODY_BYTES = 5
+    chat_server.MAX_DOC_BYTES = 5
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        for _ in range(5):
+            with pytest.raises(urllib.error.HTTPError) as raw:
+                _post_raw(
+                    base + "/v1/documents/upload?" + urllib.parse.urlencode({
+                        "source": "too-big.txt"}),
+                    "1234567890")
+            assert raw.value.code == 413
+            with pytest.raises(urllib.error.HTTPError) as json_body:
+                _post(base + "/v1/documents", {
+                    "source": "too-big.json", "text": "1234567890"})
+            assert json_body.value.code == 413
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old_state)
+        chat_server.MAX_BODY_BYTES = old_body
+        chat_server.MAX_DOC_BYTES = old_doc
+
+
 def test_http_document_endpoints_and_grounded_chat(tmp_path, monkeypatch):
     try:
         docs = DocMemory(tmp_path / "docs.db")
