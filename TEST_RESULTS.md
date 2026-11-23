@@ -49,7 +49,8 @@
   `atomzero-0.6.0-py3-none-any.whl`).
 - Release verification (`scripts/verify_release.py --version 0.6.0`):
   GitHub release + both assets **OK**, GitHub README **OK**, Hugging Face card
-  **OK**, ModelScope card **OK**, PyPI **FAIL (404, not uploaded)**.
+  **OK**, ModelScope card **OK**, dev.to article **OK**, PyPI **FAIL (404, not
+  uploaded)**. Medium remains on the prior version.
 - GitHub Actions `publish.yml` run #1: **failure**,
   `invalid-publisher` (no matching PyPI trusted publisher). A fresh PyPI token
   or trusted-publisher configuration is required before the PyPI step.
