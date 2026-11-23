@@ -61,10 +61,13 @@ of truth.
 ## Current cycle
 
 - Planner: main agent.
-- Implementer: claim/evidence algebra in
+- Implementer A: claim/evidence algebra in the
   `feat/claim-evidence-algebra` worktree.
+- Implementer B: evidence-to-AISC spec generator in the
+  `feat/aisc-spec-generator` worktree.
 - Reviewer: full tests, AISC audit and diff review.
-- Release agent: 0.6.0 public-surface verification after the PyPI upload.
+- Release agent: 0.6.0 is published; the next release agent gate is `0.6.1`
+  after both implementer branches are reviewed and merged.
 
 ## Rules
 
