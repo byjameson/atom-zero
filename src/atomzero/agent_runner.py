@@ -154,7 +154,7 @@ def verify(packet: dict, *, worktree, base: str = "main",
     try:
         gate = evaluate_gate(
             normalized, project_root=path, aisc_path=aisc_path, timeout=timeout)
-    except Exception as exc:  # noqa: BLE001 - report a runner failure
+    except (OSError, ValueError, subprocess.SubprocessError) as exc:
         gate = {"ok": False, "checks": [],
                 "summary": {"total": 0, "passed": 0, "failed": 0,
                             "manual_required": 0},
