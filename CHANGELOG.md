@@ -2,6 +2,10 @@
 
 ## atomzero 0.9.0 - unreleased
 
+- Added **self-improvement scoreboard** (`atomzero-scoreboard`): content-free
+  run records (commit, test/benchmark/AISC counts, note hash), latest/previous
+  deltas and a green flag for zero test failures. The writer verifies before an
+  atomic rewrite; test output, prompts and source text are rejected.
 - **Gated approval**: `record_gated_decision` rejects an `approve` decision
   unless the evaluation gate passed every check. The ledger stores only
   `gate_ok`, `gate_total`, `gate_passed` and `gate_method`; command output is

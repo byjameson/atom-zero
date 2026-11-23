@@ -1,10 +1,13 @@
 # atomzero 0.8.0 - human-gated self-improvement loop
 
 Status: **published.** PyPI `0.8.0`, GitHub source/tag/release `v0.8.0`,
-Hugging Face, ModelScope, dev.to, Medium and LinkedIn are updated.
-`scripts/verify_release.py --version 0.8.0` reports **0 failures**. This batch
-adds the planning layer for a self-improving system without autonomous weight
-updates. No model or runtime weights changed; the weights remain `0.8.0`.
+Hugging Face, ModelScope, dev.to and Medium are updated.
+`scripts/verify_release.py --version 0.8.0` reports **0 failures**. LinkedIn
+accepted the publish action (two attempts) but the profile activity feed still
+showed the `0.7.0` post during verification, so the LinkedIn surface is
+**blocked/unverified**, not claimed green. This batch adds the planning layer
+for a self-improving system without autonomous weight updates. No model or
+runtime weights changed; the weights remain `0.8.0`.
 
 ## What is in this batch
 

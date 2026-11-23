@@ -1,0 +1,42 @@
+name = "AtomZeroScoreboard"
+version = "0.1.0"
+description = "Content-free measured scoreboard for tracking self-improvement across runs."
+min_assurance = 0.90
+max_context_tokens = 8000
+
+[[components]]
+name = "RunNormalizer"
+input_type = "RunSummary"
+output_type = "RunRecords"
+kind = "evaluator"
+assurance = 0.97
+verified = true
+evidence = "tests/test_scoreboard.py record, invalid counts and content-free note cases"
+assumptions = ["the caller supplies measured counts, not test output"]
+guarantees = ["only counts, commit, timestamp and a note hash are stored", "invalid commits and counts are rejected"]
+context_tokens = 512
+
+[[components]]
+name = "ScoreboardSummarizer"
+input_type = "RunRecords"
+output_type = "TrendSummary"
+kind = "evaluator"
+assurance = 0.95
+verified = true
+evidence = "tests/test_scoreboard.py empty, latest, previous, delta and green cases"
+assumptions = ["records are ordered by time for the trend view"]
+guarantees = ["latest and previous are deterministic", "delta uses passed-count changes", "green requires zero test failures"]
+context_tokens = 1024
+
+[[components]]
+name = "TrendReport"
+input_type = "TrendSummary"
+output_type = "ScoreboardReport"
+kind = "tool"
+reversible = true
+assurance = 0.96
+verified = true
+evidence = "tests/test_scoreboard.py JSONL round trip, verify and CLI cases"
+assumptions = ["a human or later planner reads the report"]
+guarantees = ["weights_changed is always false", "content keys are rejected", "the writer verifies before an atomic rewrite"]
+context_tokens = 1024
