@@ -1,5 +1,6 @@
 import json
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -153,6 +154,35 @@ def test_evaluator_command_runs_in_sandbox(tmp_path):
     assert result["status"] == "pass"
     assert result["source"] == "evaluator"
     assert result["evaluation"]["loss_delta"] == pytest.approx(-0.2)
+
+
+def test_trainer_command_can_feed_the_gate(tmp_path):
+    script = tmp_path / "trainer.py"
+    script.write_text(
+        "import json, pathlib, sys\n"
+        "comparison = pathlib.Path(sys.argv[1])\n"
+        "adapter = pathlib.Path(sys.argv[2])\n"
+        "adapter.mkdir(parents=True, exist_ok=True)\n"
+        "(adapter / 'adapter.pt').write_bytes(b'fake')\n"
+        "comparison.write_text(json.dumps({'examples': 1, "
+        "'baseline': {'loss': 1.2, 'ppl': 3.3}, "
+        "'adapter': {'loss': 1.0, 'ppl': 3.0}}))\n",
+        encoding="utf-8")
+    result = run_adapter_loop(
+        [_example(index) for index in range(4)],
+        tmp_path / "candidate",
+        base="base-fixture",
+        trainer_command=[sys.executable, str(script),
+                         "{comparison_path}", "{adapter_dir}"],
+        eval_ratio=0.25,
+        timeout=60,
+        trainer_timeout=60)
+    assert result["status"] == "pass"
+    assert result["source"] == "trainer"
+    assert result["trainer"]["ok"] is True
+    assert result["evaluation"]["promotable"] is True
+    assert Path(result["paths"]["comparison_json"]).is_file()
+    assert Path(result["paths"]["adapter_dir"]).is_dir()
 
 
 def test_cli_export(tmp_path, capsys):

@@ -28,7 +28,7 @@ import sys
 import time
 from pathlib import Path
 
-from atomzero.sandbox import run_command
+from atomzero.sandbox import run_command, sanitized_env
 
 __all__ = [
     "DEFAULT_EVAL_RATIO",
@@ -371,32 +371,115 @@ def _append_ledger(path, event: dict) -> list[dict]:
     return entries
 
 
-def run_adapter_loop(examples, out_dir, *, comparison=None,
-                     evaluator_command=None, eval_ratio=DEFAULT_EVAL_RATIO,
-                     seed=DEFAULT_SEED, min_loss_delta=None,
-                     max_ppl_ratio=None, ledger_path=None,
-                     timeout: int = 900) -> dict:
-    """Export a candidate, optionally evaluate it, and record a gate event."""
+def _format_command(command, values: dict) -> list[str]:
+    if isinstance(command, str):
+        import shlex
+        command = shlex.split(command, posix=False)
+    if not isinstance(command, (list, tuple)) or not command:
+        raise ValueError("command must be a non-empty list or string")
+    return [str(part).format(**values) for part in command]
+
+
+def run_adapter_loop(examples, out_dir, *, base=None, trainer_command=None,
+                     comparison=None, evaluator_command=None,
+                     adapter_dir=None, comparison_path=None,
+                     repo_root=".", eval_ratio=DEFAULT_EVAL_RATIO,
+                     seed=DEFAULT_SEED,
+                     min_loss_delta=None, max_ppl_ratio=None,
+                     ledger_path=None, timeout: int = 900,
+                     trainer_timeout: int = 900) -> dict:
+    """Export a candidate, optionally train/evaluate, and record a gate event."""
     candidate = build_candidate(
         examples, eval_ratio=eval_ratio, seed=seed)
     paths = write_candidate(candidate, out_dir)
+    target_dir = Path(out_dir).resolve()
+    adapter_path = Path(
+        adapter_dir or (target_dir / "adapter")).resolve()
+    comparison_file = Path(
+        comparison_path or (target_dir / "comparison.json")).resolve()
+    env = sanitized_env(target_dir)
+    if repo_root:
+        env["PYTHONPATH"] = str(Path(repo_root).resolve() / "src")
     source = "provided"
+    trainer = None
+    if trainer_command:
+        values = {
+            "out_dir": str(target_dir),
+            "candidate_json": paths["candidate_json"],
+            "train_jsonl": paths["train_jsonl"],
+            "eval_jsonl": paths["eval_jsonl"],
+            "candidate_id": candidate["candidate_id"],
+            "adapter_dir": str(adapter_path),
+            "comparison_path": str(comparison_file),
+            "base": str(base or ""),
+        }
+        command = _format_command(trainer_command, values)
+        trainer_result = run_command(
+            command, cwd=target_dir, timeout=trainer_timeout, env=env)
+        trainer = {
+            "ok": trainer_result.get("ok") is True,
+            "returncode": trainer_result.get("returncode"),
+            "timed_out": trainer_result.get("timed_out") is True,
+            "elapsed_seconds": trainer_result.get("elapsed_seconds"),
+        }
+        source = "trainer"
+        if trainer_result.get("ok") is not True:
+            evaluation = {
+                "status": "invalid",
+                "ok": False,
+                "promotable": False,
+                "candidate_id": candidate["candidate_id"],
+                "reasons": ["trainer_failed"],
+                "auto_apply": False,
+                "requires_training": True,
+                "weights_changed": False,
+                "method": EVAL_METHOD,
+            }
+            comparison = None
+        elif comparison is None and comparison_file.is_file():
+            try:
+                comparison = json.loads(
+                    comparison_file.read_text(encoding="utf-8-sig"))
+            except (OSError, json.JSONDecodeError):
+                comparison = None
+    if trainer is not None and comparison is None:
+        if not trainer["ok"]:
+            return _adapter_result(
+                candidate, paths, evaluation, trainer,
+                {"adapter_dir": str(adapter_path),
+                 "comparison_json": str(comparison_file)},
+                source, ledger_path)
+        if evaluator_command is None and not comparison_file.is_file():
+            evaluation = {
+                "status": "invalid",
+                "ok": False,
+                "promotable": False,
+                "candidate_id": candidate["candidate_id"],
+                "reasons": ["trainer_no_comparison"],
+                "auto_apply": False,
+                "requires_training": True,
+                "weights_changed": False,
+                "method": EVAL_METHOD,
+            }
+            return _adapter_result(
+                candidate, paths, evaluation, trainer,
+                {"adapter_dir": str(adapter_path),
+                 "comparison_json": str(comparison_file)},
+                source, ledger_path)
     if comparison is None and evaluator_command:
-        command = evaluator_command
-        if isinstance(command, str):
-            import shlex
-            command = shlex.split(command, posix=False)
-        command = [
-            str(part).format(
-                out_dir=str(Path(out_dir).resolve()),
-                candidate_json=paths["candidate_json"],
-                train_jsonl=paths["train_jsonl"],
-                eval_jsonl=paths["eval_jsonl"])
-            for part in command
-        ]
+        command = _format_command(evaluator_command, {
+            "out_dir": str(target_dir),
+            "candidate_json": paths["candidate_json"],
+            "train_jsonl": paths["train_jsonl"],
+            "eval_jsonl": paths["eval_jsonl"],
+            "candidate_id": candidate["candidate_id"],
+            "adapter_dir": str(adapter_path),
+            "comparison_path": str(comparison_file),
+            "base": str(base or ""),
+        })
         result = run_command(
-            command, cwd=Path(out_dir), timeout=timeout)
-        source = "evaluator"
+            command, cwd=target_dir, timeout=timeout, env=env)
+        source = "trainer+evaluator" if trainer else "evaluator"
         if result.get("ok") is not True:
             evaluation = {
                 "status": "invalid",
@@ -410,26 +493,31 @@ def run_adapter_loop(examples, out_dir, *, comparison=None,
                 "weights_changed": False,
                 "method": EVAL_METHOD,
             }
-        else:
-            try:
-                comparison = json.loads(result.get("stdout") or "{}")
-            except json.JSONDecodeError:
-                evaluation = {
-                    "status": "invalid",
-                    "ok": False,
-                    "promotable": False,
-                    "candidate_id": candidate["candidate_id"],
-                    "reasons": ["evaluator_invalid_json"],
-                    "auto_apply": False,
-                    "requires_training": True,
-                    "weights_changed": False,
-                    "method": EVAL_METHOD,
-                }
-            else:
-                evaluation = evaluate_candidate(
-                    candidate, comparison, min_loss_delta=min_loss_delta,
-                    max_ppl_ratio=max_ppl_ratio)
-    elif comparison is not None:
+            return _adapter_result(
+                candidate, paths, evaluation, trainer,
+                {"adapter_dir": str(adapter_path),
+                 "comparison_json": str(comparison_file)},
+                source, ledger_path)
+        try:
+            comparison = json.loads(result.get("stdout") or "{}")
+        except json.JSONDecodeError:
+            evaluation = {
+                "status": "invalid",
+                "ok": False,
+                "promotable": False,
+                "candidate_id": candidate["candidate_id"],
+                "reasons": ["evaluator_invalid_json"],
+                "auto_apply": False,
+                "requires_training": True,
+                "weights_changed": False,
+                "method": EVAL_METHOD,
+            }
+            return _adapter_result(
+                candidate, paths, evaluation, trainer,
+                {"adapter_dir": str(adapter_path),
+                 "comparison_json": str(comparison_file)},
+                source, ledger_path)
+    if comparison is not None:
         evaluation = evaluate_candidate(
             candidate, comparison, min_loss_delta=min_loss_delta,
             max_ppl_ratio=max_ppl_ratio)
@@ -445,15 +533,25 @@ def run_adapter_loop(examples, out_dir, *, comparison=None,
             "weights_changed": False,
             "method": EVAL_METHOD,
         }
+    return _adapter_result(
+        candidate, paths, evaluation, trainer,
+        {"adapter_dir": str(adapter_path),
+         "comparison_json": str(comparison_file)},
+        source, ledger_path)
+
+
+def _adapter_result(candidate, paths, evaluation, trainer, extra_paths,
+                    source, ledger_path) -> dict:
     event = _event(candidate, evaluation)
     entries = _append_ledger(ledger_path, event) if ledger_path else []
     return {
         "status": evaluation["status"],
         "candidate": candidate["metadata"],
-        "paths": paths,
+        "paths": {**paths, **extra_paths},
         "evaluation": evaluation,
         "event": event,
         "source": source,
+        "trainer": trainer,
         "ledger_entries": len(entries),
         "auto_apply": False,
         "weights_changed": False,
@@ -521,6 +619,12 @@ def main(argv=None) -> int:
     loop = sub.add_parser("loop")
     loop.add_argument("--examples-jsonl", required=True)
     loop.add_argument("--out-dir", required=True)
+    loop.add_argument("--base", default="")
+    loop.add_argument("--repo-root", default=".")
+    loop.add_argument("--trainer-command", default="")
+    loop.add_argument("--adapter-dir", default="")
+    loop.add_argument("--comparison-out", default="")
+    loop.add_argument("--trainer-timeout", type=int, default=900)
     loop.add_argument("--comparison-json", default="")
     loop.add_argument("--evaluator-command", default="")
     loop.add_argument("--ledger", default="")
@@ -557,12 +661,18 @@ def main(argv=None) -> int:
                           if args.comparison_json else None)
             payload = run_adapter_loop(
                 _load_examples(args.examples_jsonl), args.out_dir,
+                base=args.base or None,
+                trainer_command=args.trainer_command or None,
+                adapter_dir=args.adapter_dir or None,
+                comparison_path=args.comparison_out or None,
                 comparison=comparison,
                 evaluator_command=args.evaluator_command or None,
+                repo_root=args.repo_root,
                 eval_ratio=args.eval_ratio, seed=args.seed,
                 min_loss_delta=args.min_loss_delta,
                 max_ppl_ratio=args.max_ppl_ratio,
-                ledger_path=args.ledger or None, timeout=args.timeout)
+                ledger_path=args.ledger or None, timeout=args.timeout,
+                trainer_timeout=args.trainer_timeout)
             code = 0 if payload["status"] in ("pass", "awaiting_evaluation") else 1
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"input error: {exc}", file=sys.stderr)

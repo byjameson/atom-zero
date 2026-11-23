@@ -1,0 +1,17 @@
+{
+  "train_loss": 0.641594497859478,
+  "train_steps": 300,
+  "lora_parameters": 368640,
+  "adapter": "checkpoints/adapters_candidate/v0002",
+  "base_loss": 5.994059935518743,
+  "adapter_loss": 0.7948737674289279,
+  "loss_delta": -5.199186168089815,
+  "loss_relative": -0.8673897531923599,
+  "base_ppl": 401.03950373877126,
+  "adapter_ppl": 2.2141614798660023,
+  "ppl_ratio": 0.0055210558042886985,
+  "eval_examples": 60,
+  "device": "cuda",
+  "decision": "accept",
+  "weights_changed": false
+}

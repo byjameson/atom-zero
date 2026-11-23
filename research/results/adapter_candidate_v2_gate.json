@@ -1,0 +1,24 @@
+{
+  "status": "pass",
+  "ok": true,
+  "promotable": true,
+  "candidate_id": "ad-10612cfe5f28b728",
+  "adapter_label": "adapters_candidate/v0002",
+  "eval_examples": 60,
+  "baseline_loss": 5.994059935518743,
+  "adapter_loss": 0.7948737674289279,
+  "loss_delta": -5.199186,
+  "baseline_ppl": 401.03950373877126,
+  "adapter_ppl": 2.2141614798660023,
+  "ppl_ratio": 0.005521,
+  "min_loss_delta": 0.01,
+  "max_ppl_ratio": 1.0,
+  "reasons": [
+    "loss_improved",
+    "ppl_not_worse"
+  ],
+  "auto_apply": false,
+  "requires_training": true,
+  "weights_changed": false,
+  "method": "held_out_adapter_gate_v1"
+}
