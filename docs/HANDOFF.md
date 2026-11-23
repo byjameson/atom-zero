@@ -15,14 +15,13 @@
   with the measured Brier 0.244 / ECE 0.130 and refusal-policy misses. This is
   reported, not hidden.
 - Build/twine: **PASSED** (`atomzero-0.6.1` wheel + sdist)
-- Release status: `0.6.0` is published on PyPI, GitHub, Hugging Face,
-  ModelScope, dev.to, Medium and LinkedIn. `0.6.1` is prepared locally and is
-  **not pushed yet**; per the batch-push policy, `main`, the tag and the public
-  surfaces are pushed once at the release boundary. A fresh PyPI token is
-  required for the `0.6.1` upload.
-- The `publish.yml` trusted-publisher run remains a historical failed attempt;
-  `0.6.0` was completed with a fresh project token. The ~10-increment batch
-  policy continues.
+- Release status: `0.6.1` is published on PyPI, GitHub, Hugging Face,
+  ModelScope, dev.to, Medium and LinkedIn. `scripts/verify_release.py
+  --version 0.6.1` reports **0 failures**. The `publish.yml` trusted-publisher
+  run remains a historical failed attempt; uploads use a project token from the
+  owner's local token file.
+- Post-release `main` has one local, unpushed commit for `0.6.2` (claim audit
+  HTTP route + AISC 0.5 docs). The ~10-increment batch-push policy continues.
 
 ## Completed in this session
 

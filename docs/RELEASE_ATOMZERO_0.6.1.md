@@ -1,9 +1,9 @@
 # atomzero 0.6.1 - claim evidence and generated AISC specs
 
-Status: **prepared locally; publication pending.** The code, docs and tests are
-merged on `main`; the version/tag and public surfaces are updated together at
-the batch boundary. No model or runtime weights changed; the weights remain
-`0.8.0`.
+Status: **published.** PyPI `0.6.1`, GitHub source/tag/release `v0.6.1`,
+Hugging Face, ModelScope, dev.to, Medium and LinkedIn are updated.
+`scripts/verify_release.py --version 0.6.1` reports **0 failures**. No model or
+runtime weights changed; the weights remain `0.8.0`.
 
 This is a post-`0.6.0` increment batch. It brings the memory lifecycle ledger
 and two new deterministic branches into the published package.
@@ -58,8 +58,13 @@ and two new deterministic branches into the published package.
 
 ## Verified regressions
 
-Test counts and build/AISC output are recorded in `TEST_RESULTS.md` after the
-final run on the release commit.
+- **512 Atom Zero tests passed** at the release commit.
+- `python -m build` and `twine check` passed for the wheel and sdist; both
+  `0.6.1` artifacts are on PyPI and the GitHub release.
+- AISC strict: 7 specs PASS; the answerability spec and its generated mirror
+  remain FAIL with 0 critical and 2 expected warnings.
+- `scripts/verify_release.py --version 0.6.1`: **0 failures**.
+- Full details: `TEST_RESULTS.md`.
 
 ## Install
 
