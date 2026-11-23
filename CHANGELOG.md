@@ -2,6 +2,12 @@
 
 ## atomzero 0.8.0 - unreleased
 
+- Added **improvement reminders** to proactive conversation: a pending,
+  human-gated plan can start a local check-in with the actions `show
+  improvements` and `run evaluation gate`; only the action count and top kind
+  are stored.
+- Added **improvement ledger summary** (`summarize_ledger`): content-free
+  counts by decision and kind, with the latest timestamp.
 - Added a **human-gated improvement loop** (`atomzero-improve`,
   `POST /v1/improvement/plan`, `POST /v1/improvement/decision`): local signals
   become prioritized actions with `requires_human: True` and an acceptance

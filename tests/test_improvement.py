@@ -16,6 +16,7 @@ from atomzero.improvement import (
     main,
     plan_from_inputs,
     record_decision,
+    summarize_ledger,
     verify_ledger,
 )
 
@@ -382,6 +383,23 @@ def test_record_decision_rejects_invalid_decision(decision):
 def test_record_decision_rejects_invalid_arguments(ledger, action, note):
     with pytest.raises(ValueError):
         record_decision(ledger, action, "approve", note=note, now=NOW)
+
+
+def test_summarize_ledger_is_content_free():
+    ledger = []
+    record_decision(ledger, ACTION, "approve", note="private note", now=NOW)
+    record_decision(ledger, ACTION, "reject", now=NOW)
+    summary = summarize_ledger(ledger)
+    assert summary["total"] == 2
+    assert summary["decisions"] == {"approve": 1, "reject": 1}
+    assert summary["kinds"] == {"unsupported_claims": 2}
+    assert summary["weights_changed"] is False
+    assert "private note" not in json.dumps(summary)
+
+
+def test_summarize_ledger_rejects_invalid_ledger():
+    with pytest.raises(ValueError):
+        summarize_ledger([{"text": "leak"}])
 
 
 def test_verify_ledger_accepts_records_without_note_text():

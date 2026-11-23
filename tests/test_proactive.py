@@ -99,6 +99,30 @@ def test_claim_audit_without_gaps_uses_fallback():
     assert decision["reason"] == "check_in"
 
 
+def test_note_improvement_plan_is_content_free_and_starts_checkin():
+    session = make_session()
+    enable(session)
+    entry = proactive.note_improvement_plan(session, {
+        "actions": [
+            {"kind": "unsupported_claims", "title": "private title",
+             "requires_human": True},
+            {"kind": "knowledge_gaps", "requires_human": True},
+        ],
+        "auto_apply": False,
+    }, now=NOW)
+    assert entry["actions"] == 2
+    assert entry["top_kind"] == "unsupported_claims"
+    stored = session.human.data["improvement_plan"]
+    assert "private title" not in str(stored)
+    decision = proactive.should_initiate(session, now=NOW)
+    assert decision["due"] is True
+    assert decision["reason"] == "improvement_plan"
+    candidate = proactive.build_candidate(session, now=NOW)
+    assert "2 improvement actions" in candidate["message"]
+    assert candidate["actions"] == [
+        "show improvements", "run evaluation gate"]
+
+
 def test_note_claim_audit_rejects_invalid_input():
     with pytest.raises(proactive.ProactiveError):
         proactive.note_claim_audit({}, "bad")

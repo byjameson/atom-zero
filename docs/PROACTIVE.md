@@ -29,6 +29,11 @@ the proactive layer can start a local check-in with the actions `show claims`
 and `run consensus`. The normal consent, quiet-hours, cooldown, daily-limit and
 duplicate-reason rules still apply.
 
+`POST /v1/improvement/plan` with a `session_id` records only the plan shape:
+action count, top action kind and whether every action requires human approval.
+It never stores titles or details. A pending plan can start a check-in with the
+actions `show improvements` and `run evaluation gate`.
+
 ## API
 
 ```powershell

@@ -32,6 +32,7 @@ __all__ = [
     "configure",
     "next_tick",
     "note_claim_audit",
+    "note_improvement_plan",
     "proactive_state",
     "should_initiate",
 ]
@@ -50,6 +51,7 @@ REASON_DUE_TODAY = "tasks_due_today"
 REASON_DUE_SOON = "tasks_due_soon"
 REASON_GAPS = "pending_gaps"
 REASON_CLAIMS = "claim_gaps"
+REASON_IMPROVEMENT = "improvement_plan"
 REASON_SOURCES = "recent_sources"
 REASON_CHECK_IN = "check_in"
 
@@ -595,6 +597,48 @@ def note_claim_audit(session, audit, now=None) -> dict:
     return dict(entry)
 
 
+def note_improvement_plan(session, plan, now=None) -> dict:
+    """Record only the shape of an improvement plan on the local session."""
+    if not isinstance(plan, dict):
+        raise ProactiveError("plan must be an object")
+    actions = plan.get("actions")
+    if not isinstance(actions, list):
+        raise ProactiveError("plan.actions must be a list")
+    entry = {
+        "at": _stamp(_now_local(now)),
+        "actions": len(actions),
+        "top_kind": (
+            str(actions[0].get("kind") or "") if actions
+            and isinstance(actions[0], dict) else ""),
+        "requires_human": all(
+            isinstance(action, dict) and action.get("requires_human") is True
+            for action in actions),
+    }
+    data = _human_data(session)
+    data["improvement_plan"] = entry
+    _save(session)
+    return dict(entry)
+
+
+def _improvement_candidate(data: dict, moment: datetime) -> dict | None:
+    plan = data.get("improvement_plan")
+    if not isinstance(plan, dict):
+        return None
+    count = _safe_int(plan.get("actions"))
+    if count <= 0:
+        return None
+    top = str(plan.get("top_kind") or "local work").replace("_", " ")
+    message = (
+        f"I have {count} improvement "
+        f"{_plural(count, 'action')} waiting for review, starting with "
+        f"{_short(top, 60)}. Want to review the plan?")
+    return _make_candidate(
+        REASON_IMPROVEMENT, message,
+        ["show improvements", "run evaluation gate"],
+        priority=58, next_check_seconds=21600,
+        key=f"{count}:{top}", moment=moment)
+
+
 def _claim_candidate(data: dict, moment: datetime) -> dict | None:
     audit = data.get("claim_audit")
     if not isinstance(audit, dict):
@@ -725,6 +769,10 @@ def build_candidate(session, now=None, config=None) -> dict:
     claim_candidate = _claim_candidate(data, moment)
     if claim_candidate is not None:
         return claim_candidate
+
+    improvement_candidate = _improvement_candidate(data, moment)
+    if improvement_candidate is not None:
+        return improvement_candidate
 
     recent_sources = _recent_sources(session, moment)
     if recent_sources and not _recent_brief(session, moment):

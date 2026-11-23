@@ -3364,13 +3364,24 @@ def test_http_improvement_plan_and_decision(tmp_path):
         })
         assert audit["summary"]["status_counts"]["unsupported"] == 1
         plan = _post(base + "/v1/improvement/plan", {
-            "session_id": "improve-test"})
+            "session_id": "improve-plan",
+            "claim_audit": {"unsupported": 1, "conflict_count": 0,
+                            "single_source": 0}})
         assert plan["auto_apply"] is False
         assert plan["weights_changed"] is False
         assert plan["actions"]
         action = plan["actions"][0]
         assert action["requires_human"] is True
         assert action["acceptance"]
+        configured = _post(base + "/v1/proactive/config", {
+            "session_id": "improve-plan", "enabled": True,
+            "quiet_start": "00:00", "quiet_end": "00:00",
+            "min_interval_minutes": 0})
+        assert configured["state"]["enabled"] is True
+        tick = _post(base + "/v1/proactive", {
+            "session_id": "improve-plan", "ack": True})
+        assert tick["due"] is True
+        assert tick["reason"] == "improvement_plan"
         decision = _post(base + "/v1/improvement/decision", {
             "action": action, "decision": "approve",
             "note": "private review note"})

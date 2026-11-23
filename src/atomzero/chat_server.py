@@ -6007,7 +6007,8 @@ class Handler(BaseHTTPRequestHandler):
     def _improvement_plan(self, req: dict):
         from atomzero.improvement import plan_from_inputs
         inputs = {}
-        for key in ("gaps", "feedback", "freshness", "reliability"):
+        for key in ("claim_audit", "gaps", "feedback", "freshness",
+                    "reliability"):
             if key in req:
                 inputs[key] = req[key]
         session_id = str(req.get("session_id", "")).strip()
@@ -6023,6 +6024,9 @@ class Handler(BaseHTTPRequestHandler):
         try:
             limit = int(req.get("limit", 5))
             result = plan_from_inputs(limit=limit, **inputs)
+            if session_id:
+                from atomzero.proactive import note_improvement_plan
+                note_improvement_plan(session, result)
         except (TypeError, ValueError) as exc:
             return self._json(400, {"error": str(exc)})
         return self._json(200, result)

@@ -29,6 +29,18 @@ guarantees = ["only counts and a method label are stored", "query, claim text, c
 context_tokens = 128
 
 [[components]]
+name = "ImprovementPlanReader"
+input_type = "Signals"
+output_type = "Signals"
+kind = "evaluator"
+assurance = 0.94
+verified = true
+evidence = "tests/test_proactive.py note_improvement_plan and improvement check-in cases"
+assumptions = ["an improvement plan is optional and supplied by the caller"]
+guarantees = ["only action count and top kind are stored", "plan titles and details are not stored"]
+context_tokens = 128
+
+[[components]]
 name = "ConsentGate"
 input_type = "Signals"
 output_type = "ApprovedSignals"

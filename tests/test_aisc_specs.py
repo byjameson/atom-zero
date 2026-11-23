@@ -56,8 +56,8 @@ def test_aisc_architecture_specs_are_safe_and_verified():
     assert answerability["min_answerable_coverage"] == 0.80
     assert answerability["refusal_threshold"] == 0.60
     assert [item["name"] for item in proactive["components"]] == [
-        "SignalCollector", "ClaimGapReader", "ConsentGate",
-        "ProactivePolicy", "MessageComposer", "UserChannel"]
+        "SignalCollector", "ClaimGapReader", "ImprovementPlanReader",
+        "ConsentGate", "ProactivePolicy", "MessageComposer", "UserChannel"]
     assert [item["name"] for item in memory["components"]] == [
         "MemoryRequestParser", "ScopeResolver", "HumanConfirmation",
         "MemoryStore", "LedgerWriter"]

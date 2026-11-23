@@ -34,6 +34,7 @@ __all__ = [
     "build_plan",
     "plan_from_inputs",
     "record_decision",
+    "summarize_ledger",
     "verify_ledger",
     "main",
 ]
@@ -470,6 +471,35 @@ def record_decision(ledger, action, decision, note="", now=None) -> dict:
     }
     ledger.append(record)
     return record
+
+
+def summarize_ledger(ledger) -> dict:
+    """Summarize a valid decision ledger without exposing note text.
+
+    The ledger is content-free by construction; this summary reports counts by
+    decision and action kind plus the latest timestamp.
+    """
+    report = verify_ledger(ledger)
+    if not report["ok"]:
+        raise ValueError("invalid ledger: " + "; ".join(report["errors"]))
+    decisions: dict[str, int] = {}
+    kinds: dict[str, int] = {}
+    last_at = ""
+    for record in ledger:
+        decision = record["decision"]
+        decisions[decision] = decisions.get(decision, 0) + 1
+        kind = record["kind"]
+        kinds[kind] = kinds.get(kind, 0) + 1
+        if record["at"] > last_at:
+            last_at = record["at"]
+    return {
+        "total": len(ledger),
+        "decisions": dict(sorted(decisions.items())),
+        "kinds": dict(sorted(kinds.items())),
+        "last_at": last_at,
+        "weights_changed": False,
+        "method": METHOD,
+    }
 
 
 def verify_ledger(ledger) -> dict:
