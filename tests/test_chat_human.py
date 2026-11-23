@@ -115,3 +115,66 @@ def test_chat_human_confirmed_tag_rename(tmp_path):
     reloaded = ChatHuman(memory)
     assert reloaded.data["tasks"][0]["tags"] == ["job", "home"]
     assert reloaded.data["tasks"][1]["tags"] == ["job", "finance"]
+
+
+def test_chat_human_confirmed_tag_delete_undo_and_audit(tmp_path):
+    memory = tmp_path / "memory.json"
+    human = ChatHuman(memory)
+    human.respond("add task write report tags work,home")
+    human.respond("add task pay invoice tags work")
+    human.respond("add task read book")
+
+    preview = human.respond("delete tag work")
+    assert "Delete tag 'work' from 2 task(s)" in preview
+    assert "confirm tag delete" in preview
+    assert human.pending_tag_delete == {"tag": "work"}
+    assert [task["tags"] for task in human.data["tasks"]] == [
+        ["work", "home"], ["work"], []]
+    unrelated = human.respond("cancel tag rename")
+    assert unrelated == "There is no pending tag rename."
+    assert human.pending_tag_delete == {"tag": "work"}
+
+    applied = human.respond("confirm tag delete")
+    assert applied == (
+        "Deleted tag 'work' from 2 task(s). "
+        'Reply "undo delete tag" to restore it.')
+    assert human.pending_tag_delete is None
+    assert [task["tags"] for task in human.data["tasks"]] == [
+        ["home"], [], []]
+    assert human.data["tasks"][0]["tag_removed"]
+
+    reloaded = ChatHuman(memory)
+    audit = reloaded.respond("tag audit")
+    assert "Tag audit (1 of 1 event(s)):" in audit
+    assert "delete tag 'work' | 2 task(s) (2 open, 0 done)" in audit
+
+    restored = reloaded.respond("undo delete tag")
+    assert restored == "Restored tag 'work' on 2 task(s)."
+    assert [task["tags"] for task in reloaded.data["tasks"]] == [
+        ["work", "home"], ["work"], []]
+    audit = reloaded.respond("tag audit")
+    assert "Tag audit (2 of 2 event(s)):" in audit
+    assert "undo delete tag 'work' | restored 2 task(s)" in audit
+    limited = reloaded.respond("tag audit 1")
+    assert "Tag audit (1 of 2 event(s)):" in limited
+    assert "undo delete tag 'work'" in limited
+    assert reloaded.respond("undo delete tag") == (
+        "There is no tag delete to undo")
+
+    assert reloaded.respond("delete tag missing") == (
+        "Tag 'missing' is not used.")
+    assert "letters, numbers" in reloaded.respond("delete tag bad!")
+    assert "Tell me the tag to delete" in reloaded.respond("delete tag")
+
+    second = reloaded.respond("remove tag home")
+    assert "Delete tag 'home' from 1 task(s)" in second
+    assert reloaded.pending_tag_delete == {"tag": "home"}
+    assert reloaded.respond("cancel tag delete") == "Tag delete cancelled."
+    assert reloaded.pending_tag_delete is None
+    assert [task["tags"] for task in reloaded.data["tasks"]] == [
+        ["work", "home"], ["work"], []]
+
+    final = ChatHuman(memory)
+    assert len(final.data.get("tag_audit", [])) == 2
+    assert [task["tags"] for task in final.data["tasks"]] == [
+        ["work", "home"], ["work"], []]

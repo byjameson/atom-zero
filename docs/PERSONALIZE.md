@@ -118,10 +118,16 @@ list tasks tag work
 list tags
 rename tag work job
 confirm tag rename
+delete tag job
+confirm tag delete
+undo delete tag
+tag audit 5
 ```
 
 Renaming always previews first; `confirm tag rename` applies and
-`cancel tag rename` discards the pending change.
+`cancel tag rename` discards the pending change. Tag deletion uses the same
+preview/confirm flow, `undo delete tag` restores the last deletion from its
+per-task snapshot, and `tag audit [N]` shows the last tag delete/undo events.
 
 Or over HTTP:
 

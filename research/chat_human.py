@@ -18,8 +18,11 @@ import torch
 
 from atomzero.doc_memory import best_snippet
 from atomzero.briefing import (
+    delete_task_tag as delete_tag_on_tasks,
     normalize_tag_rename, normalize_task_tag,
-    rename_task_tag as rename_tag_on_tasks, task_tag_view)
+    rename_task_tag as rename_tag_on_tasks,
+    task_tag_audit_view, task_tag_view,
+    undo_delete_task_tag as undo_delete_tag_on_tasks)
 from atomzero.transformer import TransformerLM, generate as transformer_generate
 
 try:
@@ -117,6 +120,7 @@ class ChatHuman:
         self.generator = generator
         self.allow_general_chat = bool(allow_general_chat)
         self.pending_tag_rename = None
+        self.pending_tag_delete = None
         self.data = self._load()
 
     def _load(self) -> dict:
@@ -251,6 +255,16 @@ class ChatHuman:
 
     def rename_task_tag(self, old, new) -> dict:
         result = rename_tag_on_tasks(self.data, old, new)
+        self.save()
+        return result
+
+    def delete_task_tag(self, tag) -> dict:
+        result = delete_tag_on_tasks(self.data, tag)
+        self.save()
+        return result
+
+    def undo_delete_task_tag(self) -> dict:
+        result = undo_delete_tag_on_tasks(self.data)
         self.save()
         return result
 
@@ -410,6 +424,81 @@ class ChatHuman:
                      if f["key"] == "likes"]
             reply = ("You like " + ", ".join(likes) + "." if likes
                      else "I do not know what you like yet.")
+        elif low in ("confirm tag delete", "confirm delete tag",
+                     "yes delete tag"):
+            pending = self.pending_tag_delete
+            self.pending_tag_delete = None
+            if pending is None:
+                reply = "There is no pending tag delete."
+            else:
+                try:
+                    result = self.delete_task_tag(pending["tag"])
+                except ValueError as exc:
+                    reply = str(exc)
+                else:
+                    reply = (f"Deleted tag '{result['tag']}' from "
+                             f"{result['updated']} task(s). "
+                             'Reply "undo delete tag" to restore it.')
+        elif low in ("cancel tag delete", "cancel delete tag"):
+            had_delete = self.pending_tag_delete is not None
+            self.pending_tag_delete = None
+            reply = ("Tag delete cancelled." if had_delete
+                     else "There is no pending tag delete.")
+        elif low in ("undo delete tag", "undo tag delete",
+                     "restore tag", "restore deleted tag"):
+            self.pending_tag_delete = None
+            try:
+                result = self.undo_delete_task_tag()
+            except ValueError as exc:
+                reply = str(exc)
+            else:
+                if result["restored"]:
+                    reply = (f"Restored tag '{result['tag']}' on "
+                             f"{result['restored']} task(s).")
+                else:
+                    reply = (f"No tasks needed tag '{result['tag']}' "
+                             "restored.")
+                if result["already"]:
+                    reply += f" {len(result['already'])} already had it."
+                if result["skipped"]:
+                    reply += f" {len(result['skipped'])} skipped."
+        elif (low.startswith("delete tag ") or low.startswith("remove tag ")):
+            match = re.match(
+                r"^(?:delete|remove)\s+tag\s+(\S+?)\??$",
+                text, re.IGNORECASE)
+            if not match:
+                reply = ("Use 'delete tag TAG' and confirm the preview "
+                         "with 'confirm tag delete'.")
+            else:
+                try:
+                    tag = normalize_task_tag(match.group(1))
+                except ValueError as exc:
+                    reply = str(exc)
+                else:
+                    view = task_tag_view(self.data)
+                    entry = next((item for item in view["tags"]
+                                  if item["tag"] == tag), None)
+                    if entry is None:
+                        reply = f"Tag '{tag}' is not used."
+                    else:
+                        self.pending_tag_delete = {"tag": tag}
+                        reply = (
+                            f"Delete tag '{tag}' from {entry['total']} "
+                            f"task(s) ({entry['open']} open, "
+                            f"{entry['done']} done)? "
+                            'Reply "confirm tag delete" to remove it, or '
+                            '"cancel tag delete".')
+        elif low in ("delete tag", "remove tag"):
+            reply = ("Tell me the tag to delete, for example "
+                     "'delete tag work'.")
+        elif re.match(
+                r"^(?:list|show)?\s*tag\s+audit(?:\s+(\d+))?\??$",
+                text, re.IGNORECASE):
+            audit_match = re.match(
+                r"^(?:list|show)?\s*tag\s+audit(?:\s+(\d+))?\??$",
+                text, re.IGNORECASE)
+            limit = int(audit_match.group(1)) if audit_match.group(1) else 10
+            reply = task_tag_audit_view(self.data, limit=limit)["text"]
         elif low in ("confirm tag rename", "confirm rename tag",
                      "yes rename tag"):
             pending = self.pending_tag_rename
