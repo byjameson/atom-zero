@@ -6,10 +6,11 @@
   and keep the best query coverage plus a small length bonus (capped at 500
   chars). Public SQuAD v2 visible-snippet accuracy improved from 0.816 to 0.884
   (hybrid) and 0.777 to 0.845 (FTS) on 50 contexts / 200 questions.
-- Source comparison now normalizes grouped numbers, magnitude words,
-  decimal commas and date formats before flagging conflicts (`$1,500,000` =
-  `1.5 million`, `1,5` = `1.5`, `5 January 2020` = `January 5, 2020`),
-  reducing false alarms. Contradiction regression is now 9/9.
+- Source comparison now normalizes grouped numbers, magnitude words, decimal
+  commas, dates and units before flagging conflicts (`$1,500,000` =
+  `1.5 million`, `1,5` = `1.5`, `5 January 2020` = `January 5, 2020`,
+  `24 months` = `2 years`, `72 hours` = `3 days`), reducing false alarms.
+  Contradiction regression is now 11/11.
 - Added multi-hop **graph paths**: `atomzero-docs path`, `GET /v1/graph/path`,
   chat “how is X connected to Y?” and UI Find path.
 - Added `benchmarks/graph_path_regression.py` (6/6 checks).

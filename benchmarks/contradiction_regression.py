@@ -59,6 +59,28 @@ def run(output: str | Path | None = None) -> dict:
                       title="Report B")
         docs.add_text("report_c.txt", "The launch is on 6 January 2020.",
                       title="Report C")
+        docs.add_text("warranty_24.txt",
+                      "The warranty period is 24 months.",
+                      title="Warranty 24")
+        docs.add_text("warranty_2y.txt",
+                      "The warranty period is 2 years.",
+                      title="Warranty 2y")
+        docs.add_text("warranty_36.txt",
+                      "The warranty period is 36 months.",
+                      title="Warranty 36")
+        docs.add_text("outage_days.txt", "The outage lasted 3 days.",
+                      title="Outage days")
+        docs.add_text("outage_hours.txt", "The outage lasted 72 hours.",
+                      title="Outage hours")
+        docs.add_text("trail_km.txt",
+                      "The hiking trail length is 5 km.",
+                      title="Trail km")
+        docs.add_text("trail_m.txt",
+                      "The hiking trail length is 5000 meters.",
+                      title="Trail m")
+        docs.add_text("trail_6km.txt",
+                      "The hiking trail length is 6 km.",
+                      title="Trail 6km")
         docs.add_text("unrelated.txt", "Bananas are yellow.",
                       title="Unrelated")
         old = dict(chat_server._state)
@@ -149,6 +171,38 @@ def run(output: str | Path | None = None) -> dict:
                 any("date_mismatch" in conflict["reasons"]
                     for conflict in date_conflict["conflicts"]),
                 str(date_conflict["summary"]))
+            unit_pairs = (
+                ("warranty_24.txt", "warranty_2y.txt"),
+                ("outage_days.txt", "outage_hours.txt"),
+                ("trail_km.txt", "trail_m.txt"),
+            )
+            unit_results = [
+                _get(base,
+                     f"/v1/documents/compare?source={left}&against={right}")
+                for left, right in unit_pairs
+            ]
+            unit_reasons = {reason
+                            for result in unit_results
+                            for conflict in result["conflicts"]
+                            for reason in conflict["reasons"]}
+            check(
+                "unit_formatting_no_false_positive",
+                "numeric_mismatch" not in unit_reasons,
+                str(sorted(unit_reasons)))
+            unit_conflicts = [
+                _get(base,
+                     f"/v1/documents/compare?source={left}&against={right}")
+                for left, right in (
+                    ("warranty_24.txt", "warranty_36.txt"),
+                    ("trail_km.txt", "trail_6km.txt"),
+                )
+            ]
+            check(
+                "unit_scale_conflict",
+                all(any("numeric_mismatch" in conflict["reasons"]
+                        for conflict in result["conflicts"])
+                    for result in unit_conflicts),
+                str([result["summary"] for result in unit_conflicts]))
             clean = _get(
                 base,
                 "/v1/documents/compare?source=unrelated.txt"

@@ -1,9 +1,9 @@
 """Deterministic source comparison and contradiction hints.
 
 This is not a truth arbiter. It compares claims from different indexed sources
-and flags overlapping sentences whose numbers, code identifiers or negation
-differ. Every flag keeps both snippets and page/section locators so a human can
-inspect the evidence.
+and flags overlapping sentences whose numbers, units, dates, code identifiers
+or negation differ. Every flag keeps both snippets and page/section locators so
+a human can inspect the evidence.
 """
 from __future__ import annotations
 
@@ -16,11 +16,13 @@ from atomzero.knowledge_graph import extract_entities
 NEGATION_RE = re.compile(
     r"\b(?:not|no|never|cannot|can't|doesn't|don't|isn't|aren't|won't|"
     r"without|neither|nor)\b", re.IGNORECASE)
-NUMBER_RE = re.compile(
-    r"(?<![\w.])(?P<number>"
+NUMBER_BODY = (
     r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|"
     r"\d{1,3}(?:\.\d{3})+(?:,\d+)?|"
-    r"\d+(?:[.,]\d+)?)"
+    r"\d+(?:[.,]\d+)?"
+)
+NUMBER_RE = re.compile(
+    rf"(?<![\w.])(?P<number>{NUMBER_BODY})"
     r"(?:\s*(?P<scale>k|thousand|million|billion|trillion))?(?![\w])",
     re.IGNORECASE)
 SCALES = {
@@ -56,6 +58,98 @@ DATE_PATTERNS = (
         rf"(?P<month>{MONTH_PATTERN})\.?,?[\s-]+(?P<year>\d{{4}})\b",
         re.IGNORECASE),
 )
+UNITS = {
+    # time -> seconds
+    "second": ("time", Decimal(1)), "seconds": ("time", Decimal(1)),
+    "sec": ("time", Decimal(1)), "secs": ("time", Decimal(1)),
+    "minute": ("time", Decimal(60)), "minutes": ("time", Decimal(60)),
+    "min": ("time", Decimal(60)), "mins": ("time", Decimal(60)),
+    "hour": ("time", Decimal(3600)), "hours": ("time", Decimal(3600)),
+    "hr": ("time", Decimal(3600)), "hrs": ("time", Decimal(3600)),
+    "day": ("time", Decimal(86400)), "days": ("time", Decimal(86400)),
+    "week": ("time", Decimal(604800)),
+    "weeks": ("time", Decimal(604800)),
+    "saniye": ("time", Decimal(1)), "saniyeler": ("time", Decimal(1)),
+    "dakika": ("time", Decimal(60)),
+    "dakikalar": ("time", Decimal(60)),
+    "saat": ("time", Decimal(3600)), "saatler": ("time", Decimal(3600)),
+    "gün": ("time", Decimal(86400)), "gun": ("time", Decimal(86400)),
+    "günler": ("time", Decimal(86400)),
+    "gunler": ("time", Decimal(86400)),
+    "hafta": ("time", Decimal(604800)),
+    "haftalar": ("time", Decimal(604800)),
+    # months -> months (no month/day conversion because it is not exact)
+    "month": ("months", Decimal(1)), "months": ("months", Decimal(1)),
+    "year": ("months", Decimal(12)), "years": ("months", Decimal(12)),
+    "ay": ("months", Decimal(1)), "aylar": ("months", Decimal(1)),
+    "yıl": ("months", Decimal(12)), "yil": ("months", Decimal(12)),
+    "yıllar": ("months", Decimal(12)),
+    "yillar": ("months", Decimal(12)),
+    # length -> meters
+    "millimeter": ("length", Decimal("0.001")),
+    "millimeters": ("length", Decimal("0.001")),
+    "millimetre": ("length", Decimal("0.001")),
+    "millimetres": ("length", Decimal("0.001")),
+    "mm": ("length", Decimal("0.001")),
+    "centimeter": ("length", Decimal("0.01")),
+    "centimeters": ("length", Decimal("0.01")),
+    "centimetre": ("length", Decimal("0.01")),
+    "centimetres": ("length", Decimal("0.01")),
+    "cm": ("length", Decimal("0.01")),
+    "meter": ("length", Decimal(1)), "meters": ("length", Decimal(1)),
+    "metre": ("length", Decimal(1)), "metres": ("length", Decimal(1)),
+    "kilometer": ("length", Decimal(1000)),
+    "kilometers": ("length", Decimal(1000)),
+    "kilometre": ("length", Decimal(1000)),
+    "kilometres": ("length", Decimal(1000)),
+    "km": ("length", Decimal(1000)),
+    "inch": ("length", Decimal("0.0254")),
+    "inches": ("length", Decimal("0.0254")),
+    "foot": ("length", Decimal("0.3048")),
+    "feet": ("length", Decimal("0.3048")),
+    "ft": ("length", Decimal("0.3048")),
+    "yard": ("length", Decimal("0.9144")),
+    "yards": ("length", Decimal("0.9144")),
+    "mile": ("length", Decimal("1609.344")),
+    "miles": ("length", Decimal("1609.344")),
+    # mass -> grams
+    "milligram": ("mass", Decimal("0.001")),
+    "milligrams": ("mass", Decimal("0.001")),
+    "mg": ("mass", Decimal("0.001")),
+    "gram": ("mass", Decimal(1)), "grams": ("mass", Decimal(1)),
+    "kilogram": ("mass", Decimal(1000)),
+    "kilograms": ("mass", Decimal(1000)),
+    "kg": ("mass", Decimal(1000)),
+    "pound": ("mass", Decimal("453.59237")),
+    "pounds": ("mass", Decimal("453.59237")),
+    "lb": ("mass", Decimal("453.59237")),
+    "lbs": ("mass", Decimal("453.59237")),
+    "ounce": ("mass", Decimal("28.349523125")),
+    "ounces": ("mass", Decimal("28.349523125")),
+    "oz": ("mass", Decimal("28.349523125")),
+    "ton": ("mass", Decimal(1000000)),
+    "tons": ("mass", Decimal(1000000)),
+    "tonne": ("mass", Decimal(1000000)),
+    "tonnes": ("mass", Decimal(1000000)),
+    # volume -> liters
+    "milliliter": ("volume", Decimal("0.001")),
+    "milliliters": ("volume", Decimal("0.001")),
+    "millilitre": ("volume", Decimal("0.001")),
+    "millilitres": ("volume", Decimal("0.001")),
+    "ml": ("volume", Decimal("0.001")),
+    "liter": ("volume", Decimal(1)), "liters": ("volume", Decimal(1)),
+    "litre": ("volume", Decimal(1)), "litres": ("volume", Decimal(1)),
+    "gallon": ("volume", Decimal("3.785411784")),
+    "gallons": ("volume", Decimal("3.785411784")),
+    "percent": ("percent", Decimal(1)),
+}
+UNIT_PATTERN = "|".join(
+    re.escape(unit) for unit in sorted(UNITS, key=len, reverse=True))
+MEASURE_RE = re.compile(
+    rf"(?<![\w.])(?P<number>{NUMBER_BODY})"
+    r"(?:\s*(?P<scale>k|thousand|million|billion|trillion))?"
+    rf"(?:\s*(?P<unit>%|{UNIT_PATTERN}))?(?![\w])",
+    re.IGNORECASE)
 
 
 def _sentences(text: str) -> list[str]:
@@ -70,13 +164,7 @@ def _plain_number(value: Decimal) -> str:
     return format(value.normalize(), "f")
 
 
-def _canonical_number(raw: str, scale: str) -> str:
-    """Normalize grouping, decimal comma and magnitude suffixes.
-
-    ``1,500``, ``1500`` and ``1.5k`` all become ``1500``; ``1.5 million``
-    becomes ``1500000``. A comma followed by exactly three digits is treated
-    as a thousands separator, otherwise it is a decimal comma.
-    """
+def _number_value(raw: str, scale: str = "") -> Decimal | None:
     value = raw
     if re.fullmatch(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?", value):
         value = value.replace(",", "")
@@ -87,16 +175,74 @@ def _canonical_number(raw: str, scale: str) -> str:
     try:
         number = Decimal(value)
     except InvalidOperation:
-        return raw
+        return None
     if scale:
         number *= SCALES[scale.lower()]
-    return _plain_number(number)
+    return number
+
+
+def _canonical_number(raw: str, scale: str) -> str:
+    """Normalize grouping, decimal comma and magnitude suffixes.
+
+    ``1,500``, ``1500`` and ``1.5k`` all become ``1500``; ``1.5 million``
+    becomes ``1500000``. A comma followed by exactly three digits is treated
+    as a thousands separator, otherwise it is a decimal comma.
+    """
+    number = _number_value(raw, scale)
+    return _plain_number(number) if number is not None else raw
+
+
+def _canonical_measure(raw: str, scale: str, unit: str) -> str | None:
+    """Normalize a number plus unit into a base unit for its dimension.
+
+    ``24 months`` and ``2 years`` both become ``months:24``; ``72 hours`` and
+    ``3 days`` both become ``time:259200``; ``5 km`` and ``5000 meters`` both
+    become ``length:5000``. Incompatible dimensions stay separate on purpose.
+    """
+    key = unit.lower().rstrip(".")
+    if key == "%":
+        dimension, factor = "percent", Decimal(1)
+    else:
+        entry = UNITS.get(key)
+        if entry is None:
+            return None
+        dimension, factor = entry
+    number = _number_value(raw, scale)
+    if number is None:
+        return None
+    return f"{dimension}:{_plain_number(number * factor)}"
+
+
+def _numbers_and_measures(text: str) -> tuple[set[str], set[str]]:
+    numbers: set[str] = set()
+    measures: set[str] = set()
+    for match in MEASURE_RE.finditer(text):
+        unit = match.group("unit") or ""
+        scale = match.group("scale") or ""
+        if unit:
+            measure = _canonical_measure(match.group("number"), scale, unit)
+            if measure is not None:
+                measures.add(measure)
+                continue
+        numbers.add(_canonical_number(match.group("number"), scale))
+    return numbers, measures
 
 
 def _numbers(text: str) -> set[str]:
-    return {_canonical_number(match.group("number"),
-                              match.group("scale") or "")
-            for match in NUMBER_RE.finditer(text)}
+    return _numbers_and_measures(text)[0]
+
+
+def _measures(text: str) -> set[str]:
+    return _numbers_and_measures(text)[1]
+
+
+def _measures_by_dimension(measures) -> dict[str, set[str]]:
+    grouped: dict[str, set[str]] = {}
+    for item in measures:
+        dimension, _, value = str(item).partition(":")
+        if dimension and value:
+            grouped.setdefault(dimension, set()).add(value)
+    return grouped
 
 
 def _dates(text: str) -> set[str]:
@@ -147,10 +293,13 @@ def extract_claims(docs, source: str) -> list[dict]:
             codes = _identifier_terms(sentence)
             if len(terms) < 2 and not codes:
                 continue
+            body = _without_dates(sentence)
+            numbers, measures = _numbers_and_measures(body)
             claims.append({
                 "text": sentence,
                 "terms": sorted(terms),
-                "numbers": sorted(_numbers(_without_dates(sentence))),
+                "numbers": sorted(numbers),
+                "measures": sorted(measures),
                 "dates": sorted(_dates(sentence)),
                 "codes": sorted(codes),
                 "entities": sorted({value.lower()
@@ -181,6 +330,15 @@ def _conflict_reasons(left: dict, right: dict,
         only_right = numbers_right - numbers_left
         if only_left and only_right:
             reasons.append("numeric_mismatch")
+    measures_left = _measures_by_dimension(left.get("measures", []))
+    measures_right = _measures_by_dimension(right.get("measures", []))
+    for dimension in sorted(set(measures_left) & set(measures_right)):
+        only_left = measures_left[dimension] - measures_right[dimension]
+        only_right = measures_right[dimension] - measures_left[dimension]
+        if only_left and only_right:
+            if "numeric_mismatch" not in reasons:
+                reasons.append("numeric_mismatch")
+            break
     dates_left = set(left.get("dates", []))
     dates_right = set(right.get("dates", []))
     if dates_left and dates_right:
@@ -269,7 +427,7 @@ def compare_sources(docs, source: str, against: str = "",
             "sources_compared": len(candidate_sources),
             **counts,
         },
-        "method": ("sentence overlap + number/date/code/negation difference; "
-                   "not a truth verdict"),
+        "method": ("sentence overlap + number/unit/date/code/negation "
+                   "difference; not a truth verdict"),
         "weights_changed": False,
     }

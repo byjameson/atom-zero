@@ -94,6 +94,43 @@ def test_compare_sources_normalizes_dates(tmp_path):
     docs.close()
 
 
+def test_compare_sources_normalizes_units(tmp_path):
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("warranty_24.txt",
+                  "The warranty period is 24 months.")
+    docs.add_text("warranty_2y.txt", "The warranty period is 2 years.")
+    docs.add_text("warranty_36.txt",
+                  "The warranty period is 36 months.")
+    docs.add_text("outage_days.txt", "The outage lasted 3 days.")
+    docs.add_text("outage_hours.txt", "The outage lasted 72 hours.")
+    docs.add_text("trail_km.txt",
+                  "The hiking trail length is 5 km.")
+    docs.add_text("trail_m.txt",
+                  "The hiking trail length is 5000 meters.")
+    docs.add_text("trail_6km.txt",
+                  "The hiking trail length is 6 km.")
+
+    equal = compare_sources(docs, "warranty_24.txt", "warranty_2y.txt")
+    assert equal["conflicts"] == []
+    conflict = compare_sources(docs, "warranty_24.txt",
+                               "warranty_36.txt")
+    assert any("numeric_mismatch" in item["reasons"]
+               for item in conflict["conflicts"])
+
+    outage = compare_sources(docs, "outage_days.txt", "outage_hours.txt")
+    assert outage["conflicts"] == []
+    trail = compare_sources(docs, "trail_km.txt", "trail_m.txt")
+    assert trail["conflicts"] == []
+    trail_conflict = compare_sources(docs, "trail_km.txt",
+                                     "trail_6km.txt")
+    assert any("numeric_mismatch" in item["reasons"]
+               for item in trail_conflict["conflicts"])
+
+    claims = extract_claims(docs, "warranty_24.txt")
+    assert claims[0]["measures"] == ["months:24"]
+    docs.close()
+
+
 def test_compare_all_sources_and_cli(tmp_path, capsys):
     docs = DocMemory(tmp_path / "docs.db")
     docs.add_text("policy_a.txt", "The warranty period is 24 months.")

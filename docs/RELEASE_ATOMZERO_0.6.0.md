@@ -86,11 +86,14 @@ after `0.5.0`.
 - Deterministic source comparison via `atomzero-docs compare`,
   `GET /v1/documents/compare`, UI Compare sources and chat
   `compare sources A and B`.
-- Flags numeric, date, identifier and negation conflicts with snippets and
-  locators.
+- Flags numeric, unit, date, identifier and negation conflicts with snippets
+  and locators.
 - Numeric comparison treats `1,500`, `1500` and `1.5k` as the same value, and
   `1.5 million`, `1,500,000` and `$1,500,000` as the same value; Turkish
   decimal commas (`1,5`) match English decimal points (`1.5`).
+- Unit comparison normalizes compatible measurements before flagging a
+  conflict: `24 months` = `2 years`, `72 hours` = `3 days`,
+  `5 km` = `5000 meters`, and Turkish `2 yıl` = `24 ay`.
 - Date comparison treats `5 January 2020`, `January 5, 2020`,
   `5-Jan-2020` and Turkish `5 Ocak 2020` as the same day; different full dates
   produce a `date_mismatch`.
@@ -101,12 +104,12 @@ after `0.5.0`.
 
 ## Verified regressions
 
-- `382 passed` in the assistant test suite.
+- `383 passed` in the assistant test suite.
 - Weekly chat regression: 7/7.
 - Weekly export/archive regression: 29/29.
 - Weekly review regression: 6/6.
 - Graph-path regression: 6/6.
-- Contradiction regression: 9/9.
+- Contradiction regression: 11/11.
 - Source-comparison chat regression: 6/6.
 - Product benchmark remains 21/21; raw-model probe remains 2/10.
 - Document benchmark remains 80/80 answerable and 20/20 no-answer.

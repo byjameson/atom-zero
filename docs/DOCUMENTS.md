@@ -108,7 +108,8 @@ Flags are deterministic hints, not a truth verdict:
 
 - `numeric_mismatch` — overlapping claims have different numeric values;
   formatting differences (`1,500` / `1500` / `1.5k`, `1.5 million` /
-  `1,500,000`, Turkish `1,5` / English `1.5`) are normalized first;
+  `1,500,000`, Turkish `1,5` / English `1.5`) and compatible units
+  (`24 months` / `2 years`, `72 hours` / `3 days`) are normalized first;
 - `date_mismatch` — overlapping claims give different full dates; equivalent
   formats (`5 January 2020`, `January 5, 2020`, `5 Ocak 2020`) are normalized;
 - `identifier_mismatch` — overlapping claims use different code identifiers;
