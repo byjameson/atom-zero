@@ -24,13 +24,14 @@ reviewed gate. See the [model card](MODEL_CARD.md) for the full distinction.
 
 `benchmarks/relations_regression.py` checks the served relations route, the
 supported relation types, entity/relation filters, provenance, a control
-sentence without a relation and missing-source behavior.
+sentence without a relation, missing-source behavior, the UI control and
+English/Turkish chat intents.
 
 ```powershell
 python benchmarks/relations_regression.py
 ```
 
-Current result: **6/6 checks pass**. Raw result:
+Current result: **9/9 checks pass**. Raw result:
 [`results/relations_regression.json`](results/relations_regression.json).
 
 ## Citation gate policy simulation

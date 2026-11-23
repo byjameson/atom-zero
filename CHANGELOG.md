@@ -22,11 +22,11 @@
   source/title/page/section provenance. Chat (`timeline`, `zaman çizelgesi`)
   and a UI Show timeline action share the route. The timeline regression
   passes 9/9.
-- Added deterministic **typed relation extraction**: `atomzero-docs relations`
-  and `GET /v1/graph/relations` return explicit `located_in`, `capital_of`,
+- Added deterministic **typed relation extraction**: `atomzero-docs relations`,
+  `GET /v1/graph/relations`, chat (`relations for X`, `X ilişkileri`) and a UI
+  Show relations action return explicit `located_in`, `capital_of`,
   `founded_by`, `ceo_of` and `born_in` triples with locators; English and
-  Turkish patterns are supported. `benchmarks/relations_regression.py` passes
-  6/6.
+  Turkish patterns are supported. The relations regression passes 9/9.
 - Added a calibrated **CitationGate** for local answers: rerank score ->
   validity probability, configurable threshold/profile via
   `ATOMZERO_CITATION_*`, citation dropping and explicit refusal on an empty

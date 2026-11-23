@@ -1,6 +1,6 @@
 {
   "benchmark": "atomzero-relations-regression",
-  "generated": "2026-11-23T06:11:30",
+  "generated": "2026-11-23T06:35:29",
   "checks": [
     {
       "name": "relation_types",
@@ -31,9 +31,24 @@
       "name": "missing_source",
       "ok": true,
       "detail": "404"
+    },
+    {
+      "name": "ui_relations_control",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "name": "chat_relations",
+      "ok": true,
+      "detail": "Typed relations for Ankara (3):\n- Ankara --capital_of--> Turkey [geo.txt]\n- Ankara --capital_of--> T\u00fcrkiye [tr.txt]\n- Ankara --located_in--> Turkey [geo.txt]\n\nT"
+    },
+    {
+      "name": "chat_relations_turkish",
+      "ok": true,
+      "detail": "Typed relations for Ankara (3):\n- Ankara --capital_of--> Turkey [geo.txt]\n- Ankara --capital_of--> T\u00fcrkiye [tr.txt]\n- Ankara --located_in--> Turkey [geo.txt]\n\nT"
     }
   ],
-  "passed": 6,
+  "passed": 9,
   "failed": 0,
   "ok": true
 }

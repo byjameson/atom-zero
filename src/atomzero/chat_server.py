@@ -491,7 +491,8 @@ is a statistical navigation aid, not a trained NER or reasoning model. Click an
 entity to see evidence.</p>
 <div class="row"><button id="graphrefresh">Refresh graph</button>
 <input id="gramentity" placeholder="Entity, e.g. Ankara">
-<button id="graphentitybtn">Show evidence</button></div>
+<button id="graphentitybtn">Show evidence</button>
+<button id="relationsbtn">Show relations</button></div>
 <div class="row"><input id="graphsource" placeholder="From entity">
 <input id="graphtarget" placeholder="To entity">
 <button id="graphpathbtn">Find path</button></div>
@@ -499,6 +500,7 @@ entity to see evidence.</p>
 <div id="graphnodes" class="chips"></div>
 <div id="graphedges"></div>
 <div id="graphevidence"></div>
+<div id="relations"></div>
 <hr>
 <h3>Delete data</h3>
 <p class="hint">Delete an indexed source or this browser session's memory. This
@@ -2480,6 +2482,47 @@ async function showEntity(name) {
     msg.textContent = 'entity error: ' + e;
   }
 }
+async function showRelations() {
+  const entity = document.getElementById('gramentity').value.trim();
+  const msg = document.getElementById('graphmsg');
+  const box = document.getElementById('relations');
+  if (!entity) { msg.textContent = 'enter an entity'; return; }
+  msg.textContent = 'loading typed relations for ' + entity + '...';
+  box.textContent = '';
+  try {
+    const query = new URLSearchParams({entity, limit: 20});
+    const r = await fetch('/v1/graph/relations?' + query.toString());
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'relations error: ' + (j.error || r.status);
+      return;
+    }
+    msg.textContent = (j.count || 0) + ' typed relation(s) for ' + entity;
+    (j.relations || []).forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'qitem';
+      const title = document.createElement('div');
+      title.textContent = item.subject + ' --' + item.relation + '--> ' +
+        item.object;
+      card.appendChild(title);
+      const snippet = document.createElement('div');
+      snippet.className = 'src';
+      snippet.textContent = item.text || '';
+      card.appendChild(snippet);
+      const actions = document.createElement('div');
+      actions.className = 'actions';
+      actions.appendChild(qbutton('Evidence', () =>
+        showEvidence(item.source, item.page, item.section)));
+      actions.appendChild(qbutton('Copy citation', () =>
+        copyCitation(item.source, item.page, item.section)));
+      card.appendChild(actions);
+      box.appendChild(card);
+    });
+  } catch (e) {
+    msg.textContent = 'relations error: ' + e;
+  }
+}
+document.getElementById('relationsbtn').onclick = () => showRelations();
 async function refreshSkills() {
   const msg = document.getElementById('skmsg');
   const box = document.getElementById('sklist');

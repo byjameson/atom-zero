@@ -176,6 +176,31 @@ def test_agent_document_timeline_intent(tmp_path):
     docs.close()
 
 
+def test_agent_typed_relation_intent(tmp_path):
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("geo.txt",
+                  "Ankara is the capital of Turkey. "
+                  "Ankara is in Turkey.", title="Geography")
+    docs.add_text("company.txt",
+                  "Acme was founded by Jane Doe. "
+                  "Jane Doe is the CEO of Acme.", title="Company")
+    agent = AgentSession("s-relations", tmp_path / "memory.json",
+                         docs=docs)
+    result = agent.chat("relations for Ankara")
+    assert result["tool_calls"][0]["name"] == "typed_relations"
+    assert "capital_of" in result["reply"]
+    assert result["sources"]
+    filtered = agent.chat("relations for Ankara relation capital_of")
+    assert filtered["relations"]
+    assert all(item["relation"] == "capital_of"
+               for item in filtered["relations"])
+    turkish = agent.chat("Ankara ilişkileri")
+    assert turkish["tool_calls"][0]["name"] == "typed_relations"
+    missing = agent.chat("relations for Atlantis")
+    assert "No explicit relations" in missing["reply"]
+    docs.close()
+
+
 def test_agent_graph_path_query(tmp_path):
     docs = DocMemory(tmp_path / "docs.db")
     docs.add_text("chain1.txt", "Ankara is in Turkey.", title="Chain 1")

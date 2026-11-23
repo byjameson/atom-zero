@@ -28,6 +28,14 @@ def _get(base: str, route: str) -> dict:
         return json.loads(response.read().decode("utf-8"))
 
 
+def _post(url: str, payload: dict) -> dict:
+    request = urllib.request.Request(
+        url, data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"}, method="POST")
+    with urllib.request.urlopen(request, timeout=15) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
 def run(output: str | Path | None = None) -> dict:
     checks = []
 
@@ -102,6 +110,28 @@ def run(output: str | Path | None = None) -> dict:
             except urllib.error.HTTPError as exc:
                 missing_ok = exc.code == 404
             check("missing_source", missing_ok, "404")
+            with urllib.request.urlopen(base + "/", timeout=15) as response:
+                html = response.read().decode("utf-8", "replace").lower()
+            check("ui_relations_control",
+                  "/v1/graph/relations" in html
+                  and 'id="relationsbtn"' in html
+                  and "showrelations" in html,
+                  "present" if "relationsbtn" in html else "missing")
+            chat = _post(base + "/v1/agent/chat", {
+                "session_id": "relations",
+                "message": "relations for Ankara"})
+            calls = chat.get("tool_calls") or [{}]
+            check("chat_relations",
+                  calls[0].get("name") == "typed_relations"
+                  and "capital_of" in chat.get("reply", ""),
+                  chat.get("reply", "")[:160])
+            turkish = _post(base + "/v1/agent/chat", {
+                "session_id": "relations",
+                "message": "Ankara ilişkileri"})
+            turkish_calls = turkish.get("tool_calls") or [{}]
+            check("chat_relations_turkish",
+                  turkish_calls[0].get("name") == "typed_relations",
+                  turkish.get("reply", "")[:160])
         finally:
             httpd.shutdown()
             httpd.server_close()

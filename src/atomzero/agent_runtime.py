@@ -17,6 +17,7 @@ from atomzero.contradictions import compare_sources
 from atomzero.doc_memory import format_citation, grounded_answer
 from atomzero.knowledge_gaps import KnowledgeGapError
 from atomzero.knowledge_graph import entity_sources, graph_path
+from atomzero.relations import extract_relations
 from atomzero.skills import execute_skill
 from atomzero.weekly_reports import (
     DEFAULT_REPORTS_PATH, WeeklyReportArchive, WeeklyReportError)
@@ -276,6 +277,59 @@ class AgentSession:
             "sources": sources,
             "evidence": data["sources"],
             "connections": data.get("connections", []),
+        }
+
+    def _relations(self, entity: str, relation: str = "") -> dict:
+        if self.docs is None:
+            return {"reply": "no document memory configured",
+                    "tool_calls": [], "sources": [], "evidence": []}
+        entity = entity.strip().strip("\"'")
+        relation = relation.strip().strip("\"'")
+        try:
+            data = extract_relations(
+                self.docs, entity=entity, relation=relation, limit=20)
+        except ValueError as exc:
+            return {"reply": str(exc), "tool_calls": [],
+                    "sources": [], "evidence": []}
+        tool = [{"name": "typed_relations", "entity": entity,
+                 "relation": relation}]
+        items = data.get("relations", [])
+        if not items:
+            return {"reply": f"No explicit relations found for {entity}.",
+                    "tool_calls": tool, "sources": [], "evidence": [],
+                    "relations": []}
+        lines = [f"Typed relations for {entity} ({len(items)}):"]
+        sources = []
+        evidence = []
+        for item in items[:8]:
+            lines.append(
+                f"- {item['subject']} --{item['relation']}--> "
+                f"{item['object']} [{item['source']}]")
+            source_item = {
+                "source": item["source"],
+                "title": item.get("title", ""),
+                "kind": item.get("kind", "document"),
+                "verified": bool(item.get("verified", True)),
+            }
+            if source_item not in sources:
+                sources.append(source_item)
+            evidence.append({
+                "source": item["source"],
+                "title": item.get("title", ""),
+                "page": item.get("page"),
+                "section": item.get("section", ""),
+                "snippet": item.get("text", ""),
+                "relation": item["relation"],
+            })
+        if len(items) > 8:
+            lines.append(f"... {len(items) - 8} more relation(s)")
+        lines.append("\nThis is explicit pattern extraction, not inference.")
+        return {
+            "reply": "\n".join(lines),
+            "tool_calls": tool,
+            "sources": sources,
+            "evidence": evidence,
+            "relations": items,
         }
 
     def _graph_path(self, source: str, target: str) -> dict:
@@ -1771,6 +1825,17 @@ class AgentSession:
                 r"(?:\s+(?:için\s+)?(.+?))?\??$", text, re.IGNORECASE)
         if timeline_match:
             return self._timeline(timeline_match.group(1) or "")
+        relations_match = re.match(
+            r"^(?:typed\s+)?relations?\s+(?:for|of|about)\s+(.+?)"
+            r"(?:\s+relation\s+([a-z_]+))?\??$", text, re.IGNORECASE)
+        if not relations_match:
+            relations_match = re.match(
+                r"^(.+?)\s+(?:için\s+)?ilişkiler(?:i)?"
+                r"(?:\s+([a-z_]+))?\??$", text, re.IGNORECASE)
+        if relations_match:
+            return self._relations(
+                relations_match.group(1),
+                relations_match.group(2) or "")
         graph_query = re.match(
             r"^(?:what is related to|what relates to|connections (?:for|of)|"
             r"graph)\s*:?\s*(.+?)\??$", text, re.IGNORECASE)

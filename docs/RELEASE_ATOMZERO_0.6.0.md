@@ -51,6 +51,8 @@ after `0.5.0`.
   source/title/page/section provenance.
 - English and Turkish patterns are supported; co-occurrence alone is not a
   relation.
+- Chat (`relations for X`, `X ilişkileri`) and the UI Show relations action
+  use the same route with evidence and citation buttons.
 
 ## Weekly review and report archive
 
@@ -143,13 +145,13 @@ after `0.5.0`.
 
 ## Verified regressions
 
-- `405 passed` in the assistant test suite.
+- `406 passed` in the assistant test suite.
 - Weekly chat regression: 7/7.
 - Weekly export/archive regression: 29/29.
 - Weekly review regression: 6/6.
 - Graph-path regression: 6/6.
 - Document timeline regression: 9/9.
-- Typed relations regression: 6/6.
+- Typed relations regression: 9/9.
 - Citation gate SQuAD v2 policy simulation (default 0.5): 92/103 answerable
   retained, 18/97 no-answer refused, precision 0.479.
 - Contradiction regression: 16/16.

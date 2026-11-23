@@ -69,6 +69,9 @@ def test_demo_page_uses_daily_agent_endpoint():
     assert "comparesources" in page
     assert 'id="timelinebtn"' in page
     assert "showtimeline" in page
+    assert "/v1/graph/relations" in page
+    assert 'id="relationsbtn"' in page
+    assert "showrelations" in page
     assert "/v1/hungry/run" in page
     assert "hungry mode" in page
     assert "grounded answer" in page
