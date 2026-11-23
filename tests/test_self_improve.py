@@ -33,6 +33,11 @@ def _self_code_repo(tmp_path):
             "def f():\n    try:\n        return 1\n"
             "    except Exception:\n        return None\n",
             encoding="utf-8")
+    (repo / "tests" / "test_alpha.py").write_text(
+        "def test_ok():\n    assert True\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-qm", "self-code findings"], cwd=repo,
+                   check=True)
     return repo
 
 
@@ -137,6 +142,60 @@ def test_loop_no_action_when_self_code_is_clean(tmp_path):
         checks=[], opt_in=True, approve=True, repo_root=tmp_path)
     assert result["status"] == "no_action"
     assert not (tmp_path / "ledger.jsonl").exists()
+
+
+def test_loop_self_code_diff_records_resolved_finding(tmp_path):
+    repo = _self_code_repo(tmp_path)
+    result = run_loop(
+        signals={}, allowed_files=[], checks=[], opt_in=True, approve=True,
+        repo_root=repo, base="master",
+        runner_command=[sys.executable, "-c",
+                        "open('src/alpha.py','w').write('def f():\\n"
+                        "    return 1\\n')"],
+        worktree_root=tmp_path / "agent-wt",
+        ledger_path=tmp_path / "ledger.jsonl",
+        self_code_root=repo, target_path="src/alpha.py")
+    assert result["status"] == "completed", result
+    diff = result["self_code_diff"]
+    assert diff["ok"] is True
+    assert diff["summary"]["resolved"] == 1
+    assert diff["summary"]["persisting"] == 1
+    assert diff["summary"]["introduced"] == 0
+    assert (tmp_path / "ledger.jsonl").is_file()
+
+
+def test_loop_self_code_regression_blocks_decision(tmp_path):
+    repo = _self_code_repo(tmp_path)
+    added = """def f():
+    try:
+        return 1
+    except Exception:
+        return None
+def g():
+    try:
+        return 2
+    except Exception:
+        return None
+"""
+    result = run_loop(
+        signals={}, allowed_files=[], checks=[], opt_in=True, approve=True,
+        repo_root=repo, base="master",
+        runner_command=[sys.executable, "-c",
+                        f"open('src/alpha.py','w').write({added!r})"],
+        worktree_root=tmp_path / "agent-wt",
+        ledger_path=tmp_path / "ledger.jsonl",
+        self_code_root=repo, target_path="src/alpha.py")
+    assert result["status"] == "self_code_regression", result
+    assert result["self_code_diff"]["ok"] is False
+    assert result["self_code_diff"]["summary"]["new_medium"] == 1
+    assert "decision" not in result
+    assert not (tmp_path / "ledger.jsonl").exists()
+
+
+def test_loop_without_self_code_root_has_no_diff(tmp_path):
+    result = run_loop(**_args(tmp_path))
+    assert result["status"] == "completed"
+    assert "self_code_diff" not in result
 
 
 def test_loop_target_path_selects_matching_proposal(tmp_path):

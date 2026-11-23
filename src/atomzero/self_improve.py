@@ -117,9 +117,11 @@ def run_loop(
 ) -> dict:
     """Run one bounded loop, returning every stage and its evidence."""
     normalized = dict(signals) if isinstance(signals, dict) else {}
+    before_self_code = None
     if self_code_root:
         from atomzero.self_code import audit_report
-        report = audit_report(self_code_root, propose=True)
+        before_self_code = audit_report(self_code_root, propose=True)
+        report = before_self_code
         previous = normalized.get("self_code")
         if isinstance(previous, dict):
             seen = {item.get("finding_id") for item in report["findings"]}
@@ -222,6 +224,15 @@ def run_loop(
     if runner.get("ok") is not True:
         result["status"] = "gate_failed"
         return result
+    if before_self_code is not None:
+        from atomzero.self_code import audit_report
+        from atomzero.self_code_diff import compare_reports
+        after_self_code = audit_report(runner["worktree"], propose=False)
+        diff = compare_reports(before_self_code, after_self_code)
+        result["self_code_diff"] = diff
+        if diff["ok"] is not True:
+            result["status"] = "self_code_regression"
+            return result
     gate = runner["gate"]
     ledger = _load_ledger(ledger_path) if ledger_path else []
     record = record_gated_decision(
