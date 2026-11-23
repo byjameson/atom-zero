@@ -87,6 +87,12 @@ def run(output: str | Path | None = None) -> dict:
             limited = _get(base, "/v1/documents/timeline?limit=1")
             check("timeline_limit", len(limited["events"]) == 1,
                   str(limited["limit"]))
+            entity = _get(
+                base, "/v1/documents/timeline?entity=January")
+            check("timeline_entity_filter",
+                  entity["count"] == 1
+                  and entity["events"][0]["source"] == "history.txt",
+                  str(entity["count"]))
             try:
                 _get(base, "/v1/documents/timeline?source=missing.txt")
                 missing_ok = False

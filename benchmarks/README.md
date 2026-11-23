@@ -29,14 +29,15 @@ Latest result: **6/6 checks pass**. Raw result:
 ## Document timeline regression
 
 `benchmarks/timeline_regression.py` checks the served timeline route, sorted
-dates, source filtering, year-only precision, limits, missing-source behavior,
-the UI timeline control and English/Turkish chat intents.
+dates, source filtering, entity filtering, year-only precision, limits,
+missing-source behavior, the UI timeline control and English/Turkish chat
+intents.
 
 ```powershell
 python benchmarks/timeline_regression.py
 ```
 
-Latest result: **9/9 checks pass**. Raw result:
+Latest result: **10/10 checks pass**. Raw result:
 [`results/timeline_regression.json`](results/timeline_regression.json).
 
 ## Weekly-review regression

@@ -624,6 +624,11 @@ def test_http_document_timeline(tmp_path):
             base + "/v1/documents/timeline?limit=1",
             timeout=10).read().decode("utf-8"))
         assert len(limited["events"]) == 1
+        entity = json.loads(urllib.request.urlopen(
+            base + "/v1/documents/timeline?entity=January",
+            timeout=10).read().decode("utf-8"))
+        assert entity["count"] == 1
+        assert entity["events"][0]["source"] == "history.txt"
         try:
             urllib.request.urlopen(
                 base + "/v1/documents/timeline?source=missing.txt",

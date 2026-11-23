@@ -32,6 +32,17 @@ def test_extract_timeline_sorts_dates_and_keeps_provenance(tmp_path):
     docs.close()
 
 
+def test_timeline_filters_by_entity(tmp_path):
+    docs = _docs(tmp_path)
+    january = extract_timeline(docs, entity="January")
+    assert january["count"] == 1
+    assert january["entity"] == "January"
+    assert january["events"][0]["date"] == "2020-01-05"
+    missing = extract_timeline(docs, entity="Atlantis")
+    assert missing["count"] == 0
+    docs.close()
+
+
 def test_timeline_filters_limits_and_cli(tmp_path, capsys):
     docs = _docs(tmp_path)
     filtered = extract_timeline(docs, source="toplanti.txt")

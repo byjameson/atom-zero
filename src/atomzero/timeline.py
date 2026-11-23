@@ -38,12 +38,14 @@ def _event(item: dict, date: str, precision: str,
 
 
 def extract_timeline(docs, source: str = "", source_prefix: str = "",
-                     limit: int = 100) -> dict:
+                     entity: str = "", limit: int = 100) -> dict:
     """Return dated events sorted by date with full provenance."""
     source = str(source or "").strip()
     source_prefix = str(source_prefix or "").strip()
+    entity = str(entity or "").strip()
     for label, value in (("source", source),
-                         ("source_prefix", source_prefix)):
+                         ("source_prefix", source_prefix),
+                         ("entity", entity)):
         if len(value) > 512:
             raise ValueError(f"{label} is too long (max 512 chars)")
         if any(ord(ch) < 32 for ch in value):
@@ -81,14 +83,24 @@ def extract_timeline(docs, source: str = "", source_prefix: str = "",
     for event in events:
         key = (event["source"], event["date"], event["text"])
         deduped.setdefault(key, event)
+    values = list(deduped.values())
+    if entity:
+        entity_key = entity.casefold()
+        values = [
+            event for event in values
+            if entity_key in event["text"].casefold()
+            or any(entity_key in str(name).casefold()
+                   for name in event["entities"])
+        ]
     ordered = sorted(
-        deduped.values(),
+        values,
         key=lambda event: (event["date"], event["source"],
                            event["page"] or 0, event["section"],
                            event["text"]))
     return {
         "source": source,
         "source_prefix": source_prefix,
+        "entity": entity,
         "limit": limit,
         "count": len(ordered),
         "events": ordered[:limit],

@@ -2104,6 +2104,7 @@ def main(argv=None):
         "timeline", help="list dated events with provenance")
     timeline.add_argument("--source", default="")
     timeline.add_argument("--source-prefix", default="")
+    timeline.add_argument("--entity", default="")
     timeline.add_argument("--limit", type=int, default=100)
     relations = sub.add_parser(
         "relations", help="list explicit typed relations with provenance")
@@ -2260,7 +2261,8 @@ def main(argv=None):
             try:
                 result = extract_timeline(
                     mem, source=args.source,
-                    source_prefix=args.source_prefix, limit=args.limit)
+                    source_prefix=args.source_prefix,
+                    entity=args.entity, limit=args.limit)
             except (SourceNotFound, ValueError) as exc:
                 print(json.dumps({"error": str(exc)}))
                 return 1

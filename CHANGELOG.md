@@ -19,9 +19,9 @@
   to 1.000 and FTS from 0.700 to 0.950; English SQuAD results are unchanged.
 - Added a deterministic **document timeline**: `atomzero-docs timeline` and
   `GET /v1/documents/timeline` extract full dates and year-only mentions with
-  source/title/page/section provenance. Chat (`timeline`, `zaman çizelgesi`)
-  and a UI Show timeline action share the route. The timeline regression
-  passes 9/9.
+  source/title/page/section provenance. Chat (`timeline`, `zaman çizelgesi`),
+  the UI Show timeline action and entity filters share the route. The timeline
+  regression passes 10/10.
 - Added deterministic **typed relation extraction**: `atomzero-docs relations`,
   `atomzero-docs relation-path`, `GET /v1/graph/relations`,
   `GET /v1/graph/relations/path`, chat (`relations for X`, `X ilişkileri`,

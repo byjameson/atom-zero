@@ -12,7 +12,7 @@ Endpoints:
   GET  /v1/documents/evidence?source=...&page=...&section=...
   GET  /v1/documents/summary?source=...&source_prefix=...&sentences=8
   GET  /v1/documents/compare?source=...&against=...&max_claims=200
-  GET  /v1/documents/timeline?source=...&source_prefix=...&limit=100
+  GET  /v1/documents/timeline?source=...&source_prefix=...&entity=...&limit=100
   GET  /v1/graph?limit_chunks=...&min_edge=...&max_entities=...
   GET  /v1/graph/entity?name=...&limit=...
   GET  /v1/graph/relations?entity=...&relation=...&limit=100
@@ -482,7 +482,8 @@ weights.</p>
 <button id="cmpbtn">Compare sources</button></div>
 <div id="cmpresult"></div>
 <div class="row"><button id="timelinebtn">Show timeline</button>
-<span class="hint">Uses the selected source when set.</span></div>
+<input id="timelineentity" placeholder="Entity filter (optional)">
+<span class="hint">Uses the selected source and optional entity.</span></div>
 <div id="timeline"></div>
 <hr>
 <h3>Second brain graph</h3>
@@ -2235,6 +2236,8 @@ async function showTimeline() {
   box.textContent = 'loading timeline...';
   const params = new URLSearchParams();
   if (source) params.set('source', source);
+  const entity = document.getElementById('timelineentity').value.trim();
+  if (entity) params.set('entity', entity);
   try {
     const r = await fetch('/v1/documents/timeline?' + params.toString());
     const j = await r.json();
@@ -4228,6 +4231,7 @@ class Handler(BaseHTTPRequestHandler):
                     docs,
                     source=params.get("source", [""])[0],
                     source_prefix=params.get("source_prefix", [""])[0],
+                    entity=params.get("entity", [""])[0],
                     limit=int(params.get("limit", ["100"])[0]))
             except SourceNotFound as exc:
                 return self._json(404, {"error": str(exc)})

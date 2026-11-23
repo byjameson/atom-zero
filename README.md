@@ -149,10 +149,10 @@ LoRA adapters.
 | public SQuAD v2 retrieval (20 contexts) | **0.98 top-1 context (FTS), 1.00 top-5** |
 | public SQuAD v2 retrieval (50 contexts) | **hybrid 0.975 top-1; 0.884 answer in visible snippet** |
 | Turkish morphology retrieval (20 authored queries) | **hybrid 1.000 top-1; FTS 0.950** (before vowel drop 0.800 / 0.700) |
-| document timeline regression | **9/9** |
+| document timeline regression | **10/10** |
 | typed relations regression | **12/12** |
 | citation gate, SQuAD v2 (default 0.5) | **92/103 answerable retained; 18/97 no-answer refused; precision 0.479** |
-| test suite | **408 passed** |
+| test suite | **409 passed** |
 
 The raw-model probe asks ten simple general questions with no documents, no
 calculator and no agent. The 49.2M model gets **2/10**. The product gets
@@ -203,7 +203,8 @@ short generation. It is **not MMLU, GSM8K or HumanEval**.
 - **Document timeline:** `atomzero-docs timeline`,
   `GET /v1/documents/timeline`, chat `timeline` / `zaman çizelgesi` and the UI
   Show timeline action extract full dates and year-only mentions with
-  source/title/page/section provenance; English and Turkish dates normalize to
+  source/title/page/section provenance; `--entity` / `entity=` / the UI entity
+  filter scopes events to an entity. English and Turkish dates normalize to
   ISO, and year-only events keep `precision=year`.
 - **Typed relations:** `atomzero-docs relations`,
   `atomzero-docs relation-path`, `GET /v1/graph/relations`,

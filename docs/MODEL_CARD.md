@@ -43,8 +43,8 @@ benchmarks and release — is
 | privacy | localhost, no telemetry, SSRF guard, upload caps, deletion |
 | UI | chat, documents, gaps, research queue, teacher notes, adapters, health |
 | packaging | standalone `atomzero` package (assistant deps only), `atomzero`/`atomzero-quickstart` entry points, GitHub release, HF/ModelScope weights |
-| tests | 408 passed; product 21/21; behavior 16/16; retrieval 1.000 |
-| document timeline | CLI/HTTP/chat/UI dated events with source/title/page/section provenance; 9/9 regression |
+| tests | 409 passed; product 21/21; behavior 16/16; retrieval 1.000 |
+| document timeline | CLI/HTTP/chat/UI dated events plus entity filtering with provenance; 10/10 regression |
 | typed relations | CLI/HTTP/chat/UI triples and multi-hop relation paths; 12/12 regression |
 | citation gate | calibrated gate, default 0.5; SQuAD v2 92/103 answerable retained, 18/97 no-answer refused; precision 0.479 |
 | document benchmark | 100 authored questions: 80/80 answerable, 20/20 no-answer |

@@ -128,16 +128,20 @@ Extract dated events with provenance:
 ```powershell
 atomzero-docs timeline --db data/docs.db
 atomzero-docs timeline --source policy_a.txt --limit 20
+atomzero-docs timeline --entity Ankara --db data/docs.db
 ```
 
 ```text
 GET /v1/documents/timeline?source=policy_a.txt&limit=20
+GET /v1/documents/timeline?entity=Ankara
 ```
 
 Full dates (`5 January 2020`, `January 5, 2020`, `5 Ocak 2020`,
 `2020-01-05`) become ISO dates. Year-only mentions keep `precision: year`.
 Every event keeps source, title, page/section, kind, verified flag and extracted
-entities; results are sorted by date. This is a textual timeline, not inference.
+entities; results are sorted by date. An entity filter is a case-insensitive
+match against the event text and extracted entities. This is a textual
+timeline, not inference.
 
 Chat also understands `timeline` and `zaman çizelgesi`; the documents UI has a
 **Show timeline** action with evidence and citation buttons.

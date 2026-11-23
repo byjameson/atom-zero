@@ -43,6 +43,8 @@ after `0.5.0`.
   ISO; year-only mentions keep `precision: year`.
 - Chat understands `timeline` / `zaman çizelgesi`; the documents UI has a
   **Show timeline** action with evidence and citation buttons.
+- `--entity`, `entity=` and the UI entity filter scope the timeline to an
+  entity without changing the stored events.
 
 ## Typed relations
 
@@ -148,12 +150,12 @@ after `0.5.0`.
 
 ## Verified regressions
 
-- `408 passed` in the assistant test suite.
+- `409 passed` in the assistant test suite.
 - Weekly chat regression: 7/7.
 - Weekly export/archive regression: 29/29.
 - Weekly review regression: 6/6.
 - Graph-path regression: 6/6.
-- Document timeline regression: 9/9.
+- Document timeline regression: 10/10.
 - Typed relations regression: 12/12.
 - Citation gate SQuAD v2 policy simulation (default 0.5): 92/103 answerable
   retained, 18/97 no-answer refused, precision 0.479.
