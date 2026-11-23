@@ -115,6 +115,10 @@ Flags are deterministic hints, not a truth verdict:
 - `identifier_mismatch` — overlapping claims use different code identifiers;
 - `negation_mismatch` — one claim is negated and the other is not.
 
+Claims are aligned lexically (shared terms/entities) or by topic: a shared
+title/section plus a comparable measure, date or code. Each conflict includes
+`alignment` (`lexical` or `topic`) and the shared topic terms.
+
 Every conflict includes both snippets and page/section locators for review.
 
 ### CLI

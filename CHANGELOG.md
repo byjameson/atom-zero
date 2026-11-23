@@ -10,7 +10,9 @@
   commas, dates and units before flagging conflicts (`$1,500,000` =
   `1.5 million`, `1,5` = `1.5`, `5 January 2020` = `January 5, 2020`,
   `24 months` = `2 years`, `72 hours` = `3 days`), reducing false alarms.
-  Contradiction regression is now 11/11.
+  Topic-aware alignment also compares claims with a shared title/section and a
+  comparable measure, date or code even when the wording differs; conflicts
+  record an `alignment` field. Contradiction regression is now 16/16.
 - Added Turkish morphology-aware retrieval: light suffix/consonant-mutation
   skeletons, vowel-drop stems (`şehir` / `şehrin`, `burun` / `burnu`) and FTS
   prefix variants. An authored 20-query check improved hybrid top-1 from 0.800

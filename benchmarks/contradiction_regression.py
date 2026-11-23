@@ -81,6 +81,26 @@ def run(output: str | Path | None = None) -> dict:
         docs.add_text("trail_6km.txt",
                       "The hiking trail length is 6 km.",
                       title="Trail 6km")
+        docs.add_text("warranty_topic_a.txt",
+                      "The warranty period is 24 months.",
+                      title="Warranty")
+        docs.add_text("warranty_topic_b.txt",
+                      "Coverage lasts for 3 years.",
+                      title="Warranty")
+        docs.add_text("warranty_topic_c.txt",
+                      "Coverage lasts for 2 years.",
+                      title="Warranty")
+        docs.add_text("warranty_price.txt",
+                      "The warranty price is 300 dollars.",
+                      title="Warranty")
+        docs.add_text("meeting_topic_a.txt",
+                      "The meeting is on 5 January 2020.",
+                      title="Meeting")
+        docs.add_text("meeting_topic_b.txt",
+                      "The gathering is on 6 January 2020.",
+                      title="Meeting")
+        docs.add_text("shipping_topic.txt", "Delivery takes 5 days.",
+                      title="Shipping")
         docs.add_text("unrelated.txt", "Bananas are yellow.",
                       title="Unrelated")
         old = dict(chat_server._state)
@@ -203,6 +223,49 @@ def run(output: str | Path | None = None) -> dict:
                         for conflict in result["conflicts"])
                     for result in unit_conflicts),
                 str([result["summary"] for result in unit_conflicts]))
+            topic_conflict = _get(
+                base,
+                "/v1/documents/compare?source=warranty_topic_a.txt"
+                "&against=warranty_topic_b.txt")
+            check(
+                "topic_paraphrase_measure_conflict",
+                any("numeric_mismatch" in conflict["reasons"]
+                    and conflict.get("alignment") == "topic"
+                    for conflict in topic_conflict["conflicts"]),
+                str(topic_conflict["summary"]))
+            topic_equal = _get(
+                base,
+                "/v1/documents/compare?source=warranty_topic_a.txt"
+                "&against=warranty_topic_c.txt")
+            check(
+                "topic_paraphrase_measure_equal",
+                topic_equal["conflicts"] == [],
+                str(topic_equal["summary"]))
+            topic_dates = _get(
+                base,
+                "/v1/documents/compare?source=meeting_topic_a.txt"
+                "&against=meeting_topic_b.txt")
+            check(
+                "topic_paraphrase_date_conflict",
+                any("date_mismatch" in conflict["reasons"]
+                    for conflict in topic_dates["conflicts"]),
+                str(topic_dates["summary"]))
+            topic_cross = _get(
+                base,
+                "/v1/documents/compare?source=warranty_topic_a.txt"
+                "&against=shipping_topic.txt")
+            check(
+                "topic_cross_topic_no_false_positive",
+                topic_cross["conflicts"] == [],
+                str(topic_cross["summary"]))
+            topic_dimension = _get(
+                base,
+                "/v1/documents/compare?source=warranty_topic_a.txt"
+                "&against=warranty_price.txt")
+            check(
+                "topic_dimension_no_false_positive",
+                topic_dimension["conflicts"] == [],
+                str(topic_dimension["summary"]))
             clean = _get(
                 base,
                 "/v1/documents/compare?source=unrelated.txt"

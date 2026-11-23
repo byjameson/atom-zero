@@ -101,6 +101,9 @@ after `0.5.0`.
 - Date comparison treats `5 January 2020`, `January 5, 2020`,
   `5-Jan-2020` and Turkish `5 Ocak 2020` as the same day; different full dates
   produce a `date_mismatch`.
+- Topic-aware paraphrase alignment compares claims with a shared title/section
+  and a comparable measure, date or code even when the wording differs
+  (`24 months` vs `3 years`); conflicts record `alignment: topic`.
 - Multi-hop graph paths through `atomzero-docs path`, `GET /v1/graph/path`,
   chat and UI.
 - BOM-tolerant session, feedback, gap, queue, skill and recipe JSON reads.
@@ -108,12 +111,12 @@ after `0.5.0`.
 
 ## Verified regressions
 
-- `386 passed` in the assistant test suite.
+- `387 passed` in the assistant test suite.
 - Weekly chat regression: 7/7.
 - Weekly export/archive regression: 29/29.
 - Weekly review regression: 6/6.
 - Graph-path regression: 6/6.
-- Contradiction regression: 11/11.
+- Contradiction regression: 16/16.
 - Source-comparison chat regression: 6/6.
 - Product benchmark remains 21/21; raw-model probe remains 2/10.
 - Document benchmark remains 80/80 answerable and 20/20 no-answer.

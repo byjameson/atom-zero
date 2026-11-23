@@ -295,6 +295,8 @@ def extract_claims(docs, source: str) -> list[dict]:
                 continue
             body = _without_dates(sentence)
             numbers, measures = _numbers_and_measures(body)
+            title_value = str(item.get("title", ""))
+            section_value = str(item.get("section", ""))
             claims.append({
                 "text": sentence,
                 "terms": sorted(terms),
@@ -304,11 +306,13 @@ def extract_claims(docs, source: str) -> list[dict]:
                 "codes": sorted(codes),
                 "entities": sorted({value.lower()
                                     for value in extract_entities(sentence)}),
+                "topic_terms": sorted(_query_terms(
+                    f"{title_value} {section_value}")),
                 "negated": bool(NEGATION_RE.search(sentence)),
                 "source": item.get("source", ""),
-                "title": item.get("title", ""),
+                "title": title_value,
                 "page": item.get("page"),
-                "section": item.get("section", ""),
+                "section": section_value,
             })
     return claims
 
@@ -317,6 +321,24 @@ def _overlap(left: dict, right: dict) -> tuple[set[str], set[str]]:
     shared_terms = set(left["terms"]) & set(right["terms"])
     shared_entities = set(left["entities"]) & set(right["entities"])
     return shared_terms, shared_entities
+
+
+def _topic_overlap(left: dict, right: dict) -> set[str]:
+    return set(left.get("topic_terms", [])) & set(
+        right.get("topic_terms", []))
+
+
+def _topic_comparable(left: dict, right: dict) -> bool:
+    """Return True when two claims have a comparable evidence dimension."""
+    left_measures = _measures_by_dimension(left.get("measures", []))
+    right_measures = _measures_by_dimension(right.get("measures", []))
+    if set(left_measures) & set(right_measures):
+        return True
+    if left.get("dates") and right.get("dates"):
+        return True
+    if left.get("codes") and right.get("codes"):
+        return True
+    return False
 
 
 def _conflict_reasons(left: dict, right: dict,
@@ -392,8 +414,11 @@ def compare_sources(docs, source: str, against: str = "",
             if left["source"] == right["source"]:
                 continue
             shared_terms, shared_entities = _overlap(left, right)
-            if not (len(shared_terms) >= 2
-                    or (shared_entities and shared_terms)):
+            lexical = (len(shared_terms) >= 2
+                       or (shared_entities and shared_terms))
+            topic_terms = _topic_overlap(left, right)
+            topic = bool(topic_terms) and _topic_comparable(left, right)
+            if not (lexical or topic):
                 continue
             reasons = _conflict_reasons(
                 left, right, shared_terms, shared_entities)
@@ -401,8 +426,10 @@ def compare_sources(docs, source: str, against: str = "",
                 continue
             conflicts.append({
                 "reasons": reasons,
+                "alignment": "lexical" if lexical else "topic",
                 "shared_terms": sorted(shared_terms),
                 "shared_entities": sorted(shared_entities),
+                "topic_terms": sorted(topic_terms),
                 "left": left,
                 "right": right,
             })
@@ -427,7 +454,7 @@ def compare_sources(docs, source: str, against: str = "",
             "sources_compared": len(candidate_sources),
             **counts,
         },
-        "method": ("sentence overlap + number/unit/date/code/negation "
+        "method": ("sentence overlap/topic + number/unit/date/code/negation "
                    "difference; not a truth verdict"),
         "weights_changed": False,
     }

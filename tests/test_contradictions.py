@@ -131,6 +131,44 @@ def test_compare_sources_normalizes_units(tmp_path):
     docs.close()
 
 
+def test_compare_sources_aligns_topic_paraphrases(tmp_path):
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("warranty_a.txt", "The warranty period is 24 months.",
+                  title="Warranty A")
+    docs.add_text("warranty_b.txt", "Coverage lasts for 3 years.",
+                  title="Warranty B")
+    docs.add_text("warranty_c.txt", "Coverage lasts for 2 years.",
+                  title="Warranty C")
+    docs.add_text("warranty_price.txt",
+                  "The warranty price is 300 dollars.",
+                  title="Warranty D")
+    docs.add_text("shipping.txt", "Delivery takes 5 days.",
+                  title="Shipping")
+    docs.add_text("meeting_a.txt",
+                  "The meeting is on 5 January 2020.", title="Meeting A")
+    docs.add_text("meeting_b.txt",
+                  "The gathering is on 6 January 2020.", title="Meeting B")
+
+    paraphrase = compare_sources(docs, "warranty_a.txt",
+                                 "warranty_b.txt")
+    item = next(conflict for conflict in paraphrase["conflicts"]
+                if "numeric_mismatch" in conflict["reasons"])
+    assert item["alignment"] == "topic"
+    assert "warranty" in item["topic_terms"]
+
+    equal = compare_sources(docs, "warranty_a.txt", "warranty_c.txt")
+    assert equal["conflicts"] == []
+    cross = compare_sources(docs, "warranty_a.txt", "shipping.txt")
+    assert cross["conflicts"] == []
+    price = compare_sources(docs, "warranty_a.txt", "warranty_price.txt")
+    assert price["conflicts"] == []
+
+    dates = compare_sources(docs, "meeting_a.txt", "meeting_b.txt")
+    assert any("date_mismatch" in conflict["reasons"]
+               for conflict in dates["conflicts"])
+    docs.close()
+
+
 def test_compare_all_sources_and_cli(tmp_path, capsys):
     docs = DocMemory(tmp_path / "docs.db")
     docs.add_text("policy_a.txt", "The warranty period is 24 months.")
