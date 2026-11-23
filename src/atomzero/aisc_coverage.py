@@ -111,7 +111,9 @@ def coverage_report(
         try:
             definition = load_spec(path)
             entries.append(spec_coverage(definition, project_root))
-        except Exception as exc:  # noqa: BLE001 - report one bad spec
+        except (OSError, ValueError, TypeError, KeyError) as exc:
+            # Expected bad-spec failures are reported per spec; unexpected
+            # programming errors are allowed to propagate.
             entries.append({
                 "source": str(path),
                 "name": None,
