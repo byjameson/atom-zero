@@ -48,13 +48,17 @@
   `ANSWERABILITY_POOR` + `REFUSAL_POLICY_MISMATCH`.
 - Build/twine: **PASSED** (`atomzero-0.6.0.tar.gz`,
   `atomzero-0.6.0-py3-none-any.whl`).
-- Release verification (`scripts/verify_release.py --version 0.6.0`):
-  GitHub release + both assets **OK**, GitHub README **OK**, Hugging Face card
-  **OK**, ModelScope card **OK**, dev.to article **OK**, PyPI **FAIL (404, not
-  uploaded)**. Medium remains on the prior version.
-- GitHub Actions `publish.yml` run #1: **failure**,
-  `invalid-publisher` (no matching PyPI trusted publisher). A fresh PyPI token
-  or trusted-publisher configuration is required before the PyPI step.
+- Release verification (`scripts/verify_release.py --version 0.6.0 --devto-url ...`):
+  PyPI **OK** (0.6.0 + both artifacts), GitHub release + both assets **OK**,
+  GitHub README **OK**, Hugging Face card **OK**, ModelScope card **OK**,
+  dev.to article **OK**, **summary: 0 failure(s)**.
+- Medium article: updated with the 0.6.0 note, `465 tests`, `pip install
+  atomzero==0.6.0` and the 0.6.0 PyPI link. LinkedIn: 0.6.0 release post
+  published.
+- GitHub Actions `publish.yml` run #1 remains a **historical failure**:
+  `invalid-publisher` (no matching PyPI trusted publisher). The release was
+  completed with a fresh project token; the workflow can stay as an optional
+  trusted-publishing path once configured.
 
 ## Commands
 

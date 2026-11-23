@@ -3,10 +3,11 @@
 Canonical surfaces: GitHub, Hugging Face, PyPI, dev.to, Medium, LinkedIn and
 ModelScope.
 
-Current local batch: **0.6.0.** GitHub source/tag/release, Hugging Face,
-ModelScope and dev.to are published. PyPI remains on 0.5.0 until a fresh token
-or a configured PyPI trusted publisher is available; Medium remains on the
-prior version. The release verification currently fails only on PyPI.
+Current local batch: **0.6.0 published.** PyPI, GitHub source/tag/release,
+Hugging Face, ModelScope, dev.to, Medium and LinkedIn are updated.
+`scripts/verify_release.py --version 0.6.0` reports **0 failures**. Main is
+already ahead with the post-release memory ledger and the claim/evidence
+branch; the next batch is `0.6.1`.
 
 ## Release cadence
 

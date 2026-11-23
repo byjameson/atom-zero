@@ -9,13 +9,13 @@
 - AISC strict audit: **not claimed as passing**; the AISC spec/report update is
   owned by the AISC side. Atom Zero files were not modified in that repo.
 - Build/twine: **PASSED**
-- Release status: GitHub `v0.6.0` source/tag/release, Hugging Face card,
-  ModelScope card and the dev.to article are published. PyPI `0.6.0` is blocked
-  on a fresh token or a configured trusted publisher; Medium remains on the
-  prior version. The `publish.yml` workflow reports `invalid-publisher` (no
-  matching trusted publisher). Main now has the post-release memory ledger;
-  publish it as `0.6.1` after the PyPI blocker is cleared. The ~10-increment
-  batch policy continues.
+- Release status: PyPI `0.6.0`, GitHub `v0.6.0` source/tag/release, Hugging
+  Face, ModelScope, dev.to, Medium and LinkedIn are published.
+  `scripts/verify_release.py --version 0.6.0` reports **0 failures**. The
+  `publish.yml` trusted-publisher run remains a historical failed attempt; the
+  release was completed with a fresh project token. Main is ahead of the tag
+  with the memory ledger and the claim/evidence branch; publish them as
+  `0.6.1`. The ~10-increment batch policy continues.
 
 ## Completed in this session
 
