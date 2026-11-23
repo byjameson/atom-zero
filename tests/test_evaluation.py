@@ -8,6 +8,12 @@ from unittest.mock import patch
 import pytest
 
 from atomzero import evaluation
+from atomzero.evaluation import (
+    archive_report,
+    load_archive,
+    verify_archive,
+    write_archive,
+)
 
 
 def test_parse_check():
@@ -113,6 +119,67 @@ def test_evaluate_gate_timeout(monkeypatch):
 def test_evaluate_gate_rejects_empty():
     with pytest.raises(ValueError):
         evaluation.evaluate_gate([])
+
+
+def test_archive_report_is_content_free_and_deterministic():
+    report = {
+        "ok": True,
+        "summary": {"total": 1, "passed": 1, "failed": 0,
+                    "manual_required": 0},
+        "method": "allowlisted_evaluation_gate_v1",
+        "checks": [{
+            "name": "claims", "kind": "pytest",
+            "target": "tests/test_claims.py", "ok": True,
+            "status": "pass", "duration_ms": 10,
+            "output": "private test output",
+        }],
+    }
+    first = archive_report(report)
+    second = archive_report(report)
+    assert first["gate_id"] == second["gate_id"]
+    assert "private test output" not in json.dumps(first)
+    assert first["checks"][0]["name"] == "claims"
+    assert verify_archive([first])["ok"] is True
+
+
+def test_archive_rejects_content_key():
+    entry = archive_report({
+        "ok": True,
+        "summary": {"total": 1, "passed": 1, "failed": 0},
+        "method": "gate",
+        "checks": [{"name": "a", "kind": "pytest", "ok": True,
+                    "status": "pass", "duration_ms": 1}],
+    })
+    entry["output"] = "leak"
+    assert verify_archive([entry])["ok"] is False
+
+
+def test_archive_round_trip(tmp_path):
+    entry = archive_report({
+        "ok": False,
+        "summary": {"total": 1, "passed": 0, "failed": 1},
+        "method": "gate",
+        "checks": [{"name": "a", "kind": "pytest", "ok": False,
+                    "status": "fail", "duration_ms": 2}],
+    })
+    path = tmp_path / "gates.jsonl"
+    write_archive(path, [entry])
+    assert load_archive(path) == [entry]
+
+
+def test_cli_archive(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        evaluation.subprocess, "run",
+        lambda *a, **k: SimpleNamespace(returncode=0, stdout="ok", stderr=""))
+    path = tmp_path / "gates.jsonl"
+    output = io.StringIO()
+    with redirect_stdout(output):
+        code = evaluation.main([
+            "--check", "pytest:tests/test_claims.py",
+            "--archive", str(path), "--json"])
+    assert code == 0
+    assert load_archive(path)
+    assert "gate_id" in json.loads(output.getvalue())
 
 
 def test_cli_json(monkeypatch):

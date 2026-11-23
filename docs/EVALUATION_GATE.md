@@ -26,6 +26,19 @@ python -m atomzero.evaluation `
 There is no generic shell kind. The module never edits files, never applies a
 plan and never changes weights. A timeout is a failure, not a pass.
 
+## Archive
+
+`--archive PATH` appends a content-free gate entry (JSONL) with a deterministic
+`gate_id`, counts, method and per-check name/kind/status/duration. It never
+stores check output, commands, queries or source text. The archive is verified
+before an atomic rewrite and can be read with `load_archive`.
+
+```powershell
+python -m atomzero.evaluation `
+  --check pytest:tests/test_claims.py `
+  --archive data/gate_archive.jsonl --json
+```
+
 ## Report
 
 ```json

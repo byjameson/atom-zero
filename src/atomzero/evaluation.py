@@ -11,11 +11,14 @@ runs arbitrary shell commands, never edits files and never applies a plan.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import subprocess
 import sys
+import tempfile
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -141,6 +144,119 @@ def evaluate_gate(
     }
 
 
+FORBIDDEN_ARCHIVE_KEYS = frozenset({
+    "output", "text", "query", "answer", "chunk", "content", "note",
+    "session", "source",
+})
+
+
+def archive_report(report: dict, now=None) -> dict:
+    """Build a content-free archive entry from an evaluation report."""
+    if not isinstance(report, dict) or not isinstance(report.get("checks"), list):
+        raise ValueError("report.checks must be a list")
+    checks = []
+    for index, item in enumerate(report["checks"]):
+        if not isinstance(item, dict):
+            raise ValueError(f"report.checks[{index}] must be a mapping")
+        checks.append({
+            "name": str(item.get("name") or ""),
+            "kind": str(item.get("kind") or ""),
+            "status": str(item.get("status") or ""),
+            "ok": bool(item.get("ok")),
+            "duration_ms": int(item.get("duration_ms") or 0),
+        })
+    summary = report.get("summary") if isinstance(
+        report.get("summary"), dict) else {}
+    material = json.dumps({
+        "method": report.get("method", ""),
+        "checks": checks,
+        "summary": summary,
+    }, sort_keys=True, separators=(",", ":"))
+    gate_id = hashlib.sha256(material.encode("utf-8")).hexdigest()[:16]
+    moment = now or datetime.now(timezone.utc)
+    if isinstance(moment, datetime):
+        at = moment.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    else:
+        at = str(moment)
+    return {
+        "version": 1,
+        "at": at,
+        "gate_id": gate_id,
+        "ok": bool(report.get("ok")),
+        "total": int(summary.get("total", len(checks))),
+        "passed": int(summary.get("passed", 0)),
+        "failed": int(summary.get("failed", 0)),
+        "manual_required": int(summary.get("manual_required", 0)),
+        "method": str(report.get("method", ""))[:80],
+        "checks": checks,
+    }
+
+
+def verify_archive(entries) -> dict:
+    """Validate content-free gate archive entries."""
+    if not isinstance(entries, list):
+        return {"ok": False, "entries": 0, "errors": ["archive must be a list"]}
+    errors = []
+    for index, entry in enumerate(entries):
+        where = f"entry {index}"
+        if not isinstance(entry, dict):
+            errors.append(f"{where}: must be a mapping")
+            continue
+        forbidden = sorted(set(entry) & FORBIDDEN_ARCHIVE_KEYS)
+        if forbidden:
+            errors.append(
+                f"{where}: content key(s) not allowed: " + ", ".join(forbidden))
+        if entry.get("version") != 1:
+            errors.append(f"{where}: version must be 1")
+        if (not isinstance(entry.get("gate_id"), str)
+                or len(entry["gate_id"]) != 16):
+            errors.append(f"{where}: invalid gate_id")
+        if not isinstance(entry.get("checks"), list):
+            errors.append(f"{where}: checks must be a list")
+    return {"ok": not errors, "entries": len(entries), "errors": errors}
+
+
+def load_archive(path) -> list[dict]:
+    target = Path(path)
+    if not target.exists():
+        return []
+    entries = []
+    for number, line in enumerate(
+            target.read_text(encoding="utf-8-sig").splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"{target}:{number}: invalid JSON") from exc
+        if not isinstance(entry, dict):
+            raise ValueError(f"{target}:{number}: must be a JSON object")
+        entries.append(entry)
+    return entries
+
+
+def write_archive(path, entries) -> None:
+    report = verify_archive(entries)
+    if not report["ok"]:
+        raise ValueError(
+            "invalid gate archive: " + "; ".join(report["errors"]))
+    target = Path(path).expanduser()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    text = "".join(
+        json.dumps(item, ensure_ascii=False, sort_keys=True,
+                   separators=(",", ":")) + "\n"
+        for item in entries)
+    fd, tmp_name = tempfile.mkstemp(
+        prefix=f".{target.name}.", suffix=".tmp", dir=str(target.parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(text)
+        os.replace(tmp_name, target)
+    finally:
+        if os.path.exists(tmp_name):
+            os.unlink(tmp_name)
+
+
 def _render(report: dict) -> str:
     summary = report["summary"]
     lines = [
@@ -164,13 +280,21 @@ def main(argv=None) -> int:
         help="kind:target, repeatable (pytest:..., aisc:..., manual:...)")
     parser.add_argument("--aisc-path", default=os.environ.get("AISC_PATH", ""))
     parser.add_argument("--timeout", type=int, default=300)
+    parser.add_argument("--archive", type=Path, default=None,
+                        help="append a content-free gate entry to this JSONL")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
     try:
         checks = [parse_check(value) for value in args.check]
         report = evaluate_gate(
             checks, aisc_path=args.aisc_path, timeout=args.timeout)
-    except ValueError as exc:
+        if args.archive is not None:
+            entries = load_archive(args.archive)
+            entry = archive_report(report)
+            entries.append(entry)
+            write_archive(args.archive, entries)
+            report["gate_id"] = entry["gate_id"]
+    except (OSError, ValueError) as exc:
         print(f"input error: {exc}", file=sys.stderr)
         return 2
     if args.json:

@@ -2,6 +2,9 @@
 
 ## atomzero 0.9.0 - unreleased
 
+- Added a content-free **gate archive** (`atomzero-gate --archive`): gate id,
+  counts, method and per-check status/duration only; output, commands and
+  source text are rejected.
 - The weekly review and its Markdown export include the scoreboard's latest
   measured run and delta.
 - Added scoreboard HTTP routes: `POST /v1/scoreboard/record`,
