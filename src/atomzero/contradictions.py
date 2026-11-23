@@ -236,6 +236,14 @@ def _measures(text: str) -> set[str]:
     return _numbers_and_measures(text)[1]
 
 
+def _numbers_without_dates_and_codes(text: str) -> set[str]:
+    """Numbers that are not merely digits inside dates or code tokens."""
+    value = _without_dates(str(text or ""))
+    for code in sorted(_identifier_terms(value), key=len, reverse=True):
+        value = re.sub(re.escape(code), " ", value, flags=re.IGNORECASE)
+    return _numbers(value)
+
+
 def _measures_by_dimension(measures) -> dict[str, set[str]]:
     grouped: dict[str, set[str]] = {}
     for item in measures:
@@ -396,6 +404,17 @@ def _conflict_reasons(left: dict, right: dict,
     if left["negated"] != right["negated"] and (
             len(shared_terms) >= 2 or shared_entities):
         reasons.append("negation_mismatch")
+    if ("numeric_mismatch" in reasons
+            and ("date_mismatch" in reasons
+                 or "identifier_mismatch" in reasons)):
+        left_text = str(left.get("text", "") or "")
+        right_text = str(right.get("text", "") or "")
+        if left_text and right_text:
+            left_numbers = _numbers_without_dates_and_codes(left_text)
+            right_numbers = _numbers_without_dates_and_codes(right_text)
+            if not (left_numbers - right_numbers
+                    and right_numbers - left_numbers):
+                reasons.remove("numeric_mismatch")
     return reasons
 
 
