@@ -30,23 +30,23 @@ Small subset (20 contexts, 100 questions: 50 answerable, 50 no-answer):
 
 | mode | top-1 context | top-5 context | top-1 answer in chunk | top-1 answer in snippet | MRR |
 |---|---:|---:|---:|---:|---:|
-| FTS | **0.98** | 1.00 | 0.96 | 0.84 | **0.990** |
-| hybrid | 0.96 | 1.00 | 0.96 | 0.84 | 0.978 |
+| FTS | **0.98** | 1.00 | 0.96 | 0.90 | **0.990** |
+| hybrid | 0.96 | 1.00 | 0.96 | 0.90 | 0.978 |
 
 Larger subset (50 contexts, 200 questions: 103 answerable, 97 no-answer):
 
 | mode | top-1 context | top-5 context | top-1 answer in chunk | top-1 answer in snippet | MRR |
 |---|---:|---:|---:|---:|---:|
-| FTS | 0.960 | 1.000 | 0.922 | 0.825 | 0.974 |
-| hybrid | **0.975** | 1.000 | **0.961** | **0.864** | **0.984** |
+| FTS | 0.960 | 1.000 | 0.922 | 0.845 | 0.974 |
+| hybrid | **0.975** | 1.000 | **0.961** | **0.884** | **0.984** |
 
 This is **retrieval**, not generation. SQuAD questions share vocabulary with
 their contexts, so the result is a public sanity check, not a hard semantic
-benchmark. Snippets include a local neighbourhood (up to one preceding and
-three following sentences, capped at 500 characters), which recovers answers
-that span sentence boundaries. The hybrid path wins on the larger subset but
-ties or loses on the smaller one; the difference is within the noise of a
-100-question sample.
+benchmark. Snippets score every contiguous window of up to four sentences and
+keep the best query coverage plus a small length bonus, capped at 500
+characters; this recovers answers that span sentence boundaries. The hybrid
+path wins on the larger subset but ties or loses on the smaller one; the
+difference is within the noise of a 100-question sample.
 
 ### Confidence is not answerability
 

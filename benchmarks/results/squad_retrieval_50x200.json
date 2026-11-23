@@ -17,8 +17,8 @@
       "top5_context": 1.0,
       "top1_answer": 0.9223300970873787,
       "top5_answer": 1.0,
-      "top1_answer_snippet": 0.8252427184466019,
-      "top5_answer_snippet": 0.8932038834951457,
+      "top1_answer_snippet": 0.8446601941747572,
+      "top5_answer_snippet": 0.912621359223301,
       "mrr": 0.9736666666666666
     },
     "hybrid": {
@@ -29,8 +29,8 @@
       "top5_context": 1.0,
       "top1_answer": 0.9611650485436893,
       "top5_answer": 1.0,
-      "top1_answer_snippet": 0.8640776699029126,
-      "top5_answer_snippet": 0.8932038834951457,
+      "top1_answer_snippet": 0.883495145631068,
+      "top5_answer_snippet": 0.912621359223301,
       "mrr": 0.9841666666666667,
       "mean_confidence_answerable": 0.5853495145631067,
       "mean_confidence_no_answer": 0.5833917525773197,

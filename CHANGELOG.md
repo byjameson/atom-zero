@@ -2,10 +2,10 @@
 
 ## atomzero 0.6.0 - weekly review and task workflow (2026-11-23)
 
-- Answer snippets now include a local sentence neighbourhood (one preceding,
-  up to three following, capped at 500 chars). Public SQuAD v2 visible-snippet
-  accuracy improved from 0.816 to 0.864 (hybrid) and 0.777 to 0.825 (FTS) on
-  50 contexts / 200 questions.
+- Answer snippets now score every contiguous window of up to four sentences
+  and keep the best query coverage plus a small length bonus (capped at 500
+  chars). Public SQuAD v2 visible-snippet accuracy improved from 0.816 to 0.884
+  (hybrid) and 0.777 to 0.845 (FTS) on 50 contexts / 200 questions.
 - Added multi-hop **graph paths**: `atomzero-docs path`, `GET /v1/graph/path`,
   chat “how is X connected to Y?” and UI Find path.
 - Added `benchmarks/graph_path_regression.py` (6/6 checks).

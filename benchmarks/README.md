@@ -258,12 +258,14 @@ Larger subset (50 contexts, 200 questions: 103 answerable, 97 no-answer):
 
 | mode | top-1 context | top-5 context | top-1 answer in chunk | top-1 answer in snippet | MRR |
 |---|---:|---:|---:|---:|---:|
-| FTS | 0.960 | 1.000 | 0.922 | 0.777 | 0.974 |
-| hybrid | **0.975** | 1.000 | **0.961** | **0.816** | **0.984** |
+| FTS | 0.960 | 1.000 | 0.922 | 0.845 | 0.974 |
+| hybrid | **0.975** | 1.000 | **0.961** | **0.884** | **0.984** |
 
 The hybrid path wins on the larger subset but ties or loses on the smaller one.
 SQuAD questions share vocabulary with their source paragraphs, so this is a
-public retrieval sanity check, not a hard semantic benchmark. Raw result:
+public retrieval sanity check, not a hard semantic benchmark. Snippets score
+contiguous sentence windows (up to four sentences, capped at 500 characters)
+instead of always expanding around one local maximum. Raw result:
 [`results/squad_retrieval_50x200.json`](results/squad_retrieval_50x200.json).
 
 The heuristic confidence score is **not** an answerability classifier. On the

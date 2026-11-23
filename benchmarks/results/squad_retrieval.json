@@ -17,8 +17,8 @@
       "top5_context": 1.0,
       "top1_answer": 0.96,
       "top5_answer": 1.0,
-      "top1_answer_snippet": 0.84,
-      "top5_answer_snippet": 0.88,
+      "top1_answer_snippet": 0.9,
+      "top5_answer_snippet": 0.94,
       "mrr": 0.99
     },
     "hybrid": {
@@ -29,8 +29,8 @@
       "top5_context": 1.0,
       "top1_answer": 0.96,
       "top5_answer": 1.0,
-      "top1_answer_snippet": 0.84,
-      "top5_answer_snippet": 0.88,
+      "top1_answer_snippet": 0.9,
+      "top5_answer_snippet": 0.94,
       "mrr": 0.9783333333333333,
       "mean_confidence_answerable": 0.57308,
       "mean_confidence_no_answer": 0.5975200000000002,

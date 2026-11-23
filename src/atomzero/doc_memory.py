@@ -276,14 +276,15 @@ def rerank_hits(query: str, hits: list[dict], k: int = 5) -> list[dict]:
 
 
 def best_snippet(query: str, chunk: str, max_chars: int = 500) -> str:
-    """Select the sentence that best answers the query, plus local context.
+    """Select the best contiguous window of sentences for the query.
 
-    Number/date questions get a small bonus for sentences containing digits,
-    and a sentence that opens with a pronoun pulls in the previous sentence for
-    context. The chosen sentence is expanded with up to three following
-    sentences and one preceding sentence while staying inside ``max_chars``.
-    This keeps evidence readable while recovering answers that spill into a
-    neighbouring sentence or rely on a preceding antecedent.
+    Every window of up to four neighbouring sentences is scored by how much of
+    the query it covers, with a small length bonus so the answer keeps useful
+    context. Number/date questions prefer windows containing digits or units,
+    and exact identifier queries prefer windows containing the code. Ties keep
+    the earliest window and then the longer one. This is a bounded global
+    search: it can pick a later sentence that the query words match better
+    instead of always expanding around the first local maximum.
     """
     text = str(chunk or "").strip()
     if not text:
@@ -299,37 +300,32 @@ def best_snippet(query: str, chunk: str, max_chars: int = 500) -> str:
         r"\b(how many|how much|how long|how old|how far|when|what year|"
         r"what date|what time|price|cost|population|number|percentage)\b",
         low_query))
-    scores = []
-    for part in parts:
-        score = _term_coverage(terms, part)
-        if re.search(r"\d", part):
-            score += 0.30 if wants_number else 0.10
-            if re.search(
-                    r"\d+\.\d+|\d+\s*(?:days?|months?|years?|hours?|"
-                    r"minutes?|seconds?|million|billion|kg|km|percent|%)",
-                    part, re.IGNORECASE):
-                score += 0.08
-        if codes:
-            matches = sum(1 for code in codes if code in part.lower())
-            if matches:
-                score += 0.25 * (matches / len(codes))
-        scores.append(score)
-    best = max(range(len(parts)), key=lambda i: (scores[i], -i))
-    snippet = parts[best]
-    end = best
-    while end + 1 < len(parts) and end - best < 3:
-        candidate = snippet + " " + parts[end + 1]
-        if len(candidate) > max_chars:
-            break
-        snippet = candidate
-        end += 1
-    if best > 0:
-        candidate = parts[best - 1] + " " + snippet
-        if len(candidate) <= max_chars:
-            snippet = candidate
-    if len(snippet) > max_chars:
-        snippet = parts[best]
-    return snippet[:max_chars]
+    best = ""
+    best_key = None
+    for start in range(len(parts)):
+        for end in range(start, min(len(parts), start + 4)):
+            window = " ".join(parts[start:end + 1])
+            if len(window) > max_chars:
+                break
+            score = (_term_coverage(terms, window)
+                     + 0.05 * (len(window) / max_chars))
+            if re.search(r"\d", window):
+                score += 0.30 if wants_number else 0.10
+                if re.search(
+                        r"\d+\.\d+|\d+\s*(?:days?|months?|years?|hours?|"
+                        r"minutes?|seconds?|million|billion|kg|km|percent|%)",
+                        window, re.IGNORECASE):
+                    score += 0.08
+            if codes:
+                matches = sum(1 for code in codes
+                              if code in window.lower())
+                if matches:
+                    score += 0.25 * (matches / len(codes))
+            key = (score, -start, end - start)
+            if best_key is None or key > best_key:
+                best_key = key
+                best = window
+    return best[:max_chars] if best else text[:max_chars]
 
 
 def diverse_hits(hits: list[dict], limit: int = 3,

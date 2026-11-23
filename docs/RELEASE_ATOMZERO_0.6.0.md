@@ -10,10 +10,11 @@ after `0.5.0`.
 
 ## Retrieval quality
 
-- Answer snippets now include a local sentence neighbourhood (one preceding,
-  up to three following, capped at 500 characters). On the public SQuAD v2
-  retrieval check (50 contexts / 200 questions), top-1 answer-in-snippet
-  improved from 0.816 to 0.864 for hybrid and 0.777 to 0.825 for FTS.
+- Answer snippets now score every contiguous window of up to four sentences
+  and keep the best query coverage plus a small length bonus (capped at 500
+  characters). On the public SQuAD v2 retrieval check (50 contexts / 200
+  questions), top-1 answer-in-snippet improved from 0.816 to 0.884 for hybrid
+  and 0.777 to 0.845 for FTS.
 
 ## Weekly review and report archive
 
