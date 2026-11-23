@@ -38,6 +38,14 @@ DOCS = {
     "tren.txt": "Tren açıldı mı? Tren istasyonu açıldı.",
     "kitap2.txt": "Kitabı raflarda. Kitabın sayfaları yıpranmış.",
     "defter.txt": "Defter raflarda. Defterin sayfaları yıpranmış.",
+    "sehir2.txt": "Şehrin merkezi kalabalık. Trafik var.",
+    "kasaba.txt": "Kasabanın merkezi kalabalık. Trafik var.",
+    "burun.txt": "Burnu kanıyor. Kanaması sürüyor.",
+    "kol.txt": "Kolu kanıyor. Kol ağrısı sürüyor.",
+    "agiz.txt": "Ağzı açık kaldı. Sağlığı önemli.",
+    "goz.txt": "Gözü açık kaldı. Göz sağlığı önemli.",
+    "isim.txt": "İsmi kayıtlı. Listesi güncel.",
+    "numara.txt": "Numarası kayıtlı. Numara listesi güncel.",
 }
 QUERIES = (
     ("Kitap kapağı ne renk?", "kitap.txt"),
@@ -52,6 +60,14 @@ QUERIES = (
     ("Ağaç gövdesi kalın mı?", "agac.txt"),
     ("Sokak trafiğe kapalı mı?", "sokak.txt"),
     ("Su seviyesi tehlike sınırında mı?", "su.txt"),
+    ("Şehir merkezi kalabalık mı?", "sehir2.txt"),
+    ("Burun kanıyor mu?", "burun.txt"),
+    ("Ağız açık mı?", "agiz.txt"),
+    ("İsim kayıtlı mı?", "isim.txt"),
+    ("Şehir?", "sehir2.txt"),
+    ("Burun?", "burun.txt"),
+    ("Ağız?", "agiz.txt"),
+    ("İsim?", "isim.txt"),
 )
 
 

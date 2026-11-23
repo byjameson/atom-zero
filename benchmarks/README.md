@@ -289,11 +289,13 @@ attribute words so the entity term decides the ranking.
 python benchmarks/turkish_retrieval.py
 ```
 
-| mode | before morphology | after morphology |
+| mode | before vowel drop | after |
 |---|---:|---:|
-| FTS | 0.583 | **0.833** |
-| hybrid | 0.833 | **1.000** |
+| FTS | 0.700 | **0.950** |
+| hybrid | 0.800 | **1.000** |
 
-12 queries over 18 documents. The "before" column was measured with the
-pre-morphology code on the same queries. Raw result:
+20 queries over 26 documents. The "before" column is the same query set
+run with the prior suffix/consonant-mutation morphology (no vowel drop).
+The recall probes (`Şehir?`, `Burun?`, `Ağız?`, `İsim?`) exercise
+vowel-drop forms such as `şehir` / `şehrin` and `burun` / `burnu`. Raw result:
 [`results/turkish_retrieval.json`](results/turkish_retrieval.json).

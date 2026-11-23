@@ -1,14 +1,14 @@
 {
   "benchmark": "atomzero-turkish-retrieval",
-  "generated": "2026-11-23T05:43:56",
-  "documents": 18,
+  "generated": "2026-11-23T05:50:13",
+  "documents": 26,
   "results": {
     "fts": {
-      "queries": 12,
-      "top1": 0.8333333333333334
+      "queries": 20,
+      "top1": 0.95
     },
     "hybrid": {
-      "queries": 12,
+      "queries": 20,
       "top1": 1.0
     }
   },
@@ -73,8 +73,8 @@
       "mode": "fts",
       "query": "Kitap raflarda m\u0131?",
       "gold": "kitap2.txt",
-      "top1": "kitap.txt",
-      "ok": false
+      "top1": "kitap2.txt",
+      "ok": true
     },
     {
       "mode": "fts",
@@ -95,6 +95,62 @@
       "query": "Su seviyesi tehlike s\u0131n\u0131r\u0131nda m\u0131?",
       "gold": "su.txt",
       "top1": "su.txt",
+      "ok": true
+    },
+    {
+      "mode": "fts",
+      "query": "\u015eehir merkezi kalabal\u0131k m\u0131?",
+      "gold": "sehir2.txt",
+      "top1": "sehir2.txt",
+      "ok": true
+    },
+    {
+      "mode": "fts",
+      "query": "Burun kan\u0131yor mu?",
+      "gold": "burun.txt",
+      "top1": "burun.txt",
+      "ok": true
+    },
+    {
+      "mode": "fts",
+      "query": "A\u011f\u0131z a\u00e7\u0131k m\u0131?",
+      "gold": "agiz.txt",
+      "top1": "agiz.txt",
+      "ok": true
+    },
+    {
+      "mode": "fts",
+      "query": "\u0130sim kay\u0131tl\u0131 m\u0131?",
+      "gold": "isim.txt",
+      "top1": "isim.txt",
+      "ok": true
+    },
+    {
+      "mode": "fts",
+      "query": "\u015eehir?",
+      "gold": "sehir2.txt",
+      "top1": "sehir2.txt",
+      "ok": true
+    },
+    {
+      "mode": "fts",
+      "query": "Burun?",
+      "gold": "burun.txt",
+      "top1": "burun.txt",
+      "ok": true
+    },
+    {
+      "mode": "fts",
+      "query": "A\u011f\u0131z?",
+      "gold": "agiz.txt",
+      "top1": "agiz.txt",
+      "ok": true
+    },
+    {
+      "mode": "fts",
+      "query": "\u0130sim?",
+      "gold": "isim.txt",
+      "top1": "isim.txt",
       "ok": true
     },
     {
@@ -179,6 +235,62 @@
       "query": "Su seviyesi tehlike s\u0131n\u0131r\u0131nda m\u0131?",
       "gold": "su.txt",
       "top1": "su.txt",
+      "ok": true
+    },
+    {
+      "mode": "hybrid",
+      "query": "\u015eehir merkezi kalabal\u0131k m\u0131?",
+      "gold": "sehir2.txt",
+      "top1": "sehir2.txt",
+      "ok": true
+    },
+    {
+      "mode": "hybrid",
+      "query": "Burun kan\u0131yor mu?",
+      "gold": "burun.txt",
+      "top1": "burun.txt",
+      "ok": true
+    },
+    {
+      "mode": "hybrid",
+      "query": "A\u011f\u0131z a\u00e7\u0131k m\u0131?",
+      "gold": "agiz.txt",
+      "top1": "agiz.txt",
+      "ok": true
+    },
+    {
+      "mode": "hybrid",
+      "query": "\u0130sim kay\u0131tl\u0131 m\u0131?",
+      "gold": "isim.txt",
+      "top1": "isim.txt",
+      "ok": true
+    },
+    {
+      "mode": "hybrid",
+      "query": "\u015eehir?",
+      "gold": "sehir2.txt",
+      "top1": "sehir2.txt",
+      "ok": true
+    },
+    {
+      "mode": "hybrid",
+      "query": "Burun?",
+      "gold": "burun.txt",
+      "top1": "burun.txt",
+      "ok": true
+    },
+    {
+      "mode": "hybrid",
+      "query": "A\u011f\u0131z?",
+      "gold": "agiz.txt",
+      "top1": "agiz.txt",
+      "ok": true
+    },
+    {
+      "mode": "hybrid",
+      "query": "\u0130sim?",
+      "gold": "isim.txt",
+      "top1": "isim.txt",
       "ok": true
     }
   ]

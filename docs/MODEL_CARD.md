@@ -47,7 +47,7 @@ benchmarks and release — is
 | document benchmark | 100 authored questions: 80/80 answerable, 20/20 no-answer |
 | public retrieval benchmark | SQuAD v2: 0.975 top-1, 1.000 top-5 (50 contexts, hybrid) |
 | visible-snippet answer | SQuAD v2: 0.884 top-1 answer in snippet (50 contexts, hybrid; windowed context) |
-| Turkish retrieval | 12 authored queries: hybrid 1.000 top-1, FTS 0.833 (before 0.833 / 0.583) |
+| Turkish retrieval | 20 authored queries: hybrid 1.000 top-1, FTS 0.950 (before vowel drop 0.800 / 0.700) |
 
 ## Model
 

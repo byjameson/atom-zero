@@ -80,13 +80,15 @@ python benchmarks/squad_retrieval.py `
 base form while target documents use inflected forms (`kitap` / `kitabın`,
 `ağaç` / `ağacın`, `ev` / `evler`), and distractors share the attribute words.
 
-| mode | before | after |
+| mode | before vowel drop | after |
 |---|---:|---:|
-| FTS | 0.583 | **0.833** |
-| hybrid | 0.833 | **1.000** |
+| FTS | 0.700 | **0.950** |
+| hybrid | 0.800 | **1.000** |
 
-12 queries / 18 documents. The before column was measured with the
-pre-morphology code. Raw result:
+20 queries / 26 documents. The before column is the same query set run with
+the prior suffix/consonant-mutation morphology (no vowel drop); recall probes
+(`Şehir?`, `Burun?`, `Ağız?`, `İsim?`) exercise `şehir` / `şehrin` and
+`burun` / `burnu`. Raw result:
 [`results/turkish_retrieval.json`](results/turkish_retrieval.json).
 
 ## Source-comparison regression

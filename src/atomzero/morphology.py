@@ -45,7 +45,34 @@ _FINAL_MUTATION = str.maketrans({
     "b": "p", "c": "ç", "d": "t", "g": "k", "ğ": "k"})
 _FINAL_ALTERNATIVES = {
     "p": ("b",), "ç": ("c",), "t": ("d",), "k": ("g", "ğ")}
+# Common Turkish nouns that drop their final stem vowel before a vowel-initial
+# suffix (şehir -> şehri, burun -> burnu). This is a curated list on purpose:
+# applying vowel drop to every CVC word would turn kitap into "kitp".
+VOWEL_DROP = {
+    "şehir": "şehr", "burun": "burn", "ağız": "ağz", "oğul": "oğl",
+    "isim": "ism", "resim": "resm", "gönül": "gönl", "karın": "karn",
+    "boyun": "boyn", "asıl": "asl", "akıl": "akl", "fikir": "fikr",
+    "ömür": "ömr", "sabır": "sabr", "nehir": "nehr", "zehir": "zehr",
+    "şekil": "şekl", "kayıt": "kayd", "vakit": "vakt", "metin": "metn",
+    "kavim": "kavm",
+}
+_DROPPED_STEMS = frozenset(VOWEL_DROP.values())
+_SINGLE_VOWELS = frozenset("aeıiuü")
 _WORD_RE = re.compile(r"[^\W_]+", re.UNICODE)
+
+
+def turkish_lower(text: str) -> str:
+    """Lowercase Turkish text without splitting the capital dotted İ."""
+    return str(text or "").replace("İ", "i").replace("I", "i").lower()
+
+
+def _is_suffix_tail(tail: str) -> bool:
+    if not tail:
+        return True
+    if tail in _SINGLE_VOWELS:
+        return True
+    return any(tail == suffix or tail.startswith(suffix)
+               or suffix.startswith(tail) for suffix in _SUFFIXES)
 
 
 def looks_turkish(text: str) -> bool:
@@ -53,15 +80,23 @@ def looks_turkish(text: str) -> bool:
     value = str(text or "")
     if any(char in TURKISH_CHARS for char in value):
         return True
-    return any(word in TURKISH_HINTS
-               for word in _WORD_RE.findall(value.lower()))
+    return any(word in TURKISH_HINTS or word in VOWEL_DROP
+               for word in _WORD_RE.findall(turkish_lower(value)))
 
 
 def skeleton(word: str) -> str:
     """Reduce a Turkish word to a conservative matching skeleton."""
-    value = str(word or "").strip().lower().replace("i̇", "i")
+    value = turkish_lower(word).strip().replace("i̇", "i")
     if not value:
         return ""
+    for full, dropped in VOWEL_DROP.items():
+        if value == full:
+            value = dropped
+            break
+        if value.startswith(dropped) and _is_suffix_tail(
+                value[len(dropped):]):
+            value = dropped
+            break
     for _ in range(2):
         for suffix in _SUFFIXES:
             if not value.endswith(suffix):
@@ -74,14 +109,16 @@ def skeleton(word: str) -> str:
             break
         else:
             break
-    if value:
+    if value in VOWEL_DROP:
+        value = VOWEL_DROP[value]
+    if value and value not in _DROPPED_STEMS:
         value = value[:-1] + value[-1].translate(_FINAL_MUTATION)
     return value
 
 
 def variants(word: str) -> list[str]:
     """Return exact and prefix-friendly forms for an FTS OR query."""
-    original = str(word or "").strip().lower()
+    original = turkish_lower(word).strip()
     root = skeleton(original)
     stems = {original, root}
     if root:

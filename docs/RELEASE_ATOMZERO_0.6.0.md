@@ -16,9 +16,9 @@ after `0.5.0`.
   questions), top-1 answer-in-snippet improved from 0.816 to 0.884 for hybrid
   and 0.777 to 0.845 for FTS.
 - Added Turkish morphology-aware retrieval: light suffix/consonant-mutation
-  skeletons and FTS prefix variants (`kitap` / `kitabın`, `ağaç` / `ağacın`,
-  `ev` / `evler`). An authored 12-query check improved hybrid top-1 from 0.833
-  to 1.000 and FTS from 0.583 to 0.833; English SQuAD results are unchanged.
+  skeletons, vowel-drop stems (`şehir` / `şehrin`, `burun` / `burnu`) and FTS
+  prefix variants. An authored 20-query check improved hybrid top-1 from 0.800
+  to 1.000 and FTS from 0.700 to 0.950; English SQuAD results are unchanged.
 
 ## Weekly review and report archive
 

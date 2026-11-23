@@ -48,10 +48,14 @@ def test_turkish_morphology_retrieves_inflected_forms(tmp_path):
     mem.add_text("bina.txt", "Eski bina. Binaların çatısı onarıldı.")
     mem.add_text("sehir.txt", "Şehirde yeni yollar açıldı.")
     mem.add_text("tren.txt", "Tren açıldı mı? Tren istasyonu açıldı.")
+    mem.add_text("burun.txt", "Burnu kanıyor. Kanaması sürüyor.")
+    mem.add_text("kol.txt", "Kolu kanıyor. Kol ağrısı sürüyor.")
     hits = mem.search("Ev eski mi?", k=1)
     assert hits and hits[0]["source"] == "ev.txt"
     hits = mem.search("Yol açıldı mı?", k=1)
     assert hits and hits[0]["source"] == "sehir.txt"
+    hits = mem.search("Burun?", k=1)
+    assert hits and hits[0]["source"] == "burun.txt"
     mem.close()
 
 

@@ -22,7 +22,7 @@ from collections import Counter
 from pathlib import Path
 
 from atomzero.morphology import (
-    TURKISH_STOPWORDS, looks_turkish, skeleton, variants)
+    TURKISH_STOPWORDS, looks_turkish, skeleton, turkish_lower, variants)
 
 try:
     import numpy as np
@@ -117,7 +117,7 @@ def _identifier_terms(text: str) -> set[str]:
 
 def _query_terms(text: str) -> set[str]:
     value = str(text or "")
-    words = re.findall(r"[^\W_]+", value.lower(), re.UNICODE)
+    words = re.findall(r"[^\W_]+", turkish_lower(value), re.UNICODE)
     if looks_turkish(value):
         terms = {word for word in words
                  if len(word) > 1 and word not in TURKISH_STOPWORDS}
@@ -1480,7 +1480,7 @@ class DocMemory:
             if any(ord(ch) < 32 for ch in value):
                 raise ValueError(f"{label} contains control characters")
         words = re.findall(r"[\wçğıöşüÇĞİÖŞÜ]+", query)
-        words = [w for w in words if len(w) > 1]
+        words = [turkish_lower(w) for w in words if len(w) > 1]
         turkish = looks_turkish(query)
         if turkish:
             filtered = [w for w in words
