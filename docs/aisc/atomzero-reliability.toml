@@ -1,0 +1,42 @@
+name = "AtomZeroSourceReliability"
+version = "0.1.0"
+description = "Content-free source reliability ledger built from claim-audit counts, with deterministic scoring and verification."
+min_assurance = 0.90
+max_context_tokens = 2048
+
+[[components]]
+name = "ObservationNormalizer"
+input_type = "SourceObservation"
+output_type = "NormalizedObservation"
+kind = "evaluator"
+assurance = 0.97
+verified = true
+evidence = "tests/test_reliability.py stable source hashing, empty-source rejection and count validation"
+assumptions = ["source labels are trimmed before hashing", "claim counts come from an upstream local audit"]
+guarantees = ["only a 16-hex source hash is retained", "no source text, query, answer, chunk or session is stored", "claims equal supported + weak + unsupported"]
+context_tokens = 128
+
+[[components]]
+name = "LedgerWriter"
+input_type = "NormalizedObservation"
+output_type = "ReliabilityLedger"
+kind = "tool"
+reversible = true
+assurance = 0.98
+verified = true
+evidence = "tests/test_reliability.py append, JSONL round-trip and atomic-write cases"
+assumptions = ["the local ledger file is writable"]
+guarantees = ["one content-free entry is appended per observation", "the JSONL file is replaced atomically", "verification rejects forbidden content keys"]
+context_tokens = 128
+
+[[components]]
+name = "ReliabilitySummarizer"
+input_type = "ReliabilityLedger"
+output_type = "ReliabilitySummary"
+kind = "evaluator"
+assurance = 0.96
+verified = true
+evidence = "tests/test_reliability.py threshold, weak-weighting, min_observations and deterministic-summary cases"
+assumptions = ["upstream claim audits are consistent across observations", "the ratio describes audit outcomes, not source truth"]
+guarantees = ["support_ratio is deterministic and rounded to four decimals", "reliable is at least 0.75, mixed is at least 0.40, otherwise weak", "sources are sorted by source_id"]
+context_tokens = 256
