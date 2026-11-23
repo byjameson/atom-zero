@@ -209,6 +209,39 @@ def check_provider(url: str) -> Check:
         )
 
 
+def check_aisc(aisc_path: str = "", strict: bool = True,
+               require_calibration: bool = True) -> Check:
+    """Run the optional AISC architecture audit without making it a dependency."""
+    if not aisc_path:
+        return Check(
+            "aisc",
+            "warn",
+            "not configured",
+            "optional: `atomzero-doctor --aisc --aisc-path <checkout>`",
+        )
+    try:
+        from atomzero.audit import discover_specs, run_audit
+        results = run_audit(
+            [str(path) for path in discover_specs()], aisc_path,
+            strict=strict, require_calibration=require_calibration)
+    except Exception as exc:
+        return Check(
+            "aisc",
+            "warn",
+            f"unavailable: {exc}",
+            "optional: install AISC or pass a valid --aisc-path",
+        )
+    critical = sum(int(item.get("critical_count", 0)) for item in results)
+    warnings = sum(int(item.get("warning_count", 0)) for item in results)
+    failed = [item for item in results if not item.get("ok")]
+    status = "ok" if not failed else ("fail" if critical or strict else "warn")
+    detail = (f"specs={len(results)} critical={critical} "
+              f"warnings={warnings} failed={len(failed)}")
+    return Check(
+        "aisc", status, detail,
+        "" if not failed else "run `atomzero-audit --strict` for details")
+
+
 def check_disk(path: Path) -> Check:
     path = Path(path).expanduser()
     try:
@@ -229,6 +262,11 @@ def run_checks(args) -> list[Check]:
     checks.append(check_writable(Path(args.sessions) / "session.json", "sessions"))
     checks.append(check_port(args.host, args.port))
     checks.append(check_provider(args.provider_url if args.provider else ""))
+    if getattr(args, "aisc", False) or getattr(args, "aisc_path", ""):
+        checks.append(check_aisc(
+            args.aisc_path or os.environ.get("AISC_PATH", ""),
+            strict=getattr(args, "aisc_strict", True),
+            require_calibration=True))
     checks.append(check_disk(Path(args.cache).expanduser().parent))
     return checks
 
@@ -256,6 +294,13 @@ def main(argv=None) -> int:
     parser.add_argument("--provider", action="store_true",
                         help="check the optional Ollama provider")
     parser.add_argument("--provider-url", default="http://127.0.0.1:11434/v1")
+    parser.add_argument("--aisc", action="store_true",
+                        help="run the optional AISC architecture audit")
+    parser.add_argument("--aisc-path", default="",
+                        help="AISC checkout (or set AISC_PATH)")
+    parser.add_argument("--aisc-strict", action=argparse.BooleanOptionalAction,
+                        default=True,
+                        help="treat AISC warnings as failures")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 

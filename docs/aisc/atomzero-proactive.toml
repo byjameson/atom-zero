@@ -1,0 +1,66 @@
+name = "AtomZeroProactive"
+version = "0.6.0"
+description = "Local, consent-gated, rate-limited AI-initiated conversation from tasks, gaps and local state."
+min_assurance = 0.90
+max_context_tokens = 8192
+
+[[components]]
+name = "SignalCollector"
+input_type = "LocalState"
+output_type = "Signals"
+kind = "tool"
+assurance = 0.95
+verified = true
+evidence = "tests/test_proactive.py task, gap, due-date and malformed-state cases"
+assumptions = ["local session state is readable"]
+guarantees = ["only local task, gap and source signals are used"]
+context_tokens = 1024
+
+[[components]]
+name = "ConsentGate"
+input_type = "Signals"
+output_type = "ApprovedSignals"
+kind = "human"
+assurance = 0.99
+verified = true
+evidence = "proactive enabled/disabled and config tests"
+assumptions = ["the user explicitly enables proactive conversation"]
+guarantees = ["no proactive message is sent while consent is off"]
+context_tokens = 32
+
+[[components]]
+name = "ProactivePolicy"
+input_type = "ApprovedSignals"
+output_type = "ProactiveCandidate"
+kind = "evaluator"
+assurance = 0.96
+verified = true
+evidence = "cooldown, quiet-hours, daily-limit and duplicate-reason tests"
+assumptions = ["the local clock is available"]
+guarantees = ["rate limits and quiet hours are enforced", "repeated reasons are suppressed"]
+context_tokens = 256
+
+[[components]]
+name = "MessageComposer"
+input_type = "ProactiveCandidate"
+output_type = "ProactiveMessage"
+kind = "evaluator"
+assurance = 0.95
+verified = true
+evidence = "message length, action and candidate tests"
+assumptions = ["the message is composed from local state"]
+guarantees = ["message is bounded and carries local actions"]
+context_tokens = 512
+
+[[components]]
+name = "UserChannel"
+input_type = "ProactiveMessage"
+output_type = "DeliveredMessage"
+kind = "tool"
+reversible = true
+assurance = 0.99
+verified = true
+evidence = "HTTP proactive endpoint and UI toggle tests"
+assumptions = ["the local UI is open and polling"]
+guarantees = ["delivery happens only in the local UI"]
+context_tokens = 64

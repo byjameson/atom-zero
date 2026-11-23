@@ -12,6 +12,11 @@ Atom Zero ships four optional AISC architecture specs:
   execution.
 - [`docs/aisc/atomzero-context-budget.toml`](aisc/atomzero-context-budget.toml):
   deterministic retrieval-context planning and bounded evidence.
+- [`docs/aisc/atomzero-proactive.toml`](aisc/atomzero-proactive.toml):
+  consent-gated, rate-limited local proactive conversation.
+- [`docs/aisc/atomzero-memory-lifecycle.toml`](aisc/atomzero-memory-lifecycle.toml):
+  scoped memory deletion with explicit confirmation before an irreversible
+  store mutation.
 - [`docs/aisc/atomzero-answerability.toml`](aisc/atomzero-answerability.toml):
   the measured answerability/refusal-policy experiment. It is intentionally
   retained with its failing metrics.
@@ -26,7 +31,12 @@ $env:AISC_PATH = "C:\path\to\ai-systems-algebra"
 atomzero-audit
 atomzero-audit --strict --require-calibration
 atomzero-audit --json
+atomzero-doctor --aisc --aisc-path "$env:AISC_PATH"
 ```
+
+`atomzero-doctor --aisc` folds the optional audit into the normal preflight. A
+missing AISC checkout is a warning, not a hard install failure; a strict
+warning is reported as `fail` when the audit is requested.
 
 `--strict` treats AISC warnings as failures, matching
 `python -m aisc check ... --strict`. `--require-calibration` asks AISC for the
@@ -44,6 +54,10 @@ AtomZeroTaskActions      assurance 0.96, verification debt 0, 1 irreversible
 AtomZeroToolPlan         assurance 0.98, verification debt 0, 1 irreversible
                          (HumanConfirmation precedes ToolExecutor)
 AtomZeroContextBudget    assurance 0.95, verification debt 0, no irreversible
+AtomZeroProactive        assurance 0.95, verification debt 0, no irreversible
+                         (ConsentGate precedes UserChannel)
+AtomZeroMemoryLifecycle  assurance 0.98, verification debt 0, 1 irreversible
+                         (HumanConfirmation precedes MemoryStore)
 ```
 
 `--strict --require-calibration` is **not green**:
@@ -53,6 +67,8 @@ AtomZeroReadPipeline:    FAIL, CALIBRATION_MISSING on 4 components
 AtomZeroTaskActions:     FAIL, CALIBRATION_MISSING on 4 components
 AtomZeroToolPlan:        FAIL, CALIBRATION_MISSING on 3 components
 AtomZeroContextBudget:   FAIL, CALIBRATION_MISSING on 3 components
+AtomZeroProactive:       FAIL, CALIBRATION_MISSING on 5 components
+AtomZeroMemoryLifecycle: FAIL, CALIBRATION_MISSING on 4 components
 AtomZeroAnswerability:   FAIL, ANSWERABILITY_POOR + REFUSAL_POLICY_MISMATCH
 ```
 

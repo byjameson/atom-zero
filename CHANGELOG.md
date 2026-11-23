@@ -70,6 +70,18 @@
   `grounded_answer(max_context_chars=...)` and
   `atomzero-docs answer --max-context-chars` bound retrieved evidence and
   report dropped hits (`atomzero.context_budget`).
+- Added **proactive conversation**: an opt-in local scheduler that starts a
+  short, useful chat from overdue/due tasks, knowledge gaps or recent sources,
+  with cooldowns, quiet hours, a daily cap and a UI toggle
+  (`src/atomzero/proactive.py`, `POST /v1/proactive*`).
+- Added the **memory lifecycle** first slice: document and session deletion now
+  require an explicit server-side `confirm: true` (409 otherwise, 400 for a
+  non-boolean), closing the direct-HTTP bypass. The AISC
+  `AtomZeroMemoryLifecycle` spec puts `HumanConfirmation` before the
+  irreversible `MemoryStore`.
+- Added optional AISC audit integration to `atomzero-doctor --aisc` and the
+  `AtomZeroProactive` / `AtomZeroContextBudget` / `AtomZeroMemoryLifecycle`
+  specs. Strict calibration warnings remain visible and are not hidden.
 - Added a **weekly review**: open/recently completed tasks, pending gaps,
   sources indexed within the window and graph highlights.
 - Added `atomzero-brief --weekly --days N`, `POST /v1/weekly-review` and a UI

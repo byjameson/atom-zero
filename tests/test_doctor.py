@@ -1,7 +1,9 @@
 import socket
 from pathlib import Path
 
-from atomzero.doctor import check_cache, check_docs_index, check_port, render
+from atomzero import doctor
+from atomzero.doctor import (
+    check_aisc, check_cache, check_docs_index, check_port, render)
 from atomzero.doc_memory import DocMemory
 
 
@@ -62,3 +64,39 @@ def test_render_summarizes():
     text = render(checks)
     assert "FAIL" in text
     assert "summary: 1 fail" in text
+
+
+def test_aisc_not_configured_is_a_warning():
+    check = check_aisc("")
+    assert check.status == "warn"
+    assert "not configured" in check.detail
+
+
+def test_aisc_strict_warning_fails(monkeypatch):
+    monkeypatch.setattr(
+        "atomzero.audit.run_audit",
+        lambda *args, **kwargs: [{
+            "ok": False, "critical_count": 0, "warning_count": 2,
+        }])
+    strict = check_aisc("fake", strict=True)
+    assert strict.status == "fail"
+    assert "warnings=2" in strict.detail
+    relaxed = check_aisc("fake", strict=False)
+    assert relaxed.status == "warn"
+
+
+def test_doctor_run_checks_includes_aisc_only_when_requested(
+        tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "atomzero.audit.run_audit",
+        lambda *args, **kwargs: [{
+            "ok": True, "critical_count": 0, "warning_count": 0,
+        }])
+    args = doctor.argparse.Namespace(
+        cache=str(tmp_path), docs=str(tmp_path / "docs.db"),
+        sessions=str(tmp_path / "sessions"), host="127.0.0.1", port=0,
+        provider=False, provider_url="", aisc=True, aisc_path="fake",
+        aisc_strict=True)
+    checks = doctor.run_checks(args)
+    assert any(check.name == "aisc" and check.status == "ok"
+               for check in checks)

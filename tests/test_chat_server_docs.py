@@ -74,6 +74,11 @@ def test_demo_page_uses_daily_agent_endpoint():
     assert "showrelations" in page
     assert 'id="pfile"' in page
     assert 'id="advanced"' in page
+    assert 'id="proactivetoggle"' in page
+    assert "/v1/proactive" in page
+    assert "/v1/proactive/config" in page
+    assert "/v1/proactive/ack" in page
+    assert "pollproactive" in page
     assert "attachstatus" in page
     assert "bunu öğren" in page
     assert "bu bilgileri unut" in page
@@ -740,13 +745,23 @@ def test_http_privacy_forget_document_and_session(tmp_path):
     thread.start()
     base = f"http://127.0.0.1:{httpd.server_address[1]}"
     try:
+        with pytest.raises(urllib.error.HTTPError) as unconfirmed:
+            _post(base + "/v1/documents/forget", {"source": "pii.txt"})
+        assert unconfirmed.value.code == 409
+        assert _post(base + "/v1/documents/search",
+                     {"query": "alice"})["data"]
+        with pytest.raises(urllib.error.HTTPError) as bad_type:
+            _post(base + "/v1/documents/forget",
+                  {"source": "pii.txt", "confirm": "true"})
+        assert bad_type.value.code == 400
         forgotten = _post(base + "/v1/documents/forget",
-                          {"source": "pii.txt"})
+                          {"source": "pii.txt", "confirm": True})
         assert forgotten["chunks_deleted"] == 1
         assert _post(base + "/v1/documents/search",
                      {"query": "alice"})["data"] == []
         with pytest.raises(urllib.error.HTTPError) as missing:
-            _post(base + "/v1/documents/forget", {"source": "pii.txt"})
+            _post(base + "/v1/documents/forget",
+                  {"source": "pii.txt", "confirm": True})
         assert missing.value.code == 404
         remembered = _post(base + "/v1/agent/chat", {
             "session_id": "privacy", "message": "my name is Alice"})
@@ -772,14 +787,18 @@ def test_http_privacy_forget_document_and_session(tmp_path):
         recalled = _post(base + "/v1/agent/chat", {
             "session_id": "privacy", "message": "what is my name?"})
         assert "Bob" in recalled["reply"]
+        with pytest.raises(urllib.error.HTTPError) as unconfirmed_memory:
+            _post(base + "/v1/memory/forget", {
+                "session_id": "privacy", "text": "Bob"})
+        assert unconfirmed_memory.value.code == 409
         removed = _post(base + "/v1/memory/forget", {
-            "session_id": "privacy", "text": "Bob"})
+            "session_id": "privacy", "text": "Bob", "confirm": True})
         assert removed["facts_deleted"] == 1
         recalled = _post(base + "/v1/agent/chat", {
             "session_id": "privacy", "message": "what is my name?"})
         assert "do not know your name" in recalled["reply"]
         cleared = _post(base + "/v1/memory/forget", {
-            "session_id": "privacy", "all": True})
+            "session_id": "privacy", "all": True, "confirm": True})
         assert cleared["cleared_all"] is True
     finally:
         httpd.shutdown()
@@ -3023,6 +3042,52 @@ def test_http_briefing_and_goal_plan(tmp_path):
         chat_server._state.clear()
         chat_server._state.update(old)
         docs.close()
+
+
+def test_http_proactive_conversation(tmp_path):
+    old = dict(chat_server._state)
+    chat_server._state.update({
+        "api_key": "", "model": None, "tok": None, "docs": None,
+        "session_dir": str(tmp_path / "sessions"), "sessions": {},
+    })
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        disabled = _post(base + "/v1/proactive", {
+            "session_id": "proactive-test"})
+        assert disabled["due"] is False
+        assert disabled["state"]["enabled"] is False
+
+        configured = _post(base + "/v1/proactive/config", {
+            "session_id": "proactive-test", "enabled": True})
+        assert configured["state"]["enabled"] is True
+
+        tick = _post(base + "/v1/proactive", {
+            "session_id": "proactive-test", "ack": True})
+        assert tick["due"] is True
+        assert tick["reason"] == "check_in"
+        assert tick["message"]
+        assert tick["acked"] is True
+
+        cooled = _post(base + "/v1/proactive", {
+            "session_id": "proactive-test"})
+        assert cooled["due"] is False
+        assert cooled["blocked_by"] in {"cooldown", "duplicate"}
+
+        invalid = None
+        try:
+            _post(base + "/v1/proactive/config", {
+                "session_id": "proactive-test", "max_per_day": 1001})
+        except urllib.error.HTTPError as exc:
+            invalid = exc
+        assert invalid is not None and invalid.code == 400
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
 
 
 def test_http_tool_plan_audit(tmp_path):

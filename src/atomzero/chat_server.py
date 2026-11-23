@@ -304,7 +304,10 @@ button:disabled{opacity:.55; cursor:not-allowed; transform:none}
 .qitem .src{font-size:12px; color:var(--muted); word-break:break-word; margin-top:5px; max-height:140px; overflow:auto}
 .msg .actions{display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:8px}
 .msg .actions button{font-size:11.5px; padding:4px 8px; box-shadow:none; font-weight:500}
-.topbar{display:flex; justify-content:flex-end; margin:14px 0}
+.topbar{display:flex; justify-content:flex-end; align-items:center; gap:10px; margin:14px 0}
+.proactive-toggle{display:inline-flex; align-items:center; gap:7px; padding:7px 11px; border:1px solid var(--border); border-radius:10px; background:var(--panel-soft); color:var(--muted); font-size:13px; font-weight:600; cursor:pointer; user-select:none}
+.proactive-toggle:hover{border-color:var(--border-strong); color:var(--accent)}
+.proactive-toggle input{accent-color:var(--accent); margin:0}
 .composer{display:flex; gap:8px; align-items:stretch; padding:8px; border:1px solid var(--border); border-radius:16px; background:var(--panel); box-shadow:var(--shadow-md)}
 .composer input{flex:1; min-width:0; border:0; box-shadow:none; background:transparent; padding:10px}
 .composer input:focus-visible{box-shadow:none}
@@ -353,7 +356,13 @@ a{color:var(--accent)}
 <h1>Atom Zero</h1>
 <p class="hint">local-first personal assistant</p>
 <p id="m" class="hint">loading...</p>
-<div class="topbar"><button id="newsession">New session</button></div>
+<div class="topbar">
+<label class="proactive-toggle" title="Let Atom Zero start a conversation when something needs attention">
+<input id="proactivetoggle" type="checkbox">
+<span>Proactive</span>
+</label>
+<button id="newsession">New session</button>
+</div>
 <div id="chat"></div>
 <div class="composer">
 <input id="p" placeholder="Ask, command, or attach a PDF/note...">
@@ -842,11 +851,12 @@ async function learnFile(file) {
 }
 async function forgetFile(file) {
   const source = file.name;
+  if (!confirm('Delete indexed source "' + source + '"?')) return;
   setAttachStatus('Unutuyorum: ' + source + '...');
   try {
     const r = await fetch('/v1/documents/forget', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({source}),
+      body: JSON.stringify({source, confirm: true}),
     });
     const j = await r.json();
     if (!r.ok) {
@@ -911,6 +921,55 @@ async function send(message) {
     add('bot', 'error: ' + e, '', true);
   }
 }
+async function proactivePost(path, payload) {
+  const r = await fetch(path, {method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)});
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || r.status);
+  return j;
+}
+async function pollProactive() {
+  const toggle = document.getElementById('proactivetoggle');
+  if (!toggle) return;
+  try {
+    const j = await proactivePost('/v1/proactive', {
+      session_id: sessionId, ack: false});
+    if (j.state && typeof j.state.enabled === 'boolean') {
+      toggle.checked = j.state.enabled;
+    }
+    if (!j.due || !j.message) return;
+    const box = add('bot', j.message,
+      'proactive | ' + (j.reason || 'local signal'));
+    const actions = (j.actions || []).slice(0, 3);
+    if (actions.length) {
+      const row = document.createElement('div');
+      row.className = 'actions';
+      actions.forEach(action => {
+        const button = document.createElement('button');
+        button.textContent = action.label;
+        button.onclick = () => send(action.command);
+        row.appendChild(button);
+      });
+      box.appendChild(row);
+    }
+    await proactivePost('/v1/proactive/ack', {
+      session_id: sessionId, proactive_id: j.proactive_id || '',
+      action: 'shown'});
+  } catch (e) {
+    // Proactive polling is optional; do not surface transient errors.
+  }
+}
+document.getElementById('proactivetoggle').onchange = async (event) => {
+  const enabled = event.target.checked;
+  try {
+    await proactivePost('/v1/proactive/config', {
+      session_id: sessionId, enabled: enabled});
+    if (enabled) await pollProactive();
+  } catch (e) {
+    event.target.checked = !enabled;
+  }
+};
 document.getElementById('pfile').onchange = () => {
   const file = currentAttach();
   if (!file) {
@@ -3057,7 +3116,7 @@ async function forgetSource(source) {
   try {
     const r = await fetch('/v1/documents/forget', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({source})});
+      body: JSON.stringify({source, confirm: true})});
     const j = await r.json();
     setForgetMsg(r.ok
       ? ('deleted ' + j.chunks_deleted + ' chunk(s) from ' + source)
@@ -3413,7 +3472,7 @@ document.getElementById('forgetdoc').onclick = async () => {
   try {
     const r = await fetch('/v1/documents/forget', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({source})});
+      body: JSON.stringify({source, confirm: true})});
     const j = await r.json();
     setForgetMsg(r.ok
       ? ('deleted ' + j.chunks_deleted + ' chunk(s) and ' +
@@ -3427,7 +3486,8 @@ document.getElementById('forgetmem').onclick = async () => {
   try {
     const r = await fetch('/v1/memory/forget', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({session_id: sessionId, all: true})});
+      body: JSON.stringify({session_id: sessionId, all: true,
+                            confirm: true})});
     const j = await r.json();
     setForgetMsg(r.ok
       ? ('deleted facts ' + j.facts_deleted + ', episodes ' +
@@ -3824,6 +3884,8 @@ function refreshHealth() {
   }).catch(() => { document.getElementById('m').textContent = 'server not ready'; });
 }
 restoreChat();
+pollProactive();
+setInterval(pollProactive, 60000);
 refreshHealth();
 refreshQueue();
 refreshTeacherNotes();
@@ -4638,7 +4700,8 @@ class Handler(BaseHTTPRequestHandler):
                          "/v1/research/queue/reject",
                          "/v1/research/queue/run",
                          "/v1/agent/chat", "/v1/agent/plan",
-                         "/v1/tools/audit"):
+                         "/v1/tools/audit", "/v1/proactive",
+                         "/v1/proactive/config", "/v1/proactive/ack"):
             return self._json(404, {"error": "not found"})
         key = _state.get("api_key") or ""
         if key:
@@ -4733,6 +4796,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self._agent_plan(req)
             if route == "/v1/tools/audit":
                 return self._tools_audit(req)
+            if route == "/v1/proactive":
+                return self._proactive_next(req)
+            if route == "/v1/proactive/config":
+                return self._proactive_config(req)
+            if route == "/v1/proactive/ack":
+                return self._proactive_ack(req)
             if route == "/v1/documents/forget":
                 return self._documents_forget(req)
             if route == "/v1/memory/forget":
@@ -5624,6 +5693,17 @@ class Handler(BaseHTTPRequestHandler):
         return self._json(200, result)
 
     def _documents_forget(self, req: dict):
+        confirm = req.get("confirm", None)
+        if confirm is None:
+            return self._json(409, {
+                "error": "confirmation required",
+                "code": "confirmation_required"})
+        if not isinstance(confirm, bool):
+            return self._json(400, {"error": "confirm must be a boolean"})
+        if confirm is False:
+            return self._json(409, {
+                "error": "confirmation required",
+                "code": "confirmation_required"})
         docs = _state.get("docs")
         if docs is None:
             return self._json(400, {"error": "no document memory configured"})
@@ -5636,11 +5716,24 @@ class Handler(BaseHTTPRequestHandler):
         return self._json(200, result)
 
     def _memory_forget(self, req: dict):
+        confirm = req.get("confirm", None)
+        if confirm is None:
+            return self._json(409, {
+                "error": "confirmation required",
+                "code": "confirmation_required"})
+        if not isinstance(confirm, bool):
+            return self._json(400, {"error": "confirm must be a boolean"})
+        if confirm is False:
+            return self._json(409, {
+                "error": "confirmation required",
+                "code": "confirmation_required"})
         session_id = str(req.get("session_id", "")).strip()
         if not session_id:
             return self._json(400, {"error": "session_id is required"})
         text = str(req.get("text", "")).strip()
-        clear_all = bool(req.get("all"))
+        clear_all = req.get("all", False)
+        if not isinstance(clear_all, bool):
+            return self._json(400, {"error": "all must be a boolean"})
         if not text and not clear_all:
             return self._json(400, {"error": "text or all is required"})
         try:
@@ -5739,6 +5832,57 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(400, {"error": "confirm must be a boolean"})
         result = audit_plan(req.get("steps"), confirm=confirm)
         return self._json(200 if result["valid"] else 400, result)
+
+    def _proactive_next(self, req: dict):
+        session_id = str(req.get("session_id", "")).strip()
+        if not session_id:
+            return self._json(400, {"error": "session_id is required"})
+        ack = req.get("ack", False)
+        if not isinstance(ack, bool):
+            return self._json(400, {"error": "ack must be a boolean"})
+        try:
+            from atomzero.proactive import (
+                DEFAULT_CONFIG, next_tick, proactive_state)
+            session = self._session(session_id)
+            result = next_tick(session, ack=ack)
+            result["state"] = {
+                **DEFAULT_CONFIG, **proactive_state(session)}
+        except Exception as exc:
+            return self._json(400, {"error": str(exc)})
+        return self._json(200, {"session_id": session_id, **result})
+
+    def _proactive_config(self, req: dict):
+        session_id = str(req.get("session_id", "")).strip()
+        if not session_id:
+            return self._json(400, {"error": "session_id is required"})
+        allowed = ("enabled", "min_interval_minutes", "max_per_day",
+                   "quiet_start", "quiet_end")
+        updates = {key: req[key] for key in allowed if key in req}
+        if not updates:
+            return self._json(400, {"error": "no config fields supplied"})
+        try:
+            from atomzero.proactive import configure
+            session = self._session(session_id)
+            state = configure(session, **updates)
+        except (ValueError, TypeError) as exc:
+            return self._json(400, {"error": str(exc)})
+        except Exception as exc:
+            return self._json(400, {"error": str(exc)})
+        return self._json(200, {"session_id": session_id, "state": state})
+
+    def _proactive_ack(self, req: dict):
+        session_id = str(req.get("session_id", "")).strip()
+        if not session_id:
+            return self._json(400, {"error": "session_id is required"})
+        try:
+            from atomzero.proactive import ack
+            session = self._session(session_id)
+            state = ack(
+                session, proactive_id=str(req.get("proactive_id", "")),
+                action=str(req.get("action", "shown")))
+        except Exception as exc:
+            return self._json(400, {"error": str(exc)})
+        return self._json(200, {"session_id": session_id, "state": state})
 
     def _teach(self, req: dict):
         fact = str(req.get("fact", "")).strip()

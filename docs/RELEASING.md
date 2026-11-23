@@ -40,7 +40,8 @@ python -m pytest tests -q
 python -m build
 python -m twine check dist/*
 # Optional when AISC is available:
-python scripts/aisc_audit.py --aisc-path "<aisc-checkout>"
+atomzero-audit --aisc-path "<aisc-checkout>" --strict --require-calibration
+atomzero-doctor --aisc --aisc-path "<aisc-checkout>"
 ```
 
 Expected for the next batch: `432 passed` or more.

@@ -8,6 +8,8 @@ def test_discover_specs_includes_atomzero_specs():
         "atomzero-task-actions.toml",
         "atomzero-tool-plan.toml",
         "atomzero-context-budget.toml",
+        "atomzero-proactive.toml",
+        "atomzero-memory-lifecycle.toml",
         "atomzero-answerability.toml",
     } <= names
 

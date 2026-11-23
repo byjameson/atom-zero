@@ -1,0 +1,54 @@
+name = "AtomZeroMemoryLifecycle"
+version = "0.6.0"
+description = "Scoped memory deletion with an explicit human confirmation before the irreversible store mutation."
+min_assurance = 0.90
+max_context_tokens = 4096
+
+[[components]]
+name = "MemoryRequestParser"
+input_type = "MemoryRequest"
+output_type = "MemoryCommand"
+kind = "tool"
+assurance = 0.99
+verified = true
+evidence = "confirmation-required and malformed-request HTTP tests"
+assumptions = ["request is JSON from the local API"]
+guarantees = ["confirm must be an explicit boolean"]
+context_tokens = 128
+
+[[components]]
+name = "ScopeResolver"
+input_type = "MemoryCommand"
+output_type = "ScopedMutation"
+kind = "tool"
+assurance = 0.98
+verified = true
+evidence = "document/session scope and not-found tests"
+assumptions = ["exactly one source or session scope is selected"]
+guarantees = ["deletion has a single explicit scope"]
+context_tokens = 256
+
+[[components]]
+name = "HumanConfirmation"
+input_type = "ScopedMutation"
+output_type = "ApprovedMutation"
+kind = "human"
+assurance = 0.99
+verified = true
+evidence = "HTTP 409 without confirm and success with confirm"
+assumptions = ["the user explicitly confirms destructive memory deletion"]
+guarantees = ["no destructive mutation is applied without confirmation"]
+context_tokens = 32
+
+[[components]]
+name = "MemoryStore"
+input_type = "ApprovedMutation"
+output_type = "MemoryResult"
+kind = "tool"
+reversible = false
+assurance = 0.99
+verified = true
+evidence = "document forget and session forget tests"
+assumptions = ["the local SQLite index or session file is writable"]
+guarantees = ["the confirmed scope is deleted locally"]
+context_tokens = 512
