@@ -1,0 +1,42 @@
+name = "AtomZeroFreshness"
+version = "0.1.0"
+description = "Deterministic, local source-freshness assessment from dates written in retrieval hit text."
+min_assurance = 0.90
+max_context_tokens = 8000
+
+[[components]]
+name = "DateExtractor"
+input_type = "Hit"
+output_type = "DateCandidates"
+kind = "evaluator"
+assurance = 0.97
+verified = true
+evidence = "tests/test_freshness.py date extraction, invalid-date skipping, latest-past selection and undated cases"
+assumptions = ["dates are written in chunk, snippet or title text", "the date matcher understands the formats supported by atomzero.contradictions.date_matches"]
+guarantees = ["only valid calendar dates are returned", "the newest date not later than now is selected", "a hit with no date is reported as undated"]
+context_tokens = 512
+
+[[components]]
+name = "FreshnessEvaluator"
+input_type = "DateCandidates"
+output_type = "FreshnessAssessments"
+kind = "evaluator"
+assurance = 0.96
+verified = true
+evidence = "tests/test_freshness.py fresh, aging and stale boundaries, future dates, deterministic output and threshold validation"
+assumptions = ["fresh_days and max_age_days describe age bands, not source truth", "future dates are a signal and are not clamped to fresh"]
+guarantees = ["status is one of fresh, aging, stale, future or undated", "max_age_days >= fresh_days >= 0 is enforced", "the same input and now produce the same assessment"]
+context_tokens = 512
+
+[[components]]
+name = "FreshnessAnswer"
+input_type = "FreshnessAssessments"
+output_type = "FreshnessReport"
+kind = "tool"
+reversible = true
+assurance = 0.98
+verified = true
+evidence = "tests/test_freshness.py empty hits, summary composition, CLI JSON, human output and exit-code cases"
+assumptions = ["the report is consumed by a human or a later gate"]
+guarantees = ["the report includes hits, summary and method", "weights_changed is always false", "undated and stale sources stay visible in the summary"]
+context_tokens = 1024
