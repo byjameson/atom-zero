@@ -71,6 +71,13 @@ gate passed (`gate_id ac1eb8a7ee8b5271`), approval was recorded with
 `gate_ok: true`, and the scoreboard moved from `793` to `794` passed with no
 trend alerts.
 
+`docs/LOOP_CYCLE_3.md` records the first **agent-bridge consumed** cycle: a
+live drift profile-format failure was packaged into a bounded task packet, an
+external Implementer worked in `fix/drift-profile-format`, the gate passed
+(`gate_id d38196191f97b81c`), approval recorded `gate_ok: true`, the real drift
+report now works, and the scoreboard moved from `800` to `813` passed with no
+trend alerts.
+
 ## Near-term roadmap
 
 1. Human-gated improvement planner (in progress).

@@ -396,6 +396,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Self-improvement architecture: <https://github.com/byjameson/atom-zero/blob/main/docs/SELF_IMPROVEMENT.md>
 - First measured loop cycle: <https://github.com/byjameson/atom-zero/blob/main/docs/LOOP_CYCLE.md>
 - Second measured loop cycle: <https://github.com/byjameson/atom-zero/blob/main/docs/LOOP_CYCLE_2.md>
+- Third loop cycle (agent-bridge consumed): <https://github.com/byjameson/atom-zero/blob/main/docs/LOOP_CYCLE_3.md>
 - Improvement loop: <https://github.com/byjameson/atom-zero/blob/main/docs/IMPROVEMENT_LOOP.md>
 - Self-improvement scoreboard: <https://github.com/byjameson/atom-zero/blob/main/docs/SCOREBOARD.md>
 - Improvement trend: <https://github.com/byjameson/atom-zero/blob/main/docs/TREND.md>
