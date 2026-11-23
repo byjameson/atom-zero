@@ -1,5 +1,6 @@
 import io
 import json
+import os
 import subprocess
 from contextlib import redirect_stdout
 from types import SimpleNamespace
@@ -56,6 +57,7 @@ def test_run_check_project_root_resolves_pytest_target(monkeypatch, tmp_path):
     def fake_run(command, **kwargs):
         captured["command"] = command
         captured["cwd"] = kwargs["cwd"]
+        captured["env"] = kwargs["env"]
         return SimpleNamespace(returncode=0, stdout="ok", stderr="")
 
     monkeypatch.setattr(evaluation.subprocess, "run", fake_run)
@@ -64,6 +66,8 @@ def test_run_check_project_root_resolves_pytest_target(monkeypatch, tmp_path):
         project_root=tmp_path)
     assert captured["cwd"] == str(tmp_path)
     assert str(tmp_path / "tests" / "test_dummy.py") in captured["command"]
+    assert captured["env"]["PYTHONPATH"].split(os.pathsep)[0] == str(
+        tmp_path / "src")
 
 
 def test_run_check_aisc_uses_cwd(monkeypatch, tmp_path):

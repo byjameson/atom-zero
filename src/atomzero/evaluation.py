@@ -85,13 +85,19 @@ def run_check(
     if not check.get("target"):
         raise ValueError(f"{kind} check requires a target")
     command, cwd = _command(check, aisc_path, project_root)
+    env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
+    if kind == "pytest":
+        # Do not leak the caller's main-checkout PYTHONPATH into the gate.
+        env["PYTHONPATH"] = os.pathsep.join([
+            str(cwd / "src"), str(cwd)])
+    elif kind == "aisc":
+        env["PYTHONPATH"] = str(cwd)
     started = time.monotonic()
     try:
         completed = subprocess.run(
             command, cwd=str(cwd), capture_output=True, text=True,
             encoding="utf-8", errors="replace", timeout=timeout,
-            env={**os.environ, "PYTHONIOENCODING": "utf-8"},
-            check=False)
+            env=env, check=False)
         duration = int((time.monotonic() - started) * 1000)
         output = ((completed.stdout or "") + (completed.stderr or "")).strip()
         return {
