@@ -100,10 +100,9 @@
    is a negative control, not a training target. Keep the repos separate; Atom
    Zero must not import `streamft`. Model weights are still `0.8.0` and
    unchanged.
-4. Finish the `0.6.0` public release: provide a fresh PyPI token or configure a
-   trusted publisher for `.github/workflows/publish.yml`, then update
-   dev.to/Medium and run `scripts/verify_release.py --version 0.6.0`. The
-   current verification has only the PyPI check failing.
+4. Merge the claim/evidence branch after the Reviewer gate, then cut `0.6.1`
+   with the post-release memory ledger and claims work. Run
+   `scripts/verify_release.py --version 0.6.1` before publishing.
 5. After the next code commit, re-run full pytest, AISC, build/twine and
    refresh `TEST_RESULTS.md`.
 
