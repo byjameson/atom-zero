@@ -34,6 +34,37 @@ These maps are distribution-specific starting points. A production deployment
 must recalibrate on its own queries; the gate alone does not solve
 answerability.
 
+## Calibrating on your distribution
+
+The built-in maps are starting points. To calibrate on labelled local data,
+provide a CSV with score and label columns:
+
+```text
+score,label
+0.12,0
+0.31,0
+0.74,1
+0.91,1
+```
+
+Then fit an isotonic map and recommend a threshold:
+
+```powershell
+python -m atomzero.calibrate citations.csv `
+  --out my-calibration.json --target-precision 0.9
+```
+
+The output contains an `isotonic` map, the recommended threshold, Brier/ECE and
+the selected precision/recall. Use it with:
+
+```powershell
+$env:ATOMZERO_CITATION_CALIBRATION="my-calibration.json"
+$env:ATOMZERO_CITATION_THRESHOLD="<recommended threshold>"
+```
+
+The utility uses pool-adjacent-violators locally; it does not call a model or
+external service. Labels accept `0/1`, true/false, yes/no and valid/invalid.
+
 ## Response behavior
 
 `grounded_answer` returns `refused: true`, `reason:

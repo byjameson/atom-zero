@@ -152,7 +152,7 @@ LoRA adapters.
 | document timeline regression | **9/9** |
 | typed relations regression | **6/6** |
 | citation gate, SQuAD v2 (default 0.5) | **92/103 answerable retained; 18/97 no-answer refused; precision 0.479** |
-| test suite | **400 passed** |
+| test suite | **405 passed** |
 
 The raw-model probe asks ten simple general questions with no documents, no
 calculator and no agent. The 49.2M model gets **2/10**. The product gets
@@ -180,6 +180,8 @@ short generation. It is **not MMLU, GSM8K or HumanEval**.
   are dropped and an empty gate returns an explicit refusal. Threshold,
   profile and custom calibration are set with `ATOMZERO_CITATION_*`
   environment variables; see [`docs/CITATION_GATE.md`](docs/CITATION_GATE.md).
+  `python -m atomzero.calibrate` fits a per-deployment isotonic map and
+  recommends a threshold from a score/label CSV.
 - **Source-scoped retrieval:** search and answers can be limited to one exact
   source, a source prefix or teacher notes.
 - **Exact code/ID retrieval:** `L-7781` and `W-7781` are treated as distinct

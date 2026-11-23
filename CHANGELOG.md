@@ -33,6 +33,9 @@
   gate. Default is `squad_v2_stress` at 0.5, not the authored 0.6. SQuAD v2
   simulation: 92/103 answerable retained, 18/97 no-answer refused, precision
   0.479.
+- Added a local isotonic calibration utility: `python -m atomzero.calibrate`
+  reads a score/label CSV, fits a PAVA map, reports Brier/ECE and recommends a
+  threshold for `ATOMZERO_CITATION_CALIBRATION`.
 - Added `benchmarks/graph_path_regression.py` (6/6 checks).
 - Added a **weekly review**: open/recently completed tasks, pending gaps,
   sources indexed within the window and graph highlights.

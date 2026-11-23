@@ -29,6 +29,8 @@ after `0.5.0`.
   available but is not the default.
 - An empty gate returns `refused: true`, `reason:
   no_citation_above_threshold` and no sources.
+- `python -m atomzero.calibrate` fits a local isotonic map from a score/label
+  CSV and recommends a threshold for the target distribution.
 - SQuAD v2 policy simulation (50 contexts / 200 questions): **92/103**
   answerable retained, **18/97** no-answer refused, precision **0.479**.
   This is a starting point; a separate answerability signal is still required.
@@ -141,7 +143,7 @@ after `0.5.0`.
 
 ## Verified regressions
 
-- `400 passed` in the assistant test suite.
+- `405 passed` in the assistant test suite.
 - Weekly chat regression: 7/7.
 - Weekly export/archive regression: 29/29.
 - Weekly review regression: 6/6.
