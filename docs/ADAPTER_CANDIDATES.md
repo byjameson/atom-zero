@@ -76,7 +76,22 @@ A pass sets `promotable: true`, but **does not train or apply anything**.
 atomzero-adapter-candidate loop `
   --examples-jsonl data/verified_teacher.jsonl `
   --out-dir data/adapter_candidates `
-  --evaluator-command "python research/adapter_check.py --data {eval_jsonl} --json" `
+  --trainer-command "python research/train_adapter_candidate.py --base {base} --train {train_jsonl} --eval {eval_jsonl} --out {adapter_dir} --comparison {comparison_path}" `
+  --base "C:\Users\you\.cache\atomzero\atom-zero-49m" `
+  --ledger data/adapter_candidates.jsonl --json
+```
+
+The trainer runs through the bounded `atomzero.sandbox` command runner with a
+timeout and `PYTHONPATH` rooted at the repository `src`. It must write the
+comparison JSON to `{comparison_path}`; the loop then applies the held-out gate.
+
+If no trainer is supplied, an evaluator command can be used:
+
+```powershell
+atomzero-adapter-candidate loop `
+  --examples-jsonl data/verified_teacher.jsonl `
+  --out-dir data/adapter_candidates `
+  --evaluator-command "python research/compare_adapters.py --data {eval_jsonl} --json" `
   --ledger data/adapter_candidates.jsonl --json
 ```
 

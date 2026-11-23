@@ -1,0 +1,195 @@
+"""Train a LoRA adapter on a verified-teacher candidate and measure it.
+
+This is an **external trainer harness**: it lives in ``research``, not in the
+``atomzero`` package. It loads the local base checkpoint, trains only the LoRA
+MLP parameters, saves an adapter directory and compares base vs adapter on a
+held-out JSONL with :mod:`research.compare_adapters`.
+
+    python research/train_adapter_candidate.py \
+      --base C:\\path\\to\\atom-zero-49m \
+      --train data/adapter_candidates/train.jsonl \
+      --eval data/adapter_candidates/eval.jsonl \
+      --out checkpoints/adapters_candidate/v0001 \
+      --steps 300 --lr 1e-3 --rank 8 --alpha 16 \
+      --result research/results/adapter_candidate.json
+
+It does not apply the adapter to the product and does not change `0.8.0`
+weights. Promotion is a separate decision.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import math
+import sys
+import time
+from pathlib import Path
+
+import torch
+import torch.nn.functional as F
+
+from atomzero.lora import (
+    apply_lora,
+    count_lora_params,
+    lora_parameters,
+    save_adapter,
+)
+
+try:
+    from research.adapter_runtime import (
+        fmt, load_model, mask_user_labels, read_rows, score_rows)
+    from research.compare_adapters import compare
+except ImportError:  # running as `python research/train_adapter_candidate.py`
+    from adapter_runtime import (
+        fmt, load_model, mask_user_labels, read_rows, score_rows)
+    from compare_adapters import compare
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def _resolve(path: str) -> Path:
+    value = Path(path).expanduser()
+    return value if value.is_absolute() else ROOT / value
+
+
+def _encode(tok, row, max_seq: int, device):
+    ids = tok.encode(fmt(row)).ids
+    ids = ids[:max_seq]
+    if len(ids) < 3:
+        return None
+    x = torch.tensor([ids[:-1]], dtype=torch.long, device=device)
+    y = torch.tensor([ids[1:]], dtype=torch.long, device=device)
+    user_id = tok.token_to_id("<|user|>")
+    assistant_id = tok.token_to_id("<|assistant|>")
+    if user_id is None or assistant_id is None:
+        raise SystemExit("tokenizer needs <|user|> and <|assistant|>")
+    y = mask_user_labels(y, user_id, assistant_id)
+    return x, y
+
+
+def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
+          lr: float, rank: int, alpha: int, max_seq: int,
+          device, seed: int = 13) -> dict:
+    torch.manual_seed(seed)
+    model, tok = load_model(base, device=device)
+    model = apply_lora(
+        model, r_attn=0, r_mlp=rank, alpha_mlp=alpha)
+    model.to(device)
+    params = lora_parameters(model)
+    if not params:
+        raise SystemExit("no LoRA parameters were created")
+    optimizer = torch.optim.AdamW(params, lr=lr)
+    model.train()
+    losses = []
+    started = time.time()
+    for step in range(max(1, steps)):
+        row = train_rows[step % len(train_rows)]
+        encoded = _encode(tok, row, max_seq, device)
+        if encoded is None:
+            continue
+        x, y = encoded
+        logits = model(x)
+        loss = F.cross_entropy(
+            logits.reshape(-1, model.vocab), y.reshape(-1),
+            ignore_index=-100)
+        optimizer.zero_grad(set_to_none=True)
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(params, 1.0)
+        optimizer.step()
+        losses.append(float(loss.detach().cpu()))
+        if (step + 1) % 50 == 0:
+            print(json.dumps({
+                "step": step + 1, "loss": round(losses[-1], 5),
+                "elapsed_seconds": round(time.time() - started, 2),
+            }), flush=True)
+    out.mkdir(parents=True, exist_ok=True)
+    save_adapter(
+        model, out, r_attn=0, r_mlp=rank, alpha_mlp=alpha,
+        rank=rank, alpha=alpha, steps=steps, lr=lr,
+        base=str(base), train_examples=len(train_rows),
+        method="external_train_adapter_candidate_v1")
+    tail = losses[-20:] if losses else [0.0]
+    try:
+        adapter_path = str(out.relative_to(ROOT))
+    except ValueError:
+        adapter_path = str(out)
+    return {
+        "train_loss": sum(tail) / len(tail),
+        "train_steps": steps,
+        "lora_parameters": count_lora_params(model),
+        "adapter": adapter_path,
+    }
+
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--base", required=True)
+    parser.add_argument("--train", required=True)
+    parser.add_argument("--eval", required=True)
+    parser.add_argument("--out", required=True)
+    parser.add_argument("--steps", type=int, default=300)
+    parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--rank", type=int, default=8)
+    parser.add_argument("--alpha", type=int, default=16)
+    parser.add_argument("--max-seq", type=int, default=256)
+    parser.add_argument("--seed", type=int, default=13)
+    parser.add_argument("--result", default="research/results/adapter_candidate.json")
+    parser.add_argument(
+        "--comparison",
+        default="research/results/adapter_candidate_comparison.json")
+    args = parser.parse_args(argv)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    train_rows = read_rows(_resolve(args.train))
+    eval_rows = read_rows(_resolve(args.eval))
+    if not train_rows or not eval_rows:
+        raise SystemExit("train and eval need at least one row")
+    out = _resolve(args.out)
+    summary = train(
+        args.base, train_rows, out, steps=args.steps, lr=args.lr,
+        rank=args.rank, alpha=args.alpha, max_seq=args.max_seq,
+        device=device, seed=args.seed)
+    comparison = compare(
+        args.base, str(_resolve(args.eval)), [str(out)])
+    models = comparison.get("models", [])
+    base_metrics = next(
+        (item.get("metrics", {}) for item in models
+         if item.get("label") == "base"), {})
+    adapter_metrics = next(
+        (item.get("metrics", {}) for item in models
+         if item.get("label") != "base"), {})
+    base_loss = float(base_metrics.get("loss", 0.0) or 0.0)
+    adapter_loss = float(adapter_metrics.get("loss", 0.0) or 0.0)
+    base_ppl = float(base_metrics.get("ppl", 0.0) or 0.0)
+    adapter_ppl = float(adapter_metrics.get("ppl", 0.0) or 0.0)
+    result = {
+        **summary,
+        "base_loss": base_loss,
+        "adapter_loss": adapter_loss,
+        "loss_delta": adapter_loss - base_loss,
+        "loss_relative": (adapter_loss / base_loss - 1.0
+                          if base_loss else None),
+        "base_ppl": base_ppl,
+        "adapter_ppl": adapter_ppl,
+        "ppl_ratio": adapter_ppl / base_ppl if base_ppl else None,
+        "eval_examples": len(eval_rows),
+        "device": str(device),
+        "decision": ("accept" if base_loss and adapter_loss < base_loss
+                     and adapter_ppl <= base_ppl else "reject"),
+        "weights_changed": False,
+    }
+    target = _resolve(args.result)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(
+        json.dumps(result, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8")
+    comparison_path = _resolve(args.comparison)
+    comparison_path.parent.mkdir(parents=True, exist_ok=True)
+    comparison_path.write_text(
+        json.dumps(comparison, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8")
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

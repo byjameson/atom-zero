@@ -308,6 +308,40 @@ def test_loop_adapter_gate_failure(tmp_path):
     assert result["adapter"]["evaluation"]["ok"] is False
 
 
+def test_loop_runs_adapter_trainer_command(tmp_path):
+    script = tmp_path / "trainer.py"
+    script.write_text(
+        "import json, pathlib, sys\n"
+        "comparison = pathlib.Path(sys.argv[1])\n"
+        "adapter = pathlib.Path(sys.argv[2])\n"
+        "adapter.mkdir(parents=True, exist_ok=True)\n"
+        "(adapter / 'adapter.pt').write_bytes(b'fake')\n"
+        "comparison.write_text(json.dumps({'examples': 1, "
+        "'baseline': {'loss': 1.2, 'ppl': 3.3}, "
+        "'adapter': {'loss': 1.0, 'ppl': 3.0}}))\n",
+        encoding="utf-8")
+    examples = [
+        {"user": f"q{index}", "assistant": f"a{index}",
+         "verification": {"verified": True, "promotable": True}}
+        for index in range(4)
+    ]
+    result = run_loop(
+        signals={"adapter": {"promotable": 4, "candidates": 0}},
+        allowed_files=[], checks=[], opt_in=True, approve=False,
+        autonomous=True, repo_root=tmp_path,
+        adapter_examples=examples,
+        adapter_out_dir=tmp_path / "candidate",
+        adapter_base="base-fixture",
+        adapter_trainer_command=[sys.executable, str(script),
+                                 "{comparison_path}", "{adapter_dir}"],
+        adapter_eval_ratio=0.25)
+    assert result["status"] == "completed", result
+    assert result["adapter"]["source"] == "trainer"
+    assert result["adapter"]["trainer"]["ok"] is True
+    assert result["adapter"]["evaluation"]["promotable"] is True
+    assert (tmp_path / "candidate" / "adapter" / "adapter.pt").is_file()
+
+
 def test_loop_adapter_requires_inputs(tmp_path):
     result = run_loop(
         signals={"adapter": {"promotable": 1, "candidates": 0}},

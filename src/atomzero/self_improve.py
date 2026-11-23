@@ -185,6 +185,10 @@ def run_loop(
     test_timeout: int = 900,
     adapter_examples=None,
     adapter_out_dir=None,
+    adapter_base=None,
+    adapter_trainer_command=None,
+    adapter_adapter_dir=None,
+    adapter_comparison_out=None,
     adapter_comparison=None,
     adapter_evaluator_command=None,
     adapter_ledger_path=None,
@@ -193,6 +197,7 @@ def run_loop(
     adapter_min_loss_delta=None,
     adapter_max_ppl_ratio=None,
     adapter_timeout: int = 900,
+    adapter_trainer_timeout: int = 900,
 ) -> dict:
     """Run one bounded loop, returning every stage and its evidence."""
     normalized = dict(signals) if isinstance(signals, dict) else {}
@@ -282,12 +287,18 @@ def run_loop(
         from atomzero.adapter_candidates import run_adapter_loop
         adapter = run_adapter_loop(
             adapter_examples, adapter_out_dir,
+            base=adapter_base,
+            trainer_command=adapter_trainer_command,
+            adapter_dir=adapter_adapter_dir,
+            comparison_path=adapter_comparison_out,
             comparison=adapter_comparison,
             evaluator_command=adapter_evaluator_command,
+            repo_root=repo_root,
             eval_ratio=adapter_eval_ratio, seed=adapter_seed,
             min_loss_delta=adapter_min_loss_delta,
             max_ppl_ratio=adapter_max_ppl_ratio,
-            ledger_path=adapter_ledger_path, timeout=adapter_timeout)
+            ledger_path=adapter_ledger_path, timeout=adapter_timeout,
+            trainer_timeout=adapter_trainer_timeout)
         result["adapter"] = adapter
         result["status"] = {
             "pass": "completed",
@@ -463,6 +474,10 @@ def main(argv=None) -> int:
     parser.add_argument("--test-timeout", type=int, default=900)
     parser.add_argument("--adapter-examples-jsonl", default="")
     parser.add_argument("--adapter-out", default="")
+    parser.add_argument("--adapter-base", default="")
+    parser.add_argument("--adapter-trainer-command", default="")
+    parser.add_argument("--adapter-adapter-dir", default="")
+    parser.add_argument("--adapter-comparison-out", default="")
     parser.add_argument("--adapter-comparison-json", default="")
     parser.add_argument("--adapter-evaluator-command", default="")
     parser.add_argument("--adapter-ledger", default="")
@@ -471,6 +486,7 @@ def main(argv=None) -> int:
     parser.add_argument("--adapter-min-loss-delta", type=float, default=None)
     parser.add_argument("--adapter-max-ppl-ratio", type=float, default=None)
     parser.add_argument("--adapter-timeout", type=int, default=900)
+    parser.add_argument("--adapter-trainer-timeout", type=int, default=900)
     parser.add_argument("--adapter-promotable", type=int, default=0)
     parser.add_argument("--adapter-candidates", type=int, default=0)
     parser.add_argument("--sandbox-info", action="store_true")
@@ -546,6 +562,10 @@ def main(argv=None) -> int:
             test_timeout=args.test_timeout,
             adapter_examples=adapter_examples,
             adapter_out_dir=args.adapter_out or None,
+            adapter_base=args.adapter_base or None,
+            adapter_trainer_command=args.adapter_trainer_command or None,
+            adapter_adapter_dir=args.adapter_adapter_dir or None,
+            adapter_comparison_out=args.adapter_comparison_out or None,
             adapter_comparison=adapter_comparison,
             adapter_evaluator_command=args.adapter_evaluator_command or None,
             adapter_ledger_path=args.adapter_ledger or None,
@@ -553,7 +573,8 @@ def main(argv=None) -> int:
             adapter_seed=args.adapter_seed,
             adapter_min_loss_delta=args.adapter_min_loss_delta,
             adapter_max_ppl_ratio=args.adapter_max_ppl_ratio,
-            adapter_timeout=args.adapter_timeout)
+            adapter_timeout=args.adapter_timeout,
+            adapter_trainer_timeout=args.adapter_trainer_timeout)
     except (OSError, ValueError, RunnerError, json.JSONDecodeError) as exc:
         print(f"input error: {exc}", file=sys.stderr)
         return 2

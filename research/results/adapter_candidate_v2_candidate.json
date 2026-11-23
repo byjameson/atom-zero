@@ -1,0 +1,15 @@
+{
+  "candidate_id": "ad-10612cfe5f28b728",
+  "version": 1,
+  "train_examples": 241,
+  "eval_examples": 60,
+  "total_examples": 301,
+  "duplicates_skipped": 19,
+  "eval_ratio": 0.2,
+  "seed": 13,
+  "min_loss_delta": 0.01,
+  "max_ppl_ratio": 1.0,
+  "auto_apply": false,
+  "weights_changed": false,
+  "method": "content_free_adapter_candidate_event_v1"
+}

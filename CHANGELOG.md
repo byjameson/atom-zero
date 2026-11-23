@@ -68,6 +68,12 @@ the self-code branch and its planner/runner integration.
   executes that action autonomously when adapter inputs are supplied.
 - `atomzero-growth --adapter-jsonl` reports candidate exports, gate passes and
   promotable candidates.
+- Added **external adapter training harness** (`research/train_adapter_candidate.py`)
+  and `--adapter-trainer-command`/`--base` wiring. A real LoRA run on the local
+  0.8.0 base moved held-out loss from 5.9941 to 0.7949 and perplexity from
+  401.04 to 2.214; the held-out gate passed with 60 examples.
+  See `docs/ADAPTER_TRAINING.md`. The adapter is a local candidate; no product
+  weights changed.
 - Added **prevalence-corrected isotonic calibration** for the answerability
   signal: hybrid Brier `0.2443 -> 0.2326`, ECE `0.1299 -> 0.0642`; feature-only
   Brier `0.2703 -> 0.2535`, ECE `0.1407 -> 0.0519`; AUC unchanged. The Brier
