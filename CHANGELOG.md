@@ -7,6 +7,9 @@
   consensus/single-source status, and number/date/identifier/negation conflicts
   kept separate instead of averaged. It makes no model calls and does not
   persist the request.
+- Added **AISC coverage** (`atomzero-coverage`, `atomzero-audit --coverage`):
+  per-component verification, evidence-file existence and calibration counts
+  across the specs. A passing check is not treated as complete coverage.
 - Added **claim-aware proactive conversation**: claim and consensus audits can
   record content-free counts on a local session, and proactive check-ins can
   start from unsupported claims, conflicts or single-source clusters. Query,

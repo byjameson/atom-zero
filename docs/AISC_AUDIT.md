@@ -51,12 +51,22 @@ atomzero-audit
 atomzero-audit --strict --require-calibration
 atomzero-audit --json
 atomzero-audit --strict --summary
+atomzero-audit --coverage --aisc-path "$env:AISC_PATH"
+atomzero-coverage --aisc-path "$env:AISC_PATH" --json
 atomzero-doctor --aisc --aisc-path "$env:AISC_PATH"
 ```
 
-`--summary` prints one aggregate line (`10 specs, 8 pass, 2 fail, 0 error`)
+`--summary` prints one aggregate line (`14 specs, 12 pass, 2 fail, 0 error`)
 and exits non-zero when any spec fails. Combine it with `--json` for a small
 machine-readable summary object.
+
+`--coverage` answers a different question: are the components verified, do
+their evidence strings point at files that exist, and which components have no
+calibration observations? It reads evidence paths such as `tests/test_*.py`
+relative to the repository root and reports missing files rather than treating
+a passing check as complete coverage. Current result: **14 specs, 14 clean,
+0 missing evidence files, 0 unverified components**; uncalibrated components
+remain visible.
 
 AISC 0.5 adds native batch and diff commands, which Atom Zero's multi-spec
 checkout can use directly:

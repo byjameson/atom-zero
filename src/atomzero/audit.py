@@ -127,11 +127,27 @@ def main(argv=None) -> int:
     parser.add_argument(
         "--summary", action="store_true",
         help="print only the aggregate pass/fail/error summary")
+    parser.add_argument(
+        "--coverage", action="store_true",
+        help="report evidence/verification coverage instead of checking specs")
     args = parser.parse_args(argv)
     specs = args.specs or [str(path) for path in discover_specs()]
     if not specs:
         print("No AISC specs found under docs/aisc.", file=sys.stderr)
         return 2
+    if args.coverage:
+        try:
+            from atomzero.aisc_coverage import coverage_report
+            report = coverage_report(specs, args.aisc_path)
+        except RuntimeError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        if args.json:
+            print(json.dumps(report, indent=2, ensure_ascii=False))
+        else:
+            from atomzero.aisc_coverage import _render
+            print(_render(report))
+        return 0 if report["ok"] else 1
     try:
         results = run_audit(
             specs, args.aisc_path, args.strict, args.require_calibration)
