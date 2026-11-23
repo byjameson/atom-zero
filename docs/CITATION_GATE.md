@@ -121,3 +121,36 @@ python benchmarks/citation_gate_eval.py
 
 Raw result:
 [`benchmarks/results/citation_gate_eval.json`](../benchmarks/results/citation_gate_eval.json).
+
+## Answerability is not a separate shipped gate
+
+The citation score is not an answerability classifier, and a second lexical
+answerability gate was tested and rejected. On the same 200-question SQuAD v2
+stress sample (103 answerable, 97 no-answer), transparent features covered
+query-term coverage, focus-term coverage, title/section overlap, rerank margin,
+names, years, numbers and question-type/answer-type matches.
+
+| signal | AUC |
+|---|---:|
+| best univariate (`terms`) | 0.599 |
+| logistic, context-grouped 5-fold CV | 0.562 |
+| gradient boosting, context-grouped 5-fold CV | 0.497 |
+
+SQuAD v2 no-answer questions deliberately share entities and vocabulary with
+the paragraph, so lexical overlap cannot separate them reliably. A classifier
+at this strength would refuse too many answerable questions without fixing the
+no-answer side. The product therefore keeps:
+
+- the calibrated citation gate and its configurable threshold;
+- the low-confidence warning on weak matches;
+- the knowledge-gap queue for unanswered questions;
+- the narrow document-inspection bypass for explicit quote requests.
+
+Run the negative-result benchmark with:
+
+```powershell
+python benchmarks/answerability_eval.py
+```
+
+Raw result:
+[`benchmarks/results/answerability_eval.json`](../benchmarks/results/answerability_eval.json).

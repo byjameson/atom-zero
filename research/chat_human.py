@@ -731,8 +731,11 @@ def load_model(path: str, device, arch: str = "spiking",
                               cfg["heads"], cfg["ff"]).to(device)
         model.load_state_dict(ck["state"])
         if adapter:
-            from streamft.lora import apply_adapter
-            apply_adapter(model, ROOT / adapter)
+            from atomzero.lora import apply_adapter
+            adapter_path = Path(adapter).expanduser()
+            if not adapter_path.is_absolute():
+                adapter_path = ROOT / adapter_path
+            apply_adapter(model, adapter_path)
         model.eval()
         from tokenizers import Tokenizer
         tokenizer = Tokenizer.from_file(str(ROOT / tokenizer_path))

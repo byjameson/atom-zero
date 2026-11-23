@@ -67,7 +67,10 @@ def chat_generate(model, tok, user: str, max_new_tokens: int = 80,
 
 def evaluate_assistant(model, tok, batches) -> dict:
     """Loss on assistant turns only, matching the SFT training objective."""
-    from streamft.spiking_cli import mask_user_labels
+    try:
+        from research.adapter_runtime import mask_user_labels
+    except ImportError:  # running as `python research/chat_eval.py`
+        from adapter_runtime import mask_user_labels
     user_id = tok.token_to_id("<|user|>")
     assistant_id = tok.token_to_id("<|assistant|>")
     if user_id is None or assistant_id is None:

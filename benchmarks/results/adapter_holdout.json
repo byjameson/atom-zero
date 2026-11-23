@@ -1,0 +1,17 @@
+{
+  "benchmark": "atomzero-adapter-holdout",
+  "base": "transformer_behavior_50m_long",
+  "adapter": "adapters_feedback_holdout_test/v0001",
+  "examples": 2,
+  "tokens": 16,
+  "base_loss": 3.853181,
+  "adapter_loss": 3.13947,
+  "loss_relative": -0.185226,
+  "ppl_base": 47.1428,
+  "ppl_adapter": 23.0916,
+  "notes": [
+    "Assistant-turn cross-entropy on data/feedback_holdout_test.jsonl.",
+    "Two-row holdout; small-sample evidence, not a general benchmark.",
+    "The adapter was trained in the external streamft trainer and loaded by Atom Zero."
+  ]
+}

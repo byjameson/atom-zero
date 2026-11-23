@@ -1,0 +1,75 @@
+{
+  "benchmark": "atomzero-answerability-features",
+  "dataset": "rajpurkar/squad_v2",
+  "split": "validation",
+  "seed": 0,
+  "contexts": 50,
+  "questions": 200,
+  "answerable": 103,
+  "no_answer": 97,
+  "generated": "2026-11-23T18:04:29",
+  "features": [
+    "who",
+    "when",
+    "where",
+    "amount",
+    "coverage_snippet",
+    "focus_coverage",
+    "coverage_chunk",
+    "embedding",
+    "top_score",
+    "snippet_len",
+    "terms",
+    "novel_names",
+    "novel_years",
+    "novel_numbers",
+    "type_answer"
+  ],
+  "univariate_auc": {
+    "who": 0.5425,
+    "when": 0.4824,
+    "where": 0.5088,
+    "amount": 0.5116,
+    "coverage_snippet": 0.4853,
+    "focus_coverage": 0.5056,
+    "coverage_chunk": 0.4814,
+    "embedding": 0.5868,
+    "top_score": 0.4975,
+    "snippet_len": 0.5518,
+    "terms": 0.5989,
+    "novel_names": 0.5278,
+    "novel_years": 0.495,
+    "novel_numbers": 0.4923,
+    "type_answer": 0.5374
+  },
+  "cross_validation": {
+    "logistic": {
+      "mean_auc": 0.5617,
+      "folds": [
+        0.5072,
+        0.55,
+        0.4874,
+        0.7348,
+        0.5289
+      ]
+    },
+    "boost": {
+      "mean_auc": 0.4969,
+      "folds": [
+        0.5725,
+        0.3975,
+        0.3914,
+        0.5177,
+        0.6053
+      ]
+    }
+  },
+  "best_univariate": "terms",
+  "best_univariate_auc": 0.5989,
+  "max_cv_auc": 0.5617,
+  "decision": "not shipped as a classifier or refusal gate; context-grouped cross-validated AUC is too weak on the SQuAD v2 stress set",
+  "notes": [
+    "SQuAD v2 no-answer questions share entities and vocabulary with the paragraph.",
+    "The citation gate, low-confidence warning and knowledge-gap queue remain the product mechanisms."
+  ]
+}

@@ -663,7 +663,15 @@ Sources:
 - [`adapter_comparison_feedback.json`](../research/results/adapter_comparison_feedback.json)
 
 These are small-sample measurements. They show that the reviewed update loop
-works; they do not make the model general.
+works; they do not make the model general. See [`ADAPTERS.md`](ADAPTERS.md) for
+the external-trainer adapter format, local validation commands and the
+`adapter_holdout.json` result.
+
+Answerability was tested as a separate lexical/type classifier on the SQuAD v2
+stress sample. Context-grouped 5-fold CV AUC was **0.562** (logistic) and
+**0.497** (boosted trees), so it is not shipped as a gate. See
+[`CITATION_GATE.md`](CITATION_GATE.md#answerability-is-not-a-separate-shipped-gate)
+and [`answerability_eval.py`](../benchmarks/answerability_eval.py).
 
 ## What is not measured
 

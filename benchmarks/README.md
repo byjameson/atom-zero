@@ -354,3 +354,35 @@ run with the prior suffix/consonant-mutation morphology (no vowel drop).
 The recall probes (`Şehir?`, `Burun?`, `Ağız?`, `İsim?`) exercise
 vowel-drop forms such as `şehir` / `şehrin` and `burun` / `burnu`. Raw result:
 [`results/turkish_retrieval.json`](results/turkish_retrieval.json).
+
+## Answerability negative result
+
+`benchmarks/answerability_eval.py` tests whether lexical and answer-type
+features can separate answerable from no-answer questions on the same SQuAD v2
+stress sample (50 contexts, 200 questions, 103 answerable / 97 no-answer).
+
+```powershell
+pip install datasets scikit-learn
+python benchmarks/answerability_eval.py
+```
+
+| signal | AUC |
+|---|---:|
+| best univariate (`terms`) | 0.599 |
+| logistic, context-grouped 5-fold CV | 0.562 |
+| gradient boosting, context-grouped 5-fold CV | 0.497 |
+
+The classifier is not shipped. SQuAD v2 no-answer questions share entities and
+vocabulary with their paragraph, so lexical features cannot separate them
+reliably. Raw result:
+[`results/answerability_eval.json`](results/answerability_eval.json).
+
+## External adapter holdout
+
+`research/adapter_check.py` and `research/compare_adapters.py` validate an
+adapter produced by the external `streamft` / `continual-lora` trainer without
+importing that trainer. On the two-row feedback holdout, the accepted adapter
+moved assistant loss from **3.853** to **3.139** (-18.5%). This is small-sample
+evidence and a compatibility check, not a general benchmark. See
+[`../docs/ADAPTERS.md`](../docs/ADAPTERS.md) and
+[`results/adapter_holdout.json`](results/adapter_holdout.json).
