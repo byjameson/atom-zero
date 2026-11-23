@@ -154,12 +154,13 @@ class WeeklyReportArchive:
         return needle in haystack
 
     def list(self, limit: int = 10, query: str = "",
-             order: str = "newest") -> list[dict]:
+             order: str = "newest", tag: str = "all") -> list[dict]:
         try:
             limit = max(1, min(int(limit), 100))
         except (TypeError, ValueError):
             limit = 10
         needle = str(query or "").strip().lower()
+        tag = str(tag or "all").strip().lower().lstrip("#") or "all"
         order = str(order or "newest").strip().lower()
         if order not in ("newest", "oldest", "largest"):
             raise WeeklyReportError(
@@ -182,6 +183,10 @@ class WeeklyReportArchive:
             items = []
             for entry in ordered:
                 if not self._matches(entry, needle):
+                    continue
+                entry_tag = str(
+                    entry.get("tag", "all") or "all").lower()
+                if tag != "all" and entry_tag != tag:
                     continue
                 item = dict(entry)
                 raw = str(item.get("path", "") or "")
@@ -238,14 +243,18 @@ class WeeklyReportArchive:
                 self._save()
             return removed
 
-    def count(self, query: str = "") -> int:
+    def count(self, query: str = "", tag: str = "all") -> int:
         needle = str(query or "").strip().lower()
+        tag = str(tag or "all").strip().lower().lstrip("#") or "all"
         with self._lock:
             self._reload()
-            if not needle:
+            if not needle and tag == "all":
                 return len(self.reports)
-            return sum(1 for entry in self.reports
-                       if self._matches(entry, needle))
+            return sum(
+                1 for entry in self.reports
+                if self._matches(entry, needle)
+                and (tag == "all" or str(
+                    entry.get("tag", "all") or "all").lower() == tag))
 
     def verify(self) -> dict:
         """Compare stored size/SHA-256 values with the report files."""

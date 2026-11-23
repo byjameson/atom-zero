@@ -104,6 +104,34 @@ def test_archive_query_filters_entries(tmp_path):
     assert len(archive.list(query="WEEKLY")) == 2
 
 
+def test_archive_tag_filters_entries(tmp_path):
+    index_path = tmp_path / "weekly_reports.json"
+    archive = WeeklyReportArchive(index_path)
+    tags = ("work", "home", "all")
+    for number, (name, tag) in enumerate(
+            zip(("alpha", "beta", "gamma"), tags), start=1):
+        report = tmp_path / f"{name}.md"
+        report.write_text(f"# {name}\n", encoding="utf-8")
+        archive.record(
+            report, {**_review(), "tag": tag},
+            exported_at=f"2026-11-22T0{number}:00:00")
+    assert archive.count() == 3
+    assert archive.count(tag="work") == 1
+    assert archive.count(tag="#work") == 1
+    assert archive.count(tag="home") == 1
+    assert archive.count(tag="all") == 3
+    assert archive.count(tag="missing") == 0
+    assert [item["name"] for item in archive.list(tag="work")] == [
+        "alpha.md"]
+    assert [item["name"] for item in archive.list(tag="home")] == [
+        "beta.md"]
+    assert len(archive.list(tag="all")) == 3
+    assert [item["name"] for item in archive.list(
+        query="weekly", tag="work")] == ["alpha.md"]
+    assert archive.list(query="weekly", tag="work")[0]["tag"] == "work"
+    assert archive.list(tag="missing") == []
+
+
 def test_archive_verify_detects_changed_and_missing_files(tmp_path):
     index_path = tmp_path / "weekly_reports.json"
     archive = WeeklyReportArchive(index_path)

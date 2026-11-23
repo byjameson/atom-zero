@@ -39,7 +39,7 @@ Endpoints:
   POST /v1/tasks/reschedule
   POST /v1/tasks/priority
   POST /v1/tasks/delete
-  GET  /v1/weekly-review/reports?limit=10
+  GET  /v1/weekly-review/reports?limit=10&tag=work
   GET  /v1/weekly-review/reports?id=w0001
   GET  /v1/weekly-review/reports/compare?left=w0001&right=w0002
   GET  /v1/weekly-review/reports/compare/export?left=w0001&right=w0002
@@ -391,6 +391,7 @@ Confirm delete</label>
 <p id="deletetaskmsg" class="hint"></p>
 <div class="row"><input id="weeklyreportsearch" placeholder="Search reports...">
 <button id="weeklyreportssearch">Search</button>
+<input id="weeklyreportstag" placeholder="tag" style="width:7em">
 <select id="weeklyreportsort" title="Report order">
 <option value="newest" selected>Newest</option>
 <option value="oldest">Oldest</option>
@@ -1213,10 +1214,13 @@ async function refreshWeeklyReports() {
   if (checkBox) checkBox.textContent = '';
   const query = (document.getElementById('weeklyreportsearch').value || '')
     .trim();
+  const tag = (document.getElementById('weeklyreportstag').value || '')
+    .trim();
   const sort = document.getElementById('weeklyreportsort').value || 'newest';
   try {
     const params = new URLSearchParams({limit: '10', sort});
     if (query) params.set('query', query);
+    if (tag) params.set('tag', tag);
     const r = await fetch('/v1/weekly-review/reports?' + params.toString());
     const j = await r.json();
     if (!r.ok) {
@@ -1224,7 +1228,7 @@ async function refreshWeeklyReports() {
       return;
     }
     const items = j.data || [];
-    msg.textContent = query
+    msg.textContent = (query || tag)
       ? ((j.matched || 0) + ' match(es) of ' + (j.total || 0))
       : ((j.total || items.length) + ' archived report(s)');
     if (!items.length) {
@@ -1232,8 +1236,10 @@ async function refreshWeeklyReports() {
       none.className = 'hint';
       none.textContent = query
         ? ('No archived reports match "' + query + '".')
-        : ('No archived reports yet. Use atomzero-brief ' +
-           '--weekly --markdown --out PATH.');
+        : (tag
+          ? ("No archived reports tagged '" + tag + "'.")
+          : ('No archived reports yet. Use atomzero-brief ' +
+             '--weekly --markdown --out PATH.'));
       box.appendChild(none);
       return;
     }
@@ -1243,6 +1249,7 @@ async function refreshWeeklyReports() {
       const head = document.createElement('div');
       head.textContent = item.id + ' | ' + (item.exported_at || '') +
         ' | last ' + (item.period_days || 7) + ' days' +
+        (item.tag && item.tag !== 'all' ? ' | tag=' + item.tag : '') +
         (item.exists === false ? ' [missing]' : '');
       card.appendChild(head);
       const meta = document.createElement('div');
@@ -3632,11 +3639,17 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 limit = int(params.get("limit", ["10"])[0])
                 query = str(params.get("query", [""])[0] or "").strip()
+                tag = str(params.get("tag", ["all"])[0]
+                          or "all").strip().lower().lstrip("#") or "all"
+                if tag != "all":
+                    from atomzero.briefing import normalize_task_tag
+                    tag = normalize_task_tag(tag)
                 sort = str(params.get("sort", ["newest"])[0]
                            or "newest").strip().lower()
-                entries = archive.list(limit, query=query, order=sort)
+                entries = archive.list(
+                    limit, query=query, order=sort, tag=tag)
                 total = archive.count()
-                matched = archive.count(query=query)
+                matched = archive.count(query=query, tag=tag)
             except (TypeError, ValueError, WeeklyReportError) as exc:
                 return self._json(400, {"error": str(exc)})
             payload = {
@@ -3648,6 +3661,9 @@ class Handler(BaseHTTPRequestHandler):
             }
             if query:
                 payload["query"] = query
+            if tag != "all":
+                payload["tag"] = tag
+            if query or tag != "all":
                 payload["matched"] = matched
             return self._json(200, payload)
         elif (self.path == "/v1/briefing"

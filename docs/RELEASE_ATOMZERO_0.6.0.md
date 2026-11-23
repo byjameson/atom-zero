@@ -27,6 +27,7 @@ after `0.5.0`.
 - Local report archive with report metadata, size and SHA-256.
 - Archive list/download/search/sort, retention, dry-run preview, deletion,
   integrity verification, metadata repair and report comparison.
+- Exact report-tag filtering through `--reports --tag`, HTTP/UI `tag`.
 - Priority-first brief/review sorting through `--task-sort priority`,
   HTTP `sort=priority`, chat `brief me priority` / `weekly review priority`
   and a shared UI selector.
@@ -70,7 +71,7 @@ after `0.5.0`.
 
 ## Verified regressions
 
-- `374 passed` in the assistant test suite.
+- `375 passed` in the assistant test suite.
 - Weekly chat regression: 7/7.
 - Weekly export/archive regression: 29/29.
 - Weekly review regression: 6/6.

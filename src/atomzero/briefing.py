@@ -1152,17 +1152,27 @@ def render_weekly_report_index(entries: list[dict],
                                query: str = "",
                                matched: int | None = None,
                                total: int | None = None,
-                               sort: str = "newest") -> str:
+                               sort: str = "newest",
+                               tag: str = "all") -> str:
     heading = f"Weekly report archive: {index_path}"
+    filters = []
     if query:
-        heading += (f" | query: {query} | "
-                    f"{matched if matched is not None else len(entries)} "
+        filters.append(f"query: {query}")
+    if tag != "all":
+        filters.append(f"tag: {tag}")
+    if filters:
+        heading += " | " + " | ".join(filters)
+        heading += (f" | {matched if matched is not None else len(entries)} "
                     f"match(es) of {total if total is not None else '?'}")
     heading += f" | sort: {sort}"
     lines = [heading]
     if not entries:
-        lines.append("No archived weekly reports." if not query
-                     else f'No archived reports match "{query}".')
+        if query:
+            lines.append(f'No archived reports match "{query}".')
+        elif tag != "all":
+            lines.append(f"No archived reports tagged '{tag}'.")
+        else:
+            lines.append("No archived weekly reports.")
         return "\n".join(lines)
     lines.extend(_weekly_report_line(item) for item in entries)
     return "\n".join(lines)
@@ -1567,6 +1577,8 @@ def main(argv=None) -> int:
                         help="remove one archive entry by report id")
     parser.add_argument("--query", default="",
                         help="filter archived reports by text")
+    parser.add_argument("--tag", default=None,
+                        help="filter archived reports by exact tag")
     parser.add_argument("--sort", choices=("newest", "oldest", "largest"),
                         default=None,
                         help="sort archived reports")
@@ -1700,6 +1712,17 @@ def main(argv=None) -> int:
     if args.query and (args.prune or args.keep is not None
                        or args.delete is not None or args.dry_run):
         parser.error("--query cannot be combined with maintenance options")
+    if args.tag and not args.reports:
+        parser.error("--tag requires --reports")
+    if args.tag and (
+            args.prune or args.keep is not None or args.delete is not None
+            or args.dry_run or args.verify or args.repair or args.compare):
+        parser.error("--tag cannot be combined with maintenance options")
+    if args.tag:
+        try:
+            normalize_task_tag(args.tag)
+        except ValueError as exc:
+            parser.error(str(exc))
     if args.sort and not args.reports:
         parser.error("--sort requires --reports")
     if args.verify and not args.reports:
@@ -1724,6 +1747,7 @@ def main(argv=None) -> int:
     if args.reports:
         index_path = args.reports_index or DEFAULT_REPORTS_PATH
         query = str(args.query or "").strip()
+        tag = str(args.tag or "all").strip().lower().lstrip("#") or "all"
         sort = args.sort or "newest"
         removed = 0
         trimmed = 0
@@ -1786,9 +1810,9 @@ def main(argv=None) -> int:
                 else:
                     trimmed = archive.keep(args.keep)
             entries = archive.list(
-                args.limit, query=query, order=sort)
+                args.limit, query=query, order=sort, tag=tag)
             total = archive.count()
-            matched = archive.count(query=query)
+            matched = archive.count(query=query, tag=tag)
         except (WeeklyReportError, OSError) as exc:
             if args.json:
                 print(json.dumps({"ok": False, "error": str(exc)},
@@ -1806,6 +1830,9 @@ def main(argv=None) -> int:
             }
             if query:
                 payload["query"] = query
+            if tag != "all":
+                payload["tag"] = tag
+            if query or tag != "all":
                 payload["matched"] = matched
             if args.delete is not None:
                 payload["deleted"] = deleted
@@ -1835,7 +1862,7 @@ def main(argv=None) -> int:
                       f"{args.keep}.")
             print(render_weekly_report_index(
                 entries, archive.path, query=query,
-                matched=matched, total=total, sort=sort))
+                matched=matched, total=total, sort=sort, tag=tag))
         return 0
     session_path = Path(args.session) if args.session else (
         Path(args.sessions_dir) / f"{args.session_id}.json")

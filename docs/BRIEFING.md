@@ -296,6 +296,7 @@ atomzero-brief --reports --keep 10
 atomzero-brief --reports --keep 10 --dry-run
 atomzero-brief --reports --delete w0001
 atomzero-brief --reports --query weekly
+atomzero-brief --reports --tag work
 atomzero-brief --reports --sort oldest
 atomzero-brief --reports --sort largest
 atomzero-brief --reports --verify
@@ -310,7 +311,7 @@ atomzero-brief --reports --reports-index reports\weekly_reports.json --limit 5
 
 The index defaults to `data/weekly_reports.json`. Each output path has one
 entry, refreshed on later exports to the same path. Entries store the report
-path, time, period, task/source counts, graph counts, size and SHA-256.
+path, time, period, tag, task/source counts, graph counts, size and SHA-256.
 
 `--prune` removes entries whose report file no longer exists and prints the
 removed count. `--keep N` retains only the newest N entries and atomically
@@ -321,7 +322,11 @@ With `--json`, the result includes `removed`, `trimmed`, or
 
 `--delete ID` removes one archive entry atomically and leaves the report file
 on disk. `--query TEXT` filters entries by ID, title, filename, path or date.
-`--sort newest|oldest|largest` orders the listing. `--verify` compares each
+`--tag TAG` filters by the exact stored report tag (for example a report
+created with `--weekly-tag work` has tag `work`); unlike `--query` it does not
+match substrings. Tag filters combine with `--query`, `--limit` and `--sort`,
+but not with maintenance actions. `--sort newest|oldest|largest` orders the
+listing. `--verify` compares each
 stored size and SHA-256 with the report file and reports
 `ok`/`missing`/`size_mismatch`/`hash_mismatch`. `--repair` recomputes metadata
 for existing changed files and writes the index atomically; missing files are
@@ -331,6 +336,7 @@ source, size and SHA-256 deltas.
 ```text
 GET  /v1/weekly-review/reports?limit=10&sort=newest
 GET  /v1/weekly-review/reports?query=weekly&sort=oldest
+GET  /v1/weekly-review/reports?tag=work&limit=5
 GET  /v1/weekly-review/reports?id=w0001
 GET  /v1/weekly-review/reports/compare?left=w0001&right=w0002
 GET  /v1/weekly-review/reports/compare/export?left=w0001&right=w0002

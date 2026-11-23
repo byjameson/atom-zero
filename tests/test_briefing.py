@@ -1012,6 +1012,28 @@ def test_cli_weekly_markdown_out_file(tmp_path, capsys):
     listing = json.loads(capsys.readouterr().out)
     assert listing["total"] == 1
     assert listing["data"][0]["exists"] is True
+    assert main(["--reports", "--tag", "work", "--reports-index",
+                 str(index_path)]) == 0
+    listing = capsys.readouterr().out
+    assert "tag: work" in listing
+    assert "w0001" in listing
+    assert "tag=work" in listing
+    assert main(["--reports", "--tag", "work", "--json",
+                 "--reports-index", str(index_path)]) == 0
+    listing = json.loads(capsys.readouterr().out)
+    assert listing["tag"] == "work"
+    assert listing["matched"] == 1
+    assert listing["data"][0]["id"] == "w0001"
+    assert main(["--reports", "--tag", "home", "--reports-index",
+                 str(index_path)]) == 0
+    assert "No archived reports tagged 'home'." in capsys.readouterr().out
+    with pytest.raises(SystemExit) as exc:
+        main(["--tag", "work"])
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
+        main(["--reports", "--tag", "work", "--prune",
+              "--reports-index", str(index_path)])
+    assert exc.value.code == 2
     with pytest.raises(SystemExit) as exc:
         main(["--out", str(tmp_path / "invalid.md")])
     assert exc.value.code == 2

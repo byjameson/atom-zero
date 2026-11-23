@@ -6,7 +6,7 @@ pre{background:#f4f4f4;padding:14px;overflow:auto;font:14px/1.5 Consolas,monospa
 img{max-width:100%}a{color:#1a6b5f}blockquote{border-left:4px solid #ccc;margin-left:0;padding-left:16px;color:#555}
 </style>
 <h1>Atom Zero: A 49M Local Assistant That Says “I Don’t Know”</h1>
-<p><em>Why I put facts in RAG instead of the model weights — and what 374 tests taught me about small local AI.</em></p>
+<p><em>Why I put facts in RAG instead of the model weights — and what 375 tests taught me about small local AI.</em></p>
 <p><em>This is not a ChatGPT competitor. It is a deliberately small, local assistant with source citations, deterministic tools, and an approval gate for research.</em></p>
 <hr />
 <p>Most local AI demos start with a bigger model. I went the other way: a <strong>49.2M parameter language model trained from scratch</strong>, wrapped in a runtime that does the things a small model is bad at.</p>
@@ -29,7 +29,7 @@ img{max-width:100%}a{color:#1a6b5f}blockquote{border-left:4px solid #ccc;margin-
 <li>Behavior checks: <strong>16/16</strong></li>
 <li>Source-cited retrieval top-1: <strong>1.000</strong> (FTS 0.850)</li>
 <li>Document benchmark, 100 authored questions: <strong>80/80 answerable, 20/20 no-answer</strong></li>
-<li>Test suite: <strong>374 passed in the assistant package</strong></li>
+<li>Test suite: <strong>375 passed in the assistant package</strong></li>
 </ul>
 <p>The raw-model probe asks ten simple general questions with no documents, no calculator and no agent. The 49.2M model gets <strong>2/10</strong>. The product gets <strong>21/21</strong> because the runtime does the work.</p>
 <p>The product benchmark is narrow and authored: tools, memory, tasks, source-cited retrieval, teacher-note review, missing-source detection and one short generation. It is <strong>not MMLU, GSM8K or HumanEval</strong>. I am not claiming the 49M model is generally intelligent.</p>

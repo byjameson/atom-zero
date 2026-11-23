@@ -936,6 +936,9 @@ def test_ui_collection_scope_contract():
     assert "duetag" in page
     assert 'id="weeklymd"' in page
     assert 'id="weeklyreportsrefresh"' in page
+    assert 'id="weeklyreportstag"' in page
+    assert "weeklyreportstag" in page
+    assert "item.tag" in page
     assert 'id="weeklyreportsprune"' in page
     assert 'id="weeklyreportsverify"' in page
     assert 'id="weeklyreportsrepair"' in page
@@ -1514,6 +1517,7 @@ def test_http_weekly_reports_archive(tmp_path):
     entry = archive.record(report, {
         "generated": "2026-11-22 09:00",
         "period_days": 7,
+        "tag": "work",
         "task_counts": {"open": 1, "completed_recent": 0,
                         "completed_total": 1},
         "pending_gap_count": 0,
@@ -1524,6 +1528,7 @@ def test_http_weekly_reports_archive(tmp_path):
     missing_report.write_text("# Gone\n", encoding="utf-8")
     missing_entry = archive.record(missing_report, {
         "generated": "2026-11-22 10:00", "period_days": 14,
+        "tag": "home",
         "task_counts": {"open": 0}, "recent_source_count": 0,
         "graph": {"entities": [], "connections": []},
     })
@@ -1550,6 +1555,29 @@ def test_http_weekly_reports_archive(tmp_path):
         by_id = {item["id"]: item for item in listing["data"]}
         assert by_id[entry["id"]]["exists"] is True
         assert by_id[missing_entry["id"]]["exists"] is False
+        work = json.loads(urllib.request.urlopen(
+            base + "/v1/weekly-review/reports?limit=5&tag=work",
+            timeout=10).read().decode("utf-8"))
+        assert work["tag"] == "work"
+        assert work["matched"] == 1
+        assert work["total"] == 2
+        assert [item["id"] for item in work["data"]] == [entry["id"]]
+        assert work["data"][0]["tag"] == "work"
+        home = json.loads(urllib.request.urlopen(
+            base + "/v1/weekly-review/reports?limit=5&tag=home",
+            timeout=10).read().decode("utf-8"))
+        assert [item["id"] for item in home["data"]] == [
+            missing_entry["id"]]
+        missing_tag = json.loads(urllib.request.urlopen(
+            base + "/v1/weekly-review/reports?limit=5&tag=missing",
+            timeout=10).read().decode("utf-8"))
+        assert missing_tag["data"] == []
+        assert missing_tag["matched"] == 0
+        with pytest.raises(urllib.error.HTTPError) as invalid_tag:
+            urllib.request.urlopen(
+                base + "/v1/weekly-review/reports?tag=bad%20tag%21",
+                timeout=10)
+        assert invalid_tag.value.code == 400
         oldest = json.loads(urllib.request.urlopen(
             base + "/v1/weekly-review/reports?limit=5&sort=oldest",
             timeout=10).read().decode("utf-8"))
