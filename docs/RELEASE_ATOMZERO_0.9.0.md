@@ -1,8 +1,12 @@
 # atomzero 0.9.0 - measured self-improvement
 
-Status: **prepared locally; publication pending.** This batch makes the
-human-gated improvement loop measurable. No model or runtime weights changed;
-the weights remain `0.8.0`.
+Status: **published.** PyPI `0.9.0`, GitHub source/tag/release `v0.9.0`,
+Hugging Face, ModelScope, dev.to and Medium are updated.
+`scripts/verify_release.py --version 0.9.0` reports **0 failures**. LinkedIn
+accepted the publish action but the profile activity feed still showed the
+older post during verification, so LinkedIn is **blocked/unverified**, not
+claimed green. This batch makes the human-gated improvement loop measurable.
+No model or runtime weights changed; the weights remain `0.8.0`.
 
 ## What is in this batch
 
@@ -37,6 +41,9 @@ the weights remain `0.8.0`.
 - AISC strict: **18 specs, 16 PASS, 2 expected answerability failures**
   (`AtomZeroAnswerability` and its generated mirror).
 - `benchmarks/self_improvement_regression.py`: **12/12 checks passed**.
+- `scripts/verify_release.py --version 0.9.0`: **0 failures**.
+- Release commit `b2208b0`, annotated tag `v0.9.0`.
+- LinkedIn is attempted but blocked/unverified.
 - No model weights changed; the weights remain `0.8.0`.
 
 ## Install
