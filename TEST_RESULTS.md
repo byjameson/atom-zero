@@ -1,8 +1,8 @@
 # Atom Zero and AISC Test Results
 
-- Date: 2026-11-23 04:58:28
+- Date: 2026-11-23 05:06:23
 - Atom Zero repository: `C:\Users\biris\AppData\Local\Temp\opencode\atom-zero-clean`
-- Tested Atom Zero commit: `effb0253089e1a15399d726fea03d5ea47134de4`
+- Tested Atom Zero commit: `57c08c305de39c6f28176ff7bc07c69c1d6311b4`
 - Atom Zero working tree at test start: clean
 - AISC path: `C:\Users\biris\Desktop\opencode\yeni dal\ai-systems-algebra`
 - AISC source status: directory is not a Git repository; no commit hash is available
@@ -12,7 +12,7 @@
 
 | Suite | Passed | Failed | Exit | Duration |
 |---|---:|---:|---:|---:|
-| Atom Zero `pytest tests -v` | **380** | **0** | 0 | 42.83s |
+| Atom Zero `pytest tests -v` | **380** | **0** | 0 | 46.00s |
 | AISC `pytest tests -v` | **132** (+6 subtests) | **0** | 0 | 12.21s |
 
 **Failed tests: none.**
@@ -455,7 +455,7 @@ tests/test_weekly_reports.py::test_archive_markdown_download_and_missing_files P
 tests/test_weekly_reports.py::test_archive_rejects_bad_index PASSED      [ 99%]
 tests/test_weekly_review_regression.py::test_weekly_review_regression_passes PASSED [100%]
 
-============================ 380 passed in 42.83s =============================
+============================ 380 passed in 46.00s =============================
 ~~~
 
 ## AISC full pytest output
