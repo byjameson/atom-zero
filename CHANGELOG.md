@@ -1,6 +1,10 @@
 # Changelog
 
-## atomzero 0.9.0 - unreleased
+## atomzero 0.9.0 - measured self-improvement (2026-11-23)
+
+This batch makes the human-gated loop measured: approval requires a passing
+evaluation gate, actions carry suggested checks, and a content-free scoreboard
+and trend report show whether the numbers moved.
 
 - Weak-source and single-source actions now carry source-review next steps and
   focused reliability/consensus checks.
