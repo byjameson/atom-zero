@@ -62,13 +62,18 @@ def test_prepare_requires_opt_in_packet_fields(tmp_path):
                 repo_root=tmp_path)
 
 
+def _commit(wt, path, message):
+    subprocess.run(["git", "add", path], cwd=wt, check=True)
+    subprocess.run(["git", "commit", "-qm", message], cwd=wt, check=True)
+
+
 def test_verify_scope_and_gate(tmp_path):
     repo = _repo(tmp_path)
     wt = tmp_path / "wt"
     prepare(PACKET, repo_root=repo, base="master",
             worktree_root=wt, branch="agent/test")
     (wt / "a.txt").write_text("changed\n", encoding="utf-8")
-    result = verify(PACKET, worktree=wt)
+    result = verify(PACKET, worktree=wt, base="master")
     assert result["ok"] is True
     assert result["changed_files"] == ["a.txt"]
     assert result["out_of_scope"] == []
@@ -82,7 +87,32 @@ def test_verify_rejects_out_of_scope(tmp_path):
             worktree_root=wt, branch="agent/test")
     (wt / "a.txt").write_text("changed\n", encoding="utf-8")
     (wt / "extra.txt").write_text("leak\n", encoding="utf-8")
-    result = verify(PACKET, worktree=wt)
+    result = verify(PACKET, worktree=wt, base="master")
+    assert result["ok"] is False
+    assert result["out_of_scope"] == ["extra.txt"]
+
+
+def test_verify_includes_committed_allowed_change(tmp_path):
+    repo = _repo(tmp_path)
+    wt = tmp_path / "wt"
+    prepare(PACKET, repo_root=repo, base="master",
+            worktree_root=wt, branch="agent/test")
+    (wt / "a.txt").write_text("committed\n", encoding="utf-8")
+    _commit(wt, "a.txt", "allowed change")
+    result = verify(PACKET, worktree=wt, base="master")
+    assert result["ok"] is True
+    assert result["changed_files"] == ["a.txt"]
+    assert result["out_of_scope"] == []
+
+
+def test_verify_rejects_committed_out_of_scope(tmp_path):
+    repo = _repo(tmp_path)
+    wt = tmp_path / "wt"
+    prepare(PACKET, repo_root=repo, base="master",
+            worktree_root=wt, branch="agent/test")
+    (wt / "extra.txt").write_text("leak\n", encoding="utf-8")
+    _commit(wt, "extra.txt", "out of scope")
+    result = verify(PACKET, worktree=wt, base="master")
     assert result["ok"] is False
     assert result["out_of_scope"] == ["extra.txt"]
 

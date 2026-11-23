@@ -31,8 +31,9 @@ python -m atomzero.agent_runner verify `
   `handoff: external_agent_harness_only`.
 - Allowed files must be repository-relative; `..` and absolute paths are
   rejected.
-- Changed files are checked with `git status`; any file outside the allowed
-  list fails the run.
+- Changed files are the union of committed changes since the base branch
+  (`git diff --name-only <base>...HEAD`) and working-tree changes
+  (`git status`); any file outside the allowed list fails the run.
 - The gate is executed **inside the worktree**; a pytest target is resolved
   relative to that worktree.
 - The runner does not merge/push/tag/publish and does not change weights.
