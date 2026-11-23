@@ -6,7 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from atomzero.self_improve import run_loop
+from atomzero.agent_runner import RunnerError
+from atomzero.self_improve import main, run_loop
 
 
 def _repo(tmp_path):
@@ -21,6 +22,17 @@ def _repo(tmp_path):
         "def test_ok():\n    assert True\n", encoding="utf-8")
     subprocess.run(["git", "add", "."], cwd=repo, check=True)
     subprocess.run(["git", "commit", "-qm", "base"], cwd=repo, check=True)
+    return repo
+
+
+def _self_code_repo(tmp_path):
+    repo = _repo(tmp_path)
+    (repo / "src").mkdir()
+    for name in ("alpha", "beta"):
+        (repo / "src" / f"{name}.py").write_text(
+            "def f():\n    try:\n        return 1\n"
+            "    except Exception:\n        return None\n",
+            encoding="utf-8")
     return repo
 
 
@@ -125,3 +137,81 @@ def test_loop_no_action_when_self_code_is_clean(tmp_path):
         checks=[], opt_in=True, approve=True, repo_root=tmp_path)
     assert result["status"] == "no_action"
     assert not (tmp_path / "ledger.jsonl").exists()
+
+
+def test_loop_target_path_selects_matching_proposal(tmp_path):
+    repo = _self_code_repo(tmp_path)
+    result = run_loop(
+        signals={}, allowed_files=[], checks=[], opt_in=True,
+        approve=False, repo_root=repo, self_code_root=repo,
+        target_path="./src\\alpha.py")
+    assert result["status"] == "awaiting_human"
+    assert result["plan"]["actions"][0]["kind"] == "self_code_medium"
+    assert result["packet"]["allowed_files"] == [
+        "src/alpha.py", "tests/test_alpha.py"]
+    assert result["packet"]["checks"] == ["pytest:tests/test_alpha.py"]
+    assert result["auto_apply"] is False
+    assert result["weights_changed"] is False
+
+
+def test_loop_target_path_uses_matching_proposal_from_signals(tmp_path):
+    args = _args(tmp_path)
+    args.update(
+        signals={"self_code": {
+            "findings": [
+                {"finding_id": "sc-a", "kind": "broad_exception",
+                 "severity": "medium", "path": "a.txt", "line": 1},
+                {"finding_id": "sc-b", "kind": "broad_exception",
+                 "severity": "medium", "path": "b.txt", "line": 1}],
+            "proposals": [
+                {"finding_id": "sc-a", "severity": "medium",
+                 "path": "a.txt", "allowed_files": ["a.txt"],
+                 "checks": ["pytest:tests/test_dummy.py"]},
+                {"finding_id": "sc-b", "severity": "medium",
+                 "path": "b.txt", "allowed_files": ["b.txt"],
+                 "checks": ["pytest:tests/test_dummy.py"]}],
+        }},
+        allowed_files=[], checks=[], approve=False)
+    result = run_loop(**args, target_path="b.txt")
+    assert result["status"] == "awaiting_human"
+    assert result["packet"]["allowed_files"] == ["b.txt"]
+    assert result["packet"]["checks"] == ["pytest:tests/test_dummy.py"]
+
+
+def test_loop_target_path_unknown_raises(tmp_path):
+    repo = _self_code_repo(tmp_path)
+    with pytest.raises(
+            RunnerError, match="no self-code finding or proposal matches"):
+        run_loop(
+            signals={}, allowed_files=[], checks=[], opt_in=False,
+            approve=False, repo_root=repo, self_code_root=repo,
+            target_path="src/missing.py")
+
+
+def test_loop_target_path_high_finding_builds_packet(tmp_path):
+    repo = _repo(tmp_path)
+    (repo / "src").mkdir()
+    (repo / "src" / "danger.py").write_text(
+        "def f(expression):\n    return eval(expression)\n",
+        encoding="utf-8")
+    result = run_loop(
+        signals={}, allowed_files=[], checks=[], opt_in=True,
+        approve=False, repo_root=repo, self_code_root=repo,
+        target_path="src/danger.py")
+    assert result["plan"]["actions"][0]["kind"] == "self_code_high"
+    assert result["packet"]["allowed_files"] == ["src/danger.py"]
+    assert result["packet"]["checks"] == [
+        "pytest:tests/test_self_code.py",
+        "pytest:tests/test_improvement.py"]
+
+
+def test_main_passes_target_path(tmp_path, capsys):
+    repo = _self_code_repo(tmp_path)
+    code = main([
+        "--self-code-root", str(repo), "--target-path", "src/beta.py",
+        "--opt-in", "--json"])
+    assert code == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["status"] == "awaiting_human"
+    assert payload["packet"]["allowed_files"] == [
+        "src/beta.py", "tests/test_beta.py"]

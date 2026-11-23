@@ -13,6 +13,9 @@ decision only after the gate passed.
       --runner opencode --allowed-file src/... --check pytest:tests/... \
       --ledger data/improvement_ledger.jsonl \
       --scoreboard data/scoreboard.jsonl --after-tests 839 --json
+
+    atomzero-self-improve --self-code-root . \
+      --target-path src/atomzero/agent_runner.py --opt-in --approve --json
 """
 from __future__ import annotations
 
@@ -34,6 +37,62 @@ from atomzero.trend import _load_ledger, build_trend
 
 __all__ = ["run_loop", "main"]
 
+_SEVERITY_ORDER = {"high": 0, "medium": 1, "low": 2}
+
+
+def _normalize_repo_path(path) -> str:
+    """Return a repo-relative path with POSIX separators."""
+    text = str(path or "").strip().replace("\\", "/")
+    while text.startswith("./"):
+        text = text[2:]
+    return text
+
+
+def _filter_self_code_target(report: dict, target: str) -> dict:
+    """Keep only the findings and proposals for one repo-relative path."""
+    findings = [
+        item for item in (report.get("findings") or [])
+        if isinstance(item, dict)
+        and _normalize_repo_path(item.get("path")) == target
+    ]
+    proposals = [
+        item for item in (report.get("proposals") or [])
+        if isinstance(item, dict)
+        and _normalize_repo_path(item.get("path")) == target
+    ]
+    if not findings or not proposals:
+        raise RunnerError(
+            "no self-code finding or proposal matches target path: "
+            f"{target}")
+    findings.sort(key=lambda item: (
+        _SEVERITY_ORDER.get(str(item.get("severity") or "").lower(), 3),
+        int(item.get("line") or 0),
+        str(item.get("kind") or "")))
+    proposals.sort(key=lambda item: (
+        _SEVERITY_ORDER.get(str(item.get("severity") or "").lower(), 3),
+        str(item.get("proposal_id") or "")))
+    filtered = dict(report)
+    filtered["findings"] = findings
+    filtered["proposals"] = proposals
+    counts = {}
+    severities = {}
+    for item in findings:
+        kind = str(item.get("kind") or "")
+        counts[kind] = counts.get(kind, 0) + 1
+        severity = str(item.get("severity") or "").strip().lower()
+        severities[severity] = severities.get(severity, 0) + 1
+    summary = dict(report.get("summary") or {})
+    summary.update({
+        "findings": len(findings),
+        "high": severities.get("high", 0),
+        "medium": severities.get("medium", 0),
+        "low": severities.get("low", 0),
+        "proposals": len(proposals),
+    })
+    filtered["counts"] = dict(sorted(counts.items()))
+    filtered["summary"] = summary
+    return filtered
+
 
 def run_loop(
     *,
@@ -54,6 +113,7 @@ def run_loop(
     archive=None,
     timeout: int = 1800,
     self_code_root=None,
+    target_path: str | None = None,
 ) -> dict:
     """Run one bounded loop, returning every stage and its evidence."""
     normalized = dict(signals) if isinstance(signals, dict) else {}
@@ -68,18 +128,64 @@ def run_loop(
                     report["findings"].append(item)
             report["summary"]["findings"] = len(report["findings"])
         normalized["self_code"] = report
+    target = ""
+    target_severity = ""
+    if target_path:
+        target = _normalize_repo_path(target_path)
+        if not target:
+            raise RunnerError(
+                "target_path must be a non-empty repo-relative path")
+        report = normalized.get("self_code")
+        if not isinstance(report, dict):
+            raise RunnerError(
+                "target_path requires a self-code report; pass "
+                "self_code_root or a self_code signal")
+        normalized["self_code"] = _filter_self_code_target(report, target)
+        target_severity = str(
+            normalized["self_code"]["findings"][0].get("severity") or ""
+        ).strip().lower()
+        if target_severity not in {"high", "medium"}:
+            raise RunnerError(
+                "target finding severity has no planner action: "
+                f"{target_severity or 'unknown'}")
     if not normalized:
         raise RunnerError("signals or self_code_root must provide an input")
     plan = plan_from_inputs(**normalized)
     if not plan["actions"]:
+        if target:
+            raise RunnerError(
+                "planner produced no action for target severity: "
+                f"{target_severity}")
         return {
             "status": "no_action",
             "plan": plan,
             "auto_apply": False,
             "weights_changed": False,
         }
-    action = plan["actions"][0]
-    if not allowed_files or not checks:
+    if target:
+        action = next(
+            (item for item in plan["actions"]
+             if item.get("kind") == f"self_code_{target_severity}"), None)
+        if action is None:
+            raise RunnerError(
+                "planner produced no action for target severity: "
+                f"{target_severity}")
+    else:
+        action = plan["actions"][0]
+    if target:
+        proposal = next(
+            (item for item in normalized["self_code"]["proposals"]
+             if _normalize_repo_path(item.get("path")) == target
+             and str(item.get("severity") or "").strip().lower()
+             == target_severity),
+            None)
+        if proposal is None:
+            raise RunnerError(
+                "no self-code proposal matches target path and severity: "
+                f"{target} ({target_severity})")
+        allowed_files = list(proposal.get("allowed_files") or [])
+        checks = list(proposal.get("checks") or action["suggested_checks"])
+    elif not allowed_files or not checks:
         for proposal in (normalized.get("self_code") or {}).get(
                 "proposals", []):
             if not isinstance(proposal, dict):
@@ -154,6 +260,9 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--signal", default="")
     parser.add_argument("--self-code-root", default="")
+    parser.add_argument(
+        "--target-path", default="",
+        help="limit the self-code loop to one repo-relative file")
     parser.add_argument("--allowed-file", action="append", default=[])
     parser.add_argument("--check", action="append", default=[])
     parser.add_argument("--opt-in", action="store_true")
@@ -201,7 +310,8 @@ def main(argv=None) -> int:
             scoreboard_path=args.scoreboard or None,
             after=after, aisc_path=args.aisc_path,
             archive=args.archive or None,
-            self_code_root=args.self_code_root or None)
+            self_code_root=args.self_code_root or None,
+            target_path=args.target_path or None)
     except (OSError, ValueError, RunnerError, json.JSONDecodeError) as exc:
         print(f"input error: {exc}", file=sys.stderr)
         return 2
