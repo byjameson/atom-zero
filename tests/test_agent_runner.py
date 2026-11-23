@@ -117,6 +117,36 @@ def test_verify_rejects_committed_out_of_scope(tmp_path):
     assert result["out_of_scope"] == ["extra.txt"]
 
 
+def test_verify_propagates_unexpected_gate_error(tmp_path, monkeypatch):
+    repo = _repo(tmp_path)
+    wt = tmp_path / "wt"
+    prepare(PACKET, repo_root=repo, base="master",
+            worktree_root=wt, branch="agent/test")
+
+    def boom(*args, **kwargs):
+        raise KeyError("unexpected")
+
+    monkeypatch.setattr("atomzero.agent_runner.evaluate_gate", boom)
+    with pytest.raises(KeyError):
+        verify(PACKET, worktree=wt, base="master")
+
+
+def test_verify_reports_expected_gate_error(tmp_path, monkeypatch):
+    repo = _repo(tmp_path)
+    wt = tmp_path / "wt"
+    prepare(PACKET, repo_root=repo, base="master",
+            worktree_root=wt, branch="agent/test")
+
+    def boom(*args, **kwargs):
+        raise OSError("gate unavailable")
+
+    monkeypatch.setattr("atomzero.agent_runner.evaluate_gate", boom)
+    result = verify(PACKET, worktree=wt, base="master")
+    assert result["ok"] is False
+    assert result["gate"]["ok"] is False
+    assert "OSError" in result["gate"]["error"]
+
+
 def test_run_packet_requires_opt_in(tmp_path):
     with pytest.raises(RunnerError):
         run_packet(PACKET, opt_in=False, repo_root=tmp_path)
