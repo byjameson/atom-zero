@@ -52,6 +52,7 @@ APPROVED_FEEDBACK_STATUSES = frozenset({"approved", "exported"})
 
 # Ordering follows the user-facing severity order used by the plan report.
 SIGNAL_PRIORITIES = {
+    "scoreboard_regression": 85,
     "unsupported_claims": 80,
     "conflicts": 75,
     "aisc_coverage_gaps": 72,
@@ -64,6 +65,8 @@ SIGNAL_PRIORITIES = {
 }
 
 ACCEPTANCE_GATES = {
+    "scoreboard_regression": (
+        "restore the regressed metric and rerun the scoreboard and gate"),
     "unsupported_claims": (
         "add a supporting source and rerun claim audit"),
     "conflicts": (
@@ -88,6 +91,9 @@ ACCEPTANCE_GATES = {
 REGRESSION_GATE = (
     "run the relevant pytest/AISC regression before accepting")
 NEXT_STEPS = {
+    "scoreboard_regression": (
+        "run atomzero-scoreboard --summary, identify the regressed metric, "
+        "fix it and rerun atomzero-gate"),
     "knowledge_gaps": (
         "propose the top gap with POST /v1/learning/gaps/propose, approve it "
         "in the research queue, then rerun the plan"),
@@ -100,6 +106,10 @@ NEXT_STEPS = {
 DEFAULT_NEXT_STEP = (
     "run atomzero-gate with the focused pytest/AISC checks before accepting")
 SUGGESTED_CHECKS = {
+    "scoreboard_regression": [
+        "pytest:tests/test_scoreboard.py",
+        "pytest:tests/test_improvement.py",
+    ],
     "unsupported_claims": ["pytest:tests/test_claims.py"],
     "conflicts": [
         "pytest:tests/test_claims.py", "pytest:tests/test_consensus.py"],
@@ -128,7 +138,7 @@ RECORD_KEYS = frozenset({
 }) | GATE_KEYS
 _INPUT_KEYS = frozenset({
     "claim_audit", "gaps", "feedback", "freshness", "reliability",
-    "aisc_coverage",
+    "aisc_coverage", "scoreboard",
 })
 _STDIN_ALIASES = {
     "claim_audit": "claim_audit",
@@ -140,6 +150,7 @@ _STDIN_ALIASES = {
     "reliability": "reliability",
     "aisc_coverage": "aisc_coverage",
     "coverage": "aisc_coverage",
+    "scoreboard": "scoreboard",
 }
 _NOTE_ID_RE = re.compile(r"\A(?:[0-9a-f]{1,64})?\Z")
 
@@ -188,7 +199,7 @@ def _signal(kind: str, count: int, title: str, detail: str,
 
 def collect_signals(*, claim_audit=None, gaps=None, feedback=None,
                     freshness=None, reliability=None,
-                    aisc_coverage=None) -> list[dict]:
+                    aisc_coverage=None, scoreboard=None) -> list[dict]:
     """Collect deterministic weakness signals from local summaries.
 
     ``claim_audit`` is the content-free record written by
@@ -211,6 +222,8 @@ def collect_signals(*, claim_audit=None, gaps=None, feedback=None,
         raise ValueError("reliability must be a mapping")
     if aisc_coverage is not None and not isinstance(aisc_coverage, dict):
         raise ValueError("aisc_coverage must be a mapping")
+    if scoreboard is not None and not isinstance(scoreboard, dict):
+        raise ValueError("scoreboard must be a mapping")
 
     claim = claim_audit if isinstance(claim_audit, dict) else {}
     fresh = _freshness_summary(freshness)
@@ -376,6 +389,32 @@ def collect_signals(*, claim_audit=None, gaps=None, feedback=None,
                 "pending_feedback", pending_feedback, "Pending feedback",
                 f"{pending_feedback} feedback item(s) are not approved or "
                 "exported yet.", refs))
+
+    if scoreboard is not None:
+        latest = scoreboard.get("latest")
+        delta = scoreboard.get("delta")
+        latest = latest if isinstance(latest, dict) else {}
+        delta = delta if isinstance(delta, dict) else {}
+        regressions = []
+        failed = _non_negative_int(
+            latest.get("tests_failed"), "scoreboard.latest.tests_failed")
+        if failed:
+            regressions.append(f"{failed} test failure(s)")
+        for key, label in (
+                ("tests_passed", "fewer tests passed"),
+                ("benchmark_passed", "fewer benchmark checks passed"),
+                ("aisc_passed", "fewer AISC specs passed")):
+            value = delta.get(key)
+            if isinstance(value, bool) or not isinstance(value, int):
+                continue
+            if value < 0:
+                regressions.append(f"{label} ({value:+d})")
+        if regressions:
+            signals.append(_signal(
+                "scoreboard_regression", len(regressions),
+                "Measured regression",
+                "The scoreboard shows " + ", ".join(regressions) + ".",
+                ["scoreboard"]))
 
     return sorted(
         signals, key=lambda item: (-item["priority"], item["kind"]))
@@ -707,7 +746,8 @@ def _payload_from_args(args) -> dict:
             ("feedback_json", "feedback"),
             ("freshness_json", "freshness"),
             ("reliability_json", "reliability"),
-            ("aisc_coverage_json", "aisc_coverage")):
+            ("aisc_coverage_json", "aisc_coverage"),
+            ("scoreboard_json", "scoreboard")):
         path = getattr(args, dest)
         if not path:
             continue
@@ -775,6 +815,8 @@ def main(argv=None) -> int:
                         help="JSON file with a reliability summary")
     parser.add_argument("--aisc-coverage-json", default="",
                         help="JSON file with an AISC coverage report")
+    parser.add_argument("--scoreboard-json", default="",
+                        help="JSON file with an atomzero-scoreboard summary")
     parser.add_argument("--limit", type=int, default=5,
                         help="maximum number of actions (1..20)")
     parser.add_argument("--json", action="store_true",

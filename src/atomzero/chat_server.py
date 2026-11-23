@@ -6015,7 +6015,7 @@ class Handler(BaseHTTPRequestHandler):
         from atomzero.improvement import plan_from_inputs
         inputs = {}
         for key in ("claim_audit", "gaps", "feedback", "freshness",
-                    "reliability", "aisc_coverage"):
+                    "reliability", "aisc_coverage", "scoreboard"):
             if key in req:
                 inputs[key] = req[key]
         session_id = str(req.get("session_id", "")).strip()

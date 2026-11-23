@@ -467,6 +467,30 @@ def test_verify_ledger_rejects_tampered_gate():
     assert verify_ledger(ledger)["ok"] is False
 
 
+def test_scoreboard_regression_is_the_highest_priority_signal():
+    signals = collect_signals(scoreboard={
+        "latest": {"tests_failed": 1},
+        "delta": {"tests_passed": -3, "benchmark_passed": -1},
+    })
+    assert signals[0]["kind"] == "scoreboard_regression"
+    assert signals[0]["count"] == 3
+    plan = build_plan(signals)
+    action = plan["actions"][0]
+    assert action["kind"] == "scoreboard_regression"
+    assert "regressed metric" in action["acceptance"]
+    assert action["suggested_checks"] == [
+        "pytest:tests/test_scoreboard.py",
+        "pytest:tests/test_improvement.py",
+    ]
+
+
+def test_scoreboard_without_regression_adds_no_signal():
+    assert collect_signals(scoreboard={
+        "latest": {"tests_failed": 0},
+        "delta": {"tests_passed": 2, "benchmark_passed": 1},
+    }) == []
+
+
 def test_summarize_ledger_is_content_free():
     ledger = []
     record_decision(ledger, ACTION, "approve", note="private note", now=NOW)
