@@ -3205,6 +3205,41 @@ def test_http_document_diff(tmp_path):
         chat_server._state.update(old)
 
 
+def test_http_freshness_audit(tmp_path):
+    old = dict(chat_server._state)
+    chat_server._state.update({"api_key": ""})
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        result = _post(base + "/v1/freshness", {
+            "now": "2026-11-23",
+            "hits": [
+                {"source": "old.md", "chunk": "Updated on 2020-01-01."},
+                {"source": "new.md", "chunk": "Updated on 2026-11-01."},
+                {"source": "undated.md", "chunk": "No date here."},
+            ],
+        })
+        counts = result["summary"]["status_counts"]
+        assert counts["stale"] == 1
+        assert counts["fresh"] == 1
+        assert counts["undated"] == 1
+        assert result["weights_changed"] is False
+        with pytest.raises(urllib.error.HTTPError) as bad_hits:
+            _post(base + "/v1/freshness", {"hits": "not-a-list"})
+        assert bad_hits.value.code == 400
+        with pytest.raises(urllib.error.HTTPError) as bad_days:
+            _post(base + "/v1/freshness", {
+                "hits": [], "max_age_days": 10, "fresh_days": 20})
+        assert bad_days.value.code == 400
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
+
+
 def test_http_tool_plan_audit(tmp_path):
     old = dict(chat_server._state)
     chat_server._state.update({"api_key": ""})

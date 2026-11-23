@@ -40,6 +40,7 @@ atomzero-audit = "atomzero.audit:main"
 atomzero-memory-ledger = "atomzero.memory_ledger:main"
 atomzero-claims = "atomzero.claims:main"
 atomzero-consensus = "atomzero.consensus:main"
+atomzero-freshness = "atomzero.freshness:main"
 atomzero-doc-diff = "atomzero.version_diff:main"
 atomzero-aisc-spec = "atomzero.aisc_spec:main"
 

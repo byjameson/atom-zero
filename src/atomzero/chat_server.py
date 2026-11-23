@@ -4714,8 +4714,8 @@ class Handler(BaseHTTPRequestHandler):
                          "/v1/research/queue/run",
                          "/v1/agent/chat", "/v1/agent/plan",
                          "/v1/tools/audit", "/v1/claims/audit",
-                         "/v1/consensus", "/v1/documents/diff",
-                         "/v1/proactive",
+                         "/v1/consensus", "/v1/freshness",
+                         "/v1/documents/diff", "/v1/proactive",
                          "/v1/proactive/config", "/v1/proactive/ack"):
             return self._json(404, {"error": "not found"})
         key = _state.get("api_key") or ""
@@ -4815,6 +4815,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._claims_audit(req)
             if route == "/v1/consensus":
                 return self._consensus_audit(req)
+            if route == "/v1/freshness":
+                return self._freshness_audit(req)
             if route == "/v1/documents/diff":
                 return self._documents_diff(req)
             if route == "/v1/proactive":
@@ -5930,6 +5932,36 @@ class Handler(BaseHTTPRequestHandler):
         try:
             result = audit_consensus(
                 clean, min_overlap=min_overlap, min_sources=min_sources)
+        except ValueError as exc:
+            return self._json(400, {"error": str(exc)})
+        return self._json(200, result)
+
+    def _freshness_audit(self, req: dict):
+        from atomzero.freshness import audit_freshness
+        hits = req.get("hits")
+        if not isinstance(hits, list):
+            return self._json(400, {"error": "hits must be a list"})
+        if len(hits) > 50:
+            return self._json(400, {"error": "at most 50 hits are allowed"})
+        clean = []
+        for hit in hits:
+            if not isinstance(hit, dict):
+                return self._json(400, {"error": "each hit must be an object"})
+            clean.append({
+                key: hit[key] for key in (
+                    "source", "title", "section", "page", "chunk", "snippet")
+                if key in hit
+            })
+        try:
+            max_age_days = int(req.get("max_age_days", 365))
+            fresh_days = int(req.get("fresh_days", 90))
+        except (TypeError, ValueError):
+            return self._json(400, {
+                "error": "max_age_days and fresh_days must be integers"})
+        try:
+            result = audit_freshness(
+                clean, now=req.get("now"),
+                max_age_days=max_age_days, fresh_days=fresh_days)
         except ValueError as exc:
             return self._json(400, {"error": str(exc)})
         return self._json(200, result)

@@ -70,6 +70,24 @@ Human output has one line per hit plus one summary line. Exit code 0 means a
 normal audit; exit code 2 means empty input, an unreadable file, invalid JSON,
 or invalid thresholds/`now`.
 
+## HTTP
+
+`POST /v1/freshness` accepts `hits` (maximum 50), optional `now` (ISO date),
+`max_age_days` and `fresh_days`. Only `source`, `title`, `section`, `page`,
+`chunk` and `snippet` are passed to the audit. The route is stateless.
+
+```powershell
+$body = @{
+  now = "2026-11-23"
+  hits = @(
+    @{ source = "old.md"; chunk = "Updated on 2020-01-01." },
+    @{ source = "new.md"; chunk = "Updated on 2026-11-01." }
+  )
+} | ConvertTo-Json -Depth 5
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/v1/freshness `
+  -ContentType "application/json" -Body $body
+```
+
 ## Scope and honest limits
 
 Dates come only from the hit text, never from file modification time, file

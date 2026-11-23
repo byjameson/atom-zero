@@ -7,6 +7,10 @@
   consensus/single-source status, and number/date/identifier/negation conflicts
   kept separate instead of averaged. It makes no model calls and does not
   persist the request.
+- Added **Source freshness** (`atomzero-freshness`, `POST /v1/freshness`):
+  deterministic date extraction from hit text with fresh/aging/stale/future/
+  undated status, age days and oldest/newest evidence. It does not filter
+  retrieval or use file mtime.
 - Added **Document version diff** (`atomzero-doc-diff`,
   `POST /v1/documents/diff`): deterministic block-level added/removed/changed
   blocks and a similarity ratio, with labels and no persistence.
