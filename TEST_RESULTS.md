@@ -1,9 +1,11 @@
 # Atom Zero and AISC Test Results
 
-- Date: 2026-11-23 20:35:07
+- Date: 2026-11-23 21:30
 - Atom Zero repository: `C:\Users\biris\AppData\Local\Temp\opencode\atom-zero-clean`
-- Tested Atom Zero commit: `ba9d53e72971b7556d2f73094eb1cb9bcdcbbf48`
-- Atom Zero working tree at test start: clean
+- Tested Atom Zero batch: `0.6.1` (memory ledger + claim/evidence + AISC spec
+  generator), code+release commit `fdabbe0`
+- Atom Zero working tree at test start: version-bump and release-doc edits;
+  the test run used the same code and test contents as `fdabbe0`
 - AISC path: `C:\Users\biris\Desktop\opencode\yeni dal\ai-systems-algebra`
 - AISC source status: directory is not a Git repository; no commit hash is available
 - AISC package version: `0.4.0`
@@ -12,13 +14,27 @@
 
 | Suite | Passed | Failed | Exit | Duration |
 |---|---:|---:|---:|---:|
-| Atom Zero `pytest tests -q` | **469** | **0** | 0 | 63.65s |
-| AISC `pytest tests -q` | **191** (+6 subtests) | **0** | 0 | 16.65s |
+| Atom Zero `pytest tests -q` | **512** | **0** | 0 | 61.70s |
+| AISC strict specs | **7 PASS / 2 FAIL (expected)** | 0 critical | 1 | - |
+| Build (`python -m build`) | **2 artifacts** | **0** | 0 | - |
+| `twine check` | **2 PASSED** | **0** | 0 | - |
+
+The full-suite run is subject to a known Windows socket flake in one long HTTP
+test (`WinError 10053`); the same test and the full suite pass on rerun. The
+release evidence is the clean `512 passed` run.
 
 **Failed tests: none.**
 
 ## Current evidence
 
+- `0.6.1` claim/evidence branch: **10 passed** (`tests/test_claims.py`).
+- `0.6.1` AISC spec generator: **33 passed** (`tests/test_aisc_spec.py`); the
+  generated spec matches `docs/aisc/atomzero-answerability-generated.toml` in
+  `--check` mode.
+- AISC strict after merge: 9 specs, **7 PASS**; `AtomZeroAnswerability` and
+  `AtomZeroAnswerabilityGenerated` both **FAIL** with 0 critical and 2 warnings
+  (`ANSWERABILITY_POOR`, `REFUSAL_POLICY_MISMATCH`). The warnings repeat
+  because the generated spec intentionally mirrors the measured profile.
 - Adapter runtime tests: **15 passed** (`tests/test_adapter_runtime.py`,
   `tests/test_compare_adapters.py`, `tests/test_answerability.py`).
 - Answerability gate tests: **11 passed** (`tests/test_answerability_gate.py`,
