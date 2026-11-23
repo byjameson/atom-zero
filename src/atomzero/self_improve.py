@@ -1,33 +1,39 @@
-"""Opt-in bounded self-improvement loop.
+"""Opt-in, autonomous bounded self-improvement loop.
 
 Composes the existing pieces in one explicit flow:
 
-    live signals -> planner -> bridge packet -> opt-in runner -> gate
-    -> human approval/veto -> gated decision -> scoreboard -> trend
+    live signals -> planner -> bridge packet -> opt-in runner -> focused gate
+    -> self-code diff -> full sandboxed tests -> local merge
+    -> post-merge tests -> gated decision -> scoreboard -> trend
 
-The loop never merges, pushes or edits source itself. It executes an external
-runner command only when both `opt_in` and `approve` are true, and it records a
-decision only after the gate passed.
+The loop is autonomous by default. `--opt-in` enables execution; the focused
+gate, self-code diff and full test suites replace per-change human approval.
+`--require-approval` restores the human gate. The loop never pushes, tags or
+publishes, and it rolls back a failed post-merge suite.
 
-    atomzero-self-improve --signal signals.json --opt-in --approve \
+    atomzero-self-improve --signal signals.json --opt-in \
       --runner opencode --allowed-file src/... --check pytest:tests/... \
       --ledger data/improvement_ledger.jsonl \
       --scoreboard data/scoreboard.jsonl --after-tests 839 --json
 
     atomzero-self-improve --self-code-root . \
-      --target-path src/atomzero/agent_runner.py --opt-in --approve --json
+      --target-path src/atomzero/agent_runner.py --opt-in --json
 """
 from __future__ import annotations
 
 import argparse
 import json
 import os
+import shlex
+import subprocess
 import sys
+import time
 from pathlib import Path
 
 from atomzero.agent_bridge import build_task_packet
 from atomzero.agent_runner import RunnerError, run_packet
 from atomzero.improvement import plan_from_inputs, record_gated_decision
+from atomzero.sandbox import backend_info, run_tests
 from atomzero.scoreboard import (
     load_jsonl as load_scoreboard,
     record_run,
@@ -95,18 +101,76 @@ def _filter_self_code_target(report: dict, target: str) -> dict:
     return filtered
 
 
+def _git(args, cwd):
+    return subprocess.run(
+        ["git", *args], cwd=str(cwd), env=os.environ.copy(),
+        capture_output=True, text=True, encoding="utf-8", errors="replace")
+
+
+def _git_head(cwd) -> str:
+    result = _git(["rev-parse", "--short", "HEAD"], cwd)
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
+def _git_dirty(cwd) -> bool:
+    result = _git(["status", "--porcelain"], cwd)
+    return result.returncode != 0 or bool(result.stdout.strip())
+
+
+def _merge_branch(repo_root, branch: str, message: str) -> dict:
+    before = _git_head(repo_root)
+    merge = _git(["merge", "--no-ff", branch, "-m", message], repo_root)
+    if merge.returncode != 0:
+        _git(["merge", "--abort"], repo_root)
+        return {
+            "ok": False,
+            "branch": branch,
+            "before": before,
+            "error": (merge.stderr or merge.stdout or "").strip()[-1000:],
+        }
+    return {
+        "ok": True,
+        "branch": branch,
+        "before": before,
+        "after": _git_head(repo_root),
+    }
+
+
+def _reset_hard(repo_root, commit: str) -> bool:
+    if not commit:
+        return False
+    return _git(["reset", "--hard", commit], repo_root).returncode == 0
+
+
+def _cleanup_worktree(repo_root, worktree, branch: str) -> dict:
+    result = {"ok": True, "removed": False, "branch_deleted": False}
+    if worktree and Path(worktree).exists():
+        removed = _git(["worktree", "remove", str(worktree), "--force"],
+                       repo_root)
+        result["removed"] = removed.returncode == 0
+        if removed.returncode != 0:
+            result["ok"] = False
+            result["error"] = (removed.stderr or "").strip()[-1000:]
+    if branch:
+        deleted = _git(["branch", "-D", branch], repo_root)
+        result["branch_deleted"] = deleted.returncode == 0
+    _git(["worktree", "prune"], repo_root)
+    return result
+
+
 def run_loop(
     *,
     signals: dict,
     allowed_files,
     checks,
     opt_in: bool,
-    approve: bool,
+    approve: bool = False,
     veto: bool = False,
     repo_root=".",
     runner_command=None,
     base: str = "main",
     worktree_root=None,
+    branch: str | None = None,
     ledger_path=None,
     scoreboard_path=None,
     after: dict | None = None,
@@ -115,6 +179,10 @@ def run_loop(
     timeout: int = 1800,
     self_code_root=None,
     target_path: str | None = None,
+    autonomous: bool = False,
+    auto_merge: bool = True,
+    test_command=None,
+    test_timeout: int = 900,
 ) -> dict:
     """Run one bounded loop, returning every stage and its evidence."""
     normalized = dict(signals) if isinstance(signals, dict) else {}
@@ -212,19 +280,27 @@ def run_loop(
         "status": "awaiting_human",
         "plan": plan,
         "packet": packet,
+        "autonomous": bool(autonomous),
         "auto_apply": False,
         "weights_changed": False,
     }
     if veto:
         result["status"] = "vetoed"
         return result
-    if not opt_in or not approve:
+    if not opt_in:
+        result["status"] = "awaiting_opt_in"
         return result
+    if not autonomous and not approve:
+        return result
+    run_branch = branch
+    if autonomous and not run_branch:
+        run_branch = (
+            f"agent/{action['action_id']}-{time.strftime('%Y%m%d-%H%M%S')}")
     runner = run_packet(
         packet, opt_in=True, repo_root=repo_root,
         runner_command=runner_command, base=base,
-        worktree_root=worktree_root, aisc_path=aisc_path,
-        archive=archive, timeout=timeout)
+        worktree_root=worktree_root, branch=run_branch,
+        aisc_path=aisc_path, archive=archive, timeout=timeout)
     result["runner"] = runner
     if runner.get("ok") is not True:
         result["status"] = "gate_failed"
@@ -240,11 +316,46 @@ def run_loop(
         if diff["ok"] is not True:
             result["status"] = "self_code_regression"
             return result
+    if autonomous:
+        result["sandbox"] = backend_info()
+        verification = run_tests(
+            runner["worktree"], command=test_command, timeout=test_timeout)
+        result["verification"] = verification
+        if verification.get("ok") is not True:
+            result["status"] = "verification_failed"
+            return result
+        if auto_merge:
+            if _git_dirty(repo_root):
+                result["status"] = "repo_dirty"
+                return result
+            branch = str(runner.get("branch") or "")
+            if not branch:
+                result["status"] = "merge_failed"
+                result["merge"] = {"ok": False, "error": "branch missing"}
+                return result
+            merge = _merge_branch(
+                repo_root, branch,
+                f"autonomous: merge {action['action_id']}")
+            result["merge"] = merge
+            if merge.get("ok") is not True:
+                result["status"] = "merge_failed"
+                return result
+            post = run_tests(
+                repo_root, command=test_command, timeout=test_timeout)
+            result["post_merge_verification"] = post
+            if post.get("ok") is not True:
+                result["rolled_back_to"] = merge.get("before", "")
+                _reset_hard(repo_root, merge.get("before", ""))
+                result["status"] = "post_merge_failed"
+                return result
+        else:
+            result["merge"] = {"ok": True, "skipped": True}
     gate = runner["gate"]
+    approved_by = "autonomous gate" if autonomous else "human"
     record = record_gated_decision(
         ledger, action, "approve", gate,
         note=(f"self-improve loop: {action['action_id']} gate "
-              f"{gate.get('gate_id', 'no-gate')} passed and human approved"))
+              f"{gate.get('gate_id', 'no-gate')} passed; {approved_by}"))
     if ledger_path:
         path = Path(ledger_path)
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -260,6 +371,11 @@ def run_loop(
         write_scoreboard(scoreboard_path, runs)
         result["scoreboard"] = runs
         result["trend"] = build_trend(ledger, runs)
+    if (autonomous and auto_merge
+            and result.get("merge", {}).get("ok") is True
+            and not result.get("merge", {}).get("skipped")):
+        result["cleanup"] = _cleanup_worktree(
+            repo_root, runner.get("worktree"), runner.get("branch", ""))
     result["status"] = "completed"
     return result
 
@@ -283,11 +399,24 @@ def main(argv=None) -> int:
     parser.add_argument("--allowed-file", action="append", default=[])
     parser.add_argument("--check", action="append", default=[])
     parser.add_argument("--opt-in", action="store_true")
-    parser.add_argument("--approve", action="store_true")
+    parser.add_argument("--approve", action="store_true",
+                        help="human approval (only with --require-approval)")
+    parser.add_argument(
+        "--require-approval", action="store_true",
+        help="restore the per-change human approval gate")
     parser.add_argument("--veto", action="store_true")
+    parser.add_argument(
+        "--no-auto-merge", action="store_true",
+        help="verify the change but do not merge it into the repo")
+    parser.add_argument(
+        "--test-command", default="",
+        help="full verification command (default: python -m pytest tests -q)")
+    parser.add_argument("--test-timeout", type=int, default=900)
+    parser.add_argument("--sandbox-info", action="store_true")
     parser.add_argument("--repo", default=".")
     parser.add_argument("--runner", default="")
     parser.add_argument("--base", default="main")
+    parser.add_argument("--branch", default="")
     parser.add_argument("--worktree-root", default="")
     parser.add_argument("--ledger", default="")
     parser.add_argument("--scoreboard", default="")
@@ -302,6 +431,10 @@ def main(argv=None) -> int:
     parser.add_argument("--archive", default="")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
+    if args.sandbox_info:
+        print(json.dumps(backend_info(), ensure_ascii=False, indent=2))
+        return 0
+    autonomous = not args.require_approval
     try:
         signals = _load_signals(args.signal) if args.signal else {}
         if not signals and not args.self_code_root:
@@ -323,12 +456,17 @@ def main(argv=None) -> int:
             veto=args.veto, repo_root=args.repo,
             runner_command=args.runner or None, base=args.base,
             worktree_root=args.worktree_root or None,
+            branch=args.branch or None,
             ledger_path=args.ledger or None,
             scoreboard_path=args.scoreboard or None,
             after=after, aisc_path=args.aisc_path,
             archive=args.archive or None,
             self_code_root=args.self_code_root or None,
-            target_path=args.target_path or None)
+            target_path=args.target_path or None,
+            autonomous=autonomous,
+            auto_merge=not args.no_auto_merge,
+            test_command=args.test_command or None,
+            test_timeout=args.test_timeout)
     except (OSError, ValueError, RunnerError, json.JSONDecodeError) as exc:
         print(f"input error: {exc}", file=sys.stderr)
         return 2

@@ -8,8 +8,8 @@ the self-code branch and its planner/runner integration.
 - Added **`atomzero-self-code`**: deterministic AST audit of Atom Zero's own
   source for `eval`/`exec` boundaries, `shell=True`, broad exceptions,
   wall-clock tests and TODO markers. Findings are bounded and stable.
-- Added bounded, human-gated proposals: allowed files, suggested checks and a
-  risk level; high-risk arbitrary-code findings have no automated checks.
+- Added bounded proposals: allowed files, suggested checks and a risk level;
+  high-risk arbitrary-code findings have no automated checks.
 - `atomzero-improve --self-code-json` maps high/medium findings to
   `self_code_high` and `self_code_medium` planner signals.
 - `atomzero-self-improve --self-code-root` can audit the repository and derive
@@ -47,6 +47,13 @@ the self-code branch and its planner/runner integration.
 - Added **`atomzero-verify-teacher`**: content-free claim/evidence/conflict
   verification for teacher answers. A verified result is a promotable event,
   not an automatic memory write, adapter or weight change.
+- Added **autonomous self-improvement mode** (default): `--opt-in` enables the
+  loop; the focused gate, self-code diff, full sandboxed test suite and
+  post-merge suite replace per-change human approval. `--require-approval`
+  restores the old gate. A failed post-merge suite rolls back.
+- Added **`atomzero.sandbox`** and `--sandbox-info`: disposable worktree,
+  sanitized environment, hard timeout and explicit `os_vm: false` on this
+  machine (no Docker/VM backend is installed).
 - Added **prevalence-corrected isotonic calibration** for the answerability
   signal: hybrid Brier `0.2443 -> 0.2326`, ECE `0.1299 -> 0.0642`; feature-only
   Brier `0.2703 -> 0.2535`, ECE `0.1407 -> 0.0519`; AUC unchanged. The Brier

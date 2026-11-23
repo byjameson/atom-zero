@@ -1,9 +1,8 @@
 # Self-improvement architecture
 
-Atom Zero is not claiming autonomous recursive self-modification. The concrete
-goal is a **closed, human-gated improvement loop**: the system notices its own
-weaknesses, proposes the next work, and accepts a change only after an explicit
-evaluation gate.
+Atom Zero now defaults to a **closed, autonomous improvement loop** bounded by
+an isolated worktree, focused and full test gates, a self-code diff and a
+rollback. Per-change human approval is optional via `--require-approval`.
 
 ## Loop
 
@@ -12,11 +11,18 @@ local use
   -> feedback queue / knowledge gaps / claim audits / reliability / freshness
   -> weakness signals (counts, ids, no unnecessary content)
   -> prioritized improvement plan
-  -> human approval
-  -> allowlisted evaluation gate (pytest / AISC / manual)
+  -> bridge packet + opt-in
+  -> external agent in a disposable worktree
+  -> focused allowlisted gate
+  -> self-code before/after diff
+  -> full test suite in the sandbox
+  -> local merge + post-merge full suite
   -> content-free decision ledger
   -> next plan
 ```
+
+See `docs/AUTONOMOUS.md` for the sandbox boundary, rollback and the optional
+human gate.
 
 ## Existing components
 
@@ -36,10 +42,13 @@ local use
 ## What is allowed
 
 - Propose a prioritized action from local signals.
-- Require `requires_human: True` on every action.
+- Carry `requires_human: true` in the packet as a traceable label; autonomous
+  mode auto-approves it after the automated gates pass.
 - Run an allowlisted test/AISC gate and record the result.
 - Record approve/reject/defer with an action id and a note hash.
-- Improve retrieval, tools, prompts or tests after review.
+- Improve retrieval, tools, prompts or tests after the gates pass.
+- Merge a verified change locally and roll it back if the post-merge suite
+  fails.
 
 ## What is not allowed
 
@@ -107,7 +116,7 @@ trend alerts.
 
 ## Near-term roadmap
 
-1. Human-gated improvement planner (in progress).
+1. Autonomous sandboxed loop (implemented; default).
 2. Plan and decision HTTP routes.
 3. Evaluation gate integration with plan acceptance.
 4. Decision ledger in the weekly review.
@@ -130,4 +139,7 @@ The detailed batch is in `docs/BATCH_0.8.0.md`.
   finding is a real bug.
 - The decision ledger is local and unsigned; `verify` checks shape and
   content-free rules, not authorship.
-- Human approval is a feature, not a temporary limitation.
+- Human approval is optional for high-risk runs (`--require-approval`), not a
+  per-change default.
+- The worktree sandbox is a blast-radius reduction, not an OS-level security
+  boundary. See `docs/AUTONOMOUS.md`.
