@@ -2,9 +2,9 @@
 
 ## Current state
 
-- Last feature commit: `84c81ae` (`feat: add relations chat and UI`)
+- Last feature commit: `a9a4464` (`feat: add typed relation paths`)
 - Working tree after the handoff commit: clean
-- Atom Zero tests: **406 passed**
+- Atom Zero tests: **408 passed**
 - AISC tests: **163 passed** (+6 subtests)
 - AISC strict audit: **not claimed as passing**; the AISC spec/report update is
   owned by the AISC side. Atom Zero files were not modified in that repo.
@@ -24,8 +24,8 @@
 - Document timeline: date extraction, CLI, HTTP, chat (`timeline`,
   `zaman çizelgesi`) and UI. Timeline regression: **9/9**.
 - Typed relations: `located_in`, `capital_of`, `founded_by`, `ceo_of`,
-  `born_in`; CLI/HTTP/chat/UI filters and provenance. Relations regression:
-  **9/9**.
+  `born_in`; CLI/HTTP/chat/UI filters, provenance and multi-hop relation paths.
+  Relations regression: **12/12**.
 - CitationGate: calibrated rerank -> validity probability, configurable
   threshold/profile, citation dropping and explicit refusal. Default is
   `squad_v2_stress` at **0.5**. SQuAD v2 policy simulation: **92/103**
@@ -60,8 +60,7 @@ python benchmarks/contradiction_regression.py
 python benchmarks/turkish_retrieval.py
 python benchmarks/citation_gate_eval.py
 python -m atomzero.calibrate citations.csv --out my-calibration.json
-python benchmarks/squad_retrieval.py --max-contexts 50 --max-questions 200 --per-context 5 --seed 0
-```
+python benchmarks/squad_retrieval.py --max-contexts 50 --max-questions 200 --per-context 5 --seed 0```
 
 AISC:
 
