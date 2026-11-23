@@ -1,5 +1,21 @@
 # Changelog
 
+## atomzero 0.19.0 - autonomous opt-in runner loop (2026-11-24)
+
+This release follows the 0.3 cadence after 0.16.0 and adds the bounded
+self-improve loop plus committed-change scope verification.
+
+- Added **`atomzero-self-improve`**: live signals -> planner -> bridge packet
+  -> opt-in runner -> gate -> approve/veto -> gated decision -> scoreboard ->
+  trend. It requires both `--opt-in` and `--approve`; `--veto` stops before any
+  worktree is created.
+- The runner scope check now includes `git diff --name-only base...HEAD` plus
+  working-tree changes, so an external agent cannot hide an out-of-scope
+  committed file from verification.
+- Fifth measured cycle executed an actual nested `opencode run` process in the
+  isolated worktree; gate `7fb857e6552ae5cc`; approval `gate_ok: true`;
+  scoreboard `844/0` -> `846/0`.
+
 ## atomzero 0.16.0 - opt-in runner and policy drift (2026-11-24)
 
 This release follows the 0.3 cadence after 0.13.0 and adds the opt-in agent

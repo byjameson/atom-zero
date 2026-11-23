@@ -3,58 +3,24 @@
 Canonical surfaces: GitHub, Hugging Face, PyPI, dev.to, Medium, LinkedIn and
 ModelScope.
 
-Current batch: **0.16.0 published.** It adds the opt-in agent runner,
-policy-metric drift alerts, the fourth measured cycle and the worktree gate
-isolation fix. `839` Atom Zero tests pass; AISC 0.5.1 has `223` tests and
-`benchmarks/self_improvement_regression.py` passes 12/12.
-
-`scripts/verify_release.py --version 0.16.0` reports **0 failures**. LinkedIn
-remains blocked/unverified.
+Current batch: **0.19.0 prepared locally.** It adds the bounded self-improve
+loop, committed-change scope verification and the fifth measured cycle with an
+actual nested `opencode run` process. `846` Atom Zero tests pass; AISC 0.5.1
+has `223` tests and `benchmarks/self_improvement_regression.py` passes 12/12.
 
 ## Release cadence
 
-Releases follow **0.3 minor steps**, not every 0.1. The current version is
-`0.16.0`; the next release boundary is **`0.19.0`**. Do not publish `0.17.x` or
-`0.18.x`.
+Releases follow **0.3 minor steps**, not every 0.1. The current batch is
+`0.19.0`; the next release boundary is **`0.22.0`**. Do not publish `0.20.x` or
+`0.21.x`.
 
 Intermediate commits stay local. A release batch can contain roughly ten
 development increments, but it is only published when the minor version has
 advanced by 0.3. A hotfix is the only exception and still gets one push.
 
-`scripts/verify_release.py --version 0.16.0` reports **0 failures**. LinkedIn
-remains blocked/unverified.
-
-## Release cadence
-
-Atom Zero uses a batched release train: accumulate about **10 development
-increments** on `main` before publishing. Do not upload every patch.
-
-Between batch boundaries:
-
-- keep changes under `CHANGELOG.md` → `Unreleased`;
-- run tests and builds locally;
-- do not update PyPI, GitHub releases, Hugging Face, ModelScope or dev.to;
-- no version bump is required for every commit.
-
-At the batch boundary:
-
-- bump the version;
-- update release notes, model card and current docs;
-- run preflight and `scripts/verify_release.py`;
-- publish every canonical surface once.
-
-**Push policy:** do not `git push` each increment. Accumulate local commits and
-push `main` once at the batch boundary, together with the version tag and
-release. A hotfix is the only exception, and it still gets one push, not one per
-commit.
-
-`0.5.0` was the first batched release under this policy. It included the graph,
-skills, chains, recipes, daily brief and goal planner accumulated after 0.4.2.
-
-`0.6.0` is the second batch. It includes the weekly review/report archive,
-task due dates/priorities/search/filters/exports, priority-first sorting,
-source comparison, graph paths and reliability fixes accumulated after
-`0.5.0`.
+At the batch boundary: bump the version, update release notes/model cards/docs,
+run preflight and `scripts/verify_release.py`, and publish every canonical
+surface once. Do not push each increment.
 
 ## 1. Preflight
 
