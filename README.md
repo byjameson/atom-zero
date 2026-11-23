@@ -409,6 +409,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Agent handoff bridge: <https://github.com/byjameson/atom-zero/blob/main/docs/AGENT_BRIDGE.md>
 - Opt-in agent runner: <https://github.com/byjameson/atom-zero/blob/main/docs/AGENT_RUNNER.md>
 - Self-code audit and proposals: <https://github.com/byjameson/atom-zero/blob/main/docs/SELF_CODE.md>
+- Self-code diff: <https://github.com/byjameson/atom-zero/blob/main/docs/SELF_CODE_DIFF.md>
 - AISC spec generator: <https://github.com/byjameson/atom-zero/blob/main/docs/AISC_SPEC_GENERATOR.md>
 - Multi-agent orchestration: <https://github.com/byjameson/atom-zero/blob/main/docs/ORCHESTRATION.md>
 - Branch research: <https://github.com/byjameson/atom-zero/blob/main/docs/BRANCH_RESEARCH.md>

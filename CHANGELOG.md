@@ -22,6 +22,9 @@ the self-code branch and its planner/runner integration.
   `cac82f022c879258`; scoreboard `855/0` -> `857/0`.
 - Decision notes in `atomzero-self-improve` now bind the action id and gate
   id, so the content-free `note_id` is unique per gated decision.
+- Added **`atomzero-self-code-diff`**: compares two self-code reports, pairs
+  findings by kind/path/message so line shifts are not fake fixes, and reports
+  resolved/introduced/persisting plus new high/medium counts.
 
 ## atomzero 0.19.0 - autonomous opt-in runner loop (2026-11-24)
 
