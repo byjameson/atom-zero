@@ -152,7 +152,7 @@ LoRA adapters.
 | document timeline regression | **10/10** |
 | typed relations regression | **12/12** |
 | citation gate, SQuAD v2 (default 0.5) | **92/103 answerable retained; 18/97 no-answer refused; precision 0.479** |
-| test suite | **421 passed** |
+| test suite | **432 passed** |
 
 The raw-model probe asks ten simple general questions with no documents, no
 calculator and no agent. The 49.2M model gets **2/10**. The product gets

@@ -298,7 +298,7 @@ whether to enable it.
 | typed relations regression | **12/12** |
 | citation gate, SQuAD v2 (default 0.5) | **92/103 answerable retained; 18/97 no-answer refused; precision 0.479** |
 | safety-enabled product | **26/26** |
-| test suite | **421 passed** |
+| test suite | **432 passed** |
 
 The product benchmark is narrow and authored: tools, memory, tasks, retrieval,
 teacher-note review, missing-source detection and one short generation. It is

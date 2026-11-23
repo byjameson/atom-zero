@@ -151,7 +151,7 @@ after `0.5.0`.
 
 ## Verified regressions
 
-- `421 passed` in the assistant test suite.
+- `432 passed` in the assistant test suite.
 - Weekly chat regression: 7/7.
 - Weekly export/archive regression: 29/29.
 - Weekly review regression: 6/6.

@@ -2,9 +2,9 @@
 
 ## Current state
 
-- Last feature commit: `8d2fb0f` (`feat: validate external adapters locally`)
+- Last feature commit: `276605c` (`feat: measure independent answerability signal`)
 - Working tree after the handoff commit: clean
-- Atom Zero tests: **421 passed**
+- Atom Zero tests: **432 passed**
 - AISC tests: **191 passed** (+6 subtests)
 - AISC strict audit: **not claimed as passing**; the AISC spec/report update is
   owned by the AISC side. Atom Zero files were not modified in that repo.
@@ -30,25 +30,37 @@
   threshold/profile, citation dropping and explicit refusal. Default is
   `squad_v2_stress` at **0.5**. SQuAD v2 policy simulation: **92/103**
   answerable retained, **18/97** no-answer refused, precision **0.479**.
-  Answerability was tested as a separate lexical gate and is not shipped; see
+  Answerability is a separate optional gate and is not enabled by default; see
   the decision below.
 - Local isotonic calibration utility (`python -m atomzero.calibrate`) fits a
   PAVA map, reports Brier/ECE and recommends a threshold from score/label CSV
   for `ATOMZERO_CITATION_CALIBRATION`.
-- Answerability decision: 15 lexical/type features on 200 SQuAD v2 questions;
-  best univariate AUC **0.599**, context-grouped 5-fold CV AUC **0.562**
-  (logistic) / **0.497** (boost). This is too weak to ship as a gate or
-  classifier; it is not part of the product. Reproducible with
+- Answerability initial experiment: 15 lexical/type features on 200 SQuAD v2
+  questions; best univariate AUC **0.599**, context-grouped 5-fold CV AUC
+  **0.562** (logistic) / **0.497** (boost). The follow-up 42-feature and hybrid
+  experiments are recorded below. Reproducible with
   `benchmarks/answerability_eval.py`.
 - External adapter validation: `research/adapter_runtime.py`,
   `research/adapter_check.py` and `research/compare_adapters.py` consume an
   adapter without importing `streamft`. The accepted adapter (368,640 LoRA
   params) scored **3.853 -> 3.139** (-18.5%) on the two-row holdout. A 20-step
   external behavior-mix adapter also loaded and passed the compatibility check.
+- Independent answerability signal: added `src/atomzero/answerability.py`
+  behind `ATOMZERO_ANSWERABILITY_GATE` (`off` default; `shadow`/`enforce`
+  optional). It is separate from CitationGate and has 42 retrieval/answer-type
+  features. The best hybrid (42 features + 5 tiny local QA features) reached
+  held-out AUC **0.663**, Brier **0.244**, ECE **0.130**, but failed the
+  refusal recall/precision and coverage targets. The AISC strict check is
+  **FAIL** with `ANSWERABILITY_POOR` and `REFUSAL_POLICY_MISMATCH`; see
+  `docs/ANSWERABILITY.md`. The default citation threshold remains **0.5** and
+  the answerability gate remains **off**.
 
 ## Next tasks
 
-1. Train a targeted adapter on a genuinely novel per-domain queue with
+1. Improve answerability only with a stronger local QA/NLI signal and
+   target-distribution calibration data; do not enable the current gate by
+   default. The measured targets remain unmet.
+2. Train a targeted adapter on a genuinely novel per-domain queue with
    `streamft` or `continual-lora`; validate it with
    `research/adapter_check.py` and score a held-out queue with
    `compare_adapters.py`. The 267-row format queue is already known to the base
@@ -56,8 +68,8 @@
    is a negative control, not a training target. Keep the repos separate; Atom
    Zero must not import `streamft`. Model weights are still `0.8.0` and
    unchanged.
-2. Prepare the `0.6.0` batch release once fresh credentials are available.
-3. After the next code commit, re-run full pytest, AISC, build/twine and
+3. Prepare the `0.6.0` batch release once fresh credentials are available.
+4. After the next code commit, re-run full pytest, AISC, build/twine and
    refresh `TEST_RESULTS.md`.
 
 ## Resume commands
@@ -73,6 +85,9 @@ python benchmarks/contradiction_regression.py
 python benchmarks/turkish_retrieval.py
 python benchmarks/citation_gate_eval.py
 python benchmarks/answerability_eval.py
+python benchmarks/answerability_signal.py
+python benchmarks/answerability_transformer.py
+python benchmarks/answerability_hybrid.py
 python research/adapter_check.py --base <base> --adapter <adapter>
 python research/compare_adapters.py --base <base> --data <holdout.jsonl> --adapters <adapter>
 python -m atomzero.calibrate citations.csv --out my-calibration.json

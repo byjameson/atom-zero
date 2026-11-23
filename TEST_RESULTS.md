@@ -1,8 +1,8 @@
 # Atom Zero and AISC Test Results
 
-- Date: 2026-11-23 18:13:03
+- Date: 2026-11-23 19:07:49
 - Atom Zero repository: `C:\Users\biris\AppData\Local\Temp\opencode\atom-zero-clean`
-- Tested Atom Zero commit: `8d2fb0f187e234e9d2aaaa203381f03037a3751d`
+- Tested Atom Zero commit: `276605c97a0c4a812aaca468ccc5b21a8d869a58`
 - Atom Zero working tree at test start: clean
 - AISC path: `C:\Users\biris\Desktop\opencode\yeni dal\ai-systems-algebra`
 - AISC source status: directory is not a Git repository; no commit hash is available
@@ -12,7 +12,7 @@
 
 | Suite | Passed | Failed | Exit | Duration |
 |---|---:|---:|---:|---:|
-| Atom Zero `pytest tests -q` | **421** | **0** | 0 | 57.18s |
+| Atom Zero `pytest tests -q` | **432** | **0** | 0 | 60.08s |
 | AISC `pytest tests -q` | **191** (+6 subtests) | **0** | 0 | 15.54s |
 
 **Failed tests: none.**
@@ -21,9 +21,14 @@
 
 - Adapter runtime tests: **15 passed** (`tests/test_adapter_runtime.py`,
   `tests/test_compare_adapters.py`, `tests/test_answerability.py`).
-- Answerability negative result: 200 SQuAD v2 questions (103 answerable / 97
-  no-answer); best univariate AUC **0.599**, context-grouped 5-fold CV AUC
-  **0.562** (logistic) / **0.497** (boost). Not shipped as a gate.
+- Answerability gate tests: **11 passed** (`tests/test_answerability_gate.py`,
+  `tests/test_answerability_policy.py`).
+- Answerability experiment (200 SQuAD v2 questions; 289 calibration rows):
+  feature-only AUC **0.5635** / Brier **0.2703** / ECE **0.1407**; DistilBERT
+  AUC **0.5375** / Brier **0.2762** / ECE **0.1612**; best hybrid AUC
+  **0.6627** / Brier **0.2443** / ECE **0.1299**. The hybrid still misses the
+  recall/precision/coverage targets; AISC strict is **FAIL** with
+  `ANSWERABILITY_POOR` and `REFUSAL_POLICY_MISMATCH`.
 - External adapter holdout: base loss **3.853** -> adapter **3.139** (-18.5%)
   on the two-row feedback holdout; 368,640 LoRA parameters.
 - A 20-step external behavior-mix adapter loaded and passed the compatibility
