@@ -4715,6 +4715,7 @@ class Handler(BaseHTTPRequestHandler):
                          "/v1/agent/chat", "/v1/agent/plan",
                          "/v1/tools/audit", "/v1/claims/audit",
                          "/v1/consensus", "/v1/freshness",
+                         "/v1/reliability/summary", "/v1/reliability/verify",
                          "/v1/documents/diff", "/v1/proactive",
                          "/v1/proactive/config", "/v1/proactive/ack"):
             return self._json(404, {"error": "not found"})
@@ -4817,6 +4818,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self._consensus_audit(req)
             if route == "/v1/freshness":
                 return self._freshness_audit(req)
+            if route == "/v1/reliability/summary":
+                return self._reliability_summary(req)
+            if route == "/v1/reliability/verify":
+                return self._reliability_verify(req)
             if route == "/v1/documents/diff":
                 return self._documents_diff(req)
             if route == "/v1/proactive":
@@ -5965,6 +5970,34 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError as exc:
             return self._json(400, {"error": str(exc)})
         return self._json(200, result)
+
+    def _reliability_entries(self, req: dict):
+        entries = req.get("entries")
+        if not isinstance(entries, list):
+            return None, self._json(400, {"error": "entries must be a list"})
+        if len(entries) > 1000:
+            return None, self._json(400, {
+                "error": "at most 1000 entries are allowed"})
+        return entries, None
+
+    def _reliability_summary(self, req: dict):
+        from atomzero.reliability import summarize
+        entries, error = self._reliability_entries(req)
+        if error is not None:
+            return error
+        try:
+            min_observations = int(req.get("min_observations", 1))
+            result = summarize(entries, min_observations=min_observations)
+        except (TypeError, ValueError) as exc:
+            return self._json(400, {"error": str(exc)})
+        return self._json(200, result)
+
+    def _reliability_verify(self, req: dict):
+        from atomzero.reliability import verify
+        entries, error = self._reliability_entries(req)
+        if error is not None:
+            return error
+        return self._json(200, verify(entries))
 
     def _documents_diff(self, req: dict):
         from atomzero.version_diff import audit_document_diff

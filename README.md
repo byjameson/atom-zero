@@ -389,6 +389,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Claim / evidence algebra: <https://github.com/byjameson/atom-zero/blob/main/docs/CLAIMS.md>
 - Cross-source consensus: <https://github.com/byjameson/atom-zero/blob/main/docs/CONSENSUS.md>
 - Source freshness: <https://github.com/byjameson/atom-zero/blob/main/docs/FRESHNESS.md>
+- Source reliability ledger: <https://github.com/byjameson/atom-zero/blob/main/docs/RELIABILITY.md>
 - Document version diff: <https://github.com/byjameson/atom-zero/blob/main/docs/DOCUMENT_DIFF.md>
 - AISC spec generator: <https://github.com/byjameson/atom-zero/blob/main/docs/AISC_SPEC_GENERATOR.md>
 - Multi-agent orchestration: <https://github.com/byjameson/atom-zero/blob/main/docs/ORCHESTRATION.md>

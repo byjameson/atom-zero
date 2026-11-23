@@ -3240,6 +3240,38 @@ def test_http_freshness_audit(tmp_path):
         chat_server._state.update(old)
 
 
+def test_http_reliability_summary_and_verify(tmp_path):
+    from atomzero.reliability import add_observation
+    ledger = []
+    add_observation(ledger, "notes.txt", supported=4, weak=1, unsupported=1)
+    old = dict(chat_server._state)
+    chat_server._state.update({"api_key": ""})
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        summary = _post(base + "/v1/reliability/summary", {
+            "entries": ledger})
+        assert summary["sources"][0]["status"] == "reliable"
+        assert summary["sources"][0]["support_ratio"] == 0.75
+        verified = _post(base + "/v1/reliability/verify", {
+            "entries": ledger})
+        assert verified["ok"] is True
+        tampered = [dict(ledger[0], text="leak")]
+        bad = _post(base + "/v1/reliability/verify", {"entries": tampered})
+        assert bad["ok"] is False
+        assert "forbidden content key" in bad["errors"][0]
+        with pytest.raises(urllib.error.HTTPError) as bad_summary:
+            _post(base + "/v1/reliability/summary", {"entries": tampered})
+        assert bad_summary.value.code == 400
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
+
+
 def test_http_tool_plan_audit(tmp_path):
     old = dict(chat_server._state)
     chat_server._state.update({"api_key": ""})

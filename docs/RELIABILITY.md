@@ -135,6 +135,24 @@ python -m atomzero.reliability --file ledger.jsonl --summary --json
 The default file is `data/source_reliability.jsonl`; nothing is written unless
 `--add-source` is used.
 
+## HTTP
+
+`POST /v1/reliability/summary` accepts a content-free `entries` list (maximum
+1000) and optional `min_observations`; `POST /v1/reliability/verify` returns
+`{ok, entries, errors}` for the same input. Both routes are read-only and do
+not persist or rewrite the ledger.
+
+```powershell
+$body = @{ entries = @(
+  @{ version = 1; at = "2026-11-23T00:00:00+00:00";
+     source_id = "e39538e7f27a7bf5"; supported = 4; weak = 1;
+     unsupported = 1; claims = 6; conflicts = 0 }
+) } | ConvertTo-Json -Depth 5
+Invoke-RestMethod -Method Post `
+  -Uri http://127.0.0.1:8000/v1/reliability/summary `
+  -ContentType "application/json" -Body $body
+```
+
 ## Honest limits
 
 - **Small samples.** A source with one or two observations can jump between
