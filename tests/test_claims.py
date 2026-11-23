@@ -166,11 +166,11 @@ def test_compare_claims_reports_date_identifier_and_negation_conflicts():
     date = _conflict(
         "The policy starts on 2020-01-01.",
         "The policy starts on 2021-01-01.")
-    assert "date_mismatch" in date["conflicts"][0]["reasons"]
+    assert date["conflicts"][0]["reasons"] == ["date_mismatch"]
     identifier = _conflict(
         "The warranty code is W-7781.",
         "The warranty code is W-9900.")
-    assert "identifier_mismatch" in identifier["conflicts"][0]["reasons"]
+    assert identifier["conflicts"][0]["reasons"] == ["identifier_mismatch"]
     negation = _conflict(
         "The store is open.",
         "The store is not open.")
@@ -179,6 +179,19 @@ def test_compare_claims_reports_date_identifier_and_negation_conflicts():
         "The battery lasts 8 hours.",
         "The battery lasts 10 hours.")
     assert "numeric_mismatch" in unit["conflicts"][0]["reasons"]
+
+
+def test_structured_tokens_do_not_hide_real_numeric_conflicts():
+    date_and_price = _conflict(
+        "The 2020-01-01 policy price is 10.",
+        "The 2021-01-01 policy price is 12.")
+    assert "date_mismatch" in date_and_price["conflicts"][0]["reasons"]
+    assert "numeric_mismatch" in date_and_price["conflicts"][0]["reasons"]
+    code_and_count = _conflict(
+        "Code W-7781 has 4 parts.",
+        "Code W-9900 has 6 parts.")
+    assert "identifier_mismatch" in code_and_count["conflicts"][0]["reasons"]
+    assert "numeric_mismatch" in code_and_count["conflicts"][0]["reasons"]
 
 
 def test_compare_claims_does_not_conflict_unrelated_or_matching_claims():
