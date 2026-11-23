@@ -33,8 +33,8 @@ Endpoints:
   GET  /v1/tasks/tags?session_id=default
   POST /v1/tasks/tags/rename  (add "confirm": true to apply)
   GET  /v1/tasks/export?session_id=default&status=open&due=week&priority=high&sort=priority&format=csv
-  GET  /v1/tasks/overdue?session_id=default&sort=priority
-  GET  /v1/tasks/due-soon?session_id=default&days=7&sort=priority
+  GET  /v1/tasks/overdue?session_id=default&sort=priority&tag=work
+  GET  /v1/tasks/due-soon?session_id=default&days=7&sort=priority&tag=work
   GET  /v1/tasks/search?session_id=default&q=report&status=open&due=week&priority=high&sort=priority
   POST /v1/tasks/reschedule
   POST /v1/tasks/priority
@@ -295,6 +295,7 @@ and suggested next actions.</p>
 <input id="duedays" type="number" min="1" max="90" value="7"
        title="Due-soon window in days" style="width:4em">
 <button id="duesoonbtn">Due soon</button>
+<input id="duetag" placeholder="tag" style="width:7em">
 <button id="weeklymd">Download .md</button>
 <input id="tasksearch" placeholder="Search tasks..." style="width:12em">
 <select id="tasksearchstatus" title="Task status">
@@ -726,11 +727,14 @@ async function getOverdueTasks() {
   const msg = document.getElementById('briefmsg');
   const box = document.getElementById('overdueres');
   const sort = document.getElementById('tasksort').value;
+  const tag = document.getElementById('duetag').value.trim();
   msg.textContent = 'loading overdue tasks...';
   box.textContent = '';
   try {
-    const r = await fetch('/v1/tasks/overdue?session_id=' +
-      encodeURIComponent(sessionId) + '&sort=' + encodeURIComponent(sort));
+    let url = '/v1/tasks/overdue?session_id=' +
+      encodeURIComponent(sessionId) + '&sort=' + encodeURIComponent(sort);
+    if (tag) url += '&tag=' + encodeURIComponent(tag);
+    const r = await fetch(url);
     const j = await r.json();
     if (!r.ok) {
       msg.textContent = 'overdue error: ' + (j.error || r.status);
@@ -739,7 +743,8 @@ async function getOverdueTasks() {
     msg.textContent = 'overdue tasks | ' +
       (j.overdue_task_count || 0) + ' of ' +
       (j.open_task_count || 0) + ' open' +
-      ((j.sort || sort) !== 'default' ? ' | sort=' + (j.sort || sort) : '');
+      ((j.sort || sort) !== 'default' ? ' | sort=' + (j.sort || sort) : '') +
+      ((j.tag || 'all') !== 'all' ? ' | tag=' + j.tag : '');
     const tasks = j.overdue_tasks || [];
     if (!tasks.length) {
       const none = document.createElement('div');
@@ -764,6 +769,7 @@ async function getDueSoonTasks() {
   const box = document.getElementById('dueres');
   const days = parseInt(document.getElementById('duedays').value, 10);
   const sort = document.getElementById('tasksort').value;
+  const tag = document.getElementById('duetag').value.trim();
   if (!Number.isInteger(days) || days < 1) {
     msg.textContent = 'enter a due-soon window of at least 1 day';
     return;
@@ -771,9 +777,11 @@ async function getDueSoonTasks() {
   msg.textContent = 'loading due-soon tasks...';
   box.textContent = '';
   try {
-    const r = await fetch('/v1/tasks/due-soon?session_id=' +
+    let url = '/v1/tasks/due-soon?session_id=' +
       encodeURIComponent(sessionId) + '&days=' + days +
-      '&sort=' + encodeURIComponent(sort));
+      '&sort=' + encodeURIComponent(sort);
+    if (tag) url += '&tag=' + encodeURIComponent(tag);
+    const r = await fetch(url);
     const j = await r.json();
     if (!r.ok) {
       msg.textContent = 'due-soon error: ' + (j.error || r.status);
@@ -782,7 +790,8 @@ async function getDueSoonTasks() {
     msg.textContent = 'due soon | ' + (j.due_soon_count || 0) +
       ' of ' + (j.open_task_count || 0) + ' open | next ' +
       (j.days || days) + ' days' +
-      ((j.sort || sort) !== 'default' ? ' | sort=' + (j.sort || sort) : '');
+      ((j.sort || sort) !== 'default' ? ' | sort=' + (j.sort || sort) : '') +
+      ((j.tag || 'all') !== 'all' ? ' | tag=' + j.tag : '');
     const tasks = j.due_soon_tasks || [];
     if (!tasks.length) {
       const none = document.createElement('div');
@@ -3510,11 +3519,13 @@ class Handler(BaseHTTPRequestHandler):
                     raise ValueError("days must be at least 1")
                 sort = str(
                     params.get("sort", ["default"])[0] or "default").strip()
+                tag = str(
+                    params.get("tag", ["all"])[0] or "all").strip()
                 session = self._session(session_id)
                 from atomzero.briefing import due_soon_view
 
                 result = due_soon_view(
-                    session.human.data, days=days, sort=sort,
+                    session.human.data, days=days, sort=sort, tag=tag,
                     now=params.get("today", [None])[0])
             except (TypeError, ValueError) as exc:
                 return self._json(400, {"error": str(exc)})
@@ -3530,11 +3541,13 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 sort = str(
                     params.get("sort", ["default"])[0] or "default").strip()
+                tag = str(
+                    params.get("tag", ["all"])[0] or "all").strip()
                 session = self._session(session_id)
                 from atomzero.briefing import overdue_view
 
                 result = overdue_view(
-                    session.human.data, sort=sort,
+                    session.human.data, sort=sort, tag=tag,
                     now=params.get("today", [None])[0])
             except Exception as exc:
                 return self._json(400, {"error": str(exc)})

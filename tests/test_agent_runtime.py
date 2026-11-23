@@ -152,11 +152,11 @@ def test_agent_task_due_dates_and_overdue_brief(tmp_path):
     soon = (date.today() + timedelta(days=2)).isoformat()
     later = (date.today() + timedelta(days=10)).isoformat()
     agent = AgentSession("s-due", tmp_path / "memory.json")
-    added = agent.chat(f"add task submit report due {overdue}")
+    added = agent.chat(f"add task submit report due {overdue} tags work")
     assert f"(due {overdue})" in added["reply"]
     assert agent.human.data["tasks"][0]["due"] == overdue
-    agent.chat(f"add task plan launch due {soon}")
-    agent.chat(f"add task later item due {later}")
+    agent.chat(f"add task plan launch due {soon} tags work")
+    agent.chat(f"add task later item due {later} tags home")
     listed = agent.chat("list tasks")
     assert f"{overdue}, overdue" in listed["reply"]
     assert soon in listed["reply"]
@@ -171,6 +171,36 @@ def test_agent_task_due_dates_and_overdue_brief(tmp_path):
     assert due["tool_calls"][0]["name"] == "due_soon"
     assert due["due_soon"]["due_soon_count"] == 1
     assert "plan launch" in due["reply"]
+    filtered_overdue = agent.chat("overdue tasks tag work")
+    assert filtered_overdue["tool_calls"] == [
+        {"name": "overdue", "sort": "default", "count": 1, "tag": "work"}]
+    assert filtered_overdue["overdue"]["tag"] == "work"
+    assert filtered_overdue["overdue"]["open_task_count"] == 2
+    assert filtered_overdue["overdue"]["overdue_task_count"] == 1
+    assert "| tag=work" in filtered_overdue["reply"]
+    assert "submit report" in filtered_overdue["reply"]
+    assert "later item" not in filtered_overdue["reply"]
+    priority_overdue = agent.chat("overdue tasks priority tag work")
+    assert priority_overdue["tool_calls"] == [
+        {"name": "overdue", "sort": "priority", "count": 1, "tag": "work"}]
+    filtered_due = agent.chat("due soon tag work")
+    assert filtered_due["tool_calls"] == [
+        {"name": "due_soon", "days": 7, "sort": "default", "tag": "work"}]
+    assert filtered_due["due_soon"]["tag"] == "work"
+    assert filtered_due["due_soon"]["open_task_count"] == 2
+    assert filtered_due["due_soon"]["due_soon_count"] == 1
+    assert "| tag=work" in filtered_due["reply"]
+    assert "plan launch" in filtered_due["reply"]
+    assert "submit report" not in filtered_due["reply"]
+    home_later = agent.chat("due soon in 14 days tag home")
+    assert home_later["due_soon"]["tag"] == "home"
+    assert home_later["due_soon"]["days"] == 14
+    assert home_later["due_soon"]["due_soon_count"] == 1
+    assert home_later["due_soon"]["open_task_count"] == 1
+    assert "later item" in home_later["reply"]
+    invalid_tag = agent.chat("due soon tag bad!")
+    assert "letters, numbers" in invalid_tag["reply"]
+    assert invalid_tag["tool_calls"] == []
     review = agent.chat("weekly review")
     assert "Overdue: 1" in review["reply"]
     assert "Due soon: 1 (next 7 days)" in review["reply"]

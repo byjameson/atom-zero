@@ -1113,26 +1113,40 @@ class AgentSession:
             "weights_changed": False,
         }
 
-    def _overdue(self, sort: str = "default") -> dict:
-        view = overdue_view(self.human.data, sort=sort)
+    def _overdue(self, sort: str = "default", tag: str = "all") -> dict:
+        try:
+            view = overdue_view(self.human.data, sort=sort, tag=tag)
+        except ValueError as exc:
+            return {"reply": str(exc), "tool_calls": [],
+                    "sources": [], "evidence": []}
+        tool = {"name": "overdue", "sort": view["sort"],
+                "count": view["overdue_task_count"]}
+        if view.get("tag", "all") != "all":
+            tool["tag"] = view["tag"]
         return {
             "reply": render_overdue_view(view),
-            "tool_calls": [{"name": "overdue",
-                            "sort": view["sort"],
-                            "count": view["overdue_task_count"]}],
+            "tool_calls": [tool],
             "sources": [],
             "evidence": [],
             "overdue": view,
             "weights_changed": False,
         }
 
-    def _due_soon(self, days: int = 7, sort: str = "default") -> dict:
-        view = due_soon_view(self.human.data, days=days, sort=sort)
+    def _due_soon(self, days: int = 7, sort: str = "default",
+                  tag: str = "all") -> dict:
+        try:
+            view = due_soon_view(
+                self.human.data, days=days, sort=sort, tag=tag)
+        except ValueError as exc:
+            return {"reply": str(exc), "tool_calls": [],
+                    "sources": [], "evidence": []}
+        tool = {"name": "due_soon", "days": view["days"],
+                "sort": view["sort"]}
+        if view.get("tag", "all") != "all":
+            tool["tag"] = view["tag"]
         return {
             "reply": render_due_soon_view(view),
-            "tool_calls": [{"name": "due_soon",
-                            "days": view["days"],
-                            "sort": view["sort"]}],
+            "tool_calls": [tool],
             "sources": [],
             "evidence": [],
             "due_soon": view,
@@ -1538,22 +1552,27 @@ class AgentSession:
         overdue_match = re.match(
             r"^(?:overdue(?: tasks?)?|tasks overdue|"
             r"show overdue(?: tasks?)?)"
-            r"(?:\s+(?:sort\s+)?(?P<sort>default|priority))?\??$",
+            r"(?:\s+(?:sort\s+)?(?P<sort>default|priority))?"
+            r"(?:\s+tag\s+(?P<tag>\S+))?\??$",
             text, re.IGNORECASE)
         if overdue_match:
+            groups = overdue_match.groupdict()
             return self._overdue(
-                overdue_match.groupdict().get("sort") or "default")
+                groups.get("sort") or "default",
+                tag=groups.get("tag") or "all")
         due_match = re.match(
             r"^(?:due soon|tasks due soon|what(?:'s| is) due soon|"
             r"show due soon)(?:\s+(?:in\s+)?(?P<days>\d+)\s+days?)?"
-            r"(?:\s+(?:sort\s+)?(?P<sort>default|priority))?\??$",
+            r"(?:\s+(?:sort\s+)?(?P<sort>default|priority))?"
+            r"(?:\s+tag\s+(?P<tag>\S+))?\??$",
             text, re.IGNORECASE)
         if due_match:
             groups = due_match.groupdict()
             days_raw = groups.get("days")
             return self._due_soon(
                 int(days_raw) if days_raw else 7,
-                sort=groups.get("sort") or "default")
+                sort=groups.get("sort") or "default",
+                tag=groups.get("tag") or "all")
         weekly_tag_match = re.match(
             r"^(?:(?:weekly|week)\s+(?:review|summary)|"
             r"haftal[ıi]k\s+(?:özet|rapor|değerlendirme))"

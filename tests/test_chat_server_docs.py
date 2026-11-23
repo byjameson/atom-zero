@@ -932,6 +932,8 @@ def test_ui_collection_scope_contract():
     assert "getDueSoonTasks" in page
     assert "/v1/tasks/overdue" in page
     assert "/v1/tasks/due-soon" in page
+    assert 'id="duetag"' in page
+    assert "duetag" in page
     assert 'id="weeklymd"' in page
     assert 'id="weeklyreportsrefresh"' in page
     assert 'id="weeklyreportsprune"' in page
@@ -1892,10 +1894,10 @@ def test_http_overdue_tasks(tmp_path):
     try:
         _post(base + "/v1/agent/chat", {
             "session_id": "due-http",
-            "message": f"add task submit report due {overdue}"})
+            "message": f"add task submit report due {overdue} tags work"})
         _post(base + "/v1/agent/chat", {
             "session_id": "due-http",
-            "message": f"add task plan launch due {future}"})
+            "message": f"add task plan launch due {future} tags home"})
         result = json.loads(urllib.request.urlopen(
             base + "/v1/tasks/overdue?session_id=due-http"
                    f"&today={date.today().isoformat()}",
@@ -1904,6 +1906,26 @@ def test_http_overdue_tasks(tmp_path):
         assert result["overdue_task_count"] == 1
         assert result["overdue_tasks"][0]["text"] == "submit report"
         assert result["overdue_tasks"][0]["due"] == overdue
+        filtered = json.loads(urllib.request.urlopen(
+            base + "/v1/tasks/overdue?session_id=due-http&tag=work"
+                   f"&today={date.today().isoformat()}",
+            timeout=10).read().decode("utf-8"))
+        assert filtered["tag"] == "work"
+        assert filtered["open_task_count"] == 1
+        assert filtered["overdue_task_count"] == 1
+        assert filtered["overdue_tasks"][0]["text"] == "submit report"
+        other = json.loads(urllib.request.urlopen(
+            base + "/v1/tasks/overdue?session_id=due-http&tag=home"
+                   f"&today={date.today().isoformat()}",
+            timeout=10).read().decode("utf-8"))
+        assert other["open_task_count"] == 1
+        assert other["overdue_task_count"] == 0
+        with pytest.raises(urllib.error.HTTPError) as invalid_tag:
+            urllib.request.urlopen(
+                base + "/v1/tasks/overdue?session_id=due-http"
+                       "&tag=bad%20tag%21",
+                timeout=10)
+        assert invalid_tag.value.code == 400
         empty = json.loads(urllib.request.urlopen(
             base + "/v1/tasks/overdue?session_id=empty",
             timeout=10).read().decode("utf-8"))
@@ -1935,12 +1957,12 @@ def test_http_due_soon_tasks(tmp_path):
     thread.start()
     base = f"http://127.0.0.1:{httpd.server_address[1]}"
     try:
-        for text, due in (("submit report", due_soon),
-                          ("plan launch", later),
-                          ("late task", overdue)):
+        for text, due, tag in (("submit report", due_soon, "work"),
+                               ("plan launch", later, "home"),
+                               ("late task", overdue, "work")):
             _post(base + "/v1/agent/chat", {
                 "session_id": "due-soon-http",
-                "message": f"add task {text} due {due}"})
+                "message": f"add task {text} due {due} tags {tag}"})
         result = json.loads(urllib.request.urlopen(
             base + "/v1/tasks/due-soon?session_id=due-soon-http&days=7"
                    f"&today={today.isoformat()}",
@@ -1951,6 +1973,26 @@ def test_http_due_soon_tasks(tmp_path):
         assert result["due_soon_tasks"][0]["text"] == "submit report"
         assert result["window_end"] == (
             today + timedelta(days=7)).isoformat()
+        filtered = json.loads(urllib.request.urlopen(
+            base + "/v1/tasks/due-soon?session_id=due-soon-http&days=7"
+                   f"&tag=work&today={today.isoformat()}",
+            timeout=10).read().decode("utf-8"))
+        assert filtered["tag"] == "work"
+        assert filtered["open_task_count"] == 2
+        assert filtered["due_soon_count"] == 1
+        assert filtered["due_soon_tasks"][0]["text"] == "submit report"
+        other = json.loads(urllib.request.urlopen(
+            base + "/v1/tasks/due-soon?session_id=due-soon-http&days=7"
+                   f"&tag=home&today={today.isoformat()}",
+            timeout=10).read().decode("utf-8"))
+        assert other["open_task_count"] == 1
+        assert other["due_soon_count"] == 0
+        with pytest.raises(urllib.error.HTTPError) as invalid_tag:
+            urllib.request.urlopen(
+                base + "/v1/tasks/due-soon?session_id=due-soon-http"
+                       "&tag=bad%20tag%21",
+                timeout=10)
+        assert invalid_tag.value.code == 400
         chat = _post(base + "/v1/agent/chat", {
             "session_id": "due-soon-http", "message": "due soon"})
         assert chat["tool_calls"][0]["name"] == "due_soon"

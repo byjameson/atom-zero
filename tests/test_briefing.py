@@ -7,8 +7,10 @@ from datetime import date, datetime, timedelta
 import pytest
 
 from atomzero.briefing import (
-    build_briefing, build_weekly_review, load_session, main, plan_goal,
-    rename_task_tag, render_weekly_markdown, render_weekly_report_index)
+    build_briefing, build_weekly_review, due_soon_view, load_session, main,
+    overdue_view, plan_goal, rename_task_tag, render_due_soon_view,
+    render_overdue_view, render_weekly_markdown,
+    render_weekly_report_index)
 from atomzero.doc_memory import DocMemory
 from atomzero.knowledge_gaps import KnowledgeGapStore
 from atomzero.weekly_reports import WeeklyReportArchive
@@ -353,6 +355,101 @@ def test_cli_due_soon_tasks(tmp_path, capsys):
     assert "late task" not in output
     with pytest.raises(SystemExit) as exc:
         main(["--due-soon", "--due-days", "0"])
+    assert exc.value.code == 2
+
+
+def test_overdue_and_due_soon_tag_filters(tmp_path, capsys):
+    today = date.today()
+    overdue_work = (today - timedelta(days=1)).isoformat()
+    overdue_home = (today - timedelta(days=2)).isoformat()
+    soon_work = (today + timedelta(days=2)).isoformat()
+    soon_home = (today + timedelta(days=1)).isoformat()
+    session = {"tasks": [
+        {"id": 1, "text": "work overdue", "status": "open",
+         "due": overdue_work, "tags": ["work"]},
+        {"id": 2, "text": "home overdue", "status": "open",
+         "due": overdue_home, "tags": ["home"]},
+        {"id": 3, "text": "work soon", "status": "open",
+         "due": soon_work, "tags": ["work"]},
+        {"id": 4, "text": "home soon", "status": "open",
+         "due": soon_home, "tags": ["home"]},
+        {"id": 5, "text": "work undated", "status": "open",
+         "due": "", "tags": ["work"]},
+    ]}
+    now = today.isoformat()
+    overdue = overdue_view(session, now=now, tag="work")
+    assert overdue["tag"] == "work"
+    assert overdue["open_task_count"] == 3
+    assert overdue["overdue_task_count"] == 1
+    assert [task["id"] for task in overdue["overdue_tasks"]] == [1]
+    overdue_text = render_overdue_view(overdue)
+    assert "| tag=work" in overdue_text
+    assert "work overdue" in overdue_text
+    assert "home overdue" not in overdue_text
+    assert overdue_view(session, now=now)["overdue_task_count"] == 2
+    assert overdue_view(session, now=now)["open_task_count"] == 5
+
+    due = due_soon_view(session, days=7, now=now, tag="work")
+    assert due["tag"] == "work"
+    assert due["open_task_count"] == 3
+    assert due["due_soon_count"] == 1
+    assert [task["id"] for task in due["due_soon_tasks"]] == [3]
+    due_text = render_due_soon_view(due)
+    assert "| tag=work" in due_text
+    assert "work soon" in due_text
+    assert "home soon" not in due_text
+    unfiltered_due = due_soon_view(session, days=7, now=now)
+    assert unfiltered_due["open_task_count"] == 5
+    assert unfiltered_due["due_soon_count"] == 2
+
+    session_path = tmp_path / "session.json"
+    session_path.write_text(json.dumps(session), encoding="utf-8")
+    common = [
+        "--session", str(session_path),
+        "--docs", str(tmp_path / "missing.db"),
+        "--gaps", str(tmp_path / "missing-gaps.json")]
+    assert main(common + [
+        "--overdue", "--overdue-tag", "work",
+        "--task-sort", "priority", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["tag"] == "work"
+    assert payload["sort"] == "priority"
+    assert payload["open_task_count"] == 3
+    assert payload["overdue_task_count"] == 1
+    assert [task["id"] for task in payload["overdue_tasks"]] == [1]
+    assert main(common + ["--overdue", "--overdue-tag", "work"]) == 0
+    text = capsys.readouterr().out
+    assert "| tag=work" in text
+    assert "work overdue" in text
+    assert "home overdue" not in text
+
+    assert main(common + [
+        "--due-soon", "--due-days", "7", "--due-soon-tag", "work",
+        "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["tag"] == "work"
+    assert payload["days"] == 7
+    assert payload["open_task_count"] == 3
+    assert payload["due_soon_count"] == 1
+    assert [task["id"] for task in payload["due_soon_tasks"]] == [3]
+    assert main(common + [
+        "--due-soon", "--due-days", "7", "--due-soon-tag", "work"]) == 0
+    text = capsys.readouterr().out
+    assert "| tag=work" in text
+    assert "work soon" in text
+    assert "home soon" not in text
+
+    assert main(common + [
+        "--overdue", "--overdue-tag", "bad tag!"]) == 1
+    assert "letters, numbers" in capsys.readouterr().out
+    assert main(common + [
+        "--due-soon", "--due-soon-tag", "bad tag!"]) == 1
+    assert "letters, numbers" in capsys.readouterr().out
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--overdue-tag", "work"])
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--due-soon-tag", "work"])
     assert exc.value.code == 2
 
 

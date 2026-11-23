@@ -43,7 +43,7 @@ python -m twine check dist/*
 python scripts/aisc_audit.py --aisc-path "<aisc-checkout>"
 ```
 
-Expected for the next batch: `373 passed` or more.
+Expected for the next batch: `374 passed` or more.
 
 ## 2. PyPI
 

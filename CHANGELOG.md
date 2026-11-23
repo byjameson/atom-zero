@@ -24,6 +24,10 @@
 - Added daily-brief tag filters: CLI `--brief-tag`, GET/POST `/v1/briefing`
   `tag`, chat `brief me tag work` and a UI field. Tasks, tag counts and next
   actions are scoped; gaps, index and graph stay global.
+- Added tag filters to overdue and due-soon views: CLI `--overdue-tag` /
+  `--due-soon-tag`, HTTP `tag`, chat `overdue tasks tag work` /
+  `due soon tag work` and a shared UI tag field, with scoped counts and
+  `| tag=work` headers.
 - Added `benchmarks/weekly_chat_regression.py` (6/6 checks).
 - Added weekly-review **Markdown export**:
   `atomzero-brief --weekly --markdown`, `GET /v1/weekly-review/export` and a UI

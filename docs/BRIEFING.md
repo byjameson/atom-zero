@@ -170,6 +170,12 @@ expose the same session views; HTTP equivalents are
 `atomzero-brief --session ... --due-soon --due-days 7 --task-sort priority
 [--json]`. The shared UI **Task order** selector applies to all three views.
 
+Overdue and due-soon views also accept tag filters: CLI
+`--overdue --overdue-tag work` and `--due-soon --due-soon-tag work`, HTTP
+`tag=work`, chat `overdue tasks tag work` / `due soon tag work` and the UI tag
+field next to **Due soon**. `open_task_count` and the rendered header are
+scoped to matching open tasks, and text headers show `| tag=work`.
+
 `--task-sort priority` also orders open, overdue and due-soon task lists in the
 daily brief and weekly review. The HTTP JSON forms accept
 `{"sort": "priority"}` on `POST /v1/briefing` and `POST /v1/weekly-review`;

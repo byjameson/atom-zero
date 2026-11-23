@@ -440,17 +440,28 @@ def _overdue_tasks(session_data: dict | None,
 
 
 def overdue_view(session_data: dict | None, now=None,
-                 sort="default") -> dict:
+                 sort="default", tag="all") -> dict:
     sort = _normalize_task_sort(sort)
+    tag = str(tag or "all").strip().lower().lstrip("#")
+    if tag in ("", "all"):
+        tag = "all"
+    else:
+        tag = normalize_task_tag(tag)
     tasks = _open_tasks(session_data)
+    if tag != "all":
+        tasks = [task for task in tasks if tag in _task_tags(task)]
     today = _today_from_now(now)
-    overdue = sort_tasks(_overdue_tasks(session_data, today), sort)
+    overdue = sort_tasks(
+        [task for task in tasks
+         if str(task.get("due", "") or "").strip()
+         and str(task["due"]) < today], sort)
     return {
         "generated": (now.strftime("%Y-%m-%d %H:%M")
                       if isinstance(now, datetime)
                       else str(now or time.strftime("%Y-%m-%d %H:%M"))),
         "today": today,
         "sort": sort,
+        "tag": tag,
         "open_task_count": len(tasks),
         "overdue_task_count": len(overdue),
         "open_tasks": tasks,
@@ -463,6 +474,8 @@ def render_overdue_view(view: dict) -> str:
     header = (
         f"Overdue tasks ({view.get('overdue_task_count', 0)} of "
         f"{view.get('open_task_count', 0)} open) - {view.get('today', '')}")
+    if view.get("tag", "all") != "all":
+        header += f" | tag={view['tag']}"
     if view.get("sort", "default") != "default":
         header += f" | sort={view['sort']}"
     lines = [header]
@@ -491,8 +504,13 @@ def due_soon_tasks(session_data: dict | None, days: int = 7,
 
 
 def due_soon_view(session_data: dict | None, days: int = 7,
-                  now=None, sort="default") -> dict:
+                  now=None, sort="default", tag="all") -> dict:
     sort = _normalize_task_sort(sort)
+    tag = str(tag or "all").strip().lower().lstrip("#")
+    if tag in ("", "all"):
+        tag = "all"
+    else:
+        tag = normalize_task_tag(tag)
     try:
         days = max(1, min(int(days), 90))
     except (TypeError, ValueError):
@@ -500,8 +518,12 @@ def due_soon_view(session_data: dict | None, days: int = 7,
     today = _today_from_now(now)
     end = (date.fromisoformat(today) + timedelta(days=days)).isoformat()
     tasks = _open_tasks(session_data)
+    if tag != "all":
+        tasks = [task for task in tasks if tag in _task_tags(task)]
     due = sort_tasks(
-        due_soon_tasks(session_data, days=days, today=today), sort)
+        [task for task in tasks
+         if str(task.get("due", "") or "").strip()
+         and today <= str(task["due"]) <= end], sort)
     return {
         "generated": (now.strftime("%Y-%m-%d %H:%M")
                       if isinstance(now, datetime)
@@ -510,6 +532,7 @@ def due_soon_view(session_data: dict | None, days: int = 7,
         "window_end": end,
         "days": days,
         "sort": sort,
+        "tag": tag,
         "open_task_count": len(tasks),
         "due_soon_count": len(due),
         "open_tasks": tasks,
@@ -524,6 +547,8 @@ def render_due_soon_view(view: dict) -> str:
         f"{view.get('open_task_count', 0)} open, next "
         f"{view.get('days', 7)} days) - {view.get('today', '')} "
         f"to {view.get('window_end', '')}")
+    if view.get("tag", "all") != "all":
+        header += f" | tag={view['tag']}"
     if view.get("sort", "default") != "default":
         header += f" | sort={view['sort']}"
     lines = [header]
@@ -1480,6 +1505,10 @@ def main(argv=None) -> int:
                         help="list tasks due in the next N days")
     parser.add_argument("--due-days", type=int, default=None,
                         help="due-soon window in days (default 7)")
+    parser.add_argument("--overdue-tag", default=None,
+                        help="filter overdue tasks by tag")
+    parser.add_argument("--due-soon-tag", default=None,
+                        help="filter due-soon tasks by tag")
     parser.add_argument("--search-tasks", default=None,
                         help="search task text in the session")
     parser.add_argument("--search-status", choices=TASK_SEARCH_STATUSES,
@@ -1570,6 +1599,10 @@ def main(argv=None) -> int:
         parser.error("--due-days requires --due-soon")
     if args.due_days is not None and args.due_days < 1:
         parser.error("--due-days must be at least 1")
+    if args.overdue_tag is not None and not args.overdue:
+        parser.error("--overdue-tag requires --overdue")
+    if args.due_soon_tag is not None and not args.due_soon:
+        parser.error("--due-soon-tag requires --due-soon")
     if args.weekly_tag is not None and not args.weekly:
         parser.error("--weekly-tag requires --weekly")
     if args.brief_tag is not None and (
@@ -1935,10 +1968,13 @@ def main(argv=None) -> int:
                 priority=args.search_priority, sort=args.task_sort,
                 tag=args.search_tag or "all")
         elif args.overdue:
-            result = overdue_view(session, sort=args.task_sort)
+            result = overdue_view(
+                session, sort=args.task_sort,
+                tag=args.overdue_tag or "all")
         elif args.due_soon:
             result = due_soon_view(
-                session, days=args.due_days or 7, sort=args.task_sort)
+                session, days=args.due_days or 7, sort=args.task_sort,
+                tag=args.due_soon_tag or "all")
         elif args.weekly:
             result = build_weekly_review(
                 session, gaps, docs, days=args.days,

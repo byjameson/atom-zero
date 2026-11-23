@@ -1,9 +1,9 @@
 <!-- Medium title: Atom Zero: A 49M Local Assistant That Says “I Don’t Know” -->
-<!-- Medium subtitle: Why I put facts in RAG instead of the model weights — and what 373 tests taught me about small local AI. -->
+<!-- Medium subtitle: Why I put facts in RAG instead of the model weights — and what 374 tests taught me about small local AI. -->
 
 # Atom Zero: A 49M Local Assistant That Says “I Don’t Know”
 
-Why I put facts in RAG instead of the model weights — and what 373 tests taught me about small local AI.
+Why I put facts in RAG instead of the model weights — and what 374 tests taught me about small local AI.
 
 *This is not a ChatGPT competitor. It is a deliberately small, local assistant with source citations, deterministic tools, and an approval gate for research.*
 
@@ -35,7 +35,7 @@ This is the part I wish more small-model projects published.
 - Behavior checks: **16/16**
 - Source-cited retrieval top-1: **1.000** (FTS 0.850)
 - Document benchmark, 100 authored questions: **80/80 answerable, 20/20 no-answer**
-- Test suite: **373 passed in the assistant package**
+- Test suite: **374 passed in the assistant package**
 
 The raw-model probe asks ten simple general questions with no documents, no calculator and no agent. The 49.2M model gets **2/10**. The product gets **21/21** because the runtime does the work.
 
