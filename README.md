@@ -147,7 +147,7 @@ LoRA adapters.
 | source-cited retrieval top-1 | **1.000** (FTS 0.850) |
 | document benchmark, 100 authored questions | **80/80 answerable, 20/20 no-answer** |
 | public SQuAD v2 retrieval (20 contexts) | **0.98 top-1 context (FTS), 1.00 top-5** |
-| public SQuAD v2 retrieval (50 contexts) | **hybrid 0.975 top-1; 0.816 answer in visible snippet** |
+| public SQuAD v2 retrieval (50 contexts) | **hybrid 0.975 top-1; 0.864 answer in visible snippet** |
 | test suite | **380 passed** |
 
 The raw-model probe asks ten simple general questions with no documents, no

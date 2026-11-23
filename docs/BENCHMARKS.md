@@ -37,13 +37,16 @@ Larger subset (50 contexts, 200 questions: 103 answerable, 97 no-answer):
 
 | mode | top-1 context | top-5 context | top-1 answer in chunk | top-1 answer in snippet | MRR |
 |---|---:|---:|---:|---:|---:|
-| FTS | 0.960 | 1.000 | 0.922 | 0.777 | 0.974 |
-| hybrid | **0.975** | 1.000 | **0.961** | **0.816** | **0.984** |
+| FTS | 0.960 | 1.000 | 0.922 | 0.825 | 0.974 |
+| hybrid | **0.975** | 1.000 | **0.961** | **0.864** | **0.984** |
 
 This is **retrieval**, not generation. SQuAD questions share vocabulary with
 their contexts, so the result is a public sanity check, not a hard semantic
-benchmark. The hybrid path wins on the larger subset but ties or loses on the
-smaller one; the difference is within the noise of a 100-question sample.
+benchmark. Snippets include a local neighbourhood (up to one preceding and
+three following sentences, capped at 500 characters), which recovers answers
+that span sentence boundaries. The hybrid path wins on the larger subset but
+ties or loses on the smaller one; the difference is within the noise of a
+100-question sample.
 
 ### Confidence is not answerability
 

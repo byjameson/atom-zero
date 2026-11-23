@@ -35,6 +35,9 @@ def test_best_snippet_selects_query_sentence_and_keeps_teacher_value():
         "It is the capital of Germany.")
     snippet = best_snippet("what is the population of Berlin?", text)
     assert "population of 3.7 million" in snippet
+    assert "Berlin was first documented" in snippet
+    assert "capital of Germany" in snippet
+    assert len(snippet) <= 500
     teacher = ("Topic: Teacher code\n\nThe teacher code is T-9000.")
     assert "T-9000" in best_snippet("what is the teacher code?", teacher)
 

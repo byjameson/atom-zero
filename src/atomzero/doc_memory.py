@@ -276,12 +276,14 @@ def rerank_hits(query: str, hits: list[dict], k: int = 5) -> list[dict]:
 
 
 def best_snippet(query: str, chunk: str, max_chars: int = 500) -> str:
-    """Select the sentence that best answers the query.
+    """Select the sentence that best answers the query, plus local context.
 
     Number/date questions get a small bonus for sentences containing digits,
     and a sentence that opens with a pronoun pulls in the previous sentence for
-    context. Otherwise the result stays short and quote-like instead of
-    padding the evidence with unrelated sentences.
+    context. The chosen sentence is expanded with up to three following
+    sentences and one preceding sentence while staying inside ``max_chars``.
+    This keeps evidence readable while recovering answers that spill into a
+    neighbouring sentence or rely on a preceding antecedent.
     """
     text = str(chunk or "").strip()
     if not text:
@@ -313,18 +315,18 @@ def best_snippet(query: str, chunk: str, max_chars: int = 500) -> str:
                 score += 0.25 * (matches / len(codes))
         scores.append(score)
     best = max(range(len(parts)), key=lambda i: (scores[i], -i))
-    start = best
-    if best > 0 and re.match(
-            r"^(it|this|these|they|he|she|its|their|such|that|those)\b",
-            parts[best].lower()):
-        start = best - 1
-    snippet = " ".join(parts[start:best + 1])
-    if best + 1 < len(parts) and len(snippet) < max_chars:
-        following = parts[best + 1]
-        follow_coverage = _term_coverage(terms, following)
-        short_context = len(snippet) < 60 and not re.search(r"\d", snippet)
-        if follow_coverage > 0.0 or short_context:
-            snippet += " " + following
+    snippet = parts[best]
+    end = best
+    while end + 1 < len(parts) and end - best < 3:
+        candidate = snippet + " " + parts[end + 1]
+        if len(candidate) > max_chars:
+            break
+        snippet = candidate
+        end += 1
+    if best > 0:
+        candidate = parts[best - 1] + " " + snippet
+        if len(candidate) <= max_chars:
+            snippet = candidate
     if len(snippet) > max_chars:
         snippet = parts[best]
     return snippet[:max_chars]
