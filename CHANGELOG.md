@@ -7,6 +7,10 @@
   consensus/single-source status, and number/date/identifier/negation conflicts
   kept separate instead of averaged. It makes no model calls and does not
   persist the request.
+- Added **Temporal validity / as-of filtering** (`atomzero-temporal`,
+  `POST /v1/temporal/filter`): explicit `valid_from`/`valid_until` windows,
+  valid/expired/not_yet/undated status and an included/excluded evidence
+  report. Undated evidence is configurable and no input is persisted.
 - Added **Source reliability ledger** (`atomzero-reliability`,
   `POST /v1/reliability/summary`, `POST /v1/reliability/verify`): hash-only
   observation counts, a support ratio and verification that rejects text,

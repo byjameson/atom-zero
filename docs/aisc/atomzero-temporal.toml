@@ -1,0 +1,43 @@
+name = "AtomZeroTemporal"
+version = "0.1.0"
+description = "Deterministic as-of validity filtering for retrieval hits with explicit valid_from/valid_until metadata."
+min_assurance = 0.90
+max_context_tokens = 8000
+
+[[components]]
+name = "DateParser"
+input_type = "Metadata"
+output_type = "Dates"
+kind = "tool"
+reversible = true
+assurance = 0.97
+verified = true
+evidence = "tests/test_temporal.py ISO date, datetime, date and invalid input cases"
+assumptions = ["validity metadata is supplied as ISO date strings"]
+guarantees = ["parsing is deterministic", "invalid values raise ValueError"]
+context_tokens = 512
+
+[[components]]
+name = "ValidityEvaluator"
+input_type = "Dates"
+output_type = "ValidityStatus"
+kind = "evaluator"
+assurance = 0.95
+verified = true
+evidence = "tests/test_temporal.py valid, expired, not_yet, undated and inclusive-boundary cases"
+assumptions = ["valid_from and valid_until are inclusive day boundaries"]
+guarantees = ["each hit gets one status", "days_remaining and days_until_start are deterministic"]
+context_tokens = 1024
+
+[[components]]
+name = "AsOfFilter"
+input_type = "ValidityStatus"
+output_type = "FilteredEvidence"
+kind = "tool"
+reversible = true
+assurance = 0.96
+verified = true
+evidence = "tests/test_temporal.py include/exclude, keep_undated, empty and HTTP cases"
+assumptions = ["the caller decides whether undated evidence is acceptable"]
+guarantees = ["included and excluded lists are both reported", "weights_changed is always false", "the route does not persist input"]
+context_tokens = 1024

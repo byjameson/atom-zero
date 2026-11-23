@@ -4715,6 +4715,7 @@ class Handler(BaseHTTPRequestHandler):
                          "/v1/agent/chat", "/v1/agent/plan",
                          "/v1/tools/audit", "/v1/claims/audit",
                          "/v1/consensus", "/v1/freshness",
+                         "/v1/temporal/filter",
                          "/v1/reliability/summary", "/v1/reliability/verify",
                          "/v1/documents/diff", "/v1/proactive",
                          "/v1/proactive/config", "/v1/proactive/ack"):
@@ -4818,6 +4819,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._consensus_audit(req)
             if route == "/v1/freshness":
                 return self._freshness_audit(req)
+            if route == "/v1/temporal/filter":
+                return self._temporal_filter(req)
             if route == "/v1/reliability/summary":
                 return self._reliability_summary(req)
             if route == "/v1/reliability/verify":
@@ -5967,6 +5970,33 @@ class Handler(BaseHTTPRequestHandler):
             result = audit_freshness(
                 clean, now=req.get("now"),
                 max_age_days=max_age_days, fresh_days=fresh_days)
+        except ValueError as exc:
+            return self._json(400, {"error": str(exc)})
+        return self._json(200, result)
+
+    def _temporal_filter(self, req: dict):
+        from atomzero.temporal import filter_as_of
+        hits = req.get("hits")
+        if not isinstance(hits, list):
+            return self._json(400, {"error": "hits must be a list"})
+        if len(hits) > 50:
+            return self._json(400, {"error": "at most 50 hits are allowed"})
+        clean = []
+        for hit in hits:
+            if not isinstance(hit, dict):
+                return self._json(400, {"error": "each hit must be an object"})
+            clean.append({
+                key: hit[key] for key in (
+                    "source", "title", "section", "page", "chunk", "snippet",
+                    "valid_from", "valid_until")
+                if key in hit
+            })
+        keep_undated = req.get("keep_undated", True)
+        if not isinstance(keep_undated, bool):
+            return self._json(400, {"error": "keep_undated must be a boolean"})
+        try:
+            result = filter_as_of(
+                clean, as_of=req.get("as_of"), keep_undated=keep_undated)
         except ValueError as exc:
             return self._json(400, {"error": str(exc)})
         return self._json(200, result)

@@ -3272,6 +3272,44 @@ def test_http_reliability_summary_and_verify(tmp_path):
         chat_server._state.update(old)
 
 
+def test_http_temporal_filter(tmp_path):
+    old = dict(chat_server._state)
+    chat_server._state.update({"api_key": ""})
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        result = _post(base + "/v1/temporal/filter", {
+            "as_of": "2026-11-23",
+            "hits": [
+                {"source": "valid", "valid_until": "2026-12-31"},
+                {"source": "expired", "valid_until": "2025-12-31"},
+                {"source": "undated"},
+            ],
+        })
+        assert result["summary"]["included"] == 2
+        assert result["summary"]["status_counts"]["expired"] == 1
+        assert result["weights_changed"] is False
+        strict = _post(base + "/v1/temporal/filter", {
+            "as_of": "2026-11-23", "keep_undated": False,
+            "hits": [{"source": "undated"}],
+        })
+        assert strict["summary"]["included"] == 0
+        with pytest.raises(urllib.error.HTTPError) as bad_hits:
+            _post(base + "/v1/temporal/filter", {"hits": "not-a-list"})
+        assert bad_hits.value.code == 400
+        with pytest.raises(urllib.error.HTTPError) as bad_date:
+            _post(base + "/v1/temporal/filter", {
+                "as_of": "bad", "hits": [{"source": "x"}]})
+        assert bad_date.value.code == 400
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
+
+
 def test_http_tool_plan_audit(tmp_path):
     old = dict(chat_server._state)
     chat_server._state.update({"api_key": ""})
