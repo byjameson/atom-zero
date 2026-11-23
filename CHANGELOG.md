@@ -1,5 +1,12 @@
 # Changelog
 
+## atomzero 0.16.0 - unreleased
+
+- Added **opt-in agent runner** (`atomzero-agent-run`): prepares an isolated
+  worktree, optionally invokes an external command, checks scope against the
+  packet's allowed files, runs the allowlisted gate inside the worktree, and
+  reports; it never merges, pushes, tags or publishes.
+
 ## atomzero 0.13.0 - agent bridge and calibrated profiles (2026-11-24)
 
 This release follows the 0.3 cadence after 0.10.0 and adds the bounded

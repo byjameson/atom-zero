@@ -46,7 +46,24 @@ def test_run_check_pytest_command(monkeypatch):
     assert result["status"] == "pass"
     assert captured["command"][:3] == [
         evaluation.sys.executable, "-m", "pytest"]
-    assert "tests/test_claims.py" in captured["command"]
+    assert str(
+        evaluation.ROOT / "tests" / "test_claims.py") in captured["command"]
+
+
+def test_run_check_project_root_resolves_pytest_target(monkeypatch, tmp_path):
+    captured = {}
+
+    def fake_run(command, **kwargs):
+        captured["command"] = command
+        captured["cwd"] = kwargs["cwd"]
+        return SimpleNamespace(returncode=0, stdout="ok", stderr="")
+
+    monkeypatch.setattr(evaluation.subprocess, "run", fake_run)
+    evaluation.run_check(
+        {"name": "dummy", "kind": "pytest", "target": "tests/test_dummy.py"},
+        project_root=tmp_path)
+    assert captured["cwd"] == str(tmp_path)
+    assert str(tmp_path / "tests" / "test_dummy.py") in captured["command"]
 
 
 def test_run_check_aisc_uses_cwd(monkeypatch, tmp_path):
