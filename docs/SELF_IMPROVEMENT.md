@@ -78,6 +78,13 @@ external Implementer worked in `fix/drift-profile-format`, the gate passed
 report now works, and the scoreboard moved from `800` to `813` passed with no
 trend alerts.
 
+`docs/LOOP_CYCLE_4.md` records the first **opt-in runner** cycle: a live
+policy/ECE drift signal was packaged, `atomzero-agent-run` prepared the
+worktree, an external Implementer added policy-metric alerts, the runner
+verified scope and gate (`gate_id 5134439e1f4e69df`), approval recorded
+`gate_ok: true`, and the scoreboard moved from `821` to `839` passed with no
+trend alerts.
+
 ## Near-term roadmap
 
 1. Human-gated improvement planner (in progress).
