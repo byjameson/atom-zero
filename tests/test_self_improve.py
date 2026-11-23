@@ -192,6 +192,53 @@ def g():
     assert not (tmp_path / "ledger.jsonl").exists()
 
 
+def test_loop_uses_ledger_history_for_priorities(tmp_path):
+    report = {"self_code": {
+        "findings": [{"finding_id": "sc-1", "severity": "medium",
+                      "path": "a.txt", "line": 1}],
+        "proposals": [{"severity": "medium", "allowed_files": ["a.txt"],
+                       "checks": ["pytest:tests/test_dummy.py"]}],
+    }}
+    signals = {**report, "claim_audit": {"conflict_count": 1}}
+    base = dict(
+        signals=signals, allowed_files=["a.txt"],
+        checks=["pytest:tests/test_dummy.py"], opt_in=True, approve=False,
+        repo_root=tmp_path, ledger_path=tmp_path / "ledger.jsonl")
+    before = run_loop(**base)
+    assert before["plan"]["actions"][0]["kind"] == "conflicts"
+
+    (tmp_path / "ledger.jsonl").write_text(
+        "\n".join(json.dumps({"kind": "self_code_medium",
+                              "decision": "approve"})
+                  for _ in range(2)) + "\n", encoding="utf-8")
+    after = run_loop(**base)
+    assert after["plan"]["actions"][0]["kind"] == "self_code_medium"
+    assert after["plan"]["actions"][0]["priority"] > 75
+
+
+def test_loop_explicit_history_is_not_overwritten(tmp_path):
+    ledger_path = tmp_path / "ledger.jsonl"
+    ledger_path.write_text(
+        "\n".join(json.dumps({"kind": "self_code_medium",
+                              "decision": "approve"})
+                  for _ in range(2)) + "\n", encoding="utf-8")
+    signals = {
+        "self_code": {
+            "findings": [{"finding_id": "sc-1", "severity": "medium",
+                          "path": "a.txt", "line": 1}],
+            "proposals": [{"severity": "medium", "allowed_files": ["a.txt"],
+                           "checks": ["pytest:tests/test_dummy.py"]}],
+        },
+        "claim_audit": {"conflict_count": 1},
+        "history": [],
+    }
+    result = run_loop(
+        signals=signals, allowed_files=["a.txt"],
+        checks=["pytest:tests/test_dummy.py"], opt_in=True, approve=False,
+        repo_root=tmp_path, ledger_path=ledger_path)
+    assert result["plan"]["actions"][0]["kind"] == "conflicts"
+
+
 def test_loop_without_self_code_root_has_no_diff(tmp_path):
     result = run_loop(**_args(tmp_path))
     assert result["status"] == "completed"
