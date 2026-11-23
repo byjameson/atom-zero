@@ -679,7 +679,8 @@ per-domain queue and keep the holdout. Raw result:
 Answerability was tested as a separate lexical/type classifier on the SQuAD v2
 stress sample. Context-grouped 5-fold CV AUC was **0.562** (logistic) and
 **0.497** (boosted trees). A later 42-feature + tiny-QA hybrid reached held-out
-AUC **0.663**, Brier **0.244**, ECE **0.130**, but still missed the refusal
+AUC **0.663**, Brier **0.233**, ECE **0.064** after prior-weighted isotonic
+calibration, but still missed the Brier target and the refusal
 recall/precision and coverage targets at every threshold. The optional gate is
 off by default; CitationGate remains the default refusal gate at 0.5. See
 [`ANSWERABILITY.md`](ANSWERABILITY.md),

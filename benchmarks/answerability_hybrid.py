@@ -4,8 +4,8 @@ This is the strongest local experiment in the answerability batch. It combines
 the retrieval/answer-type features from ``answerability_signal.py`` with the
 no-answer/span-margin confidence of a tiny SQuAD v2 QA model
 (``mrm8488/bert-tiny-finetuned-squadv2``), fits a logistic model, calibrates it
-with isotonic regression on a separate calibration split, and evaluates the
-same 200-question validation sample.
+with prior-weighted isotonic regression on a separate calibration split, and
+evaluates the same 200-question validation sample.
 
 The hybrid profile is an experiment artifact. The shipped optional gate is the
 feature-only profile in ``benchmarks/results/answerability_signal``; both
@@ -29,7 +29,6 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from sklearn.isotonic import IsotonicRegression
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from transformers import AutoModelForQuestionAnswering, AutoTokenizer
@@ -38,13 +37,17 @@ from atomzero.answerability import FEATURE_NAMES
 
 try:
     from benchmarks.answerability_signal import (
-        TARGETS, THRESHOLDS, _metric_summary, extract_rows, load_squad_rows,
-        policy_point, policy_table, run_aisc_check, run_aisc_policy,
+        CALIBRATION_METHOD, DEFAULT_TARGET_PREVALENCE, TARGETS, THRESHOLDS,
+        _metric_summary, extract_rows, isotonic_curve, load_squad_rows,
+        out_of_fold_metrics, policy_point, policy_table,
+        prior_weighted_isotonic, run_aisc_check, run_aisc_policy,
         select_threshold, write_observations, write_toml)
 except ImportError:  # running as `python benchmarks/answerability_hybrid.py`
     from answerability_signal import (
-        TARGETS, THRESHOLDS, _metric_summary, extract_rows, load_squad_rows,
-        policy_point, policy_table, run_aisc_check, run_aisc_policy,
+        CALIBRATION_METHOD, DEFAULT_TARGET_PREVALENCE, TARGETS, THRESHOLDS,
+        _metric_summary, extract_rows, isotonic_curve, load_squad_rows,
+        out_of_fold_metrics, policy_point, policy_table,
+        prior_weighted_isotonic, run_aisc_check, run_aisc_policy,
         select_threshold, write_observations, write_toml)
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -102,7 +105,10 @@ def _vector(row: dict) -> list[float]:
             + [row["qa"][name] for name in QA_FEATURES])
 
 
-def fit_hybrid(train: list[dict], calibration: list[dict]) -> dict:
+def fit_hybrid(train: list[dict], calibration: list[dict],
+               target_prevalence: float | None = None) -> dict:
+    if target_prevalence is None:
+        target_prevalence = DEFAULT_TARGET_PREVALENCE
     x_train = np.array([_vector(row) for row in train])
     y_train = np.array([row["label"] for row in train])
     x_cal = np.array([_vector(row) for row in calibration])
@@ -119,10 +125,10 @@ def fit_hybrid(train: list[dict], calibration: list[dict]) -> dict:
         if best is None or brier < best["brier"]:
             best = {"brier": brier, "C": c_value, "scaler": scaler,
                     "model": model, "raw_cal": raw_cal}
-    isotonic = IsotonicRegression(y_min=0.0, y_max=1.0, out_of_bounds="clip")
-    isotonic.fit(best["raw_cal"], y_cal)
-    grid = np.unique(np.concatenate(([0.0, 1.0], best["raw_cal"])))
-    calibrated = isotonic.predict(grid)
+    observed_prevalence = float(np.mean(y_cal))
+    isotonic = prior_weighted_isotonic(
+        best["raw_cal"].tolist(), y_cal.tolist(), target_prevalence)
+    grid_values, calibrated = isotonic_curve(isotonic, best["raw_cal"])
     coefficients = best["model"].coef_[0] / best["scaler"].scale_
     intercept = (best["model"].intercept_[0]
                  - float(np.dot(coefficients, best["scaler"].mean_)))
@@ -132,8 +138,13 @@ def fit_hybrid(train: list[dict], calibration: list[dict]) -> dict:
         "coefficients": [float(value) for value in coefficients],
         "intercept": float(intercept),
         "calibration": {
-            "x": [float(value) for value in grid],
+            "x": [float(value) for value in grid_values],
             "y": [float(value) for value in calibrated],
+        },
+        "calibration_method": CALIBRATION_METHOD,
+        "prevalence": {
+            "calibration": round(observed_prevalence, 6),
+            "target": round(float(target_prevalence), 6),
         },
         "model": {
             "type": "hybrid-logistic",
@@ -146,19 +157,24 @@ def fit_hybrid(train: list[dict], calibration: list[dict]) -> dict:
     }
 
 
-def predict(rows: list[dict], profile: dict) -> list[float]:
+def raw_probabilities(rows: list[dict], profile: dict) -> list[float]:
     output = []
     for row in rows:
         vector = _vector(row)
         raw = profile["intercept"] + sum(
             coefficient * value
             for coefficient, value in zip(profile["coefficients"], vector))
-        probability = 1.0 / (1.0 + np.exp(-raw))
-        probability = float(np.interp(
-            probability, profile["calibration"]["x"],
-            profile["calibration"]["y"]))
-        output.append(max(0.0, min(1.0, probability)))
+        output.append(float(1.0 / (1.0 + np.exp(-raw))))
     return output
+
+
+def predict(rows: list[dict], profile: dict) -> list[float]:
+    return [
+        max(0.0, min(1.0, float(np.interp(
+            probability, profile["calibration"]["x"],
+            profile["calibration"]["y"]))))
+        for probability in raw_probabilities(rows, profile)
+    ]
 
 
 def write_report(path: Path, payload: dict) -> None:
@@ -170,8 +186,11 @@ def write_report(path: Path, payload: dict) -> None:
         "Signal features: 42 retrieval/answer-type features plus 5 tiny "
         "SQuAD v2 QA features (no-answer score, best span, margin, span "
         "length, answer probability). CitationGate probabilities are not used.",
-        "Calibration method: logistic model + isotonic calibration on a "
-        "context-grouped calibration split.",
+        f"Calibration method: {payload['calibration_method']} "
+        "(prior-weighted isotonic map fitted on the context-grouped "
+        "calibration split).",
+        f"Prevalence: calibration={payload['prevalence']['calibration']:.4f}, "
+        f"target={payload['prevalence']['target']:.4f}",
         f"n: train={payload['train_n']}, calibration={payload['calibration_n']}, "
         f"held-out test={payload['test']['n']}",
         f"Brier / ECE: {payload['test']['brier']:.4f} / "
@@ -198,6 +217,25 @@ def write_report(path: Path, payload: dict) -> None:
         f"{'yes' if payload['test']['brier'] <= 0.15 else 'no'} |",
         f"| answerability ECE | {payload['test']['ece']:.4f} | 0.10 | "
         f"{'yes' if payload['test']['ece'] <= 0.10 else 'no'} |",
+        "",
+        "## Calibration report",
+        "",
+        "| report | split | n | Brier | ECE | AUC |",
+        "|---|---|---:|---:|---:|---:|",
+    ])
+    for label, key in (
+            ("in-sample", "calibration_in_sample"),
+            ("out-of-fold", "calibration_oof")):
+        report = payload[key]
+        lines.append(
+            f"| {label} | {report['split']} | {report['n']} | "
+            f"{report['brier']:.4f} | {report['ece']:.4f} | "
+            f"{report['auc']:.4f} |")
+    lines.extend([
+        "",
+        "`calibration_metrics` in the profile is the out-of-fold report. The "
+        "in-sample row is optimistic because the production map saw those "
+        "rows.",
         "",
         "## Threshold table (held-out)",
         "",
@@ -298,16 +336,24 @@ def main(argv=None) -> int:
                     qa_model, tokenizer, row["question"],
                     row["context_text"], device)
 
-    print("fitting hybrid logistic model...", flush=True)
-    profile = fit_hybrid(train, calibration)
+    test_labels = [row["label"] for row in test]
+    test_prevalence = sum(test_labels) / len(test_labels)
+    print(
+        f"fitting hybrid logistic model and prior-weighted isotonic "
+        f"calibration (target prevalence {test_prevalence:.3f})...",
+        flush=True)
+    profile = fit_hybrid(
+        train, calibration, target_prevalence=test_prevalence)
     cal_labels = [row["label"] for row in calibration]
     cal_probabilities = predict(calibration, profile)
-    test_labels = [row["label"] for row in test]
+    cal_raw_scores = raw_probabilities(calibration, profile)
     test_probabilities = predict(test, profile)
+    test_raw_scores = raw_probabilities(test, profile)
     selection = select_threshold(cal_labels, cal_probabilities)
     calibration_csv = out / "answerability_calibration.csv"
     write_observations(
-        calibration_csv, calibration, cal_probabilities, "calibration")
+        calibration_csv, calibration, cal_probabilities, "calibration",
+        cal_raw_scores)
     aisc_calibration = {}
     aisc_threshold = None
     if args.aisc_root and not args.skip_aisc:
@@ -325,6 +371,9 @@ def main(argv=None) -> int:
     test_table = policy_table(test_labels, test_probabilities)
     test_metrics = _metric_summary(test_labels, test_probabilities)
     cal_metrics = _metric_summary(cal_labels, cal_probabilities)
+    cal_metrics["split"] = "calibration"
+    oof_metrics = out_of_fold_metrics(
+        test, test_raw_scores, test_prevalence)
     try:
         commit = subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True,
@@ -346,7 +395,11 @@ def main(argv=None) -> int:
                 test_point["answerable_coverage_wilson_95"],
         },
         "metrics": test_metrics,
-        "calibration_metrics": cal_metrics,
+        "calibration_in_sample": cal_metrics,
+        "calibration_oof": oof_metrics,
+        # Compatibility key: it now reports the out-of-fold estimate, not the
+        # optimistic in-sample fit.
+        "calibration_metrics": dict(oof_metrics),
         "selection": {
             "feasible_on_calibration": selection["feasible"],
             "threshold": threshold,
@@ -370,7 +423,8 @@ def main(argv=None) -> int:
             "%Y-%m-%d", time.localtime(time.time() + 90 * 86400)),
     })
     observations = out / "answerability_observations.csv"
-    write_observations(observations, test, test_probabilities, "heldout")
+    write_observations(
+        observations, test, test_probabilities, "heldout", test_raw_scores)
     profile_path = out / "answerability_profile.json"
     profile_path.write_text(
         json.dumps(profile, indent=2) + "\n", encoding="utf-8")
@@ -428,6 +482,12 @@ def main(argv=None) -> int:
         "and 0.80 answerable-coverage targets together.",
         "CitationGate remains a separate gate and the default refusal "
         "threshold remains 0.5.",
+        "Prior weighting corrects the calibration/target prevalence gap but "
+        "does not add discriminative signal; the Brier floor is set by the "
+        "class overlap, so the 0.15 Brier target is not claimed.",
+        "Out-of-fold calibration metrics are a reporting estimate; the "
+        "production map is fitted once on the calibration split and is not "
+        "refitted on held-out rows.",
         "No 0.98 assurance claim is made.",
     ]
     payload = {
@@ -436,6 +496,10 @@ def main(argv=None) -> int:
         "train_n": len(train),
         "calibration_n": len(calibration),
         "calibration": cal_metrics,
+        "calibration_method": profile["calibration_method"],
+        "prevalence": profile["prevalence"],
+        "calibration_in_sample": cal_metrics,
+        "calibration_oof": oof_metrics,
         "test": test_metrics,
         "threshold": threshold,
         "test_point": test_point,
@@ -457,6 +521,8 @@ def main(argv=None) -> int:
         "brier": test_metrics["brier"],
         "ece": test_metrics["ece"],
         "auc": test_metrics["auc"],
+        "calibration_oof_brier": oof_metrics["brier"],
+        "calibration_oof_ece": oof_metrics["ece"],
         "refusal_precision": test_point["refusal_precision"],
         "refusal_recall": test_point["refusal_recall"],
         "answerable_coverage": test_point["answerable_coverage"],

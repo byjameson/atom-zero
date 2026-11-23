@@ -17,7 +17,7 @@ mode:
 The signal uses local retrieval features (score distribution, query coverage,
 question type, answer-type candidates, entity/number alignment). It does not
 call a model or an external service. The profile contains a fitted logistic
-model and an isotonic calibration map.
+model and a prior-weighted isotonic calibration map.
 """
 from __future__ import annotations
 
@@ -298,6 +298,29 @@ def load_profile(path: str | Path) -> dict:
         if x_values != sorted(x_values):
             raise ValueError("answerability calibration x must be sorted")
     data["calibration"] = {"x": x_values, "y": y_values}
+    method = data.get("calibration_method")
+    if method is not None:
+        if not isinstance(method, str) or not method:
+            raise ValueError(
+                "answerability calibration method must be a string")
+        data["calibration_method"] = method
+    prevalence = data.get("prevalence")
+    if prevalence is not None:
+        if not isinstance(prevalence, dict):
+            raise ValueError("answerability prevalence must be an object")
+        normalized = {}
+        for key, value in prevalence.items():
+            try:
+                number = float(value)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    f"answerability prevalence {key!r} must be a number"
+                ) from exc
+            if not 0.0 <= number <= 1.0:
+                raise ValueError(
+                    f"answerability prevalence {key!r} must be in [0, 1]")
+            normalized[str(key)] = number
+        data["prevalence"] = normalized
     return data
 
 

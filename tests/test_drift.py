@@ -403,9 +403,12 @@ def test_real_answerability_profiles():
     assert any(alert in report["alerts"] for alert in (
         "refusal_recall_decreased", "refusal_precision_decreased",
         "answerable_coverage_decreased"))
-    assert "refusal_precision_decreased" in report["alerts"]
+    # The prior-weighted signal profile selects a low internal threshold with
+    # zero measured refusals; the transformer keeps high recall at a much
+    # lower answerable coverage. The direction below follows the new baseline.
     assert "answerable_coverage_decreased" in report["alerts"]
-    assert report["policy"]["baseline"]["refusal_recall"] == 0.433
+    assert "refusal_precision_decreased" not in report["alerts"]
+    assert report["policy"]["baseline"]["refusal_recall"] == 0.0
     # The transformer stores the same ratio as no_answer_refusal at 0.7.
     assert report["policy"]["current"]["refusal_recall"] == 0.752577
     assert report["baseline"]["n"] == 200
