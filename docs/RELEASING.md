@@ -3,16 +3,16 @@
 Canonical surfaces: GitHub, Hugging Face, PyPI, dev.to, Medium, LinkedIn and
 ModelScope.
 
-Current batch: **0.8.0 prepared locally.** It adds the human-gated improvement
-loop, content-free decision ledger, evaluation gate, weekly-review integration
-and the self-improvement regression benchmark. `755` Atom Zero tests pass;
-AISC 0.5.1 has `223` tests and `benchmarks/self_improvement_regression.py`
-passes 10/10 checks.
+Current batch: **0.8.0 published.** It adds the human-gated improvement loop,
+content-free decision ledger, evaluation gate, weekly-review integration and
+the self-improvement regression benchmark. `755` Atom Zero tests pass; AISC
+0.5.1 has `223` tests and `benchmarks/self_improvement_regression.py` passes
+10/10 checks. `scripts/verify_release.py --version 0.8.0` reports **0
+failures**.
 
-Publish at this boundary: push `main` and the tag once, create the GitHub
-release with both assets, upload to PyPI, update the Hugging Face/ModelScope
-cards, dev.to, Medium and LinkedIn, then run
-`scripts/verify_release.py --version 0.8.0` and the read-only Release agent.
+Post-release work starts the next batch toward measured, reviewable
+self-improvement. Do not push intermediate commits; the next boundary is the
+next ten-increment batch.
 
 ## Release cadence
 

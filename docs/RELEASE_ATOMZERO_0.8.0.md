@@ -1,8 +1,10 @@
 # atomzero 0.8.0 - human-gated self-improvement loop
 
-Status: **prepared locally; publication pending.** This batch adds the planning
-layer for a self-improving system without autonomous weight updates. No model
-or runtime weights changed; the weights remain `0.8.0`.
+Status: **published.** PyPI `0.8.0`, GitHub source/tag/release `v0.8.0`,
+Hugging Face, ModelScope, dev.to, Medium and LinkedIn are updated.
+`scripts/verify_release.py --version 0.8.0` reports **0 failures**. This batch
+adds the planning layer for a self-improving system without autonomous weight
+updates. No model or runtime weights changed; the weights remain `0.8.0`.
 
 ## What is in this batch
 
@@ -38,6 +40,8 @@ or runtime weights changed; the weights remain `0.8.0`.
 - AISC strict: **16 specs, 14 PASS, 2 expected answerability failures**
   (`AtomZeroAnswerability` and its generated mirror).
 - `benchmarks/self_improvement_regression.py`: **10/10 checks passed**.
+- `scripts/verify_release.py --version 0.8.0`: **0 failures**.
+- Release commit `514632e`, annotated tag `v0.8.0`.
 - No model weights changed; the weights remain `0.8.0`.
 
 ## Install

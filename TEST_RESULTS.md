@@ -2,8 +2,8 @@
 
 - Date: 2026-11-23 23:30
 - Atom Zero repository: `C:\Users\biris\AppData\Local\Temp\opencode\atom-zero-clean`
-- Tested Atom Zero batch: `0.7.0` (ten-increment evidence/temporal batch),
-  release commit `72c9b5b`
+- Tested Atom Zero batch: `0.8.0` (human-gated self-improvement loop),
+  release commit `514632e`
 - Atom Zero working tree at test start: clean; the test run used the release
   commit contents
 - AISC path: `C:\Users\biris\Desktop\opencode\yeni dal\ai-systems-algebra`
@@ -14,19 +14,18 @@
 
 | Suite | Passed | Failed | Exit | Duration |
 |---|---:|---:|---:|---:|
-| Atom Zero `pytest tests -q` (0.7.0 release) | **646** | **0** | 0 | 66.54s |
-| Atom Zero `pytest tests -q` (post-release main) | **755** | **0** | 0 | 67.68s |
+| Atom Zero `pytest tests -q` (0.8.0 release) | **755** | **0** | 0 | 66.04s |
 | AISC `pytest tests -q` (0.5.1) | **223** (+6 subtests) | **0** | 0 | 17.13s |
-| AISC strict specs | **12 PASS / 2 FAIL (expected)** | 0 critical | 1 | - |
+| AISC strict specs | **14 PASS / 2 FAIL (expected)** | 0 critical | 1 | - |
 | Build (`python -m build`) | **2 artifacts** | **0** | 0 | - |
 | `twine check` | **2 PASSED** | **0** | 0 | - |
 
 The full-suite run is subject to a known Windows socket flake in one long HTTP
 test (`WinError 10053`); the same test and the full suite pass on rerun. The
-release evidence is the clean `646 passed` run.
+release evidence is the clean `755 passed` run.
 
 **Failed tests: none.** Release verification
-(`scripts/verify_release.py --version 0.7.0`) reports **0 failures**.
+(`scripts/verify_release.py --version 0.8.0`) reports **0 failures**.
 
 ## Current evidence
 
