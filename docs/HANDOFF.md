@@ -2,9 +2,9 @@
 
 ## Current state
 
-- Last feature commit: `a9a4464` (`feat: add typed relation paths`)
+- Last feature commit: `690c68c` (`feat: filter timeline by entity`)
 - Working tree after the handoff commit: clean
-- Atom Zero tests: **408 passed**
+- Atom Zero tests: **409 passed**
 - AISC tests: **163 passed** (+6 subtests)
 - AISC strict audit: **not claimed as passing**; the AISC spec/report update is
   owned by the AISC side. Atom Zero files were not modified in that repo.
@@ -21,8 +21,8 @@
 - Turkish morphology retrieval (suffix, final-consonant mutation, vowel drop,
   FTS prefix variants). Authored 20-query check: hybrid **0.800 -> 1.000**,
   FTS **0.700 -> 0.950**. English SQuAD results unchanged.
-- Document timeline: date extraction, CLI, HTTP, chat (`timeline`,
-  `zaman çizelgesi`) and UI. Timeline regression: **9/9**.
+- Document timeline: date extraction, entity filtering, CLI, HTTP, chat
+  (`timeline`, `zaman çizelgesi`) and UI. Timeline regression: **10/10**.
 - Typed relations: `located_in`, `capital_of`, `founded_by`, `ceo_of`,
   `born_in`; CLI/HTTP/chat/UI filters, provenance and multi-hop relation paths.
   Relations regression: **12/12**.
