@@ -2,7 +2,7 @@
 
 - Date: 2026-11-23 05:24:30
 - Atom Zero repository: `C:\Users\biris\AppData\Local\Temp\opencode\atom-zero-clean`
-- Tested Atom Zero commit: `25bd25ddbf6fad042d136063d964b10e8cdce0ab`
+- Tested Atom Zero commit: `34cf2691abe25db63c991f5946c8712a7d26ecfc`
 - Atom Zero working tree at test start: clean
 - AISC path: `C:\Users\biris\Desktop\opencode\yeni dal\ai-systems-algebra`
 - AISC source status: directory is not a Git repository; no commit hash is available
