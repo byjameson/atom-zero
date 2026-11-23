@@ -504,6 +504,35 @@ def test_runner_scope_gap_signal_and_action():
     ]
 
 
+def test_self_code_signals_and_actions():
+    signals = collect_signals(self_code={"findings": [
+        {"finding_id": "sc-1", "severity": "high"},
+        {"finding_id": "sc-2", "severity": "medium"},
+        {"finding_id": "sc-3", "severity": "medium"},
+        {"finding_id": "sc-4", "severity": "low"},
+    ]})
+    assert [item["kind"] for item in signals] == [
+        "self_code_high", "self_code_medium"]
+    assert [item["count"] for item in signals] == [1, 2]
+    plan = build_plan(signals)
+    actions = {item["kind"]: item for item in plan["actions"]}
+    assert actions["self_code_high"]["requires_human"] is True
+    assert "high-risk" in actions["self_code_high"]["acceptance"]
+    assert actions["self_code_high"]["suggested_checks"] == [
+        "pytest:tests/test_self_code.py",
+        "pytest:tests/test_improvement.py",
+    ]
+    assert "medium" in actions["self_code_medium"]["next_step"]
+
+
+def test_self_code_plan_from_inputs():
+    plan = plan_from_inputs(self_code={"findings": [
+        {"finding_id": "sc-1", "severity": "medium"}]})
+    assert plan["actions"][0]["kind"] == "self_code_medium"
+    assert plan["actions"][0]["priority"] == SIGNAL_PRIORITIES[
+        "self_code_medium"]
+
+
 def test_calibration_drift_signal():
     signals = collect_signals(drift={
         "alerts": ["brier_increased", "ece_increased"]})

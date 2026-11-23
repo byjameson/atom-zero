@@ -35,6 +35,7 @@ from atomzero.proactive import (
     should_initiate,
 )
 from atomzero.scoreboard import record_run
+from atomzero.self_code import audit_report
 from atomzero.temporal import filter_as_of
 from atomzero.trend import build_trend
 
@@ -204,6 +205,22 @@ def check_temporal_filter_is_deterministic():
     assert first["weights_changed"] is False
 
 
+def check_self_code_audit_and_plan():
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "src").mkdir()
+        (root / "src" / "mod.py").write_text(
+            "def f():\n    try:\n        return 1\n"
+            "    except Exception:\n        return None\n", encoding="utf-8")
+        report = audit_report(root, propose=True)
+        assert report["summary"]["medium"] == 1
+        assert report["auto_apply"] is False
+        assert report["weights_changed"] is False
+        assert report["proposals"][0]["requires_human"] is True
+        plan = plan_from_inputs(self_code=report)
+        assert plan["actions"][0]["kind"] == "self_code_medium"
+
+
 CHECKS = [
     check_plan_priority_and_human_gate,
     check_plan_does_not_auto_apply,
@@ -217,6 +234,7 @@ CHECKS = [
     check_evaluation_allowlist,
     check_upstream_audits_are_content_free,
     check_temporal_filter_is_deterministic,
+    check_self_code_audit_and_plan,
 ]
 
 

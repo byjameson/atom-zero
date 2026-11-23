@@ -1,5 +1,22 @@
 # Changelog
 
+## atomzero 1.0.0 - unreleased
+
+Release cadence changes to **one major version per release**. This batch adds
+the self-code branch and its planner/runner integration.
+
+- Added **`atomzero-self-code`**: deterministic AST audit of Atom Zero's own
+  source for `eval`/`exec` boundaries, `shell=True`, broad exceptions,
+  wall-clock tests and TODO markers. Findings are bounded and stable.
+- Added bounded, human-gated proposals: allowed files, suggested checks and a
+  risk level; high-risk arbitrary-code findings have no automated checks.
+- `atomzero-improve --self-code-json` maps high/medium findings to
+  `self_code_high` and `self_code_medium` planner signals.
+- `atomzero-self-improve --self-code-root` can audit the repository and derive
+  the packet's allowed files and checks from the top self-code proposal.
+- Added `docs/SELF_CODE.md`, `docs/aisc/atomzero-self-code.toml` and a
+  self-code check in `benchmarks/self_improvement_regression.py`.
+
 ## atomzero 0.19.0 - autonomous opt-in runner loop (2026-11-24)
 
 This release follows the 0.3 cadence after 0.16.0 and adds the bounded

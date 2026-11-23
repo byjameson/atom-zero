@@ -6086,7 +6086,7 @@ class Handler(BaseHTTPRequestHandler):
         inputs = {}
         for key in ("claim_audit", "gaps", "feedback", "freshness",
                     "reliability", "aisc_coverage", "scoreboard", "drift",
-                    "runner_audit"):
+                    "runner_audit", "self_code"):
             if key in req:
                 inputs[key] = req[key]
         session_id = str(req.get("session_id", "")).strip()

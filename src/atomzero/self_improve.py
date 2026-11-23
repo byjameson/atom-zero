@@ -53,12 +53,45 @@ def run_loop(
     aisc_path: str = "",
     archive=None,
     timeout: int = 1800,
+    self_code_root=None,
 ) -> dict:
     """Run one bounded loop, returning every stage and its evidence."""
-    if not isinstance(signals, dict) or not signals:
-        raise RunnerError("signals must be a non-empty mapping")
-    plan = plan_from_inputs(**signals)
+    normalized = dict(signals) if isinstance(signals, dict) else {}
+    if self_code_root:
+        from atomzero.self_code import audit_report
+        report = audit_report(self_code_root, propose=True)
+        previous = normalized.get("self_code")
+        if isinstance(previous, dict):
+            seen = {item.get("finding_id") for item in report["findings"]}
+            for item in previous.get("findings") or []:
+                if isinstance(item, dict) and item.get("finding_id") not in seen:
+                    report["findings"].append(item)
+            report["summary"]["findings"] = len(report["findings"])
+        normalized["self_code"] = report
+    if not normalized:
+        raise RunnerError("signals or self_code_root must provide an input")
+    plan = plan_from_inputs(**normalized)
+    if not plan["actions"]:
+        return {
+            "status": "no_action",
+            "plan": plan,
+            "auto_apply": False,
+            "weights_changed": False,
+        }
     action = plan["actions"][0]
+    if not allowed_files or not checks:
+        for proposal in (normalized.get("self_code") or {}).get(
+                "proposals", []):
+            if not isinstance(proposal, dict):
+                continue
+            wanted = action["kind"] == f"self_code_{proposal.get('severity')}"
+            if not wanted:
+                continue
+            if not allowed_files:
+                allowed_files = proposal.get("allowed_files") or []
+            if not checks:
+                checks = proposal.get("checks") or action["suggested_checks"]
+            break
     packet = build_task_packet(
         action, allowed_files=allowed_files, checks=checks,
         repository=str(repo_root))
@@ -118,7 +151,8 @@ def _load_signals(path: str) -> dict:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--signal", required=True)
+    parser.add_argument("--signal", default="")
+    parser.add_argument("--self-code-root", default="")
     parser.add_argument("--allowed-file", action="append", default=[])
     parser.add_argument("--check", action="append", default=[])
     parser.add_argument("--opt-in", action="store_true")
@@ -142,7 +176,9 @@ def main(argv=None) -> int:
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
     try:
-        signals = _load_signals(args.signal)
+        signals = _load_signals(args.signal) if args.signal else {}
+        if not signals and not args.self_code_root:
+            raise RunnerError("--signal or --self-code-root is required")
         after = None
         if args.after_commit:
             after = {
@@ -163,7 +199,8 @@ def main(argv=None) -> int:
             ledger_path=args.ledger or None,
             scoreboard_path=args.scoreboard or None,
             after=after, aisc_path=args.aisc_path,
-            archive=args.archive or None)
+            archive=args.archive or None,
+            self_code_root=args.self_code_root or None)
     except (OSError, ValueError, RunnerError, json.JSONDecodeError) as exc:
         print(f"input error: {exc}", file=sys.stderr)
         return 2

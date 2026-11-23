@@ -302,6 +302,8 @@ next answer can cite it; weights_changed: false
 
 The self-improvement ladder is deliberately split:
 
+- **Self-code audit:** deterministic AST scan of Atom Zero's own source; it
+  proposes bounded, human-gated patches and changes no file.
 - **RAG memory:** a teacher note or your document enters the index; no weight
   change.
 - **Reviewed adapter:** a LoRA adapter for style/skills; human review + gates;
@@ -405,6 +407,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Calibration drift: <https://github.com/byjameson/atom-zero/blob/main/docs/DRIFT.md>
 - Agent handoff bridge: <https://github.com/byjameson/atom-zero/blob/main/docs/AGENT_BRIDGE.md>
 - Opt-in agent runner: <https://github.com/byjameson/atom-zero/blob/main/docs/AGENT_RUNNER.md>
+- Self-code audit and proposals: <https://github.com/byjameson/atom-zero/blob/main/docs/SELF_CODE.md>
 - AISC spec generator: <https://github.com/byjameson/atom-zero/blob/main/docs/AISC_SPEC_GENERATOR.md>
 - Multi-agent orchestration: <https://github.com/byjameson/atom-zero/blob/main/docs/ORCHESTRATION.md>
 - Branch research: <https://github.com/byjameson/atom-zero/blob/main/docs/BRANCH_RESEARCH.md>

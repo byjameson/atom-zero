@@ -1,0 +1,54 @@
+name = "AtomZeroSelfCode"
+version = "0.1.0"
+description = "Deterministic AST-based audit of Atom Zero's own code with bounded, human-gated patch proposals."
+min_assurance = 0.90
+max_context_tokens = 8000
+
+[[components]]
+name = "SourceScanner"
+input_type = "RepositoryRoot"
+output_type = "BoundedSourceSet"
+kind = "evaluator"
+assurance = 0.94
+verified = true
+evidence = "tests/test_self_code.py deterministic and bounded audit cases"
+assumptions = ["the root is a local repository checkout"]
+guarantees = ["skipped directories are excluded", "findings are capped per kind", "no network or model call occurs"]
+context_tokens = 1024
+
+[[components]]
+name = "AstBoundaryDetector"
+input_type = "BoundedSourceSet"
+output_type = "CodeFindings"
+kind = "evaluator"
+assurance = 0.96
+verified = true
+evidence = "tests/test_self_code.py eval/exec, shell=True, broad-exception and false-positive cases"
+assumptions = ["Python sources parse successfully"]
+guarantees = ["dangerous builtins and shell=True are detected from the AST", "model.eval() and string literals are not flagged", "syntax errors produce no code finding"]
+context_tokens = 2048
+
+[[components]]
+name = "ProposalBuilder"
+input_type = "CodeFindings"
+output_type = "BoundedProposals"
+kind = "tool"
+reversible = true
+assurance = 0.95
+verified = true
+evidence = "tests/test_self_code.py proposal scope, risk and human-gate cases"
+assumptions = ["a human or opt-in runner consumes the proposal"]
+guarantees = ["allowed_files contains only the finding path", "high-risk proposals have no automated checks", "auto_apply and weights_changed are false"]
+context_tokens = 1024
+
+[[components]]
+name = "SelfCodeHumanGate"
+input_type = "BoundedProposals"
+output_type = "GatedDecision"
+kind = "evaluator"
+assurance = 0.98
+verified = true
+evidence = "tests/test_self_improve.py approval, veto and proposal-derived scope cases"
+assumptions = ["approval is supplied by a human"]
+guarantees = ["no worktree is created without opt-in and approval", "veto stops before work", "no merge, push, tag or publish occurs"]
+context_tokens = 512
