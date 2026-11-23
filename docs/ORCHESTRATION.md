@@ -103,7 +103,7 @@ spec generator; the LinkedIn activity feed contains the `0.6.1` post.
   - `feat/scoreboard-collect` in `%TEMP%\opencode\atom-zero-score`:
     content-free count extraction from pytest/benchmark/AISC output.
 - Reviewer gate on `main`: **985 Atom Zero tests**, **223 AISC tests**,
-  **23 strict AISC specs (21 PASS, 2 expected answerability FAIL)** and
+  **24 strict AISC specs (22 PASS, 2 expected answerability FAIL)** and
   **17/17** self-improvement benchmark checks.
 - Release agent: releases follow **one major version per release** now.
   `0.19.0` is the current published version; the next boundary is `1.0.0`,

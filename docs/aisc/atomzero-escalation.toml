@@ -1,0 +1,54 @@
+name = "AtomZeroEscalation"
+version = "0.1.0"
+description = "Deterministic local/teacher/agent/refuse escalation router with privacy, freshness and budget rules."
+min_assurance = 0.90
+max_context_tokens = 8000
+
+[[components]]
+name = "TaskPolicyValidator"
+input_type = "TaskMetadataAndPolicy"
+output_type = "ValidatedEscalationInput"
+kind = "evaluator"
+assurance = 0.96
+verified = true
+evidence = "tests/test_escalation.py malformed task, policy and history cases"
+assumptions = ["the caller supplies local confidence and privacy metadata"]
+guarantees = ["unknown keys and invalid values are rejected", "confidence is bounded to 0..1", "no task text is required or stored"]
+context_tokens = 512
+
+[[components]]
+name = "PrivacyGate"
+input_type = "ValidatedEscalationInput"
+output_type = "ValidatedEscalationInput"
+kind = "evaluator"
+assurance = 0.98
+verified = true
+evidence = "tests/test_escalation.py secret and private refusal cases"
+assumptions = ["privacy labels are provided by the caller"]
+guarantees = ["secret tasks never route to a teacher or agent", "private tasks never route to an external teacher", "external_call is always false"]
+context_tokens = 512
+
+[[components]]
+name = "RouteDecider"
+input_type = "ValidatedEscalationInput"
+output_type = "EscalationDecision"
+kind = "evaluator"
+assurance = 0.95
+verified = true
+evidence = "tests/test_escalation.py local, teacher, freshness, agent and budget cases"
+assumptions = ["the policy explicitly enables teacher or agent routes"]
+guarantees = ["the rule order is fixed", "agent handoff always requires human approval", "budgets are read from content-free history"]
+context_tokens = 1024
+
+[[components]]
+name = "GrowthLedger"
+input_type = "EscalationDecision"
+output_type = "ContentFreeGrowthSummary"
+kind = "tool"
+reversible = true
+assurance = 0.95
+verified = true
+evidence = "tests/test_escalation.py verified-teacher, adapter-candidate and content-bearing ledger cases"
+assumptions = ["events are recorded by the caller"]
+guarantees = ["content-bearing keys are rejected", "verified teacher answers and adapter candidates are counted", "parameter_growth is always 0 and weights_changed is false"]
+context_tokens = 1024
