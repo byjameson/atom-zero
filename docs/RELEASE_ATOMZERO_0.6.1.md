@@ -49,10 +49,13 @@ and two new deterministic branches into the published package.
   irreversible steps).
 - Read, task, tool-plan, context-budget, proactive and memory-lifecycle specs:
   **PASS**.
-- `AtomZeroAnswerability`: **FAIL** by design of the measurement, not hidden.
-  Brier 0.244 and ECE 0.130 miss the 0.15/0.10 bounds; refusal recall 0.546,
-  precision 0.631 and answerable coverage 0.699 miss the 0.90/0.90/0.80
-  targets. The gate remains off and CitationGate stays at 0.5.
+- `AtomZeroAnswerability` and its generated mirror
+  `AtomZeroAnswerabilityGenerated`: **FAIL** by design of the measurement, not
+  hidden. Brier 0.244 and ECE 0.130 miss the 0.15/0.10 bounds; refusal recall
+  0.546, precision 0.631 and answerable coverage 0.699 miss the
+  0.90/0.90/0.80 targets. The gate remains off and CitationGate stays at 0.5.
+- Total at the `0.6.1` tag: 9 specs, **7 PASS**, 2 expected answerability
+  failures.
 - `--require-calibration` still reports `CALIBRATION_MISSING` for specs without
   target-distribution calibration data. This is not claimed as green.
 
