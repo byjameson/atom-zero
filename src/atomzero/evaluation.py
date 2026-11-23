@@ -40,14 +40,21 @@ def parse_check(value: str) -> dict:
     return {"name": target or kind, "kind": kind, "target": target}
 
 
-def _command(check: dict, aisc_path: str) -> tuple[list[str], Path]:
+def _command(check: dict, aisc_path: str,
+             project_root: str | Path = ROOT) -> tuple[list[str], Path]:
+    root = Path(project_root).expanduser().resolve()
     if check["kind"] == "pytest":
-        return ([sys.executable, "-m", "pytest", check["target"], "-q"],
-                ROOT)
+        target = Path(check["target"])
+        if not target.is_absolute():
+            target = root / target
+        return ([sys.executable, "-m", "pytest", str(target), "-q"], root)
     if check["kind"] == "aisc":
-        base = Path(aisc_path).expanduser().resolve() if aisc_path else ROOT
+        base = Path(aisc_path).expanduser().resolve() if aisc_path else root
+        target = Path(check["target"])
+        if not target.is_absolute():
+            target = root / target
         return ([sys.executable, "-m", "aisc", "check",
-                 str((ROOT / check["target"]).resolve()), "--strict"], base)
+                 str(target.resolve()), "--strict"], base)
     raise ValueError("manual checks have no command")
 
 
@@ -77,7 +84,7 @@ def run_check(
         }
     if not check.get("target"):
         raise ValueError(f"{kind} check requires a target")
-    command, cwd = _command(check, aisc_path)
+    command, cwd = _command(check, aisc_path, project_root)
     started = time.monotonic()
     try:
         completed = subprocess.run(

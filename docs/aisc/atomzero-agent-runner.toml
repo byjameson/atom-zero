@@ -1,0 +1,55 @@
+name = "AtomZeroAgentRunner"
+version = "0.1.0"
+description = "Opt-in, bounded worktree runner for agent-bridge packets with scope and gate verification."
+min_assurance = 0.90
+max_context_tokens = 8000
+
+[[components]]
+name = "PacketValidator"
+input_type = "AgentTaskPacket"
+output_type = "ValidatedPacket"
+kind = "evaluator"
+assurance = 0.97
+verified = true
+evidence = "tests/test_agent_runner.py human-gate, auto-start and path-traversal cases"
+assumptions = ["packets come from atomzero-agent-bridge or a human"]
+guarantees = ["human-gated and non-auto-start packets only", "absolute and parent-relative allowed files are rejected"]
+context_tokens = 512
+
+[[components]]
+name = "WorktreePreparer"
+input_type = "ValidatedPacket"
+output_type = "IsolatedWorktree"
+kind = "tool"
+reversible = true
+assurance = 0.95
+verified = true
+evidence = "tests/test_agent_runner.py prepare and stub-runner cases"
+assumptions = ["the repository is a git checkout"]
+guarantees = ["a new branch/worktree is created", "the packet is written inside the worktree", "existing worktrees are never overwritten"]
+context_tokens = 1024
+
+[[components]]
+name = "GateVerifier"
+input_type = "IsolatedWorktree"
+output_type = "GateAndScopeReport"
+kind = "evaluator"
+assurance = 0.96
+verified = true
+evidence = "tests/test_agent_runner.py allowed, out-of-scope, gate and project-root cases"
+assumptions = ["the packet checks are allowlisted"]
+guarantees = ["out-of-scope changes fail", "gate runs inside the worktree", "no merge or publish occurs"]
+context_tokens = 2048
+
+[[components]]
+name = "RunnerReport"
+input_type = "GateAndScopeReport"
+output_type = "RunnerReport"
+kind = "tool"
+reversible = true
+assurance = 0.97
+verified = true
+evidence = "tests/test_agent_runner.py CLI, opt-in and runner exit-code cases"
+assumptions = ["a human/reviewer reads the report"]
+guarantees = ["auto_apply and weights_changed are always false", "auto_merge is always false", "runner output is bounded"]
+context_tokens = 1024

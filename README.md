@@ -402,6 +402,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Improvement trend: <https://github.com/byjameson/atom-zero/blob/main/docs/TREND.md>
 - Calibration drift: <https://github.com/byjameson/atom-zero/blob/main/docs/DRIFT.md>
 - Agent handoff bridge: <https://github.com/byjameson/atom-zero/blob/main/docs/AGENT_BRIDGE.md>
+- Opt-in agent runner: <https://github.com/byjameson/atom-zero/blob/main/docs/AGENT_RUNNER.md>
 - AISC spec generator: <https://github.com/byjameson/atom-zero/blob/main/docs/AISC_SPEC_GENERATOR.md>
 - Multi-agent orchestration: <https://github.com/byjameson/atom-zero/blob/main/docs/ORCHESTRATION.md>
 - Branch research: <https://github.com/byjameson/atom-zero/blob/main/docs/BRANCH_RESEARCH.md>
