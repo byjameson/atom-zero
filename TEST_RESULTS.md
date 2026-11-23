@@ -15,7 +15,7 @@
 | Suite | Passed | Failed | Exit | Duration |
 |---|---:|---:|---:|---:|
 | Atom Zero `pytest tests -q` (0.6.1 release) | **512** | **0** | 0 | 61.70s |
-| Atom Zero `pytest tests -q` (post-release main) | **617** | **0** | 0 | 60.90s |
+| Atom Zero `pytest tests -q` (post-release main) | **646** | **0** | 0 | 60.90s |
 | AISC `pytest tests -q` (0.5.0) | **223** (+6 subtests) | **0** | 0 | 16.94s |
 | AISC strict specs | **11 PASS / 2 FAIL (expected)** | 0 critical | 1 | - |
 | Build (`python -m build`) | **2 artifacts** | **0** | 0 | - |
@@ -31,7 +31,7 @@ release evidence is the clean `512 passed` run.
 
 - Post-release `0.6.2` HTTP integration: **2 passed**
   (`test_http_claims_audit`, `test_http_consensus_audit`), full main suite
-  **617 passed**.
+  **646 passed**.
 - `0.6.2` cross-source consensus branch: **12 passed**
   (`tests/test_consensus.py`); the `AtomZeroConsensus` AISC spec is **PASS**
   (4 verified components, assurance bound 0.93, 0 irreversible).
@@ -39,7 +39,7 @@ release evidence is the clean `512 passed` run.
 - `0.6.1` AISC spec generator: **33 passed** (`tests/test_aisc_spec.py`); the
   generated spec matches `docs/aisc/atomzero-answerability-generated.toml` in
   `--check` mode.
-- AISC strict after merge: 13 specs, **11 PASS**; `AtomZeroAnswerability` and
+- AISC strict after merge: 14 specs, **12 PASS**; `AtomZeroAnswerability` and
   `AtomZeroAnswerabilityGenerated` both **FAIL** with 0 critical and 2 warnings
   (`ANSWERABILITY_POOR`, `REFUSAL_POLICY_MISMATCH`). The warnings repeat
   because the generated spec intentionally mirrors the measured profile.
@@ -48,7 +48,7 @@ release evidence is the clean `512 passed` run.
   pass/fail/error counts, structured spec diffs and `--fail-on-breaking`;
   `batch --baseline` adds regression classification and exit codes.
   `python -m aisc batch docs/aisc/atomzero-*.toml --strict` reports
-  13 specs: 11 PASS, 2 FAIL, 0 errors, exit 1.
+  14 specs: 12 PASS, 2 FAIL, 0 errors, exit 1.
 - Freshness branch: **31 passed**; AISC `AtomZeroFreshness` PASS
   (assurance 0.96, 0 irreversible).
 - Reliability branch: **39 passed** (after verify-before-write hardening);

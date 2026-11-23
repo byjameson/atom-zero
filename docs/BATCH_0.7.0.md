@@ -1,8 +1,9 @@
 # Batch 0.7.0 - ten increments before the next push
 
 The owner asked for a push at roughly ten development increments, not after
-every version. `0.6.1` is the last published tag. The following work accumulates
-on local `main` and is pushed once at the `0.7.0` boundary.
+every version. `0.6.1` is the last published tag. The following work accumulated
+on local `main` and is now at the `0.7.0` boundary: **all ten increments are
+merged, 646 Atom Zero tests pass, and AISC 0.5.1 has 223 tests.**
 
 ## Increments
 
@@ -15,9 +16,9 @@ on local `main` and is pushed once at the `0.7.0` boundary.
 | 5 | Content-free source reliability ledger + HTTP summary/verify | merged on local main |
 | 6 | AISC `batch --baseline` regression gate | implemented in AISC 0.5.1 |
 | 7 | Document version diff (`atomzero-doc-diff`, `POST /v1/documents/diff`) | merged on local main |
-| 8 | Temporal validity / as-of filtering extension | planned |
-| 9 | Claim-aware proactive conversation | planned |
-| 10 | AISC spec coverage report | planned |
+| 8 | Temporal validity / as-of filtering (`POST /v1/temporal/filter`) | merged on local main |
+| 9 | Claim-aware proactive conversation | merged on local main |
+| 10 | AISC spec coverage report (`atomzero-coverage`) | merged on local main |
 
 The research scan behind these choices is in `docs/BRANCH_RESEARCH.md`.
 
