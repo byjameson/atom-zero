@@ -412,6 +412,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - AISC spec generator: <https://github.com/byjameson/atom-zero/blob/main/docs/AISC_SPEC_GENERATOR.md>
 - Multi-agent orchestration: <https://github.com/byjameson/atom-zero/blob/main/docs/ORCHESTRATION.md>
 - Branch research: <https://github.com/byjameson/atom-zero/blob/main/docs/BRANCH_RESEARCH.md>
+- 1.0.0 parallel batch plan: <https://github.com/byjameson/atom-zero/blob/main/docs/BATCH_1.0.0.md>
 - Release cadence: one major version per release (next: 1.0.0)
 - Ten-increment batch plan: <https://github.com/byjameson/atom-zero/blob/main/docs/BATCH_0.7.0.md>
 - Self-improvement batch plan: <https://github.com/byjameson/atom-zero/blob/main/docs/BATCH_0.9.0.md>
