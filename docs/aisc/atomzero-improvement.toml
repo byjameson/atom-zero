@@ -1,0 +1,54 @@
+name = "AtomZeroImprovementLoop"
+version = "0.1.0"
+description = "Deterministic, local weakness-signal planning with a mandatory human approval gate and a content-free decision ledger."
+min_assurance = 0.90
+max_context_tokens = 4096
+
+[[components]]
+name = "SignalCollector"
+input_type = "ImprovementInputs"
+output_type = "Signals"
+kind = "evaluator"
+assurance = 0.96
+verified = true
+evidence = "tests/test_improvement.py signal kinds, zero-count exclusion, gap/closed filtering, feedback filtering, weak-source counting and deterministic-order cases"
+assumptions = ["claim audits, gaps, feedback, freshness and reliability summaries are supplied by the local caller", "signals are lexical and count-based summaries, not truth verdicts"]
+guarantees = ["only positive-count signals are returned", "closed gaps and approved/exported feedback are excluded", "the same inputs always produce the same sorted signal list", "no model is called"]
+context_tokens = 1024
+
+[[components]]
+name = "ImprovementPlanner"
+input_type = "Signals"
+output_type = "ImprovementPlan"
+kind = "evaluator"
+assurance = 0.95
+verified = true
+evidence = "tests/test_improvement.py priority ordering, limit validation, summary counts, concrete acceptance gates and deterministic-output cases"
+assumptions = ["signals carry a priority and a kind", "the plan is a proposal for review, not an execution instruction"]
+guarantees = ["actions are sorted by priority descending and then by kind", "at most 20 actions are returned", "every action requires human approval", "every action carries a concrete acceptance gate", "auto_apply is always false and weights_changed is always false"]
+context_tokens = 1024
+
+[[components]]
+name = "HumanApprovalGate"
+input_type = "ImprovementPlan"
+output_type = "ApprovedPlan"
+kind = "human"
+assurance = 0.99
+verified = true
+evidence = "tests/test_improvement.py requires_human, auto_apply false and weights_changed false cases"
+assumptions = ["a human reviews the plan before any follow-up work"]
+guarantees = ["no action is accepted without an explicit human decision", "the gate can approve, reject or defer an action"]
+context_tokens = 32
+
+[[components]]
+name = "PlanReport"
+input_type = "ApprovedPlan"
+output_type = "PlanReport"
+kind = "tool"
+reversible = true
+assurance = 0.97
+verified = true
+evidence = "tests/test_improvement.py CLI JSON, human output, exit codes and content-free decision-ledger verification cases"
+assumptions = ["the report is consumed locally by a human or a later evaluation step"]
+guarantees = ["the report includes actions, summary and method", "decision records store only an action id, kind, decision and a note hash", "note text, queries, sources and chunks never enter the ledger"]
+context_tokens = 512
