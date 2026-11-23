@@ -12,10 +12,12 @@
   `gate_id 7f0d5be2bce36219`, `1033/0 -> 1035/0`;
   `gate_id da83c0302933d484`, `1064/0 -> 1066/0`). Per-change human approval is
   now optional (`--require-approval`); the default loop merges locally after
-  its gates. Accumulating for the **1.0.0** boundary; not pushed yet.
+  its gates. Verified-teacher adapter candidates and a held-out loss/perplexity
+  gate are added for the capability-growth step. Accumulating for the
+  **1.0.0** boundary; not pushed yet.
 - Working tree after the release-doc commits: clean
-- Atom Zero tests: **1066 passed**
-- AISC strict audit: **25 specs, 23 PASS, 0 errors**; `AtomZeroAnswerability`
+- Atom Zero tests: **1081 passed**
+- AISC strict audit: **26 specs, 24 PASS, 0 errors**; `AtomZeroAnswerability`
   and `AtomZeroAnswerabilityGenerated` remain **FAIL** with the measured
   Brier 0.233 / ECE 0.064 and refusal-policy misses. The ECE target is met;
   the Brier target is not. This is reported, not hidden.

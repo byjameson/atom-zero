@@ -1,0 +1,67 @@
+name = "AtomZeroAdapterCandidate"
+version = "0.1.0"
+description = "Verified-teacher adapter candidate export and held-out loss/perplexity gate; no training or weight change."
+min_assurance = 0.90
+max_context_tokens = 8000
+
+[[components]]
+name = "VerifiedExampleFilter"
+input_type = "VerifiedTeacherExamples"
+output_type = "VerifiedExamples"
+kind = "evaluator"
+assurance = 0.97
+verified = true
+evidence = "tests/test_adapter_candidates.py verified, unverified and duplicate cases"
+assumptions = ["each row carries a verification event"]
+guarantees = ["only verified examples are accepted", "unverified or non-promotable rows are rejected", "duplicate user/assistant pairs are removed"]
+context_tokens = 1024
+
+[[components]]
+name = "SplitBuilder"
+input_type = "VerifiedExamples"
+output_type = "CandidateRows"
+kind = "evaluator"
+assurance = 0.95
+verified = true
+evidence = "tests/test_adapter_candidates.py deterministic split and candidate-id cases"
+assumptions = ["a small local candidate set is acceptable"]
+guarantees = ["the split is deterministic for a seed", "the held-out set is non-empty when at least two examples exist", "candidate_id is stable"]
+context_tokens = 1024
+
+[[components]]
+name = "CandidateWriter"
+input_type = "CandidateRows"
+output_type = "LocalCandidate"
+kind = "tool"
+reversible = true
+assurance = 0.95
+verified = true
+evidence = "tests/test_adapter_candidates.py metadata/content-free and file cases"
+assumptions = ["the local filesystem is writable"]
+guarantees = ["metadata contains no prompt or answer text", "train/eval files are local", "auto_apply and weights_changed are false"]
+context_tokens = 512
+
+[[components]]
+name = "HeldOutGate"
+input_type = "LocalCandidate"
+output_type = "GateResult"
+kind = "evaluator"
+assurance = 0.96
+verified = true
+evidence = "tests/test_adapter_candidates.py pass, loss fail, perplexity fail and mismatch cases"
+assumptions = ["a comparison report is supplied by an external evaluator"]
+guarantees = ["the comparison example count must equal the held-out count", "adapter loss must improve by the declared margin", "perplexity must not regress", "promotable is evidence, not a training action"]
+context_tokens = 1024
+
+[[components]]
+name = "CandidateEvent"
+input_type = "GateResult"
+output_type = "ContentFreeEvent"
+kind = "tool"
+reversible = true
+assurance = 0.98
+verified = true
+evidence = "tests/test_adapter_candidates.py content-free ledger and summary cases"
+assumptions = ["events are written to a local content-free ledger"]
+guarantees = ["no prompt, answer or source text is stored", "promotable is true only for a pass", "parameter_growth is zero and weights_changed is false"]
+context_tokens = 512
