@@ -35,6 +35,8 @@ atomzero-docs = "atomzero.doc_memory:main"
 atomzero-hungry = "atomzero.hungry:main"
 atomzero-skills = "atomzero.skills:main"
 atomzero-brief = "atomzero.briefing:main"
+atomzero-plan = "atomzero.plan_audit:main"
+atomzero-audit = "atomzero.audit:main"
 
 [project.urls]
 Homepage = "https://github.com/byjameson/atom-zero"

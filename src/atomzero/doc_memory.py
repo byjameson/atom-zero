@@ -610,7 +610,8 @@ def _document_inspection_query(query: str) -> bool:
 
 
 def grounded_answer(query: str, hits: list[dict],
-                    limit: int = 3, gate=None) -> dict:
+                    limit: int = 3, gate=None,
+                    max_context_chars: int = 0) -> dict:
     """Build a cited answer, evidence list and confidence from search hits.
 
     This is the shared core used by both the HTTP endpoint and the
@@ -622,6 +623,12 @@ def grounded_answer(query: str, hits: list[dict],
     evidence. The gate is configurable through environment variables; see
     :mod:`atomzero.citation_gate`.
     """
+    budget = None
+    if max_context_chars and hits:
+        from atomzero.context_budget import plan_hits
+        budget = plan_hits(
+            hits, max_chars=max_context_chars, max_items=max(1, int(limit)))
+        hits = budget["hits"]
     scored = []
     for hit in hits:
         try:
@@ -675,9 +682,11 @@ def grounded_answer(query: str, hits: list[dict],
         }
         if answerability is not None:
             result["answerability"] = answerability
+        if budget is not None:
+            result["context_budget"] = budget
         return result
     if answerability is not None and answerability.get("refused"):
-        return {
+        result = {
             "text": ("Bu soru yerel kaynaklarla güvenilir biçimde "
                      "cevaplanamıyor. (The local context does not support a "
                      "confident answer.)"),
@@ -689,6 +698,9 @@ def grounded_answer(query: str, hits: list[dict],
             "gate": gate_meta,
             "answerability": answerability,
         }
+        if budget is not None:
+            result["context_budget"] = budget
+        return result
     confidence = retrieval_confidence(query, selected)
     notes = []
     evidence = []
@@ -741,6 +753,8 @@ def grounded_answer(query: str, hits: list[dict],
               "refused": False, "reason": "", "gate": gate_meta}
     if answerability is not None:
         result["answerability"] = answerability
+    if budget is not None:
+        result["context_budget"] = budget
     return result
 
 
@@ -2071,6 +2085,8 @@ def main(argv=None):
         "answer", help="return a cited answer with evidence and confidence")
     answer.add_argument("query")
     answer.add_argument("-k", type=int, default=6)
+    answer.add_argument("--max-context-chars", type=int, default=0,
+                        help="trim retrieved context to this character budget")
     answer.add_argument("--source", default="")
     answer.add_argument("--source-prefix", default="")
     answer.add_argument("--kind", default="")
@@ -2197,7 +2213,9 @@ def main(argv=None):
                                    "coverage": 0.0, "margin": 0.0},
                 }
             else:
-                result = grounded_answer(args.query, hits)
+                result = grounded_answer(
+                    args.query, hits,
+                    max_context_chars=args.max_context_chars)
             print(json.dumps(result, indent=2, ensure_ascii=False))
         elif args.cmd == "sync":
             result = mem.sync_directory(

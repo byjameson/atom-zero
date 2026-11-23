@@ -3023,3 +3023,34 @@ def test_http_briefing_and_goal_plan(tmp_path):
         chat_server._state.clear()
         chat_server._state.update(old)
         docs.close()
+
+
+def test_http_tool_plan_audit(tmp_path):
+    old = dict(chat_server._state)
+    chat_server._state.update({"api_key": ""})
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        read_only = _post(base + "/v1/tools/audit", {
+            "steps": [{"tool": "time"}]})
+        assert read_only["allowed"] is True
+        assert read_only["risk"] == "low"
+        side_effect = _post(base + "/v1/tools/audit", {
+            "steps": [{"tool": "task_add", "args": {"text": "buy milk"}}]})
+        assert side_effect["allowed"] is False
+        assert side_effect["requires_confirmation"] is True
+        confirmed = _post(base + "/v1/tools/audit", {
+            "steps": [{"tool": "task_add", "args": {"text": "buy milk"}}],
+            "confirm": True})
+        assert confirmed["allowed"] is True
+        with pytest.raises(urllib.error.HTTPError) as invalid:
+            _post(base + "/v1/tools/audit", {
+                "steps": [{"tool": "shell", "args": {"cmd": "dir"}}]})
+        assert invalid.value.code == 400
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)

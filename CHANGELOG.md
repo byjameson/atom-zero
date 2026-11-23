@@ -59,6 +59,17 @@
   coverage targets, so it is not enabled by default. See
   [`docs/ANSWERABILITY.md`](docs/ANSWERABILITY.md).
 - Added `benchmarks/graph_path_regression.py` (6/6 checks).
+- Added a packaged `atomzero-audit` command with strict warning handling and
+  `--require-calibration`, plus `--json`, `--explain`-ready findings and the
+  `docs/aisc/` specs for read, task, tool-plan, context-budget and
+  answerability paths.
+- Added the **tool plan algebra**: `atomzero-plan` / `POST /v1/tools/audit`
+  reports side effects, irreversible steps, confirmation requirements and risk
+  before execution (`atomzero.plan_audit`).
+- Added the **context budget algebra**: `plan_hits`,
+  `grounded_answer(max_context_chars=...)` and
+  `atomzero-docs answer --max-context-chars` bound retrieved evidence and
+  report dropped hits (`atomzero.context_budget`).
 - Added a **weekly review**: open/recently completed tasks, pending gaps,
   sources indexed within the window and graph highlights.
 - Added `atomzero-brief --weekly --days N`, `POST /v1/weekly-review` and a UI

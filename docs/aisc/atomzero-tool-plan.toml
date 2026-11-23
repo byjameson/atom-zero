@@ -1,0 +1,42 @@
+name = "AtomZeroToolPlan"
+version = "0.6.0"
+description = "Constrained tool-plan validation, explicit confirmation and bounded local execution."
+min_assurance = 0.90
+max_context_tokens = 8000
+
+[[components]]
+name = "PlanValidator"
+input_type = "PlanRequest"
+output_type = "ValidatedPlan"
+kind = "evaluator"
+assurance = 0.98
+verified = true
+evidence = "tests/test_tool_planner.py and tests/test_plan_audit.py"
+assumptions = ["plan is JSON with allowlisted tool names and arguments"]
+guarantees = ["unknown tools, unknown arguments and oversized plans are rejected"]
+context_tokens = 512
+
+[[components]]
+name = "HumanConfirmation"
+input_type = "ValidatedPlan"
+output_type = "ApprovedPlan"
+kind = "human"
+assurance = 0.99
+verified = true
+evidence = "confirmation-required and confirmed-execution tests"
+assumptions = ["the user explicitly confirms side effects"]
+guarantees = ["side-effect plans require explicit confirmation"]
+context_tokens = 32
+
+[[components]]
+name = "ToolExecutor"
+input_type = "ApprovedPlan"
+output_type = "PlanResult"
+kind = "tool"
+reversible = false
+assurance = 0.99
+verified = true
+evidence = "read-only and confirmed side-effect execution tests"
+assumptions = ["validated plan and explicit confirmation are present"]
+guarantees = ["no unknown tool is executed", "no unconfirmed side effect runs"]
+context_tokens = 1024

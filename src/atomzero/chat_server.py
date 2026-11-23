@@ -101,6 +101,7 @@ from atomzero.research_queue import (
 from atomzero.teacher_notes import TeacherNoteTooLarge, add_teacher_note
 from atomzero.teacher_provider import TeacherProvider, TeacherProviderError
 from atomzero.tool_planner import ToolPlanError, execute_plan
+from atomzero.plan_audit import audit_plan
 from atomzero.transformer import TransformerLM, generate
 from atomzero.weekly_reports import (
     DEFAULT_REPORTS_PATH, WeeklyReportArchive, WeeklyReportError)
@@ -3835,7 +3836,8 @@ refreshWeeklyReports();
 
 
 def doc_answer(text: str, docs, source: str = "",
-               source_prefix: str = "", kind: str = "") -> dict | None:
+               source_prefix: str = "", kind: str = "",
+               max_context_chars: int = 0) -> dict | None:
     """Return grounded notes with sources, evidence and match confidence."""
     if docs is None:
         return None
@@ -3846,7 +3848,7 @@ def doc_answer(text: str, docs, source: str = "",
                        source_prefix=source_prefix, kind=kind)
     if not hits:
         return None
-    return grounded_answer(query, hits)
+    return grounded_answer(query, hits, max_context_chars=max_context_chars)
 
 
 def chat_prompt(messages) -> str:
@@ -4635,7 +4637,8 @@ class Handler(BaseHTTPRequestHandler):
                          "/v1/research/queue/approve",
                          "/v1/research/queue/reject",
                          "/v1/research/queue/run",
-                         "/v1/agent/chat", "/v1/agent/plan"):
+                         "/v1/agent/chat", "/v1/agent/plan",
+                         "/v1/tools/audit"):
             return self._json(404, {"error": "not found"})
         key = _state.get("api_key") or ""
         if key:
@@ -4728,6 +4731,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._queue_run(req)
             if route == "/v1/agent/plan":
                 return self._agent_plan(req)
+            if route == "/v1/tools/audit":
+                return self._tools_audit(req)
             if route == "/v1/documents/forget":
                 return self._documents_forget(req)
             if route == "/v1/memory/forget":
@@ -4772,9 +4777,18 @@ class Handler(BaseHTTPRequestHandler):
                     req.get("source_prefix", "") or "").strip()
                 kind = str(req.get("kind", "") or "").strip()
                 try:
+                    max_chars = int(req.get("max_context_chars", 0) or 0)
+                except (TypeError, ValueError):
+                    return self._json(400, {
+                        "error": "max_context_chars must be an integer"})
+                if max_chars < 0 or max_chars > 1_000_000:
+                    return self._json(400, {
+                        "error": "max_context_chars out of range"})
+                try:
                     answer = doc_answer(
                         query, docs, source=source,
-                        source_prefix=source_prefix, kind=kind)
+                        source_prefix=source_prefix, kind=kind,
+                        max_context_chars=max_chars)
                 except ValueError as exc:
                     return self._json(400, {"error": str(exc)})
                 if answer is None:
@@ -5718,6 +5732,13 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as exc:
             return self._json(400, {"error": str(exc)})
         return self._json(200, result)
+
+    def _tools_audit(self, req: dict):
+        confirm = req.get("confirm", False)
+        if not isinstance(confirm, bool):
+            return self._json(400, {"error": "confirm must be a boolean"})
+        result = audit_plan(req.get("steps"), confirm=confirm)
+        return self._json(200 if result["valid"] else 400, result)
 
     def _teach(self, req: dict):
         fact = str(req.get("fact", "")).strip()

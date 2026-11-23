@@ -1,0 +1,42 @@
+name = "AtomZeroContextBudget"
+version = "0.6.0"
+description = "Deterministic retrieval-context budget planning, answer building and local rendering."
+min_assurance = 0.90
+max_context_tokens = 8000
+
+[[components]]
+name = "ContextPlanner"
+input_type = "RetrievedEvidence"
+output_type = "BoundedContext"
+kind = "evaluator"
+assurance = 0.95
+verified = true
+evidence = "tests/test_context_budget.py budget and item-limit cases"
+assumptions = ["the character-to-token estimate is advisory"]
+guarantees = ["context stays within the configured character budget when possible"]
+context_tokens = 1024
+
+[[components]]
+name = "AnswerBuilder"
+input_type = "BoundedContext"
+output_type = "DraftAnswer"
+kind = "evaluator"
+assurance = 0.96
+verified = true
+evidence = "grounded_answer tests with citation gate and context budget"
+assumptions = ["answer stays extractive from supplied evidence"]
+guarantees = ["answer text is derived from the bounded evidence"]
+context_tokens = 2048
+
+[[components]]
+name = "LocalRenderer"
+input_type = "DraftAnswer"
+output_type = "Reply"
+kind = "tool"
+reversible = true
+assurance = 1.0
+verified = true
+evidence = "deterministic formatting tests"
+assumptions = ["draft answer is already source-bound"]
+guarantees = ["deterministic local response formatting"]
+context_tokens = 64

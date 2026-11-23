@@ -1,0 +1,26 @@
+name = "AtomZeroAnswerability"
+version = "0.1"
+description = "Independent answerability signal experiment"
+min_assurance = 0.80
+max_context_tokens = 50000
+answerability_n = 200
+answerability_brier = 0.244274
+answerability_ece = 0.129867
+refusal_precision = 0.631000
+refusal_recall = 0.546400
+answerable_coverage = 0.699000
+refusal_threshold = 0.600000
+min_refusal_precision = 0.90
+min_refusal_recall = 0.90
+min_answerable_coverage = 0.80
+
+[[components]]
+name = "AnswerabilitySignal"
+input_type = "Query"
+output_type = "Decision"
+kind = "model"
+assurance = 0.80
+verified = true
+evidence = "held-out SQuAD v2 answerability experiment"
+guarantees = ["calibrated answerability probability"]
+context_tokens = 2000
