@@ -1,10 +1,13 @@
 # atomzero 0.13.0 - agent bridge and calibrated profiles
 
-Status: **prepared locally; publication pending.** This is the first release
-under the **0.3 minor cadence** after `0.10.0` (no 0.11/0.12). It adds the
-bounded agent-handoff bridge, nested calibration-profile support and the first
-agent-bridge-consumed improvement cycle. No model or runtime weights changed;
-the weights remain `0.8.0`.
+Status: **published.** PyPI `0.13.0`, GitHub source/tag/release `v0.13.0`,
+Hugging Face, ModelScope, dev.to and Medium are updated.
+`scripts/verify_release.py --version 0.13.0` reports **0 failures**. LinkedIn
+remains **blocked/unverified** (publish action accepted, profile feed not
+updated). This is the first release under the **0.3 minor cadence** after
+`0.10.0` (no 0.11/0.12). It adds the bounded agent-handoff bridge, nested
+calibration-profile support and the first agent-bridge-consumed improvement
+cycle. No model or runtime weights changed; the weights remain `0.8.0`.
 
 ## What is in this batch
 
@@ -35,6 +38,9 @@ the weights remain `0.8.0`.
 - `benchmarks/self_improvement_regression.py`: **12/12 checks passed**.
 - Three measured cycles have content-free gate archives and `gate_ok: true`
   decisions.
+- `scripts/verify_release.py --version 0.13.0`: **0 failures**.
+- Release commit `ce08d8f`, annotated tag `v0.13.0`.
+- LinkedIn is blocked/unverified.
 - No model weights changed; the weights remain `0.8.0`.
 
 ## Install

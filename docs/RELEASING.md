@@ -3,15 +3,16 @@
 Canonical surfaces: GitHub, Hugging Face, PyPI, dev.to, Medium, LinkedIn and
 ModelScope.
 
-Current batch: **0.13.0 prepared locally.** It adds the bounded agent-handoff
-bridge, nested calibration-profile support, the first agent-bridge-consumed
-improvement cycle and a wall-clock test fix. `813` Atom Zero tests pass; AISC
-0.5.1 has `223` tests and `benchmarks/self_improvement_regression.py` passes
-12/12.
+Current batch: **0.13.0 published.** It adds the bounded agent-handoff bridge,
+nested calibration-profile support, the first agent-bridge-consumed improvement
+cycle and a wall-clock test fix. `813` Atom Zero tests pass; AISC 0.5.1 has
+`223` tests and `benchmarks/self_improvement_regression.py` passes 12/12.
+`scripts/verify_release.py --version 0.13.0` reports **0 failures**. LinkedIn
+remains blocked/unverified.
 
 ## Release cadence
 
-Releases follow **0.3 minor steps**, not every 0.1. The current batch is
+Releases follow **0.3 minor steps**, not every 0.1. The current version is
 `0.13.0`; the next release boundary is **`0.16.0`**. Do not publish `0.14.x` or
 `0.15.x`.
 
