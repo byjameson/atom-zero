@@ -30,6 +30,7 @@ TASK_SEARCH_STATUSES = ("all", "open", "done")
 TASK_SEARCH_DUE_FILTERS = ("all", "overdue", "today", "week", "none")
 TASK_PRIORITIES = ("low", "normal", "high")
 TASK_TAG_LIMIT = 5
+TAG_AUDIT_LIMIT = 20
 TASK_SEARCH_PRIORITIES = ("all",) + TASK_PRIORITIES
 TASK_SORTS = ("default", "priority")
 TASK_EXPORT_FORMATS = ("text", "csv", "markdown")
@@ -413,6 +414,8 @@ def delete_task_tag(session_data: dict | None, tag) -> dict:
         raise ValueError("session tasks must be a list")
     updated = []
     snapshot = []
+    affected_open = 0
+    affected_done = 0
     stamp = time.strftime("%Y-%m-%dT%H:%M:%S")
     for task in tasks:
         if not isinstance(task, dict):
@@ -420,6 +423,10 @@ def delete_task_tag(session_data: dict | None, tag) -> dict:
         tags = _task_tags(task)
         if tag not in tags:
             continue
+        if str(task.get("status", "open")) == "done":
+            affected_done += 1
+        else:
+            affected_open += 1
         try:
             task_id = int(task.get("id"))
         except (TypeError, ValueError):
@@ -442,6 +449,19 @@ def delete_task_tag(session_data: dict | None, tag) -> dict:
         "deleted_at": stamp,
         "tasks": snapshot,
     }
+    audit = data.get("tag_audit")
+    if not isinstance(audit, list):
+        audit = []
+    audit.append({
+        "action": "delete_tag",
+        "tag": tag,
+        "ts": stamp,
+        "updated": len(updated),
+        "open": affected_open,
+        "done": affected_done,
+        "task_ids": updated,
+    })
+    data["tag_audit"] = audit[-TAG_AUDIT_LIMIT:]
     return {
         "tag": tag,
         "updated": len(updated),
@@ -499,6 +519,20 @@ def undo_delete_task_tag(session_data: dict | None) -> dict:
         task["tag_restored"] = stamp
         restored.append(task_id)
     data.pop("tag_delete_undo", None)
+    audit = data.get("tag_audit")
+    if not isinstance(audit, list):
+        audit = []
+    audit.append({
+        "action": "undo_tag_delete",
+        "tag": tag,
+        "ts": stamp,
+        "restored": len(restored),
+        "already": len(already),
+        "skipped": len(skipped),
+        "task_ids": restored,
+        "deleted_at": str(record.get("deleted_at", "") or ""),
+    })
+    data["tag_audit"] = audit[-TAG_AUDIT_LIMIT:]
     return {
         "tag": tag,
         "restored": len(restored),
@@ -506,6 +540,65 @@ def undo_delete_task_tag(session_data: dict | None) -> dict:
         "already": already,
         "skipped": skipped,
         "deleted_at": str(record.get("deleted_at", "") or ""),
+    }
+
+
+def task_tag_audit_view(session_data: dict | None, limit: int = 10,
+                        now=None) -> dict:
+    """Show the most recent tag delete/undo events, newest first."""
+    try:
+        limit = max(1, min(int(limit), 50))
+    except (TypeError, ValueError):
+        limit = 10
+    data = session_data if isinstance(session_data, dict) else {}
+    raw = data.get("tag_audit", [])
+    if not isinstance(raw, list):
+        raw = []
+    valid = [event for event in raw
+             if isinstance(event, dict)
+             and event.get("action") in ("delete_tag", "undo_tag_delete")]
+    events = []
+    for event in reversed(valid):
+        item = dict(event)
+        item["tag"] = str(item.get("tag", "") or "").lower().lstrip("#")
+        item["task_ids"] = [int(value) for value in item.get("task_ids", [])
+                            if isinstance(value, (int, float))
+                            or str(value).isdigit()]
+        events.append(item)
+        if len(events) >= limit:
+            break
+    stamp = (now.strftime("%Y-%m-%d %H:%M")
+             if isinstance(now, datetime)
+             else str(now or time.strftime("%Y-%m-%d %H:%M")))
+    lines = [f"Tag audit ({len(events)} of {len(valid)} event(s)):"]
+    if not events:
+        lines.append("- None")
+    for event in events:
+        ids = ", ".join(f"#{value}" for value in event["task_ids"])
+        if event["action"] == "delete_tag":
+            lines.append(
+                f"- {event.get('ts', '')} | delete tag "
+                f"'{event['tag']}' | {event.get('updated', 0)} task(s) "
+                f"({event.get('open', 0)} open, {event.get('done', 0)} done)"
+                + (f" [{ids}]" if ids else ""))
+        else:
+            detail = (f"restored {event.get('restored', 0)} task(s)"
+                      + (f" [{ids}]" if ids else ""))
+            if event.get("already"):
+                detail += f" | {event['already']} already had it"
+            if event.get("skipped"):
+                detail += f" | {event['skipped']} skipped"
+            lines.append(
+                f"- {event.get('ts', '')} | undo delete tag "
+                f"'{event['tag']}' | {detail}")
+    return {
+        "generated": stamp,
+        "limit": limit,
+        "count": len(events),
+        "total": len(valid),
+        "events": events,
+        "text": "\n".join(lines),
+        "weights_changed": False,
     }
 
 
@@ -1026,6 +1119,7 @@ def build_weekly_review(session_data: dict | None, gaps, docs,
     active_tasks = open_tasks + completed_recent
     weekly_tags = _tag_counts(active_tasks)
     tagged_active = sum(1 for task in active_tasks if _task_tags(task))
+    tag_audit = task_tag_audit_view(session_data, limit=10, now=now)
     pending = _pending_gaps(gaps)
     sources = docs.sources() if docs is not None else []
     recent_sources = [source for source in sources
@@ -1138,6 +1232,8 @@ def build_weekly_review(session_data: dict | None, gaps, docs,
         "tag_count": len(weekly_tags),
         "tagged_task_count": tagged_active,
         "untagged_task_count": len(active_tasks) - tagged_active,
+        "tag_audit": tag_audit["events"],
+        "tag_audit_total": tag_audit["total"],
         "pending_gaps": pending[:5],
         "pending_gap_count": len(pending),
         "recent_sources": recent_sources[:8],
@@ -1525,6 +1621,33 @@ def render_weekly_markdown(review: dict) -> str:
         ])
     else:
         lines.append("- None")
+    audit = review.get("tag_audit", [])
+    audit_total = review.get("tag_audit_total", len(audit))
+    lines.extend(["", f"## Tag audit ({audit_total})", ""])
+    if audit:
+        for event in audit:
+            ids = ", ".join(f"#{value}"
+                            for value in event.get("task_ids", []))
+            if event.get("action") == "delete_tag":
+                detail = (f"{event.get('updated', 0)} task(s) "
+                          f"({event.get('open', 0)} open, "
+                          f"{event.get('done', 0)} done)"
+                          + (f" [{ids}]" if ids else ""))
+                lines.append(
+                    f"- {event.get('ts', '')} | delete tag "
+                    f"'{event.get('tag', '')}' | {detail}")
+            else:
+                detail = (f"restored {event.get('restored', 0)} task(s)"
+                          + (f" [{ids}]" if ids else ""))
+                if event.get("already"):
+                    detail += f" | {event['already']} already had it"
+                if event.get("skipped"):
+                    detail += f" | {event['skipped']} skipped"
+                lines.append(
+                    f"- {event.get('ts', '')} | undo delete tag "
+                    f"'{event.get('tag', '')}' | {detail}")
+    else:
+        lines.append("- None")
     gaps = review.get("pending_gaps", [])
     lines.extend([
         "",
@@ -1648,6 +1771,10 @@ def main(argv=None) -> int:
                         help="render a filtered task list")
     parser.add_argument("--list-tags", action="store_true",
                         help="count task tags across open and done tasks")
+    parser.add_argument("--tag-audit", action="store_true",
+                        help="show recent tag delete/undo events")
+    parser.add_argument("--tag-audit-limit", type=int, default=10,
+                        help="number of tag audit events (default 10)")
     parser.add_argument("--rename-tag", nargs=2, metavar=("OLD", "NEW"),
                         default=None,
                         help="preview renaming one task tag everywhere")
@@ -1763,6 +1890,20 @@ def main(argv=None) -> int:
             or args.set_task_priority is not None
             or args.task_sort != "default"):
         parser.error("--list-tags cannot be combined with other views")
+    if args.tag_audit and (
+            args.task_list or args.list_tags or args.weekly or args.goal
+            or args.reports or args.markdown or args.out or args.overdue
+            or args.due_soon or args.search_tasks is not None
+            or args.set_task_priority is not None
+            or args.rename_tag is not None
+            or args.delete_tag is not None
+            or args.undo_delete_tag
+            or args.task_sort != "default"):
+        parser.error("--tag-audit cannot be combined with other views")
+    if args.tag_audit_limit != 10 and not args.tag_audit:
+        parser.error("--tag-audit-limit requires --tag-audit")
+    if not 1 <= args.tag_audit_limit <= 50:
+        parser.error("--tag-audit-limit must be between 1 and 50")
     if args.confirm_rename_tag and args.rename_tag is None:
         parser.error("--confirm-rename-tag requires --rename-tag")
     if args.rename_tag is not None and (
@@ -2125,6 +2266,23 @@ def main(argv=None) -> int:
         try:
             session = load_session(session_path)
             result = task_tag_view(session)
+        except (ValueError, OSError) as exc:
+            if args.json:
+                print(json.dumps({"ok": False, "error": str(exc)},
+                                 indent=2, ensure_ascii=False))
+            else:
+                print(f"briefing error: {exc}")
+            return 1
+        if args.json:
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+        else:
+            print(result["text"])
+        return 0
+    if args.tag_audit:
+        try:
+            session = load_session(session_path)
+            result = task_tag_audit_view(
+                session, limit=args.tag_audit_limit)
         except (ValueError, OSError) as exc:
             if args.json:
                 print(json.dumps({"ok": False, "error": str(exc)},

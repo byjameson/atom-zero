@@ -49,6 +49,8 @@ after `0.5.0`.
   other tags and can leave a task untagged.
 - Undo for the last confirmed tag delete in chat, CLI, HTTP and UI, restoring
   from a per-task snapshot stored in the session.
+- Local tag audit trail of the last 20 delete/undo events in chat, CLI, HTTP,
+  UI and weekly Markdown/archive output.
 - Tag parity in the legacy `research/chat_human.py` runtime: add/tag/list
   filters, inventory and confirmed rename with persistence.
 - Rescheduling and confirmed deletion.
@@ -77,7 +79,7 @@ after `0.5.0`.
 
 ## Verified regressions
 
-- `378 passed` in the assistant test suite.
+- `379 passed` in the assistant test suite.
 - Weekly chat regression: 7/7.
 - Weekly export/archive regression: 29/29.
 - Weekly review regression: 6/6.

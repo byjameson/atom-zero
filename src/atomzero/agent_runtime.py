@@ -12,7 +12,7 @@ from atomzero.briefing import (
     normalize_tag_rename, normalize_task_tag, plan_goal,
     render_due_soon_view, render_overdue_view, render_task_search_view,
     render_task_tag_view, render_weekly_report_comparison,
-    task_search_view, task_tag_view)
+    task_search_view, task_tag_audit_view, task_tag_view)
 from atomzero.contradictions import compare_sources
 from atomzero.doc_memory import format_citation, grounded_answer
 from atomzero.knowledge_gaps import KnowledgeGapError
@@ -1225,6 +1225,20 @@ class AgentSession:
             "weights_changed": False,
         }
 
+    def _tag_audit(self, limit: int = 10) -> dict:
+        view = task_tag_audit_view(self.human.data, limit=limit)
+        return {
+            "reply": view["text"],
+            "tool_calls": [{"name": "tag_audit",
+                            "count": view["count"],
+                            "total": view["total"],
+                            "limit": view["limit"]}],
+            "sources": [],
+            "evidence": [],
+            "tag_audit": view,
+            "weights_changed": False,
+        }
+
     def _search_tasks(self, raw_query: str) -> dict:
         query, status, due, priority, sort, tag = (
             parse_task_search_filters(raw_query))
@@ -1715,6 +1729,13 @@ class AgentSession:
             return self._briefing(
                 groups.get("sort") or "default",
                 tag=groups.get("tag") or "all")
+        tag_audit_match = re.match(
+            r"^(?:list|show)?\s*tag\s+audit"
+            r"(?:\s+(?:limit\s+)?(\d+))?\??$", text, re.IGNORECASE)
+        if tag_audit_match:
+            return self._tag_audit(
+                int(tag_audit_match.group(1))
+                if tag_audit_match.group(1) else 10)
         if (re.match(r"^(?:list|show)\s+(?:task\s+)?tags\??$", text,
                      re.IGNORECASE)
                 or low.rstrip("?") in ("tags", "task tags")):

@@ -459,6 +459,17 @@ def test_agent_deletes_tag_with_confirmation(tmp_path):
     assert agent.chat("undo delete tag")["reply"] == (
         "There is no tag delete to undo")
 
+    audit = agent.chat("tag audit")
+    assert audit["tool_calls"] == [
+        {"name": "tag_audit", "count": 2, "total": 2, "limit": 10}]
+    assert [event["action"] for event in audit["tag_audit"]["events"]] == [
+        "undo_tag_delete", "delete_tag"]
+    assert "Tag audit (2 of 2 event(s))" in audit["reply"]
+    assert "undo delete tag 'work'" in audit["reply"]
+    limited_audit = agent.chat("tag audit 1")
+    assert limited_audit["tag_audit"]["count"] == 1
+    assert limited_audit["tag_audit"]["total"] == 2
+
     tags = agent.chat("tags")
     assert tags["task_tags"]["tag_count"] == 2
     assert tags["task_tags"]["tagged_task_count"] == 2

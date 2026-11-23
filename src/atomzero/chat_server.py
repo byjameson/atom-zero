@@ -31,6 +31,7 @@ Endpoints:
   GET  /v1/weekly-review/export?session_id=...&days=7&tag=work
   GET  /v1/tasks/list?session_id=default&status=open&due=week&priority=high&sort=priority
   GET  /v1/tasks/tags?session_id=default
+  GET  /v1/tasks/tags/audit?session_id=default&limit=10
   POST /v1/tasks/tags/rename  (add "confirm": true to apply)
   POST /v1/tasks/tags/delete  (add "confirm": true to apply)
   POST /v1/tasks/tags/undo-delete
@@ -353,6 +354,7 @@ and suggested next actions.</p>
 <button id="tasklistcsv">Download CSV</button>
 <button id="tasklistmd">Download .md</button>
 <button id="tasktagsbtn">Tags</button>
+<button id="tagauditbtn">Tag audit</button>
 <input id="renameoldtag" placeholder="old tag" style="width:7em">
 <input id="renamenewtag" placeholder="new tag" style="width:7em">
 <label class="hint"><input id="renametagconfirm" type="checkbox">
@@ -392,6 +394,8 @@ Confirm delete</label>
 <div id="tasklistres"></div>
 <p id="tasktagsmsg" class="hint"></p>
 <div id="tasktagsres"></div>
+<p id="tagauditmsg" class="hint"></p>
+<div id="tagauditres"></div>
 <p id="renametagmsg" class="hint"></p>
 <p id="deletetagmsg" class="hint"></p>
 <p id="reschedulemsg" class="hint"></p>
@@ -980,6 +984,53 @@ async function getTaskTags() {
     msg.textContent = 'task tags error: ' + e;
   }
 }
+async function getTagAudit() {
+  const msg = document.getElementById('tagauditmsg');
+  const box = document.getElementById('tagauditres');
+  msg.textContent = 'loading tag audit...';
+  box.textContent = '';
+  try {
+    const params = new URLSearchParams({session_id: sessionId, limit: '10'});
+    const r = await fetch('/v1/tasks/tags/audit?' + params.toString());
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'tag audit error: ' + (j.error || r.status);
+      return;
+    }
+    msg.textContent = 'tag audit | ' + (j.count || 0) + ' of ' +
+      (j.total || 0) + ' event(s)';
+    const events = j.events || [];
+    if (!events.length) {
+      const none = document.createElement('div');
+      none.className = 'hint';
+      none.textContent = 'No tag audit events yet.';
+      box.appendChild(none);
+      return;
+    }
+    events.forEach(event => {
+      const card = document.createElement('div');
+      card.className = 'qitem';
+      const ids = (event.task_ids || []).map(id => '#' + id).join(', ');
+      let line = (event.ts || '') + ' | ';
+      if (event.action === 'delete_tag') {
+        line += "delete tag '" + event.tag + "' | " +
+          (event.updated || 0) + ' task(s) (' + (event.open || 0) +
+          ' open, ' + (event.done || 0) + ' done)' +
+          (ids ? ' [' + ids + ']' : '');
+      } else {
+        line += "undo delete tag '" + event.tag + "' | restored " +
+          (event.restored || 0) + ' task(s)' +
+          (ids ? ' [' + ids + ']' : '') +
+          (event.already ? ' | ' + event.already + ' already had it' : '') +
+          (event.skipped ? ' | ' + event.skipped + ' skipped' : '');
+      }
+      card.textContent = line;
+      box.appendChild(card);
+    });
+  } catch (e) {
+    msg.textContent = 'tag audit error: ' + e;
+  }
+}
 async function renameTag() {
   const msg = document.getElementById('renametagmsg');
   const oldTag = document.getElementById('renameoldtag').value.trim();
@@ -1061,6 +1112,7 @@ async function deleteTag() {
       searchFilter.value = '';
     }
     getTaskTags();
+    getTagAudit();
     if (refreshList) {
       getTaskList();
     }
@@ -1088,6 +1140,7 @@ async function undoTagDelete() {
         ? '; ' + j.skipped.length + ' skipped' : '');
     getTaskTags();
     getTaskList();
+    getTagAudit();
   } catch (e) {
     msg.textContent = 'tag undo error: ' + e;
   }
@@ -1724,6 +1777,7 @@ document.getElementById('duesoonbtn').onclick = () => getDueSoonTasks();
 document.getElementById('tasksearchbtn').onclick = () => searchTasks();
 document.getElementById('tasklistbtn').onclick = () => getTaskList();
 document.getElementById('tasktagsbtn').onclick = () => getTaskTags();
+document.getElementById('tagauditbtn').onclick = () => getTagAudit();
 document.getElementById('renametagbtn').onclick = () => renameTag();
 document.getElementById('deletetagbtn').onclick = () => deleteTag();
 document.getElementById('undotagdeletebtn').onclick = () => undoTagDelete();
@@ -3541,6 +3595,27 @@ class Handler(BaseHTTPRequestHandler):
                 result = task_tag_view(
                     session.human.data,
                     now=params.get("today", [None])[0])
+            except Exception as exc:
+                return self._json(400, {"error": str(exc)})
+            return self._json(200, result)
+        elif (self.path == "/v1/tasks/tags/audit"
+              or self.path.startswith("/v1/tasks/tags/audit?")):
+            params = urllib.parse.parse_qs(
+                urllib.parse.urlparse(self.path).query)
+            session_id = (params.get("session_id", ["default"])[0]
+                          or "default")
+            try:
+                limit = int(params.get("limit", ["10"])[0])
+                if limit < 1:
+                    raise ValueError("limit must be at least 1")
+                session = self._session(session_id)
+                from atomzero.briefing import task_tag_audit_view
+
+                result = task_tag_audit_view(
+                    session.human.data, limit=limit,
+                    now=params.get("today", [None])[0])
+            except (TypeError, ValueError) as exc:
+                return self._json(400, {"error": str(exc)})
             except Exception as exc:
                 return self._json(400, {"error": str(exc)})
             return self._json(200, result)

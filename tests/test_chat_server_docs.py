@@ -896,8 +896,12 @@ def test_ui_collection_scope_contract():
     assert 'id="deletetagbtn"' in page
     assert 'id="deletetagmsg"' in page
     assert 'id="undotagdeletebtn"' in page
+    assert 'id="tagauditbtn"' in page
+    assert 'id="tagauditmsg"' in page
+    assert 'id="tagauditres"' in page
     assert "deleteTag" in page
     assert "undoTagDelete" in page
+    assert "getTagAudit" in page
     assert '<option value="open" selected>Open</option>' in page
     assert "getTaskList" in page
     assert "getTaskTags" in page
@@ -2339,6 +2343,28 @@ def test_http_delete_tag(tmp_path):
             _post(base + "/v1/tasks/tags/undo-delete", {
                 "session_id": session_id})
         assert no_undo.value.code == 404
+
+        audit = json.loads(urllib.request.urlopen(
+            base + "/v1/tasks/tags/audit?session_id=" + session_id,
+            timeout=10).read().decode("utf-8"))
+        assert audit["count"] == 2
+        assert audit["total"] == 2
+        assert [event["action"] for event in audit["events"]] == [
+            "undo_tag_delete", "delete_tag"]
+        assert audit["events"][0]["restored"] == 2
+        assert audit["events"][1]["updated"] == 2
+        limited_audit = json.loads(urllib.request.urlopen(
+            base + "/v1/tasks/tags/audit?session_id=" + session_id
+                   + "&limit=1",
+            timeout=10).read().decode("utf-8"))
+        assert limited_audit["count"] == 1
+        assert limited_audit["total"] == 2
+        with pytest.raises(urllib.error.HTTPError) as invalid_limit:
+            urllib.request.urlopen(
+                base + "/v1/tasks/tags/audit?session_id=" + session_id
+                       + "&limit=0",
+                timeout=10)
+        assert invalid_limit.value.code == 400
 
         with pytest.raises(urllib.error.HTTPError) as missing:
             _post(base + "/v1/tasks/tags/delete", {

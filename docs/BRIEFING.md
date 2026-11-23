@@ -153,6 +153,21 @@ is kept; a successful undo clears the snapshot. If a task was edited meanwhile,
 its current other tags are preserved and the deleted tag is re-inserted; tags
 already present are reported separately.
 
+Tag delete and undo events are also kept in a local audit trail (last 20):
+
+```text
+tag audit
+tag audit 5
+# Tag audit (2 of 2 event(s)):
+# - 2026-11-23T10:00:00 | undo delete tag 'work' | restored 2 task(s) [#1, #2]
+# - 2026-11-23T09:59:00 | delete tag 'work' | 2 task(s) (1 open, 1 done) [#1, #2]
+```
+
+CLI uses `--tag-audit [--tag-audit-limit N]`, HTTP uses
+`GET /v1/tasks/tags/audit?limit=10`, and the UI has a **Tag audit** button. The
+weekly review JSON includes `tag_audit`/`tag_audit_total`, and its Markdown
+export adds a `## Tag audit` section, so archived reports keep the trail.
+
 Priority can also be updated outside chat:
 
 ```powershell
@@ -255,6 +270,7 @@ A weekly review aggregates:
 
 - open tasks and tasks completed within the window;
 - active tag counts (open tasks plus completions in the window);
+- recent tag delete/undo audit events (last 10);
 - undated completed tasks separately;
 - pending gaps;
 - sources indexed within the window;

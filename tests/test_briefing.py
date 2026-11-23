@@ -7,10 +7,10 @@ from datetime import date, datetime, timedelta
 import pytest
 
 from atomzero.briefing import (
-    build_briefing, build_weekly_review, due_soon_view, load_session, main,
-    overdue_view, plan_goal, rename_task_tag, render_due_soon_view,
-    render_overdue_view, render_weekly_markdown,
-    render_weekly_report_index)
+    build_briefing, build_weekly_review, delete_task_tag, due_soon_view,
+    load_session, main, overdue_view, plan_goal, rename_task_tag,
+    render_due_soon_view, render_overdue_view, render_weekly_markdown,
+    render_weekly_report_index, task_tag_audit_view, undo_delete_task_tag)
 from atomzero.doc_memory import DocMemory
 from atomzero.knowledge_gaps import KnowledgeGapStore
 from atomzero.weekly_reports import WeeklyReportArchive
@@ -837,6 +837,74 @@ def test_cli_delete_tag(tmp_path, capsys):
     assert exc.value.code == 2
     with pytest.raises(SystemExit) as exc:
         main(common + ["--delete-tag", "home", "--rename-tag", "a", "b"])
+    assert exc.value.code == 2
+
+
+def test_tag_audit_and_weekly_archive(tmp_path, capsys):
+    session = {"tasks": [
+        {"id": 1, "text": "write report", "status": "open",
+         "tags": ["work", "home"]},
+        {"id": 2, "text": "pay invoice", "status": "done",
+         "tags": ["work"]},
+        {"id": 3, "text": "read book", "status": "open", "tags": []},
+    ]}
+    delete_task_tag(session, "work")
+    undo_delete_task_tag(session)
+    view = task_tag_audit_view(session, limit=5)
+    assert view["count"] == 2
+    assert view["total"] == 2
+    assert [event["action"] for event in view["events"]] == [
+        "undo_tag_delete", "delete_tag"]
+    assert view["events"][0]["tag"] == "work"
+    assert view["events"][0]["restored"] == 2
+    assert view["events"][1]["updated"] == 2
+    assert "Tag audit (2 of 2 event(s)):" in view["text"]
+    assert "undo delete tag 'work' | restored 2 task(s)" in view["text"]
+    assert ("delete tag 'work' | 2 task(s) "
+            "(1 open, 1 done)") in view["text"]
+    limited = task_tag_audit_view(session, limit=1)
+    assert limited["count"] == 1
+    assert limited["total"] == 2
+    assert limited["events"][0]["action"] == "undo_tag_delete"
+
+    review = build_weekly_review(session, None, None, days=7)
+    assert review["tag_audit_total"] == 2
+    assert [event["action"] for event in review["tag_audit"]] == [
+        "undo_tag_delete", "delete_tag"]
+    markdown = render_weekly_markdown(review)
+    assert "## Tag audit (2)" in markdown
+    assert "undo delete tag 'work' | restored 2 task(s)" in markdown
+    assert ("delete tag 'work' | 2 task(s) "
+            "(1 open, 1 done)") in markdown
+
+    session_path = tmp_path / "session.json"
+    session_path.write_text(json.dumps(session), encoding="utf-8")
+    common = [
+        "--session", str(session_path),
+        "--docs", str(tmp_path / "missing.db"),
+        "--gaps", str(tmp_path / "missing-gaps.json")]
+    assert main(common + ["--tag-audit", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["count"] == 2
+    assert payload["total"] == 2
+    assert payload["events"][0]["action"] == "undo_tag_delete"
+    assert main(common + [
+        "--tag-audit", "--tag-audit-limit", "1", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["count"] == 1
+    assert payload["total"] == 2
+    assert main(common + ["--tag-audit"]) == 0
+    assert "Tag audit (2 of 2 event(s))" in capsys.readouterr().out
+    assert main(common + ["--weekly", "--markdown"]) == 0
+    assert "## Tag audit (2)" in capsys.readouterr().out
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--tag-audit-limit", "2"])
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--tag-audit", "--list-tags"])
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--tag-audit", "--tag-audit-limit", "0"])
     assert exc.value.code == 2
 
 
