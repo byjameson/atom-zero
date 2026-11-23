@@ -2,20 +2,21 @@
 
 ## Current state
 
-- Last released batch: `0.6.1` on `main` (memory ledger, claim/evidence
-  algebra, generated AISC spec)
-- Post-release main (`0.6.2` work): cross-source consensus
-  (`atomzero-consensus`, `POST /v1/consensus`), `POST /v1/claims/audit` and
-  AISC 0.5 `batch`/`diff` documentation. Not pushed yet; the next batch push
-  is the `0.6.2` release boundary.
+- Last released batch: `0.19.0` on `main` (bounded self-improve loop,
+  committed-change scope check, fifth measured cycle)
+- Post-release main: self-code audit branch (`atomzero-self-code`), bounded
+  proposals, `self_code_high`/`self_code_medium` planner signals, proposal-
+  derived runner scope and the sixth measured cycle (gate
+  `cac82f022c879258`, `855/0 -> 857/0`). Accumulating for the **1.0.0**
+  boundary; not pushed yet.
 - Working tree after the release-doc commits: clean
-- Atom Zero tests: **646 passed** (512 at the `0.6.1` tag)
-- AISC strict audit: **7 specs PASS** (`Claims`, `ContextBudget`,
-  `MemoryLifecycle`, `Proactive`, `ReadPipeline`, `TaskActions`, `ToolPlan`);
-  `AtomZeroAnswerability` and `AtomZeroAnswerabilityGenerated` remain **FAIL**
-  with the measured Brier 0.244 / ECE 0.130 and refusal-policy misses. This is
-  reported, not hidden.
-- Build/twine: **PASSED** (`atomzero-0.6.1` wheel + sdist)
+- Atom Zero tests: **857 passed**
+- AISC strict audit: **22 specs, 20 PASS, 0 errors**; `AtomZeroAnswerability`
+  and `AtomZeroAnswerabilityGenerated` remain **FAIL** with the measured
+  Brier 0.244 / ECE 0.130 and refusal-policy misses. This is reported, not
+  hidden.
+- Build/twine: **PASSED** (`atomzero-0.19.0` wheel + sdist)
+- No model weights changed; weights remain `0.8.0`.
 - Release status: `0.19.0` is published on PyPI, GitHub, Hugging Face,
   ModelScope, dev.to and Medium. `scripts/verify_release.py --version 0.19.0`
   reports **0 failures**; release commit `a6ad17c`, annotated tag `v0.19.0`.

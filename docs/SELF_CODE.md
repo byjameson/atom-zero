@@ -96,3 +96,6 @@ It never merges, pushes, tags or publishes.
 - `tests/test_self_improve.py`: proposal-derived scope and clean-tree
   `no_action`.
 - `benchmarks/self_improvement_regression.py`: audit -> plan regression check.
+- `docs/LOOP_CYCLE_6.md`: the first measured cycle fed by this audit; the
+  external agent narrowed `agent_runner.verify`'s broad handler and added two
+  regression tests (`gate_id cac82f022c879258`, `855/0 -> 857/0`).

@@ -16,6 +16,12 @@ the self-code branch and its planner/runner integration.
   the packet's allowed files and checks from the top self-code proposal.
 - Added `docs/SELF_CODE.md`, `docs/aisc/atomzero-self-code.toml` and a
   self-code check in `benchmarks/self_improvement_regression.py`.
+- Sixth measured cycle (first self-code-fed cycle): the audit found a broad
+  handler in `agent_runner.verify`, an external opt-in agent narrowed it to
+  expected failures and added two regression tests; gate
+  `cac82f022c879258`; scoreboard `855/0` -> `857/0`.
+- Decision notes in `atomzero-self-improve` now bind the action id and gate
+  id, so the content-free `note_id` is unique per gated decision.
 
 ## atomzero 0.19.0 - autonomous opt-in runner loop (2026-11-24)
 

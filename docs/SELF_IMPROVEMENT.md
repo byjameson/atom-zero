@@ -78,6 +78,14 @@ external Implementer worked in `fix/drift-profile-format`, the gate passed
 report now works, and the scoreboard moved from `800` to `813` passed with no
 trend alerts.
 
+`docs/LOOP_CYCLE_6.md` records the first **self-code fed** cycle: the AST
+audit found a broad exception in `agent_runner.verify`, the planner emitted
+`imp-01-self_code_medium`, the opt-in runner executed an external agent in an
+isolated worktree, the gate passed (`gate_id cac82f022c879258`), approval
+recorded `gate_ok: true`, and the scoreboard moved from `855` to `857` passed.
+The same cycle exposed a constant decision-note id; the loop now binds the note
+to the action id and gate id.
+
 `docs/LOOP_CYCLE_5.md` records the first **autonomous opt-in runner loop**: a
 live runner-scope signal was planned, packaged, executed by an actual nested
 `opencode run` process, verified (`gate_id 7fb857e6552ae5cc`), approved with
