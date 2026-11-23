@@ -302,6 +302,11 @@ next answer can cite it; weights_changed: false
 
 The self-improvement ladder is deliberately split:
 
+- **Growth ladder:** local retrieval -> opt-in teacher -> verified memory ->
+  skills -> distilled adapters -> offline checkpoint upcycling -> agentic code
+  improvement. Asking a larger AI does not automatically grow the parameter
+  count; only the offline, human-approved training steps do. See
+  [`docs/GROWTH_LADDER.md`](docs/GROWTH_LADDER.md).
 - **Self-code audit:** deterministic AST scan of Atom Zero's own source; it
   proposes bounded, human-gated patches and changes no file.
 - **RAG memory:** a teacher note or your document enters the index; no weight
