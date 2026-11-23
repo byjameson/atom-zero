@@ -85,6 +85,26 @@ def test_agent_returns_sources_for_grounded_answer(tmp_path):
     docs.close()
 
 
+def test_agent_refuses_when_citation_gate_has_no_hit(tmp_path, monkeypatch):
+    from atomzero.citation_gate import CitationGate
+
+    monkeypatch.setattr(
+        "atomzero.doc_memory.citation_gate_from_env",
+        lambda: CitationGate(
+            threshold=0.5,
+            calibration={"x_thresholds": [0.0, 1.0],
+                         "y_thresholds": [0.0, 0.0]}))
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("law.txt", "The capital of France is Paris.", title="Notes")
+    agent = AgentSession("s-gate", tmp_path / "memory.json", docs=docs)
+    result = agent.chat("what is the capital of France?")
+    assert result["refused"] is True
+    assert result["reason"] == "no_citation_above_threshold"
+    assert "Yeterli güvenilir yerel kaynak bulamadım" in result["reply"]
+    assert result["sources"] == []
+    docs.close()
+
+
 def test_agent_answers_graph_relation_query(tmp_path):
     docs = DocMemory(tmp_path / "docs.db")
     docs.add_text(

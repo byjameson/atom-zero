@@ -274,6 +274,14 @@ and it does not replace reading the cited source. When nothing matches, the
 endpoint returns the no-source answer with an empty source list rather than
 inventing a fact.
 
+Each answer also passes a calibrated CitationGate before release. The default
+threshold is `0.5` with the `squad_v2_stress` profile; set
+`ATOMZERO_CITATION_THRESHOLD`, `ATOMZERO_CITATION_PROFILE`,
+`ATOMZERO_CITATION_CALIBRATION` or `ATOMZERO_CITATION_GATE` to change it. When
+no citation passes, the response has `refused: true`, `reason:
+no_citation_above_threshold` and an empty source list. See
+[`CITATION_GATE.md`](CITATION_GATE.md) for calibration and measurement details.
+
 ### Extractive summary API
 
 ```text

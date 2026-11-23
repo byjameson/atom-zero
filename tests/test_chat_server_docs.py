@@ -118,6 +118,27 @@ def test_doc_answer_returns_sources(tmp_path):
     docs.close()
 
 
+def test_doc_answer_refuses_when_citation_gate_is_empty(tmp_path, monkeypatch):
+    from atomzero.citation_gate import CitationGate
+
+    monkeypatch.setattr(
+        "atomzero.doc_memory.citation_gate_from_env",
+        lambda: CitationGate(
+            threshold=0.5,
+            calibration={"x_thresholds": [0.0, 1.0],
+                         "y_thresholds": [0.0, 0.0]}))
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("law.txt", "The capital of France is Paris.",
+                  title="Notes")
+    answer = chat_server.doc_answer("capital of France", docs)
+    assert answer is not None
+    assert answer["refused"] is True
+    assert answer["reason"] == "no_citation_above_threshold"
+    assert answer["sources"] == []
+    assert "Yeterli güvenilir yerel kaynak bulamadım" in answer["text"]
+    docs.close()
+
+
 def test_teacher_note_validation(tmp_path):
     try:
         docs = DocMemory(tmp_path / "docs.db")

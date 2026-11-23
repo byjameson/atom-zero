@@ -151,7 +151,8 @@ LoRA adapters.
 | Turkish morphology retrieval (20 authored queries) | **hybrid 1.000 top-1; FTS 0.950** (before vowel drop 0.800 / 0.700) |
 | document timeline regression | **9/9** |
 | typed relations regression | **6/6** |
-| test suite | **393 passed** |
+| citation gate, SQuAD v2 (default 0.5) | **92/103 answerable retained; 18/97 no-answer refused; precision 0.479** |
+| test suite | **400 passed** |
 
 The raw-model probe asks ten simple general questions with no documents, no
 calculator and no agent. The 49.2M model gets **2/10**. The product gets
@@ -174,6 +175,11 @@ short generation. It is **not MMLU, GSM8K or HumanEval**.
 - **Grounded answers:** `POST /v1/documents/answer` returns cited notes,
   evidence and a transparent match-confidence score; chat replies use the same
   core and expose the match label.
+- **Calibrated citation gate:** rerank scores are mapped to citation-validity
+  probabilities; citations below the configurable threshold (default `0.5`)
+  are dropped and an empty gate returns an explicit refusal. Threshold,
+  profile and custom calibration are set with `ATOMZERO_CITATION_*`
+  environment variables; see [`docs/CITATION_GATE.md`](docs/CITATION_GATE.md).
 - **Source-scoped retrieval:** search and answers can be limited to one exact
   source, a source prefix or teacher notes.
 - **Exact code/ID retrieval:** `L-7781` and `W-7781` are treated as distinct

@@ -23,6 +23,7 @@ from pathlib import Path
 
 from atomzero.morphology import (
     TURKISH_STOPWORDS, looks_turkish, skeleton, turkish_lower, variants)
+from atomzero.citation_gate import citation_gate_from_env
 
 try:
     import numpy as np
@@ -592,13 +593,34 @@ def add_citation_source(sources: dict, hit: dict) -> dict:
     return source
 
 
+_INSPECTION_NOUN = re.compile(
+    r"\b(?:document|documents|file|files|note|notes|source|sources|"
+    r"belge|dosya|kaynak)\b", re.IGNORECASE)
+_INSPECTION_VERB = re.compile(
+    r"\b(?:say|says|said|contain|contains|contained|write|writes|wrote|"
+    r"mention|mentions|quote|quotes)\b|(?:ne\s+(?:diyor|yazıyor)|içeriyor)",
+    re.IGNORECASE)
+
+
+def _document_inspection_query(query: str) -> bool:
+    """Explicit quote/inspection requests should show the document itself."""
+    value = str(query or "")
+    return bool(_INSPECTION_NOUN.search(value)
+                and _INSPECTION_VERB.search(value))
+
+
 def grounded_answer(query: str, hits: list[dict],
-                    limit: int = 3) -> dict:
+                    limit: int = 3, gate=None) -> dict:
     """Build a cited answer, evidence list and confidence from search hits.
 
     This is the shared core used by both the HTTP endpoint and the
     ``atomzero-docs answer`` CLI. It does not generate new facts; it quotes the
     retrieved local sentences and labels teacher notes.
+
+    A calibrated citation gate can reject low-validity citations. If no
+    citation remains, the answer is refused instead of releasing unsupported
+    evidence. The gate is configurable through environment variables; see
+    :mod:`atomzero.citation_gate`.
     """
     scored = []
     for hit in hits:
@@ -615,6 +637,36 @@ def grounded_answer(query: str, hits: list[dict],
     if not relevant and scored:
         relevant = [scored[0][1]]
     selected = diverse_hits(relevant, limit=limit)
+    candidates = selected
+    gate = gate if gate is not None else citation_gate_from_env()
+    selected, gate_meta = gate.filter(selected)
+    if gate_meta.get("applied") and not selected and candidates \
+            and _document_inspection_query(query):
+        accepted = []
+        for hit in candidates:
+            item = dict(hit)
+            item["citation_probability"] = round(
+                gate.probability(hit.get("rerank_score")), 4)
+            item["citation_threshold"] = round(gate.threshold, 4)
+            accepted.append(item)
+        gate_meta["would_drop"] = gate_meta.get("dropped", 0)
+        gate_meta["dropped"] = 0
+        gate_meta["accepted"] = len(accepted)
+        gate_meta["bypass"] = "document_inspection"
+        gate_meta["reason"] = "document_inspection_bypass"
+        selected = accepted
+    if gate_meta.get("applied") and not selected:
+        confidence = retrieval_confidence(query, [])
+        return {
+            "text": ("Yeterli güvenilir yerel kaynak bulamadım. "
+                     "(No citation passed the local confidence threshold.)"),
+            "sources": [],
+            "evidence": [],
+            "confidence": confidence,
+            "refused": True,
+            "reason": "no_citation_above_threshold",
+            "gate": gate_meta,
+        }
     confidence = retrieval_confidence(query, selected)
     notes = []
     evidence = []
@@ -646,6 +698,8 @@ def grounded_answer(query: str, hits: list[dict],
             "snippet": snippet,
             "chunk": hit.get("chunk", ""),
             "score": score,
+            "citation_probability": hit.get("citation_probability"),
+            "citation_threshold": hit.get("citation_threshold"),
             "kind": hit.get("kind", "document"),
             "verified": verified,
             "source_url": hit.get("source_url", ""),
@@ -661,7 +715,8 @@ def grounded_answer(query: str, hits: list[dict],
     if unverified:
         text += "\n\nThis includes an unverified teacher-derived note."
     return {"text": text, "sources": list(source_map.values()),
-            "evidence": evidence, "confidence": confidence}
+            "evidence": evidence, "confidence": confidence,
+            "refused": False, "reason": "", "gate": gate_meta}
 
 
 def _chunks(text: str) -> list[str]:

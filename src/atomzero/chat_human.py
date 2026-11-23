@@ -526,6 +526,9 @@ class ChatHuman:
         self.last_evidence = []
         self.last_confidence = {"score": 0.0, "label": "none",
                                 "coverage": 0.0, "margin": 0.0}
+        self.last_refused = False
+        self.last_reason = ""
+        self.last_gate = {}
         self.add_episode("user", text)
         extracted = extract_facts(text)
         for key, value in extracted:
@@ -722,6 +725,9 @@ class ChatHuman:
                 self.last_sources = answer["sources"]
                 self.last_evidence = answer["evidence"]
                 self.last_confidence = answer["confidence"]
+                self.last_refused = bool(answer.get("refused"))
+                self.last_reason = answer.get("reason", "")
+                self.last_gate = answer.get("gate", {})
                 reply = answer["text"]
             else:
                 formatted = self.format_skill(text)

@@ -261,6 +261,32 @@ python benchmarks/relations_regression.py
 Latest result: **6/6 checks pass**. Raw result:
 [`results/relations_regression.json`](results/relations_regression.json).
 
+## Citation gate policy simulation
+
+`benchmarks/citation_gate_eval.py` evaluates the calibrated CitationGate on
+SQuAD v2 (50 contexts, 200 questions: 103 answerable, 97 no-answer). Citation
+precision counts released answers whose visible snippet contains the gold
+answer. This is a distribution-shift simulation, not a production calibration
+proof.
+
+```powershell
+python benchmarks/citation_gate_eval.py
+```
+
+| profile | threshold | answered / correct | no-answer refused | precision | overall |
+|---|---:|---:|---:|---:|---:|
+| authored_v1 | 0.5 | 69 / 64 | 34/97 | 0.485 | 0.490 |
+| authored_v1 | 0.6 | 58 / 56 | 44/97 | 0.504 | 0.500 |
+| **squad_v2_stress** | **0.5** | **92 / 82** | **18/97** | **0.479** | **0.500** |
+| squad_v2_stress | 0.6 | 2 / 2 | 97/97 | 1.000 | 0.495 |
+
+The default `squad_v2_stress` / `0.5` keeps most answerable questions but only
+refuses 18/97 no-answer questions. Precision stays near the release-all
+baseline. The `0.6` threshold is not portable: it refuses almost all no-answer
+questions but also almost all answerable questions. A separate answerability
+signal and target-distribution calibration are still required. Raw result:
+[`results/citation_gate_eval.json`](results/citation_gate_eval.json).
+
 ## SQuAD v2 retrieval
 
 This is a **public retrieval benchmark**, not a generation benchmark. It uses

@@ -209,19 +209,29 @@ class AgentSession:
     def _search_docs(self, query: str) -> dict:
         hits = self.docs.search(query, k=6) if self.docs else []
         if not hits:
-            return {"reply": "I found no matching local notes.",
+            return {"reply": ("Yeterli güvenilir yerel kaynak bulamadım. "
+                              "(I found no matching local notes.)"),
                     "tool_calls": [{"name": "search_docs", "query": query}],
                     "sources": [], "evidence": [],
+                    "refused": True, "reason": "no_hits",
+                    "gate": {"applied": False, "reason": "no_candidates"},
                     "confidence": {"score": 0.0, "label": "none",
                                    "coverage": 0.0, "margin": 0.0}}
         answer = grounded_answer(query, hits)
-        return {
+        result = {
             "reply": answer["text"],
             "tool_calls": [{"name": "search_docs", "query": query}],
             "sources": answer["sources"],
             "evidence": answer["evidence"],
             "confidence": answer["confidence"],
+            "refused": bool(answer.get("refused")),
+            "reason": answer.get("reason", ""),
+            "gate": answer.get("gate", {}),
         }
+        if answer.get("refused"):
+            result["sources"] = []
+            result["evidence"] = []
+        return result
 
     def _graph_entity(self, name: str) -> dict:
         if self.docs is None:
@@ -1945,10 +1955,16 @@ class AgentSession:
             if skill is not None:
                 return self._run_skill(skill, text)
         reply = self.human.respond(text)
+        refused = bool(getattr(self.human, "last_refused", False))
         return {"reply": reply, "tool_calls": [],
-                "sources": list(getattr(self.human, "last_sources", [])),
-                "evidence": list(getattr(self.human, "last_evidence", [])),
+                "sources": [] if refused else list(
+                    getattr(self.human, "last_sources", [])),
+                "evidence": [] if refused else list(
+                    getattr(self.human, "last_evidence", [])),
                 "confidence": getattr(
                     self.human, "last_confidence",
                     {"score": 0.0, "label": "none",
-                     "coverage": 0.0, "margin": 0.0})}
+                     "coverage": 0.0, "margin": 0.0}),
+                "refused": refused,
+                "reason": getattr(self.human, "last_reason", ""),
+                "gate": getattr(self.human, "last_gate", {})}

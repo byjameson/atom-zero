@@ -1,0 +1,123 @@
+{
+  "benchmark": "atomzero-citation-gate-eval",
+  "dataset": "rajpurkar/squad_v2",
+  "split": "validation",
+  "seed": 0,
+  "contexts": 50,
+  "questions": 200,
+  "generated": "2026-11-23T06:27:39",
+  "profiles": [
+    "authored_v1",
+    "squad_v2_stress"
+  ],
+  "results": [
+    {
+      "profile": "authored_v1",
+      "threshold": 0.3,
+      "answerable": 103,
+      "answerable_answered": 93,
+      "answerable_correct": 82,
+      "answerable_refused": 10,
+      "no_answer": 97,
+      "no_answer_refused": 13,
+      "released_answers": 177,
+      "citation_precision": 0.4633,
+      "overall_accuracy": 0.475
+    },
+    {
+      "profile": "authored_v1",
+      "threshold": 0.4,
+      "answerable": 103,
+      "answerable_answered": 93,
+      "answerable_correct": 82,
+      "answerable_refused": 10,
+      "no_answer": 97,
+      "no_answer_refused": 14,
+      "released_answers": 176,
+      "citation_precision": 0.4659,
+      "overall_accuracy": 0.48
+    },
+    {
+      "profile": "authored_v1",
+      "threshold": 0.5,
+      "answerable": 103,
+      "answerable_answered": 69,
+      "answerable_correct": 64,
+      "answerable_refused": 34,
+      "no_answer": 97,
+      "no_answer_refused": 34,
+      "released_answers": 132,
+      "citation_precision": 0.4848,
+      "overall_accuracy": 0.49
+    },
+    {
+      "profile": "authored_v1",
+      "threshold": 0.6,
+      "answerable": 103,
+      "answerable_answered": 58,
+      "answerable_correct": 56,
+      "answerable_refused": 45,
+      "no_answer": 97,
+      "no_answer_refused": 44,
+      "released_answers": 111,
+      "citation_precision": 0.5045,
+      "overall_accuracy": 0.5
+    },
+    {
+      "profile": "squad_v2_stress",
+      "threshold": 0.3,
+      "answerable": 103,
+      "answerable_answered": 92,
+      "answerable_correct": 82,
+      "answerable_refused": 11,
+      "no_answer": 97,
+      "no_answer_refused": 16,
+      "released_answers": 173,
+      "citation_precision": 0.474,
+      "overall_accuracy": 0.49
+    },
+    {
+      "profile": "squad_v2_stress",
+      "threshold": 0.4,
+      "answerable": 103,
+      "answerable_answered": 92,
+      "answerable_correct": 82,
+      "answerable_refused": 11,
+      "no_answer": 97,
+      "no_answer_refused": 17,
+      "released_answers": 172,
+      "citation_precision": 0.4767,
+      "overall_accuracy": 0.495
+    },
+    {
+      "profile": "squad_v2_stress",
+      "threshold": 0.5,
+      "answerable": 103,
+      "answerable_answered": 92,
+      "answerable_correct": 82,
+      "answerable_refused": 11,
+      "no_answer": 97,
+      "no_answer_refused": 18,
+      "released_answers": 171,
+      "citation_precision": 0.4795,
+      "overall_accuracy": 0.5
+    },
+    {
+      "profile": "squad_v2_stress",
+      "threshold": 0.6,
+      "answerable": 103,
+      "answerable_answered": 2,
+      "answerable_correct": 2,
+      "answerable_refused": 101,
+      "no_answer": 97,
+      "no_answer_refused": 97,
+      "released_answers": 2,
+      "citation_precision": 1.0,
+      "overall_accuracy": 0.495
+    }
+  ],
+  "notes": [
+    "Citation precision counts released answers whose visible snippet contains the gold answer.",
+    "This is a distribution-shift simulation, not a production calibration proof."
+  ]
+}

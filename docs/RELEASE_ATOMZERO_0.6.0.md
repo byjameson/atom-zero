@@ -20,6 +20,19 @@ after `0.5.0`.
   prefix variants. An authored 20-query check improved hybrid top-1 from 0.800
   to 1.000 and FTS from 0.700 to 0.950; English SQuAD results are unchanged.
 
+## Citation gate
+
+- Local answers pass a calibrated citation-validity gate before release.
+- Default threshold is `0.5` with the `squad_v2_stress` profile; threshold,
+  profile and a custom calibration map are configurable with
+  `ATOMZERO_CITATION_*` environment variables. The authored `0.6` threshold is
+  available but is not the default.
+- An empty gate returns `refused: true`, `reason:
+  no_citation_above_threshold` and no sources.
+- SQuAD v2 policy simulation (50 contexts / 200 questions): **92/103**
+  answerable retained, **18/97** no-answer refused, precision **0.479**.
+  This is a starting point; a separate answerability signal is still required.
+
 ## Document timeline
 
 - `atomzero-docs timeline` and `GET /v1/documents/timeline` return dated events
@@ -128,13 +141,15 @@ after `0.5.0`.
 
 ## Verified regressions
 
-- `393 passed` in the assistant test suite.
+- `400 passed` in the assistant test suite.
 - Weekly chat regression: 7/7.
 - Weekly export/archive regression: 29/29.
 - Weekly review regression: 6/6.
 - Graph-path regression: 6/6.
 - Document timeline regression: 9/9.
 - Typed relations regression: 6/6.
+- Citation gate SQuAD v2 policy simulation (default 0.5): 92/103 answerable
+  retained, 18/97 no-answer refused, precision 0.479.
 - Contradiction regression: 16/16.
 - Source-comparison chat regression: 6/6.
 - Product benchmark remains 21/21; raw-model probe remains 2/10.

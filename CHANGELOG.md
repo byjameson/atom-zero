@@ -27,6 +27,12 @@
   `founded_by`, `ceo_of` and `born_in` triples with locators; English and
   Turkish patterns are supported. `benchmarks/relations_regression.py` passes
   6/6.
+- Added a calibrated **CitationGate** for local answers: rerank score ->
+  validity probability, configurable threshold/profile via
+  `ATOMZERO_CITATION_*`, citation dropping and explicit refusal on an empty
+  gate. Default is `squad_v2_stress` at 0.5, not the authored 0.6. SQuAD v2
+  simulation: 92/103 answerable retained, 18/97 no-answer refused, precision
+  0.479.
 - Added `benchmarks/graph_path_regression.py` (6/6 checks).
 - Added a **weekly review**: open/recently completed tasks, pending gaps,
   sources indexed within the window and graph highlights.
