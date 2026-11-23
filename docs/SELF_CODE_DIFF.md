@@ -69,4 +69,6 @@ compares the two reports:
   scoreboard delta.
 
 This prevents a patch that passes its focused tests from adding a new
-arbitrary-code or broad-exception risk elsewhere in the change.
+arbitrary-code or broad-exception risk elsewhere in the change. Both audits use
+a high per-kind cap so a removed finding cannot push a pre-existing finding
+past the default truncation and look like a new regression.

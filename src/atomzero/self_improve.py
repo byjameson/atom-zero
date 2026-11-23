@@ -38,6 +38,7 @@ from atomzero.trend import _load_ledger, build_trend
 __all__ = ["run_loop", "main"]
 
 _SEVERITY_ORDER = {"high": 0, "medium": 1, "low": 2}
+_AUDIT_MAX_PER_KIND = 200
 
 
 def _normalize_repo_path(path) -> str:
@@ -123,7 +124,8 @@ def run_loop(
     before_self_code = None
     if self_code_root:
         from atomzero.self_code import audit_report
-        before_self_code = audit_report(self_code_root, propose=True)
+        before_self_code = audit_report(
+            self_code_root, propose=True, max_per_kind=_AUDIT_MAX_PER_KIND)
         report = before_self_code
         previous = normalized.get("self_code")
         if isinstance(previous, dict):
@@ -230,7 +232,9 @@ def run_loop(
     if before_self_code is not None:
         from atomzero.self_code import audit_report
         from atomzero.self_code_diff import compare_reports
-        after_self_code = audit_report(runner["worktree"], propose=False)
+        after_self_code = audit_report(
+            runner["worktree"], propose=False,
+            max_per_kind=_AUDIT_MAX_PER_KIND)
         diff = compare_reports(before_self_code, after_self_code)
         result["self_code_diff"] = diff
         if diff["ok"] is not True:

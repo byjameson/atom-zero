@@ -164,6 +164,24 @@ def test_loop_self_code_diff_records_resolved_finding(tmp_path):
     assert (tmp_path / "ledger.jsonl").is_file()
 
 
+def test_loop_audits_with_high_per_kind_cap(tmp_path, monkeypatch):
+    import atomzero.self_code as self_code
+    calls = []
+    real = self_code.audit_report
+
+    def spy(*args, **kwargs):
+        calls.append(dict(kwargs))
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(self_code, "audit_report", spy)
+    repo = _self_code_repo(tmp_path)
+    result = run_loop(
+        signals={}, allowed_files=[], checks=[], opt_in=True, approve=False,
+        repo_root=repo, self_code_root=repo, target_path="src/alpha.py")
+    assert result["status"] == "awaiting_human"
+    assert calls and calls[0]["max_per_kind"] == 200
+
+
 def test_loop_self_code_regression_blocks_decision(tmp_path):
     repo = _self_code_repo(tmp_path)
     added = """def f():
