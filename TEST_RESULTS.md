@@ -47,6 +47,12 @@
   `ANSWERABILITY_POOR` + `REFUSAL_POLICY_MISMATCH`.
 - Build/twine: **PASSED** (`atomzero-0.6.0.tar.gz`,
   `atomzero-0.6.0-py3-none-any.whl`).
+- Release verification (`scripts/verify_release.py --version 0.6.0`):
+  GitHub release + both assets **OK**, GitHub README **OK**, Hugging Face card
+  **OK**, ModelScope card **OK**, PyPI **FAIL (404, not uploaded)**.
+- GitHub Actions `publish.yml` run #1: **failure**,
+  `invalid-publisher` (no matching PyPI trusted publisher). A fresh PyPI token
+  or trusted-publisher configuration is required before the PyPI step.
 
 ## Commands
 

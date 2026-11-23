@@ -3,8 +3,10 @@
 Canonical surfaces: GitHub, Hugging Face, PyPI, dev.to, Medium, LinkedIn and
 ModelScope.
 
-Current local batch: **0.6.0 prepared; public surfaces remain 0.5.0 until the
-authenticated publication steps are completed.**
+Current local batch: **0.6.0.** GitHub source/tag/release, Hugging Face and
+ModelScope are published. PyPI remains on 0.5.0 until a fresh token or a
+configured PyPI trusted publisher is available; dev.to/Medium updates wait for
+the PyPI install version.
 
 ## Release cadence
 

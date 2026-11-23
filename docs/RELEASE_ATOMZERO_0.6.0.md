@@ -1,8 +1,11 @@
 # atomzero 0.6.0 - weekly review and task workflow
 
-Status: **prepared for publication; publishing is pending fresh PyPI,
-Hugging Face, ModelScope and dev.to credentials plus GitHub release/tag
-steps.** No model or runtime weights changed; the weights remain `0.8.0`.
+Status: **partially published.** GitHub source/tag/release `v0.6.0`, the
+Hugging Face model card and the ModelScope model card are updated. PyPI `0.6.0`
+is still pending a fresh upload token or a configured PyPI trusted publisher;
+the GitHub release assets are available. dev.to/Medium article updates wait for
+the PyPI install version. No model or runtime weights changed; the weights
+remain `0.8.0`.
 
 This is the second batched release under the ~10-increment policy. It covers
 the weekly-review, task-workflow, export and source-comparison work accumulated

@@ -2,15 +2,18 @@
 
 ## Current state
 
-- Last feature commit: `35241de` (`fix: harden proactive state parsing`)
+- Last feature commit: `813e356` (`ci: add manual PyPI trusted-publishing workflow`)
 - Working tree after the handoff commit: clean
 - Atom Zero tests: **465 passed**
 - AISC tests: **191 passed** (+6 subtests)
 - AISC strict audit: **not claimed as passing**; the AISC spec/report update is
   owned by the AISC side. Atom Zero files were not modified in that repo.
 - Build/twine: **PASSED**
-- No release or push: fresh PyPI/HF/ModelScope/dev.to credentials and a GitHub
-  session are still missing. The ~10-increment batch policy continues.
+- Release status: GitHub `v0.6.0` source/tag/release, Hugging Face card and
+  ModelScope card are published. PyPI `0.6.0` is blocked on a fresh token or a
+  configured trusted publisher; dev.to/Medium updates wait for PyPI. The
+  `publish.yml` workflow reports `invalid-publisher` (no matching trusted
+  publisher). The ~10-increment batch policy continues.
 
 ## Completed in this session
 
@@ -89,8 +92,10 @@
    is a negative control, not a training target. Keep the repos separate; Atom
    Zero must not import `streamft`. Model weights are still `0.8.0` and
    unchanged.
-4. Publish the `0.6.0` batch release to PyPI, GitHub, Hugging Face, ModelScope,
-   dev.to and Medium; verify all surfaces with `scripts/verify_release.py`.
+4. Finish the `0.6.0` public release: provide a fresh PyPI token or configure a
+   trusted publisher for `.github/workflows/publish.yml`, then update
+   dev.to/Medium and run `scripts/verify_release.py --version 0.6.0`. The
+   current verification has only the PyPI check failing.
 5. After the next code commit, re-run full pytest, AISC, build/twine and
    refresh `TEST_RESULTS.md`.
 
