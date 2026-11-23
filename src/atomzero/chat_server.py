@@ -4714,7 +4714,8 @@ class Handler(BaseHTTPRequestHandler):
                          "/v1/research/queue/run",
                          "/v1/agent/chat", "/v1/agent/plan",
                          "/v1/tools/audit", "/v1/claims/audit",
-                         "/v1/consensus", "/v1/proactive",
+                         "/v1/consensus", "/v1/documents/diff",
+                         "/v1/proactive",
                          "/v1/proactive/config", "/v1/proactive/ack"):
             return self._json(404, {"error": "not found"})
         key = _state.get("api_key") or ""
@@ -4814,6 +4815,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._claims_audit(req)
             if route == "/v1/consensus":
                 return self._consensus_audit(req)
+            if route == "/v1/documents/diff":
+                return self._documents_diff(req)
             if route == "/v1/proactive":
                 return self._proactive_next(req)
             if route == "/v1/proactive/config":
@@ -5930,6 +5933,20 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError as exc:
             return self._json(400, {"error": str(exc)})
         return self._json(200, result)
+
+    def _documents_diff(self, req: dict):
+        from atomzero.version_diff import audit_document_diff
+        old_text = req.get("old_text")
+        new_text = req.get("new_text")
+        if not isinstance(old_text, str) or not isinstance(new_text, str):
+            return self._json(400, {
+                "error": "old_text and new_text must be strings"})
+        if len(old_text) > 200_000 or len(new_text) > 200_000:
+            return self._json(400, {"error": "each text is limited to 200000 characters"})
+        return self._json(200, audit_document_diff(
+            old_text, new_text,
+            old_label=str(req.get("old_label") or "old"),
+            new_label=str(req.get("new_label") or "new")))
 
     def _proactive_next(self, req: dict):
         session_id = str(req.get("session_id", "")).strip()

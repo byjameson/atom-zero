@@ -7,6 +7,9 @@
   consensus/single-source status, and number/date/identifier/negation conflicts
   kept separate instead of averaged. It makes no model calls and does not
   persist the request.
+- Added **Document version diff** (`atomzero-doc-diff`,
+  `POST /v1/documents/diff`): deterministic block-level added/removed/changed
+  blocks and a similarity ratio, with labels and no persistence.
 - Added `POST /v1/claims/audit` for the local claim/evidence audit. `query` is
   required, `hits` is a bounded list (maximum 50) and only source/title/
   section/page/chunk/snippet fields are passed through.

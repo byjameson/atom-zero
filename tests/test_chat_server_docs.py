@@ -3074,7 +3074,8 @@ def test_http_proactive_conversation(tmp_path):
         assert disabled["state"]["enabled"] is False
 
         configured = _post(base + "/v1/proactive/config", {
-            "session_id": "proactive-test", "enabled": True})
+            "session_id": "proactive-test", "enabled": True,
+            "quiet_start": "00:00", "quiet_end": "00:00"})
         assert configured["state"]["enabled"] is True
 
         tick = _post(base + "/v1/proactive", {
@@ -3165,6 +3166,38 @@ def test_http_consensus_audit(tmp_path):
         with pytest.raises(urllib.error.HTTPError) as bad_overlap:
             _post(base + "/v1/consensus", {"hits": [], "min_overlap": 2})
         assert bad_overlap.value.code == 400
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
+
+
+def test_http_document_diff(tmp_path):
+    old = dict(chat_server._state)
+    chat_server._state.update({"api_key": ""})
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        result = _post(base + "/v1/documents/diff", {
+            "old_text": "The price is 10.\n\nKeep the receipt.",
+            "new_text": "The price is 12.\n\nKeep the receipt.",
+            "old_label": "v1",
+            "new_label": "v2",
+        })
+        assert result["summary"]["changed"] == 1
+        assert result["summary"]["unchanged"] == 1
+        assert result["old_label"] == "v1"
+        assert result["weights_changed"] is False
+        with pytest.raises(urllib.error.HTTPError) as missing:
+            _post(base + "/v1/documents/diff", {"old_text": "x"})
+        assert missing.value.code == 400
+        with pytest.raises(urllib.error.HTTPError) as too_big:
+            _post(base + "/v1/documents/diff", {
+                "old_text": "x" * 200_001, "new_text": "y"})
+        assert too_big.value.code == 400
     finally:
         httpd.shutdown()
         httpd.server_close()

@@ -1,0 +1,43 @@
+name = "AtomZeroDocumentDiff"
+version = "0.1.0"
+description = "Deterministic block-level document version diff with an explicit change report."
+min_assurance = 0.90
+max_context_tokens = 8000
+
+[[components]]
+name = "TextLoader"
+input_type = "Text"
+output_type = "Blocks"
+kind = "tool"
+reversible = true
+assurance = 0.97
+verified = true
+evidence = "tests/test_version_diff.py split, whitespace normalization and empty-input cases"
+assumptions = ["input is UTF-8 text supplied by the caller"]
+guarantees = ["blocks are deterministic", "horizontal whitespace is normalized", "empty blocks are dropped"]
+context_tokens = 1024
+
+[[components]]
+name = "BlockDiffer"
+input_type = "Blocks"
+output_type = "BlockDiff"
+kind = "evaluator"
+assurance = 0.94
+verified = true
+evidence = "tests/test_version_diff.py added, removed, replaced and identical block cases"
+assumptions = ["difflib.SequenceMatcher is sufficient for local version review"]
+guarantees = ["added, removed and changed blocks are separated", "similarity is deterministic"]
+context_tokens = 2048
+
+[[components]]
+name = "DiffAnswer"
+input_type = "BlockDiff"
+output_type = "DiffReport"
+kind = "tool"
+reversible = true
+assurance = 0.96
+verified = true
+evidence = "tests/test_version_diff.py summary, labels, CLI and deterministic output cases"
+assumptions = ["the report is consumed by a human or a later review step"]
+guarantees = ["the report includes summary and method", "weights_changed is always false", "the route does not persist text"]
+context_tokens = 1024
