@@ -62,6 +62,38 @@ def test_compare_sources_normalizes_formatted_numbers(tmp_path):
     docs.close()
 
 
+def test_compare_sources_normalizes_dates(tmp_path):
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("report_a.txt", "The launch is on 5 January 2020.",
+                  title="Report A")
+    docs.add_text("report_b.txt", "The launch is on January 5, 2020.",
+                  title="Report B")
+    docs.add_text("report_c.txt", "The launch is on 6 January 2020.",
+                  title="Report C")
+    docs.add_text("tr_a.txt", "Toplantı 5 Ocak 2020 tarihinde yapıldı.",
+                  title="TR A")
+    docs.add_text("tr_b.txt", "Toplantı Ocak 5, 2020 tarihinde yapıldı.",
+                  title="TR B")
+    docs.add_text("tr_c.txt", "Toplantı 6 Ocak 2020 tarihinde yapıldı.",
+                  title="TR C")
+
+    equal = compare_sources(docs, "report_a.txt", "report_b.txt")
+    assert equal["conflicts"] == []
+    assert equal["summary"]["date_mismatch"] == 0
+
+    conflict = compare_sources(docs, "report_a.txt", "report_c.txt")
+    assert any("date_mismatch" in item["reasons"]
+               for item in conflict["conflicts"])
+    assert conflict["summary"]["date_mismatch"] >= 1
+
+    turkish_equal = compare_sources(docs, "tr_a.txt", "tr_b.txt")
+    assert turkish_equal["conflicts"] == []
+    turkish_conflict = compare_sources(docs, "tr_a.txt", "tr_c.txt")
+    assert any("date_mismatch" in item["reasons"]
+               for item in turkish_conflict["conflicts"])
+    docs.close()
+
+
 def test_compare_all_sources_and_cli(tmp_path, capsys):
     docs = DocMemory(tmp_path / "docs.db")
     docs.add_text("policy_a.txt", "The warranty period is 24 months.")

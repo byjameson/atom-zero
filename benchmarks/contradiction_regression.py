@@ -53,6 +53,12 @@ def run(output: str | Path | None = None) -> dict:
                       title="Price B")
         docs.add_text("price_c.txt", "The contract value is $1,300,000.",
                       title="Price C")
+        docs.add_text("report_a.txt", "The launch is on 5 January 2020.",
+                      title="Report A")
+        docs.add_text("report_b.txt", "The launch is on January 5, 2020.",
+                      title="Report B")
+        docs.add_text("report_c.txt", "The launch is on 6 January 2020.",
+                      title="Report C")
         docs.add_text("unrelated.txt", "Bananas are yellow.",
                       title="Unrelated")
         old = dict(chat_server._state)
@@ -124,6 +130,25 @@ def run(output: str | Path | None = None) -> dict:
                 any("numeric_mismatch" in conflict["reasons"]
                     for conflict in scaled["conflicts"]),
                 str(scaled["summary"]))
+            date_formatted = _get(
+                base,
+                "/v1/documents/compare?source=report_a.txt"
+                "&against=report_b.txt")
+            date_reasons = {reason for conflict in date_formatted["conflicts"]
+                            for reason in conflict["reasons"]}
+            check(
+                "date_formatting_no_false_positive",
+                "date_mismatch" not in date_reasons,
+                str(sorted(date_reasons)))
+            date_conflict = _get(
+                base,
+                "/v1/documents/compare?source=report_a.txt"
+                "&against=report_c.txt")
+            check(
+                "date_conflict",
+                any("date_mismatch" in conflict["reasons"]
+                    for conflict in date_conflict["conflicts"]),
+                str(date_conflict["summary"]))
             clean = _get(
                 base,
                 "/v1/documents/compare?source=unrelated.txt"

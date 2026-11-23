@@ -294,7 +294,7 @@ whether to enable it.
 | document benchmark (100 authored questions) | **80/80 answerable, 20/20 no-answer** |
 | public SQuAD v2 retrieval (50 contexts) | **hybrid 0.975 top-1; 0.884 answer in snippet** |
 | safety-enabled product | **26/26** |
-| test suite | **381 passed** |
+| test suite | **382 passed** |
 
 The product benchmark is narrow and authored: tools, memory, tasks, retrieval,
 teacher-note review, missing-source detection and one short generation. It is

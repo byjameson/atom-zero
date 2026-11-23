@@ -3,14 +3,16 @@
 ## Source-comparison regression
 
 `benchmarks/contradiction_regression.py` checks the served compare controls,
-numeric/negation conflicts, identifier conflicts and a no-conflict comparison
+numeric/negation conflicts, identifier conflicts, formatted-number and date
+equivalence (`$1,500,000` vs `1.5 million`, `5 January 2020` vs
+`January 5, 2020`), magnitude/date conflicts and a no-conflict comparison
 through the real handler.
 
 ```powershell
 python benchmarks/contradiction_regression.py
 ```
 
-Latest result: **7/7 checks pass**. Raw result:
+Latest result: **9/9 checks pass**. Raw result:
 [`results/contradiction_regression.json`](results/contradiction_regression.json).
 
 `benchmarks/compare_chat_regression.py` checks the chat intent, both snippets,

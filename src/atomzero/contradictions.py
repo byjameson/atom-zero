@@ -30,6 +30,32 @@ SCALES = {
     "billion": 10 ** 9,
     "trillion": 10 ** 12,
 }
+MONTHS = {
+    "january": 1, "jan": 1, "february": 2, "feb": 2, "march": 3,
+    "mar": 3, "april": 4, "apr": 4, "may": 5, "june": 6, "jun": 6,
+    "july": 7, "jul": 7, "august": 8, "aug": 8, "september": 9,
+    "sep": 9, "sept": 9, "october": 10, "oct": 10, "november": 11,
+    "nov": 11, "december": 12, "dec": 12,
+    "ocak": 1, "şubat": 2, "subat": 2, "mart": 3, "nisan": 4,
+    "mayıs": 5, "mayis": 5, "haziran": 6, "temmuz": 7,
+    "ağustos": 8, "agustos": 8, "eylül": 9, "eylul": 9,
+    "ekim": 10, "kasım": 11, "kasim": 11, "aralık": 12, "aralik": 12,
+}
+MONTH_PATTERN = "|".join(
+    re.escape(name) for name in sorted(MONTHS, key=len, reverse=True))
+DATE_PATTERNS = (
+    re.compile(
+        r"(?<![\w-])(?P<year>\d{4})-(?P<month>\d{1,2})-(?P<day>\d{1,2})"
+        r"(?![\w-])"),
+    re.compile(
+        rf"\b(?P<month>{MONTH_PATTERN})\.?\s+"
+        r"(?P<day>\d{1,2})(?:st|nd|rd|th)?,?\s+(?P<year>\d{4})\b",
+        re.IGNORECASE),
+    re.compile(
+        rf"\b(?P<day>\d{{1,2}})(?:st|nd|rd|th)?(?:\s+of)?[\s-]+"
+        rf"(?P<month>{MONTH_PATTERN})\.?,?[\s-]+(?P<year>\d{{4}})\b",
+        re.IGNORECASE),
+)
 
 
 def _sentences(text: str) -> list[str]:
@@ -73,6 +99,38 @@ def _numbers(text: str) -> set[str]:
             for match in NUMBER_RE.finditer(text)}
 
 
+def _dates(text: str) -> set[str]:
+    """Return canonical ISO-like dates found in text.
+
+    Supports ISO dates, ``Month D, YYYY``, ``D Month YYYY`` and Turkish month
+    names. Numeric slash/dot dates are deliberately ignored because their
+    day/month order is locale-dependent and would create false conflicts.
+    """
+    found = set()
+    for pattern in DATE_PATTERNS:
+        for match in pattern.finditer(text):
+            try:
+                year = int(match.group("year"))
+                day = int(match.group("day"))
+            except (TypeError, ValueError):
+                continue
+            raw_month = match.group("month")
+            if raw_month.isdigit():
+                month = int(raw_month)
+            else:
+                month = MONTHS.get(raw_month.lower().rstrip("."), 0)
+            if 1 <= month <= 12 and 1 <= day <= 31 and 1000 <= year <= 2999:
+                found.add(f"{year:04d}-{month:02d}-{day:02d}")
+    return found
+
+
+def _without_dates(text: str) -> str:
+    value = str(text or "")
+    for pattern in DATE_PATTERNS:
+        value = pattern.sub(" ", value)
+    return value
+
+
 def extract_claims(docs, source: str) -> list[dict]:
     """Extract comparable sentence-level claims for one source."""
     source = str(source or "").strip()
@@ -92,7 +150,8 @@ def extract_claims(docs, source: str) -> list[dict]:
             claims.append({
                 "text": sentence,
                 "terms": sorted(terms),
-                "numbers": sorted(_numbers(sentence)),
+                "numbers": sorted(_numbers(_without_dates(sentence))),
+                "dates": sorted(_dates(sentence)),
                 "codes": sorted(codes),
                 "entities": sorted({value.lower()
                                     for value in extract_entities(sentence)}),
@@ -122,6 +181,13 @@ def _conflict_reasons(left: dict, right: dict,
         only_right = numbers_right - numbers_left
         if only_left and only_right:
             reasons.append("numeric_mismatch")
+    dates_left = set(left.get("dates", []))
+    dates_right = set(right.get("dates", []))
+    if dates_left and dates_right:
+        only_left = dates_left - dates_right
+        only_right = dates_right - dates_left
+        if only_left and only_right:
+            reasons.append("date_mismatch")
     codes_left = set(left["codes"])
     codes_right = set(right["codes"])
     if codes_left and codes_right:
@@ -186,8 +252,8 @@ def compare_sources(docs, source: str, against: str = "",
                 break
         if len(conflicts) >= 100:
             break
-    counts = {"numeric_mismatch": 0, "identifier_mismatch": 0,
-              "negation_mismatch": 0}
+    counts = {"numeric_mismatch": 0, "date_mismatch": 0,
+              "identifier_mismatch": 0, "negation_mismatch": 0}
     for conflict in conflicts:
         for reason in conflict["reasons"]:
             counts[reason] = counts.get(reason, 0) + 1
@@ -203,7 +269,7 @@ def compare_sources(docs, source: str, against: str = "",
             "sources_compared": len(candidate_sources),
             **counts,
         },
-        "method": ("sentence overlap + number/code/negation difference; "
+        "method": ("sentence overlap + number/date/code/negation difference; "
                    "not a truth verdict"),
         "weights_changed": False,
     }

@@ -148,7 +148,7 @@ LoRA adapters.
 | document benchmark, 100 authored questions | **80/80 answerable, 20/20 no-answer** |
 | public SQuAD v2 retrieval (20 contexts) | **0.98 top-1 context (FTS), 1.00 top-5** |
 | public SQuAD v2 retrieval (50 contexts) | **hybrid 0.975 top-1; 0.884 answer in visible snippet** |
-| test suite | **381 passed** |
+| test suite | **382 passed** |
 
 The raw-model probe asks ten simple general questions with no documents, no
 calculator and no agent. The 49.2M model gets **2/10**. The product gets

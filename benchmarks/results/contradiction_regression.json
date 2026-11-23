@@ -1,6 +1,6 @@
 {
   "benchmark": "atomzero-contradiction-regression",
-  "generated": "2026-11-23T05:26:23",
+  "generated": "2026-11-23T05:30:41",
   "checks": [
     {
       "name": "ui_compare_controls",
@@ -20,7 +20,7 @@
     {
       "name": "identifier_conflict",
       "ok": true,
-      "detail": "{'conflict_count': 1, 'sources_compared': 1, 'numeric_mismatch': 0, 'identifier_mismatch': 1, 'negation_mismatch': 0}"
+      "detail": "{'conflict_count': 1, 'sources_compared': 1, 'numeric_mismatch': 0, 'date_mismatch': 0, 'identifier_mismatch': 1, 'negation_mismatch': 0}"
     },
     {
       "name": "numeric_formatting_no_false_positive",
@@ -30,15 +30,25 @@
     {
       "name": "numeric_scale_conflict",
       "ok": true,
-      "detail": "{'conflict_count': 1, 'sources_compared': 1, 'numeric_mismatch': 1, 'identifier_mismatch': 0, 'negation_mismatch': 0}"
+      "detail": "{'conflict_count': 1, 'sources_compared': 1, 'numeric_mismatch': 1, 'date_mismatch': 0, 'identifier_mismatch': 0, 'negation_mismatch': 0}"
+    },
+    {
+      "name": "date_formatting_no_false_positive",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "date_conflict",
+      "ok": true,
+      "detail": "{'conflict_count': 1, 'sources_compared': 1, 'numeric_mismatch': 0, 'date_mismatch': 1, 'identifier_mismatch': 0, 'negation_mismatch': 0}"
     },
     {
       "name": "no_false_positive",
       "ok": true,
-      "detail": "{'conflict_count': 0, 'sources_compared': 1, 'numeric_mismatch': 0, 'identifier_mismatch': 0, 'negation_mismatch': 0}"
+      "detail": "{'conflict_count': 0, 'sources_compared': 1, 'numeric_mismatch': 0, 'date_mismatch': 0, 'identifier_mismatch': 0, 'negation_mismatch': 0}"
     }
   ],
-  "passed": 7,
+  "passed": 9,
   "failed": 0,
   "ok": true
 }
