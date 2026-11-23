@@ -65,7 +65,7 @@ of truth.
 
 | Cycle | Planner | Implementer | Reviewer | Release agent | Result |
 |---|---|---|---|---|---|
-| `0.6.1` claims | task packet | isolated `feat/claim-evidence-algebra`, commit `3bc41f2` | read-only diff + full suite + AISC, PASS | read-only surface verification | merged, released as `v0.6.1` (`c874ef4`), 512 tests |
+| `0.6.1` claims | task packet | isolated `feat/claim-evidence-algebra`, commit `3bc41f2` | read-only diff + full suite + AISC, PASS | read-only surface verification, release gate PASS | merged, released as `v0.6.1` (`c874ef4`), 512 tests |
 | `0.6.1` AISC spec | task packet | isolated `feat/aisc-spec-generator`, commit `6693b30` | focused/full suite, AISC PASS | same release gate | merged, generated spec shipped |
 | `0.6.2` consensus | task packet | main-agent implementation, commit `a0808c2` | full suite + AISC, PASS | held for batch boundary | on `main`, 527 tests |
 | `0.6.2` freshness | task packet | isolated `feat/freshness-algebra`, running | pending | pending | in progress |
@@ -74,6 +74,13 @@ The `0.6.1` cycle used two parallel Implementer worktrees, a separate Reviewer
 report and a separate Release verification report. The Reviewer caught no
 blocking issues; it did flag that the claim tests did not cover date/identifier/
 negation paths, which is recorded as a non-blocking gap.
+
+The read-only Release agent returned **release gate: PASS** for every surface
+it could verify: PyPI, GitHub release/assets, Hugging Face, ModelScope, dev.to
+and wheel import. Medium (HTTP 403) and LinkedIn (no browser in the agent) were
+reported UNTESTED; the Planner then verified both in the local browser:
+Medium contains `0.6.1`, `512 tests`, the claim/evidence section and the AISC
+spec generator; the LinkedIn activity feed contains the `0.6.1` post.
 
 ## Current cycle
 
@@ -86,10 +93,13 @@ negation paths, which is recorded as a non-blocking gap.
 - AISC side: version `0.5.0` adds native `batch` and `diff`; 209 tests pass.
 - Reviewer gate: 527 Atom Zero tests, 8 passing AISC specs, 2 expected
   answerability failures.
-- In progress: freshness Implementer in `feat/freshness-algebra` and a
-  read-only Release agent verification of the published `0.6.1` surfaces.
-- Release agent: hold the accumulated `0.6.2` work until the batch boundary;
-  then one push for `main`, the tag and every public surface.
+- In progress: freshness Implementer in `feat/freshness-algebra`, source
+  reliability Implementer in `feat/source-reliability`, and an AISC
+  `batch --baseline` Implementer. The `0.6.1` Release agent gate is PASS
+  (Medium and LinkedIn verified by the Planner browser).
+- Release agent: hold the accumulated work until the ten-increment `0.7.0`
+  boundary; then one push for `main`, the tag and every public surface.
+  See `docs/BATCH_0.7.0.md`.
 
 ## Rules
 
