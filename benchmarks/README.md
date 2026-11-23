@@ -248,6 +248,19 @@ python benchmarks/briefing_regression.py
 Latest result: **9/9 checks pass**. Raw result:
 [`results/briefing_regression.json`](results/briefing_regression.json).
 
+## Typed relation regression
+
+`benchmarks/relations_regression.py` checks the served relations route, the
+supported relation types, entity/relation filters, provenance, a control
+sentence without a relation and missing-source behavior.
+
+```powershell
+python benchmarks/relations_regression.py
+```
+
+Latest result: **6/6 checks pass**. Raw result:
+[`results/relations_regression.json`](results/relations_regression.json).
+
 ## SQuAD v2 retrieval
 
 This is a **public retrieval benchmark**, not a generation benchmark. It uses

@@ -22,8 +22,11 @@
   source/title/page/section provenance. Chat (`timeline`, `zaman çizelgesi`)
   and a UI Show timeline action share the route. The timeline regression
   passes 9/9.
-- Added multi-hop **graph paths**: `atomzero-docs path`, `GET /v1/graph/path`,
-  chat “how is X connected to Y?” and UI Find path.
+- Added deterministic **typed relation extraction**: `atomzero-docs relations`
+  and `GET /v1/graph/relations` return explicit `located_in`, `capital_of`,
+  `founded_by`, `ceo_of` and `born_in` triples with locators; English and
+  Turkish patterns are supported. `benchmarks/relations_regression.py` passes
+  6/6.
 - Added `benchmarks/graph_path_regression.py` (6/6 checks).
 - Added a **weekly review**: open/recently completed tasks, pending gaps,
   sources indexed within the window and graph highlights.

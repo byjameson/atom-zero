@@ -1,0 +1,39 @@
+{
+  "benchmark": "atomzero-relations-regression",
+  "generated": "2026-11-23T06:11:30",
+  "checks": [
+    {
+      "name": "relation_types",
+      "ok": true,
+      "detail": "['born_in', 'capital_of', 'ceo_of', 'founded_by', 'located_in']"
+    },
+    {
+      "name": "entity_filter",
+      "ok": true,
+      "detail": "3"
+    },
+    {
+      "name": "relation_filter",
+      "ok": true,
+      "detail": "2"
+    },
+    {
+      "name": "provenance",
+      "ok": true,
+      "detail": "{'relation': 'born_in', 'subject': 'Jane Doe', 'object': 'Istanbul', 'text': 'Jane Doe was born in Istanbul.', 'source': 'life.txt', 'title': 'Life', 'page': None, 'section': '', 'kind': 'document', 'verified': True, 'entities': ['Istanbul', 'Jane Doe']}"
+    },
+    {
+      "name": "control_no_false_positive",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "missing_source",
+      "ok": true,
+      "detail": "404"
+    }
+  ],
+  "passed": 6,
+  "failed": 0,
+  "ok": true
+}

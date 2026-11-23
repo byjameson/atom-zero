@@ -2050,6 +2050,13 @@ def main(argv=None):
     timeline.add_argument("--source", default="")
     timeline.add_argument("--source-prefix", default="")
     timeline.add_argument("--limit", type=int, default=100)
+    relations = sub.add_parser(
+        "relations", help="list explicit typed relations with provenance")
+    relations.add_argument("--entity", default="")
+    relations.add_argument("--relation", default="")
+    relations.add_argument("--source", default="")
+    relations.add_argument("--source-prefix", default="")
+    relations.add_argument("--limit", type=int, default=100)
     export = sub.add_parser(
         "export", help="export the index to portable JSONL")
     export.add_argument("--out", default="atomzero-index.jsonl")
@@ -2065,8 +2072,8 @@ def main(argv=None):
     # Accept --db on either side of the subcommand; the docs use both forms.
     for parser in (add, search, answer, sync, status, doctor, list_db,
                    stats_db, evidence, summary, summary_collection, graph,
-                   entity, path, compare, timeline, export, import_cmd,
-                   forget):
+                   entity, path, compare, timeline, relations, export,
+                   import_cmd, forget):
         parser.add_argument("--db", dest="db_after", default=None)
     args = ap.parse_args(argv)
     mem = DocMemory(args.db_after or args.db or "data/docs.db")
@@ -2194,6 +2201,18 @@ def main(argv=None):
                 result = extract_timeline(
                     mem, source=args.source,
                     source_prefix=args.source_prefix, limit=args.limit)
+            except (SourceNotFound, ValueError) as exc:
+                print(json.dumps({"error": str(exc)}))
+                return 1
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+        elif args.cmd == "relations":
+            from atomzero.relations import extract_relations
+
+            try:
+                result = extract_relations(
+                    mem, entity=args.entity, relation=args.relation,
+                    source=args.source, source_prefix=args.source_prefix,
+                    limit=args.limit)
             except (SourceNotFound, ValueError) as exc:
                 print(json.dumps({"error": str(exc)}))
                 return 1

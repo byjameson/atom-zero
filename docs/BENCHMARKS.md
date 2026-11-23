@@ -20,6 +20,19 @@ Raw means no RAG, no tools and no agent. "Product" adds the runtime. The
 adapter does not add factual knowledge; it is a style/skill layer with a
 reviewed gate. See the [model card](MODEL_CARD.md) for the full distinction.
 
+## Typed relation regression
+
+`benchmarks/relations_regression.py` checks the served relations route, the
+supported relation types, entity/relation filters, provenance, a control
+sentence without a relation and missing-source behavior.
+
+```powershell
+python benchmarks/relations_regression.py
+```
+
+Current result: **6/6 checks pass**. Raw result:
+[`results/relations_regression.json`](results/relations_regression.json).
+
 ## Public retrieval benchmark: SQuAD v2
 
 `benchmarks/squad_retrieval.py` runs a public retrieval check on

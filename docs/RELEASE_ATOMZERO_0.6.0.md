@@ -29,6 +29,14 @@ after `0.5.0`.
 - Chat understands `timeline` / `zaman çizelgesi`; the documents UI has a
   **Show timeline** action with evidence and citation buttons.
 
+## Typed relations
+
+- `atomzero-docs relations` and `GET /v1/graph/relations` return explicit
+  `located_in`, `capital_of`, `founded_by`, `ceo_of` and `born_in` triples with
+  source/title/page/section provenance.
+- English and Turkish patterns are supported; co-occurrence alone is not a
+  relation.
+
 ## Weekly review and report archive
 
 - `atomzero-brief --weekly --days N`, `POST /v1/weekly-review` and chat
@@ -120,12 +128,13 @@ after `0.5.0`.
 
 ## Verified regressions
 
-- `391 passed` in the assistant test suite.
+- `393 passed` in the assistant test suite.
 - Weekly chat regression: 7/7.
 - Weekly export/archive regression: 29/29.
 - Weekly review regression: 6/6.
 - Graph-path regression: 6/6.
 - Document timeline regression: 9/9.
+- Typed relations regression: 6/6.
 - Contradiction regression: 16/16.
 - Source-comparison chat regression: 6/6.
 - Product benchmark remains 21/21; raw-model probe remains 2/10.

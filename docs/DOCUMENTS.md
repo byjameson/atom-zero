@@ -142,6 +142,24 @@ entities; results are sorted by date. This is a textual timeline, not inference.
 Chat also understands `timeline` and `zaman çizelgesi`; the documents UI has a
 **Show timeline** action with evidence and citation buttons.
 
+### Typed relations
+
+Extract explicit relation triples with provenance:
+
+```powershell
+atomzero-docs relations --entity Ankara --relation capital_of `
+  --db data/docs.db
+```
+
+```text
+GET /v1/graph/relations?entity=Ankara&relation=capital_of&limit=100
+```
+
+Supported relations are `located_in`, `capital_of`, `founded_by`, `ceo_of` and
+`born_in`, with English and Turkish sentence patterns. Filters accept a
+case-insensitive entity substring and an exact relation name. Co-occurrence
+alone is not a relation; every triple keeps the sentence and source locators.
+
 ### CLI
 
 ```powershell
