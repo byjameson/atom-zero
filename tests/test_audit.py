@@ -1,4 +1,4 @@
-from atomzero.audit import discover_specs, resolve_spec_path
+from atomzero.audit import discover_specs, resolve_spec_path, summarize_results
 
 
 def test_discover_specs_includes_atomzero_specs():
@@ -11,7 +11,22 @@ def test_discover_specs_includes_atomzero_specs():
         "atomzero-proactive.toml",
         "atomzero-memory-lifecycle.toml",
         "atomzero-answerability.toml",
+        "atomzero-answerability-generated.toml",
+        "atomzero-claims.toml",
+        "atomzero-consensus.toml",
     } <= names
+
+
+def test_summarize_results_counts_errors_and_passes():
+    summary = summarize_results([
+        {"ok": True},
+        {"ok": False, "error": "bad spec"},
+        {"ok": False},
+    ])
+    assert summary == {
+        "total": 3, "passed": 1, "failed": 2, "errors": 1, "ok": False,
+    }
+    assert summarize_results([])["ok"] is False
 
 
 def test_resolve_spec_path_keeps_absolute_paths(tmp_path):

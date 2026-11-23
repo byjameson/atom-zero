@@ -40,8 +40,13 @@ $env:AISC_PATH = "C:\path\to\ai-systems-algebra"
 atomzero-audit
 atomzero-audit --strict --require-calibration
 atomzero-audit --json
+atomzero-audit --strict --summary
 atomzero-doctor --aisc --aisc-path "$env:AISC_PATH"
 ```
+
+`--summary` prints one aggregate line (`10 specs, 8 pass, 2 fail, 0 error`)
+and exits non-zero when any spec fails. Combine it with `--json` for a small
+machine-readable summary object.
 
 AISC 0.5 adds native batch and diff commands, which Atom Zero's multi-spec
 checkout can use directly:

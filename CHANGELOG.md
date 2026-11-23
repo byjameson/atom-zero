@@ -10,6 +10,8 @@
 - Added `POST /v1/claims/audit` for the local claim/evidence audit. `query` is
   required, `hits` is a bounded list (maximum 50) and only source/title/
   section/page/chunk/snippet fields are passed through.
+- Added `atomzero-audit --summary` for a single aggregate pass/fail/error line
+  across all specs, with an optional JSON summary.
 - Documented AISC 0.5 `batch` and `diff` support, including glob/directory
   expansion and `--fail-on-breaking`, in `docs/AISC_AUDIT.md`.
 

@@ -15,8 +15,8 @@
 | Suite | Passed | Failed | Exit | Duration |
 |---|---:|---:|---:|---:|
 | Atom Zero `pytest tests -q` (0.6.1 release) | **512** | **0** | 0 | 61.70s |
-| Atom Zero `pytest tests -q` (post-release main) | **526** | **0** | 0 | 60.90s |
-| AISC `pytest tests -q` (0.5.0) | **208** (+6 subtests) | **0** | 0 | 16.94s |
+| Atom Zero `pytest tests -q` (post-release main) | **527** | **0** | 0 | 60.90s |
+| AISC `pytest tests -q` (0.5.0) | **209** (+6 subtests) | **0** | 0 | 16.94s |
 | AISC strict specs | **8 PASS / 2 FAIL (expected)** | 0 critical | 1 | - |
 | Build (`python -m build`) | **2 artifacts** | **0** | 0 | - |
 | `twine check` | **2 PASSED** | **0** | 0 | - |
@@ -31,7 +31,7 @@ release evidence is the clean `512 passed` run.
 
 - Post-release `0.6.2` HTTP integration: **2 passed**
   (`test_http_claims_audit`, `test_http_consensus_audit`), full main suite
-  **526 passed**.
+  **527 passed**.
 - `0.6.2` cross-source consensus branch: **12 passed**
   (`tests/test_consensus.py`); the `AtomZeroConsensus` AISC spec is **PASS**
   (4 verified components, assurance bound 0.93, 0 irreversible).
@@ -43,7 +43,7 @@ release evidence is the clean `512 passed` run.
   `AtomZeroAnswerabilityGenerated` both **FAIL** with 0 critical and 2 warnings
   (`ANSWERABILITY_POOR`, `REFUSAL_POLICY_MISMATCH`). The warnings repeat
   because the generated spec intentionally mirrors the measured profile.
-- AISC 0.5 development: **208 passed** (+6 subtests), up from 191. New
+- AISC 0.5 development: **209 passed** (+6 subtests), up from 191. New
   `aisc batch` and `aisc diff` cover glob/directory expansion, aggregate
   pass/fail/error counts, structured spec diffs and `--fail-on-breaking`.
   `python -m aisc batch docs/aisc/atomzero-*.toml --strict` reports

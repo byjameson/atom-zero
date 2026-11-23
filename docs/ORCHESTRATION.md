@@ -68,7 +68,7 @@ of truth.
   claims HTTP route.
 - AISC side: version `0.5.0` adds native `batch` and `diff`; 208 tests pass.
 - Reviewer: full tests, strict AISC batch and diff review. Current gate:
-  526 Atom Zero tests, 8 passing AISC specs, 2 expected answerability failures.
+  527 Atom Zero tests, 8 passing AISC specs, 2 expected answerability failures.
 - Release agent: hold the accumulated `0.6.2` work until the batch boundary;
   then one push for `main`, the tag and every public surface.
 

@@ -70,6 +70,21 @@ def audit_definition(definition, strict: bool = False,
     }
 
 
+def summarize_results(results: list[dict]) -> dict:
+    """Toplu denetim sonuçlarını tek bir sayıya indirger."""
+    total = len(results)
+    errors = sum(1 for result in results if "error" in result)
+    passed = sum(1 for result in results if result.get("ok") is True)
+    failed = total - passed
+    return {
+        "total": total,
+        "passed": passed,
+        "failed": failed,
+        "errors": errors,
+        "ok": failed == 0 and total > 0,
+    }
+
+
 def run_audit(specs, aisc_path: str = "", strict: bool = False,
               require_calibration: bool = False) -> list[dict]:
     aisc = resolve_aisc_path(aisc_path)
@@ -109,6 +124,9 @@ def main(argv=None) -> int:
     parser.add_argument("--require-calibration", action="store_true",
                         help="require AISC high-assurance calibration evidence")
     parser.add_argument("--json", action="store_true")
+    parser.add_argument(
+        "--summary", action="store_true",
+        help="print only the aggregate pass/fail/error summary")
     args = parser.parse_args(argv)
     specs = args.specs or [str(path) for path in discover_specs()]
     if not specs:
@@ -120,6 +138,16 @@ def main(argv=None) -> int:
     except RuntimeError as exc:
         print(str(exc), file=sys.stderr)
         return 2
+    summary = summarize_results(results)
+    if args.summary:
+        if args.json:
+            print(json.dumps(summary, indent=2, ensure_ascii=False))
+        else:
+            print(
+                f"summary: {summary['total']} specs, "
+                f"{summary['passed']} pass, {summary['failed']} fail, "
+                f"{summary['errors']} error")
+        return 0 if summary["ok"] else 1
     if args.json:
         print(json.dumps(results, indent=2, ensure_ascii=False))
     else:
