@@ -655,9 +655,15 @@ def grounded_answer(query: str, hits: list[dict],
         gate_meta["bypass"] = "document_inspection"
         gate_meta["reason"] = "document_inspection_bypass"
         selected = accepted
+    answerability = None
+    if not _document_inspection_query(query):
+        from atomzero.answerability import answerability_gate_from_env
+        answerability_gate = answerability_gate_from_env()
+        if answerability_gate is not None:
+            answerability = answerability_gate.evaluate(query, hits)
     if gate_meta.get("applied") and not selected:
         confidence = retrieval_confidence(query, [])
-        return {
+        result = {
             "text": ("Yeterli güvenilir yerel kaynak bulamadım. "
                      "(No citation passed the local confidence threshold.)"),
             "sources": [],
@@ -666,6 +672,22 @@ def grounded_answer(query: str, hits: list[dict],
             "refused": True,
             "reason": "no_citation_above_threshold",
             "gate": gate_meta,
+        }
+        if answerability is not None:
+            result["answerability"] = answerability
+        return result
+    if answerability is not None and answerability.get("refused"):
+        return {
+            "text": ("Bu soru yerel kaynaklarla güvenilir biçimde "
+                     "cevaplanamıyor. (The local context does not support a "
+                     "confident answer.)"),
+            "sources": [],
+            "evidence": [],
+            "confidence": retrieval_confidence(query, []),
+            "refused": True,
+            "reason": "no_answerability",
+            "gate": gate_meta,
+            "answerability": answerability,
         }
     confidence = retrieval_confidence(query, selected)
     notes = []
@@ -714,9 +736,12 @@ def grounded_answer(query: str, hits: list[dict],
                  "relying on this answer.")
     if unverified:
         text += "\n\nThis includes an unverified teacher-derived note."
-    return {"text": text, "sources": list(source_map.values()),
-            "evidence": evidence, "confidence": confidence,
-            "refused": False, "reason": "", "gate": gate_meta}
+    result = {"text": text, "sources": list(source_map.values()),
+              "evidence": evidence, "confidence": confidence,
+              "refused": False, "reason": "", "gate": gate_meta}
+    if answerability is not None:
+        result["answerability"] = answerability
+    return result
 
 
 def _chunks(text: str) -> list[str]:
