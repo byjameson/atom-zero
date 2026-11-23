@@ -52,6 +52,7 @@ APPROVED_FEEDBACK_STATUSES = frozenset({"approved", "exported"})
 
 # Ordering follows the user-facing severity order used by the plan report.
 SIGNAL_PRIORITIES = {
+    "runner_scope_gap": 88,
     "scoreboard_regression": 85,
     "unsupported_claims": 80,
     "calibration_drift": 78,
@@ -66,6 +67,8 @@ SIGNAL_PRIORITIES = {
 }
 
 ACCEPTANCE_GATES = {
+    "runner_scope_gap": (
+        "fix committed-change scope detection and rerun the runner audit"),
     "scoreboard_regression": (
         "restore the regressed metric and rerun the scoreboard and gate"),
     "calibration_drift": (
@@ -95,6 +98,9 @@ ACCEPTANCE_GATES = {
 REGRESSION_GATE = (
     "run the relevant pytest/AISC regression before accepting")
 NEXT_STEPS = {
+    "runner_scope_gap": (
+        "reproduce a committed out-of-scope file, fix the runner diff check, "
+        "then rerun the allowlisted gate"),
     "scoreboard_regression": (
         "run atomzero-scoreboard --summary, identify the regressed metric, "
         "fix it and rerun atomzero-gate"),
@@ -119,6 +125,10 @@ NEXT_STEPS = {
 DEFAULT_NEXT_STEP = (
     "run atomzero-gate with the focused pytest/AISC checks before accepting")
 SUGGESTED_CHECKS = {
+    "runner_scope_gap": [
+        "pytest:tests/test_agent_runner.py",
+        "pytest:tests/test_improvement.py",
+    ],
     "scoreboard_regression": [
         "pytest:tests/test_scoreboard.py",
         "pytest:tests/test_improvement.py",
@@ -155,7 +165,7 @@ RECORD_KEYS = frozenset({
 }) | GATE_KEYS
 _INPUT_KEYS = frozenset({
     "claim_audit", "gaps", "feedback", "freshness", "reliability",
-    "aisc_coverage", "scoreboard", "drift",
+    "aisc_coverage", "scoreboard", "drift", "runner_audit",
 })
 _STDIN_ALIASES = {
     "claim_audit": "claim_audit",
@@ -170,6 +180,7 @@ _STDIN_ALIASES = {
     "scoreboard": "scoreboard",
     "drift": "drift",
     "calibration_drift": "drift",
+    "runner_audit": "runner_audit",
 }
 _NOTE_ID_RE = re.compile(r"\A(?:[0-9a-f]{1,64})?\Z")
 
@@ -219,7 +230,7 @@ def _signal(kind: str, count: int, title: str, detail: str,
 def collect_signals(*, claim_audit=None, gaps=None, feedback=None,
                     freshness=None, reliability=None,
                     aisc_coverage=None, scoreboard=None,
-                    drift=None) -> list[dict]:
+                    drift=None, runner_audit=None) -> list[dict]:
     """Collect deterministic weakness signals from local summaries.
 
     ``claim_audit`` is the content-free record written by
@@ -246,6 +257,8 @@ def collect_signals(*, claim_audit=None, gaps=None, feedback=None,
         raise ValueError("scoreboard must be a mapping")
     if drift is not None and not isinstance(drift, dict):
         raise ValueError("drift must be a mapping")
+    if runner_audit is not None and not isinstance(runner_audit, dict):
+        raise ValueError("runner_audit must be a mapping")
 
     claim = claim_audit if isinstance(claim_audit, dict) else {}
     fresh = _freshness_summary(freshness)
@@ -437,6 +450,19 @@ def collect_signals(*, claim_audit=None, gaps=None, feedback=None,
                 "Measured regression",
                 "The scoreboard shows " + ", ".join(regressions) + ".",
                 ["scoreboard"]))
+
+    if runner_audit is not None:
+        alerts = runner_audit.get("alerts")
+        if alerts is None:
+            alerts = []
+        if not isinstance(alerts, list):
+            raise ValueError("runner_audit.alerts must be a list")
+        if alerts:
+            signals.append(_signal(
+                "runner_scope_gap", len(alerts), "Runner scope gap",
+                "The runner audit reported "
+                + ", ".join(str(alert) for alert in alerts) + ".",
+                ["runner_audit"]))
 
     if drift is not None:
         alerts = drift.get("alerts")
@@ -784,7 +810,8 @@ def _payload_from_args(args) -> dict:
             ("reliability_json", "reliability"),
             ("aisc_coverage_json", "aisc_coverage"),
             ("scoreboard_json", "scoreboard"),
-            ("drift_json", "drift")):
+            ("drift_json", "drift"),
+            ("runner_audit_json", "runner_audit")):
         path = getattr(args, dest)
         if not path:
             continue
@@ -856,6 +883,8 @@ def main(argv=None) -> int:
                         help="JSON file with an atomzero-scoreboard summary")
     parser.add_argument("--drift-json", default="",
                         help="JSON file with an atomzero-drift report")
+    parser.add_argument("--runner-audit-json", default="",
+                        help="JSON file with a runner scope audit")
     parser.add_argument("--limit", type=int, default=5,
                         help="maximum number of actions (1..20)")
     parser.add_argument("--json", action="store_true",

@@ -490,6 +490,20 @@ def test_scoreboard_regression_is_the_highest_priority_signal():
     ]
 
 
+def test_runner_scope_gap_signal_and_action():
+    signals = collect_signals(runner_audit={
+        "alerts": ["committed_out_of_scope"]})
+    assert signals[0]["kind"] == "runner_scope_gap"
+    plan = build_plan(signals)
+    action = plan["actions"][0]
+    assert action["kind"] == "runner_scope_gap"
+    assert "committed-change scope" in action["acceptance"]
+    assert action["suggested_checks"] == [
+        "pytest:tests/test_agent_runner.py",
+        "pytest:tests/test_improvement.py",
+    ]
+
+
 def test_calibration_drift_signal():
     signals = collect_signals(drift={
         "alerts": ["brier_increased", "ece_increased"]})
