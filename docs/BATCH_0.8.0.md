@@ -23,13 +23,13 @@ local signals
 | 1 | Human-gated improvement loop (`atomzero-improve`) | merged on local main |
 | 2 | `POST /v1/improvement/plan` + content-free decision route | merged on local main |
 | 3 | Evaluation gate harness (pytest, AISC strict, focused benchmark) | merged on local main |
-| 4 | Decision ledger integration into weekly review | planned |
-| 5 | Gap-to-research approval link | planned |
-| 6 | Feedback-to-improvement link | planned |
-| 7 | Reliability-to-source-review link | planned |
-| 8 | Proactive improvement reminders | planned |
-| 9 | AISC coverage in the improvement plan | planned |
-| 10 | Self-improvement regression benchmark | planned |
+| 4 | Decision ledger integration into weekly review | merged on local main |
+| 5 | Gap-to-research approval link | gap signal + action merged; direct research approval link pending |
+| 6 | Feedback-to-improvement link | merged as the `pending_feedback` signal |
+| 7 | Reliability-to-source-review link | merged as the `weak_sources` signal |
+| 8 | Proactive improvement reminders | merged on local main |
+| 9 | AISC coverage in the improvement plan | merged as the `aisc_coverage_gaps` signal |
+| 10 | Self-improvement regression benchmark | merged; 10/10 checks pass |
 
 ## Hard boundaries
 
