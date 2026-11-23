@@ -77,3 +77,44 @@ def test_loop_gate_failure_does_not_record(tmp_path):
     result = run_loop(**args)
     assert result["status"] == "gate_failed"
     assert not (tmp_path / "ledger.jsonl").exists()
+
+
+def test_loop_derives_self_code_proposal_scope(tmp_path):
+    args = _args(tmp_path)
+    args["signals"] = {"self_code": {
+        "findings": [{"finding_id": "sc-1", "severity": "medium",
+                      "path": "a.txt", "line": 1}],
+        "proposals": [{"severity": "medium", "allowed_files": ["a.txt"],
+                       "checks": ["pytest:tests/test_dummy.py"]}],
+    }}
+    args["allowed_files"] = []
+    args["checks"] = []
+    result = run_loop(**args)
+    assert result["status"] == "completed", result
+    assert result["packet"]["allowed_files"] == ["a.txt"]
+    assert result["runner"]["changed_files"] == ["a.txt"]
+
+
+def test_loop_self_code_root_builds_packet_without_approval(tmp_path):
+    repo = _repo(tmp_path)
+    (repo / "src").mkdir()
+    (repo / "src" / "mod.py").write_text(
+        "def f():\n    try:\n        return 1\n"
+        "    except Exception:\n        return None\n", encoding="utf-8")
+    result = run_loop(
+        signals={}, allowed_files=[], checks=[], opt_in=True,
+        approve=False, repo_root=repo, self_code_root=repo)
+    assert result["status"] == "awaiting_human"
+    assert result["plan"]["actions"][0]["kind"] == "self_code_medium"
+    assert result["packet"]["allowed_files"] == [
+        "src/mod.py", "tests/test_mod.py"]
+    assert result["packet"]["checks"] == ["pytest:tests/test_mod.py"]
+    assert not (tmp_path / "agent-wt").exists()
+
+
+def test_loop_no_action_when_self_code_is_clean(tmp_path):
+    result = run_loop(
+        signals={"self_code": {"findings": []}}, allowed_files=[],
+        checks=[], opt_in=True, approve=True, repo_root=tmp_path)
+    assert result["status"] == "no_action"
+    assert not (tmp_path / "ledger.jsonl").exists()

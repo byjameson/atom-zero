@@ -53,10 +53,12 @@ APPROVED_FEEDBACK_STATUSES = frozenset({"approved", "exported"})
 # Ordering follows the user-facing severity order used by the plan report.
 SIGNAL_PRIORITIES = {
     "runner_scope_gap": 88,
+    "self_code_high": 86,
     "scoreboard_regression": 85,
     "unsupported_claims": 80,
     "calibration_drift": 78,
     "conflicts": 75,
+    "self_code_medium": 73,
     "aisc_coverage_gaps": 72,
     "knowledge_gaps": 70,
     "single_source": 65,
@@ -69,6 +71,12 @@ SIGNAL_PRIORITIES = {
 ACCEPTANCE_GATES = {
     "runner_scope_gap": (
         "fix committed-change scope detection and rerun the runner audit"),
+    "self_code_high": (
+        "review and remove or explicitly justify the high-risk self-code "
+        "finding, then rerun atomzero-self-code"),
+    "self_code_medium": (
+        "resolve the medium self-code finding and rerun atomzero-self-code "
+        "and its tests"),
     "scoreboard_regression": (
         "restore the regressed metric and rerun the scoreboard and gate"),
     "calibration_drift": (
@@ -101,6 +109,13 @@ NEXT_STEPS = {
     "runner_scope_gap": (
         "reproduce a committed out-of-scope file, fix the runner diff check, "
         "then rerun the allowlisted gate"),
+    "self_code_high": (
+        "run atomzero-self-code --root . --propose --json, inspect the "
+        "high-risk arbitrary-code boundary, then prepare a bounded patch; "
+        "never auto-edit an eval/exec or shell boundary"),
+    "self_code_medium": (
+        "run atomzero-self-code --root . --propose --json, implement the top "
+        "medium finding in its allowed file, then rerun the suggested checks"),
     "scoreboard_regression": (
         "run atomzero-scoreboard --summary, identify the regressed metric, "
         "fix it and rerun atomzero-gate"),
@@ -127,6 +142,14 @@ DEFAULT_NEXT_STEP = (
 SUGGESTED_CHECKS = {
     "runner_scope_gap": [
         "pytest:tests/test_agent_runner.py",
+        "pytest:tests/test_improvement.py",
+    ],
+    "self_code_high": [
+        "pytest:tests/test_self_code.py",
+        "pytest:tests/test_improvement.py",
+    ],
+    "self_code_medium": [
+        "pytest:tests/test_self_code.py",
         "pytest:tests/test_improvement.py",
     ],
     "scoreboard_regression": [
@@ -165,7 +188,7 @@ RECORD_KEYS = frozenset({
 }) | GATE_KEYS
 _INPUT_KEYS = frozenset({
     "claim_audit", "gaps", "feedback", "freshness", "reliability",
-    "aisc_coverage", "scoreboard", "drift", "runner_audit",
+    "aisc_coverage", "scoreboard", "drift", "runner_audit", "self_code",
 })
 _STDIN_ALIASES = {
     "claim_audit": "claim_audit",
@@ -181,6 +204,8 @@ _STDIN_ALIASES = {
     "drift": "drift",
     "calibration_drift": "drift",
     "runner_audit": "runner_audit",
+    "self_code": "self_code",
+    "self_code_audit": "self_code",
 }
 _NOTE_ID_RE = re.compile(r"\A(?:[0-9a-f]{1,64})?\Z")
 
@@ -230,7 +255,8 @@ def _signal(kind: str, count: int, title: str, detail: str,
 def collect_signals(*, claim_audit=None, gaps=None, feedback=None,
                     freshness=None, reliability=None,
                     aisc_coverage=None, scoreboard=None,
-                    drift=None, runner_audit=None) -> list[dict]:
+                    drift=None, runner_audit=None,
+                    self_code=None) -> list[dict]:
     """Collect deterministic weakness signals from local summaries.
 
     ``claim_audit`` is the content-free record written by
@@ -259,6 +285,8 @@ def collect_signals(*, claim_audit=None, gaps=None, feedback=None,
         raise ValueError("drift must be a mapping")
     if runner_audit is not None and not isinstance(runner_audit, dict):
         raise ValueError("runner_audit must be a mapping")
+    if self_code is not None and not isinstance(self_code, dict):
+        raise ValueError("self_code must be a mapping")
 
     claim = claim_audit if isinstance(claim_audit, dict) else {}
     fresh = _freshness_summary(freshness)
@@ -463,6 +491,36 @@ def collect_signals(*, claim_audit=None, gaps=None, feedback=None,
                 "The runner audit reported "
                 + ", ".join(str(alert) for alert in alerts) + ".",
                 ["runner_audit"]))
+
+    if self_code is not None:
+        findings = self_code.get("findings")
+        if findings is None:
+            findings = []
+        if not isinstance(findings, list):
+            raise ValueError("self_code.findings must be a list")
+        buckets = {"high": [], "medium": []}
+        for index, finding in enumerate(findings):
+            if not isinstance(finding, dict):
+                raise ValueError(f"self_code.findings[{index}] must be a mapping")
+            severity = str(finding.get("severity") or "").strip().lower()
+            if severity not in buckets:
+                continue
+            identifier = str(finding.get("finding_id") or "").strip()
+            if not identifier:
+                identifier = (
+                    f"{finding.get('path', 'unknown')}:{finding.get('line', 0)}")
+            buckets[severity].append(f"finding:{identifier}")
+        for severity, kind, title in (
+                ("high", "self_code_high", "High-risk self-code findings"),
+                ("medium", "self_code_medium",
+                 "Medium self-code findings")):
+            items = buckets[severity]
+            if items:
+                signals.append(_signal(
+                    kind, len(items), title,
+                    f"{len(items)} {severity}-severity finding(s) in Atom "
+                    "Zero's own code need review.",
+                    sorted(set(items))[:5]))
 
     if drift is not None:
         alerts = drift.get("alerts")
@@ -811,7 +869,8 @@ def _payload_from_args(args) -> dict:
             ("aisc_coverage_json", "aisc_coverage"),
             ("scoreboard_json", "scoreboard"),
             ("drift_json", "drift"),
-            ("runner_audit_json", "runner_audit")):
+            ("runner_audit_json", "runner_audit"),
+            ("self_code_json", "self_code")):
         path = getattr(args, dest)
         if not path:
             continue
@@ -885,6 +944,8 @@ def main(argv=None) -> int:
                         help="JSON file with an atomzero-drift report")
     parser.add_argument("--runner-audit-json", default="",
                         help="JSON file with a runner scope audit")
+    parser.add_argument("--self-code-json", default="",
+                        help="JSON file with an atomzero-self-code report")
     parser.add_argument("--limit", type=int, default=5,
                         help="maximum number of actions (1..20)")
     parser.add_argument("--json", action="store_true",

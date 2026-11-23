@@ -302,6 +302,8 @@ next answer can cite it; weights_changed: false
 
 The self-improvement ladder is deliberately split:
 
+- **Self-code audit:** deterministic AST scan of Atom Zero's own source; it
+  proposes bounded, human-gated patches and changes no file.
 - **RAG memory:** a teacher note or your document enters the index; no weight
   change.
 - **Reviewed adapter:** a LoRA adapter for style/skills; human review + gates;
@@ -405,10 +407,11 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Calibration drift: <https://github.com/byjameson/atom-zero/blob/main/docs/DRIFT.md>
 - Agent handoff bridge: <https://github.com/byjameson/atom-zero/blob/main/docs/AGENT_BRIDGE.md>
 - Opt-in agent runner: <https://github.com/byjameson/atom-zero/blob/main/docs/AGENT_RUNNER.md>
+- Self-code audit and proposals: <https://github.com/byjameson/atom-zero/blob/main/docs/SELF_CODE.md>
 - AISC spec generator: <https://github.com/byjameson/atom-zero/blob/main/docs/AISC_SPEC_GENERATOR.md>
 - Multi-agent orchestration: <https://github.com/byjameson/atom-zero/blob/main/docs/ORCHESTRATION.md>
 - Branch research: <https://github.com/byjameson/atom-zero/blob/main/docs/BRANCH_RESEARCH.md>
-- Release cadence: every 0.3 minor version (next: 0.13.0)
+- Release cadence: one major version per release (next: 1.0.0)
 - Ten-increment batch plan: <https://github.com/byjameson/atom-zero/blob/main/docs/BATCH_0.7.0.md>
 - Self-improvement batch plan: <https://github.com/byjameson/atom-zero/blob/main/docs/BATCH_0.9.0.md>
 - Benchmarks: <https://github.com/byjameson/atom-zero/blob/main/docs/BENCHMARKS.md>
