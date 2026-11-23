@@ -1,6 +1,9 @@
 # Changelog
 
-## atomzero 0.16.0 - unreleased
+## atomzero 0.16.0 - opt-in runner and policy drift (2026-11-24)
+
+This release follows the 0.3 cadence after 0.13.0 and adds the opt-in agent
+runner and policy-metric drift alerts.
 
 - Added **opt-in agent runner** (`atomzero-agent-run`): prepares an isolated
   worktree, optionally invokes an external command, checks scope against the
