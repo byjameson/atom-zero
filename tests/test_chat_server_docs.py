@@ -3391,6 +3391,10 @@ def test_http_improvement_plan_and_decision(tmp_path):
         text = ledger_path.read_text(encoding="utf-8")
         assert "private review note" not in text
         assert "The battery lasts 8 hours" not in text
+        weekly = _post(base + "/v1/weekly-review", {
+            "session_id": "improve-plan"})
+        assert weekly["improvement"]["total"] >= 1
+        assert weekly["improvement"]["decisions"]["approve"] >= 1
         with pytest.raises(urllib.error.HTTPError) as invalid:
             _post(base + "/v1/improvement/decision", {
                 "action": action, "decision": "maybe"})

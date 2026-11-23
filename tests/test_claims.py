@@ -155,6 +155,41 @@ def test_cli_reads_file_and_rejects_empty_file(tmp_path, capsys):
     assert main(["--file", str(empty)]) == 2
 
 
+def _conflict(left, right):
+    return compare_claims([
+        {"claim_id": "a", "text": left, "source": "a.txt"},
+        {"claim_id": "b", "text": right, "source": "b.txt"},
+    ])
+
+
+def test_compare_claims_reports_date_identifier_and_negation_conflicts():
+    date = _conflict(
+        "The policy starts on 2020-01-01.",
+        "The policy starts on 2021-01-01.")
+    assert "date_mismatch" in date["conflicts"][0]["reasons"]
+    identifier = _conflict(
+        "The warranty code is W-7781.",
+        "The warranty code is W-9900.")
+    assert "identifier_mismatch" in identifier["conflicts"][0]["reasons"]
+    negation = _conflict(
+        "The store is open.",
+        "The store is not open.")
+    assert negation["conflicts"][0]["reasons"] == ["negation_mismatch"]
+    unit = _conflict(
+        "The battery lasts 8 hours.",
+        "The battery lasts 10 hours.")
+    assert "numeric_mismatch" in unit["conflicts"][0]["reasons"]
+
+
+def test_compare_claims_does_not_conflict_unrelated_or_matching_claims():
+    assert _conflict(
+        "The capital of France is Paris.",
+        "The warranty code is W-7781.")["conflict_count"] == 0
+    assert _conflict(
+        "The battery lasts 8 hours.",
+        "It lasts 8 hours.")["conflict_count"] == 0
+
+
 def test_audit_output_is_deterministic():
     assert extract_claims(TEXT) == extract_claims(TEXT)
     first = link_evidence(extract_claims(TEXT), [MOTOR_HIT, BATTERY_HIT])

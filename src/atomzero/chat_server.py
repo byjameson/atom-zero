@@ -5518,14 +5518,21 @@ class Handler(BaseHTTPRequestHandler):
         try:
             session = self._session(session_id)
             from atomzero.briefing import build_weekly_review
+            from atomzero.improvement import summarize_ledger
 
+            try:
+                _, ledger = self._improvement_ledger()
+                improvement = summarize_ledger(ledger)
+            except (OSError, ValueError):
+                improvement = {}
             result = build_weekly_review(
                 session.human.data, _state.get("gaps"), _state.get("docs"),
                 days=req.get("days", 7),
                 sort=str(req.get("sort", "default") or "default").strip(),
                 tag=str(req.get("tag", "all") or "all").strip(),
                 audit_action=str(
-                    req.get("audit_action", "all") or "all").strip())
+                    req.get("audit_action", "all") or "all").strip(),
+                improvement=improvement)
         except Exception as exc:
             return self._json(400, {"error": str(exc)})
         return self._json(200, result)
@@ -6008,7 +6015,7 @@ class Handler(BaseHTTPRequestHandler):
         from atomzero.improvement import plan_from_inputs
         inputs = {}
         for key in ("claim_audit", "gaps", "feedback", "freshness",
-                    "reliability"):
+                    "reliability", "aisc_coverage"):
             if key in req:
                 inputs[key] = req[key]
         session_id = str(req.get("session_id", "")).strip()

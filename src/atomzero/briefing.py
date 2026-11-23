@@ -1187,7 +1187,8 @@ def _source_recent(item: dict, cutoff_ts: float) -> bool:
 
 def build_weekly_review(session_data: dict | None, gaps, docs,
                         days: int = 7, now=None, sort="default",
-                        tag="all", audit_action="all") -> dict:
+                        tag="all", audit_action="all",
+                        improvement=None) -> dict:
     """Aggregate tasks, gaps, recent sources and graph highlights."""
     sort = _normalize_task_sort(sort)
     tag = str(tag or "all").strip().lower().lstrip("#")
@@ -1355,6 +1356,7 @@ def build_weekly_review(session_data: dict | None, gaps, docs,
         "tag_count": len(weekly_tags),
         "tagged_task_count": tagged_active,
         "untagged_task_count": len(active_tasks) - tagged_active,
+        "improvement": improvement or {},
         "tag_audit": tag_audit["events"],
         "tag_audit_total": tag_audit["total"],
         "tag_audit_action": tag_audit["action"],
@@ -1760,6 +1762,24 @@ def render_weekly_markdown(review: dict) -> str:
     if audit:
         for event in audit:
             lines.append(f"- {_tag_audit_event_line(event)}")
+    else:
+        lines.append("- None")
+    improvement = review.get("improvement") or {}
+    improvement_total = improvement.get("total", 0)
+    lines.extend([
+        "",
+        f"## Improvement decisions ({improvement_total})",
+        "",
+    ])
+    if improvement_total:
+        decisions = improvement.get("decisions", {})
+        kinds = improvement.get("kinds", {})
+        if decisions:
+            lines.append("- Decisions: " + ", ".join(
+                f"{key}={value}" for key, value in sorted(decisions.items())))
+        if kinds:
+            lines.append("- Kinds: " + ", ".join(
+                f"{key}={value}" for key, value in sorted(kinds.items())))
     else:
         lines.append("- None")
     gaps = review.get("pending_gaps", [])

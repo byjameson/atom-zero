@@ -53,6 +53,7 @@ APPROVED_FEEDBACK_STATUSES = frozenset({"approved", "exported"})
 SIGNAL_PRIORITIES = {
     "unsupported_claims": 80,
     "conflicts": 75,
+    "aisc_coverage_gaps": 72,
     "knowledge_gaps": 70,
     "single_source": 65,
     "stale_sources": 60,
@@ -66,6 +67,9 @@ ACCEPTANCE_GATES = {
         "add a supporting source and rerun claim audit"),
     "conflicts": (
         "resolve conflicting claims and rerun claim audit"),
+    "aisc_coverage_gaps": (
+        "fix missing evidence files or unverified components and rerun AISC "
+        "coverage"),
     "knowledge_gaps": (
         "add a local source for the top pending gap and rerun gap audit"),
     "single_source": (
@@ -92,6 +96,7 @@ RECORD_KEYS = frozenset({
 })
 _INPUT_KEYS = frozenset({
     "claim_audit", "gaps", "feedback", "freshness", "reliability",
+    "aisc_coverage",
 })
 _STDIN_ALIASES = {
     "claim_audit": "claim_audit",
@@ -101,6 +106,8 @@ _STDIN_ALIASES = {
     "feedback": "feedback",
     "freshness": "freshness",
     "reliability": "reliability",
+    "aisc_coverage": "aisc_coverage",
+    "coverage": "aisc_coverage",
 }
 _NOTE_ID_RE = re.compile(r"\A(?:[0-9a-f]{1,64})?\Z")
 
@@ -148,7 +155,8 @@ def _signal(kind: str, count: int, title: str, detail: str,
 
 
 def collect_signals(*, claim_audit=None, gaps=None, feedback=None,
-                    freshness=None, reliability=None) -> list[dict]:
+                    freshness=None, reliability=None,
+                    aisc_coverage=None) -> list[dict]:
     """Collect deterministic weakness signals from local summaries.
 
     ``claim_audit`` is the content-free record written by
@@ -169,6 +177,8 @@ def collect_signals(*, claim_audit=None, gaps=None, feedback=None,
         raise ValueError("feedback must be a list")
     if reliability is not None and not isinstance(reliability, dict):
         raise ValueError("reliability must be a mapping")
+    if aisc_coverage is not None and not isinstance(aisc_coverage, dict):
+        raise ValueError("aisc_coverage must be a mapping")
 
     claim = claim_audit if isinstance(claim_audit, dict) else {}
     fresh = _freshness_summary(freshness)
@@ -294,6 +304,26 @@ def collect_signals(*, claim_audit=None, gaps=None, feedback=None,
                 "weak_sources", weak, "Weak or low-confidence sources",
                 f"{weak} source(s) are weak or have fewer than two "
                 "observations.", refs))
+
+    if aisc_coverage is not None:
+        coverage = aisc_coverage.get("summary")
+        if not isinstance(coverage, dict):
+            raise ValueError("aisc_coverage.summary must be a mapping")
+        missing = _non_negative_int(
+            coverage.get("specs_with_missing_evidence"),
+            "aisc_coverage.summary.specs_with_missing_evidence")
+        unverified = _non_negative_int(
+            coverage.get("specs_with_unverified_components"),
+            "aisc_coverage.summary.specs_with_unverified_components")
+        errors = _non_negative_int(
+            coverage.get("errors"), "aisc_coverage.summary.errors")
+        total = missing + unverified + errors
+        if total:
+            signals.append(_signal(
+                "aisc_coverage_gaps", total, "AISC coverage gaps",
+                f"{total} AISC coverage problem(s): "
+                f"{missing} missing evidence, {unverified} unverified specs, "
+                f"{errors} errors.", ["aisc_coverage"]))
 
     if feedback is not None:
         pending_feedback = 0
@@ -572,7 +602,8 @@ def _payload_from_args(args) -> dict:
             ("gaps_json", "gaps"),
             ("feedback_json", "feedback"),
             ("freshness_json", "freshness"),
-            ("reliability_json", "reliability")):
+            ("reliability_json", "reliability"),
+            ("aisc_coverage_json", "aisc_coverage")):
         path = getattr(args, dest)
         if not path:
             continue
@@ -638,6 +669,8 @@ def main(argv=None) -> int:
                         help="JSON file with a freshness/consensus summary")
     parser.add_argument("--reliability-json", default="",
                         help="JSON file with a reliability summary")
+    parser.add_argument("--aisc-coverage-json", default="",
+                        help="JSON file with an AISC coverage report")
     parser.add_argument("--limit", type=int, default=5,
                         help="maximum number of actions (1..20)")
     parser.add_argument("--json", action="store_true",

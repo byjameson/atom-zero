@@ -385,6 +385,22 @@ def test_record_decision_rejects_invalid_arguments(ledger, action, note):
         record_decision(ledger, action, "approve", note=note, now=NOW)
 
 
+def test_aisc_coverage_signal_and_action():
+    signals = collect_signals(aisc_coverage={
+        "summary": {
+            "specs_with_missing_evidence": 1,
+            "specs_with_unverified_components": 2,
+            "errors": 0,
+        }})
+    assert len(signals) == 1
+    signal = signals[0]
+    assert signal["kind"] == "aisc_coverage_gaps"
+    assert signal["count"] == 3
+    plan = build_plan(signals)
+    assert plan["actions"][0]["kind"] == "aisc_coverage_gaps"
+    assert "AISC coverage" in plan["actions"][0]["acceptance"]
+
+
 def test_summarize_ledger_is_content_free():
     ledger = []
     record_decision(ledger, ACTION, "approve", note="private note", now=NOW)
