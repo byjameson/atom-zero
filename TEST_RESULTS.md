@@ -15,6 +15,7 @@
 | Suite | Passed | Failed | Exit | Duration |
 |---|---:|---:|---:|---:|
 | Atom Zero `pytest tests -q` (0.8.0 release) | **755** | **0** | 0 | 66.04s |
+| Atom Zero `pytest tests -q` (post-release main) | **759** | **0** | 0 | 67.73s |
 | AISC `pytest tests -q` (0.5.1) | **223** (+6 subtests) | **0** | 0 | 17.13s |
 | AISC strict specs | **14 PASS / 2 FAIL (expected)** | 0 critical | 1 | - |
 | Build (`python -m build`) | **2 artifacts** | **0** | 0 | - |
@@ -33,8 +34,8 @@ release evidence is the clean `755 passed` run.
   and document-diff routes are covered. Full release suite **646 passed**.
 - Post-release self-improvement loop: improvement planner and decisions,
   evaluation gate, weekly-review ledger summary and proactive reminders.
-  Full main suite **755 passed**; `benchmarks/self_improvement_regression.py`
-  reports **10/10 checks passed**.
+  Full main suite **759 passed**; `benchmarks/self_improvement_regression.py`
+  reports **11/11 checks passed** after gated approval was added.
 - `0.7.0` cross-source consensus branch: **12 passed**
   (`tests/test_consensus.py`); the `AtomZeroConsensus` AISC spec is **PASS**
   (4 verified components, assurance bound 0.93, 0 irreversible).
