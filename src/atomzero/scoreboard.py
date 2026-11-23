@@ -10,6 +10,10 @@ or source text.
       --record --commit 514632e --tests-passed 755 \
       --benchmark-passed 10 --benchmark-total 10 \
       --aisc-passed 14 --aisc-total 16 --json
+
+    atomzero-scoreboard --file data/scoreboard.jsonl --record \
+      --from-pytest pytest.txt --from-benchmark benchmark.json \
+      --from-aisc aisc.txt --json
 """
 from __future__ import annotations
 
@@ -18,12 +22,16 @@ import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
 __all__ = [
+    "parse_aisc_summary",
+    "parse_benchmark_summary",
+    "parse_pytest_summary",
     "record_run",
     "summarize_runs",
     "verify_runs",
@@ -41,12 +49,101 @@ RECORD_KEYS = frozenset({
 })
 _COMMIT_RE = re.compile(r"\A[0-9a-f]{7,40}\Z")
 _NOTE_RE = re.compile(r"\A(?:[0-9a-f]{1,64})?\Z")
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+_PYTEST_TOKEN_RE = re.compile(
+    r"(?<![\w.])(\d+)\s+(passed|failed|errors?|skipped|warnings?|"
+    r"xfailed|xpassed|deselected)\b",
+    re.IGNORECASE)
+_PYTEST_TIME_RE = re.compile(r"\bin\s+\d+(?:\.\d+)?s\b")
+_BENCHMARK_SUMMARY_RE = re.compile(
+    r"summary:\s*(\d+)\s*/\s*(\d+)\s+(?:checks?\s+)?passed\b",
+    re.IGNORECASE)
+_AISC_SUMMARY_RE = re.compile(
+    r"(\d+)\s+specs?,\s*(\d+)\s+pass(?:ed)?,\s*(\d+)\s+fail(?:ed)?"
+    r"(?:\s*,\s*(\d+)\s+errors?)?",
+    re.IGNORECASE)
 
 
 def _int(value, name: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise ValueError(f"{name} must be a non-negative integer")
     return value
+
+
+def _pair(passed, total, label: str) -> dict:
+    passed = _int(passed, f"{label}_passed")
+    total = _int(total, f"{label}_total")
+    if passed > total:
+        raise ValueError(f"{label}_passed cannot exceed {label}_total")
+    return {f"{label}_passed": passed, f"{label}_total": total}
+
+
+def _pytest_counts(line: str) -> dict | None:
+    if not _PYTEST_TIME_RE.search(line):
+        return None
+    tokens = _PYTEST_TOKEN_RE.findall(line)
+    if not tokens:
+        return None
+    counts: dict[str, int] = {}
+    for number, status in tokens:
+        status = status.lower()
+        if status.startswith("error"):
+            status = "error"
+        elif status.startswith("warning"):
+            status = "warning"
+        counts[status] = counts.get(status, 0) + int(number)
+    if not {"passed", "failed", "error"} & set(counts):
+        return None
+    return {
+        "tests_passed": counts.get("passed", 0),
+        "tests_failed": counts.get("failed", 0) + counts.get("error", 0),
+    }
+
+
+def parse_pytest_summary(text) -> dict:
+    """Extract pass/fail totals from pytest's last summary line."""
+    if not isinstance(text, str):
+        raise ValueError("pytest output must be text")
+    for line in reversed(_ANSI_RE.sub("", text).splitlines()):
+        counts = _pytest_counts(line)
+        if counts is not None:
+            return counts
+    raise ValueError("no pytest totals found in output")
+
+
+def parse_benchmark_summary(text) -> dict:
+    """Extract benchmark pass/total counts from a JSON or text report."""
+    if not isinstance(text, str):
+        raise ValueError("benchmark output must be text")
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        data = None
+    if (isinstance(data, dict) and "passed" in data and "total" in data):
+        return _pair(data["passed"], data["total"], "benchmark")
+    matches = list(_BENCHMARK_SUMMARY_RE.finditer(text))
+    if not matches:
+        raise ValueError("no benchmark totals found in output")
+    match = matches[-1]
+    return _pair(int(match.group(1)), int(match.group(2)), "benchmark")
+
+
+def parse_aisc_summary(text) -> dict:
+    """Extract AISC pass/spec totals from the audit summary line."""
+    if not isinstance(text, str):
+        raise ValueError("AISC output must be text")
+    matches = list(_AISC_SUMMARY_RE.finditer(_ANSI_RE.sub("", text)))
+    if not matches:
+        raise ValueError("no AISC totals found in output")
+    match = matches[-1]
+    total = int(match.group(1))
+    passed = int(match.group(2))
+    counted = passed + int(match.group(3)) + int(match.group(4) or 0)
+    if passed > total:
+        raise ValueError("aisc_passed cannot exceed aisc_total")
+    if counted > total:
+        raise ValueError("AISC counts cannot exceed the spec total")
+    return {"aisc_passed": passed, "aisc_total": total}
 
 
 def _stamp(now=None) -> str:
@@ -240,17 +337,70 @@ def _render(summary: dict) -> str:
     return "\n".join(lines)
 
 
+_COUNT_KEYS = (
+    "tests_passed", "tests_failed", "benchmark_passed", "benchmark_total",
+    "aisc_passed", "aisc_total",
+)
+_SOURCES = (
+    ("from_pytest", parse_pytest_summary),
+    ("from_benchmark", parse_benchmark_summary),
+    ("from_aisc", parse_aisc_summary),
+)
+
+
+def _read_source(path: str) -> str:
+    if path == "-":
+        return sys.stdin.read()
+    return Path(path).expanduser().read_text(
+        encoding="utf-8-sig", errors="replace")
+
+
+def _collect_counts(args) -> dict:
+    paths = [getattr(args, name) for name, _ in _SOURCES]
+    if sum(1 for path in paths if path == "-") > 1:
+        raise ValueError("stdin (-) can be used for only one input source")
+    values = {key: 0 for key in _COUNT_KEYS}
+    for name, parser in _SOURCES:
+        path = getattr(args, name)
+        if path:
+            values.update(parser(_read_source(path)))
+    for key in _COUNT_KEYS:
+        explicit = getattr(args, key)
+        if explicit is not None:
+            values[key] = explicit
+    return values
+
+
+def _current_commit() -> str:
+    try:
+        completed = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True, text=True, encoding="utf-8",
+            errors="replace", check=False, timeout=30)
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise ValueError(
+            "cannot derive commit from git; pass --commit explicitly") from exc
+    commit = (completed.stdout or "").strip().lower()
+    if completed.returncode != 0 or not commit:
+        raise ValueError(
+            "cannot derive commit from git; pass --commit explicitly")
+    return commit
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--file", type=Path, default=Path("data/scoreboard.jsonl"))
     parser.add_argument("--record", action="store_true")
     parser.add_argument("--commit", default="")
-    parser.add_argument("--tests-passed", type=int, default=0)
-    parser.add_argument("--tests-failed", type=int, default=0)
-    parser.add_argument("--benchmark-passed", type=int, default=0)
-    parser.add_argument("--benchmark-total", type=int, default=0)
-    parser.add_argument("--aisc-passed", type=int, default=0)
-    parser.add_argument("--aisc-total", type=int, default=0)
+    parser.add_argument("--tests-passed", type=int, default=None)
+    parser.add_argument("--tests-failed", type=int, default=None)
+    parser.add_argument("--benchmark-passed", type=int, default=None)
+    parser.add_argument("--benchmark-total", type=int, default=None)
+    parser.add_argument("--aisc-passed", type=int, default=None)
+    parser.add_argument("--aisc-total", type=int, default=None)
+    parser.add_argument("--from-pytest", default="", metavar="FILE")
+    parser.add_argument("--from-benchmark", default="", metavar="FILE")
+    parser.add_argument("--from-aisc", default="", metavar="FILE")
     parser.add_argument("--note", default="")
     parser.add_argument("--summary", action="store_true")
     parser.add_argument("--verify", action="store_true")
@@ -267,14 +417,12 @@ def main(argv=None) -> int:
                     "OK" if result["ok"] else "; ".join(result["errors"])))
             return 0 if result["ok"] else 2
         if args.record:
-            record_run(
-                runs, commit=args.commit, tests_passed=args.tests_passed,
-                tests_failed=args.tests_failed,
-                benchmark_passed=args.benchmark_passed,
-                benchmark_total=args.benchmark_total,
-                aisc_passed=args.aisc_passed, aisc_total=args.aisc_total,
-                note=args.note)
+            commit = args.commit.strip() or _current_commit()
+            record_run(runs, commit=commit, note=args.note,
+                       **_collect_counts(args))
             write_jsonl(args.file, runs)
+        elif any(getattr(args, name) for name, _ in _SOURCES):
+            raise ValueError("--from-* sources require --record")
         summary = summarize_runs(runs)
     except (OSError, ValueError) as exc:
         print(f"input error: {exc}", file=sys.stderr)

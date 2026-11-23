@@ -6,10 +6,17 @@ delta from the previous run.
 
 ```powershell
 $env:PYTHONPATH="$PWD\src"
+
+# Manual counts
 python -m atomzero.scoreboard --file data/scoreboard.jsonl `
   --record --commit 514632e --tests-passed 755 --tests-failed 0 `
   --benchmark-passed 10 --benchmark-total 10 `
   --aisc-passed 14 --aisc-total 16 --json
+
+# Extract counts from saved test, benchmark and audit output
+python -m atomzero.scoreboard --file data/scoreboard.jsonl --record `
+  --from-pytest pytest.txt --from-benchmark benchmark.json `
+  --from-aisc aisc.txt --json
 
 python -m atomzero.scoreboard --file data/scoreboard.jsonl --summary
 python -m atomzero.scoreboard --file data/scoreboard.jsonl --verify --json
@@ -27,6 +34,37 @@ Each JSONL record stores:
 
 It never stores test output, prompts, queries, source text, logs or the note.
 `verify` rejects those keys, invalid counts and malformed commits.
+
+## Collect counts from output
+
+`--from-pytest FILE`, `--from-benchmark FILE` and `--from-aisc FILE` read a
+saved report, extract only the counts and merge them into the run recorded by
+`--record`. The raw output is discarded and never written to the scoreboard.
+
+- `--from-pytest` reads the last pytest summary line, for example
+  `857 passed in 81.49s` or `2 failed, 855 passed in 12.3s`. Errors count as
+  failures.
+- `--from-benchmark` accepts the benchmark JSON report
+  `{"passed": 13, "total": 13, "ok": true}` or the line
+  `summary: 13/13 checks passed`.
+- `--from-aisc` accepts `summary: 22 specs, 20 pass, 2 fail, 0 error` or
+  `22 specs, 20 PASS, 2 FAIL`.
+
+Use `-` as the file to read one source from stdin; only one source may use
+stdin. Explicit `--tests-passed`, `--tests-failed`, `--benchmark-passed`,
+`--benchmark-total`, `--aisc-passed` and `--aisc-total` override the parsed
+values field by field.
+
+When `--record` is used without `--commit`, the commit is derived from
+`git rev-parse --short HEAD` in the current directory. Pass `--commit`
+explicitly if the command runs outside a git checkout.
+
+```powershell
+# One source from stdin, explicit counts override the parsed ones
+Get-Content pytest.txt | python -m atomzero.scoreboard `
+  --file data/scoreboard.jsonl --record --from-pytest - `
+  --tests-failed 0 --json
+```
 
 ## HTTP
 
@@ -67,6 +105,8 @@ next to tasks, gaps and improvement decisions.
   not authorship.
 - The scoreboard does not run tests; it records results produced by the
   evaluation gate or a human.
+- The output parsers only extract counts from saved reports. Malformed or
+  unexpected output raises an error instead of guessing.
 
 ## AISC
 
