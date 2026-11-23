@@ -1,8 +1,8 @@
 # Atom Zero and AISC Test Results
 
-- Date: 2026-11-23 06:49:28
+- Date: 2026-11-23 18:13:03
 - Atom Zero repository: `C:\Users\biris\AppData\Local\Temp\opencode\atom-zero-clean`
-- Tested Atom Zero commit: `690c68cdccc0377620b50e2b0c265a459c0338df`
+- Tested Atom Zero commit: `8d2fb0f187e234e9d2aaaa203381f03037a3751d`
 - Atom Zero working tree at test start: clean
 - AISC path: `C:\Users\biris\Desktop\opencode\yeni dal\ai-systems-algebra`
 - AISC source status: directory is not a Git repository; no commit hash is available
@@ -12,10 +12,25 @@
 
 | Suite | Passed | Failed | Exit | Duration |
 |---|---:|---:|---:|---:|
-| Atom Zero `pytest tests -v` | **409** | **0** | 0 | 44.60s |
-| AISC `pytest tests -v` | **163** (+6 subtests) | **0** | 0 | 10.27s |
+| Atom Zero `pytest tests -q` | **421** | **0** | 0 | 57.18s |
+| AISC `pytest tests -q` | **191** (+6 subtests) | **0** | 0 | 15.54s |
 
 **Failed tests: none.**
+
+## Current evidence
+
+- Adapter runtime tests: **15 passed** (`tests/test_adapter_runtime.py`,
+  `tests/test_compare_adapters.py`, `tests/test_answerability.py`).
+- Answerability negative result: 200 SQuAD v2 questions (103 answerable / 97
+  no-answer); best univariate AUC **0.599**, context-grouped 5-fold CV AUC
+  **0.562** (logistic) / **0.497** (boost). Not shipped as a gate.
+- External adapter holdout: base loss **3.853** -> adapter **3.139** (-18.5%)
+  on the two-row feedback holdout; 368,640 LoRA parameters.
+- A 20-step external behavior-mix adapter loaded and passed the compatibility
+  check (368,640 LoRA parameters), confirming the external-trainer -> Atom Zero
+  path.
+- Build/twine: **PASSED** (`atomzero-0.6.0.tar.gz`,
+  `atomzero-0.6.0-py3-none-any.whl`).
 
 ## Commands
 
@@ -24,33 +39,22 @@ Atom Zero:
 ```powershell
 cd C:\Users\biris\AppData\Local\Temp\opencode\atom-zero-clean
 $env:PYTHONPATH="$PWD\src"
-python -m pytest tests -v
+python -m pytest tests -q
 ```
 
 AISC:
 
 ```powershell
 cd "C:\Users\biris\Desktop\opencode\yeni dal\ai-systems-algebra"
-python -m pytest tests -v
+python -m pytest tests -q
 ```
 
-## "403 test" claim verification
+## Historical note on the 403 claim
 
 The 403 figure came from the old monorepo era and cannot be reproduced from
-the current repos.
-
-- Historical claim (commit `2f1ece9`, `docs/MEDIUM_ARTICLE.md`): "403 passed
-  across both repos (200 trainer + 203 assistant)".
-- That figure belongs to the pre-split monorepo. Atom Zero is now a standalone
-  package and the trainer (`streamft`) is a separate project, so 403 cannot be
-  reproduced from the current repos.
-- `a3bcd3f` replaced 403 with 215 but kept the inconsistent "(200 trainer + 203
-  assistant)" parenthetical and the model card said 412 at that time.
-- The current text says "380 passed in the assistant package".
-- Current Atom Zero reports **380 passed**.
-- Current AISC reports **163 passed** (+6 subtests).
-- 381 + 163 = **544**. Neither repo reports 403 today.
-- A search of current docs found no live `403 test` / `403 passed` claim.
+the current repos. That figure belongs to the pre-split monorepo; Atom Zero is
+now a standalone package and the trainer (`streamft`) is a separate project.
+A search of current docs found no live `403 test` / `403 passed` claim.
 
 Verification command:
 
@@ -61,7 +65,10 @@ Select-String -Path README.md,CHANGELOG.md,docs\*.md `
 
 Result: no matches in the current docs.
 
-## Atom Zero full pytest output
+## Historical full pytest output (690c68c, 409 passed)
+
+The output below is the previous full `-v` run for reference. The current
+421-pass summary is above.
 
 Command exit code: **0**
 
@@ -487,7 +494,10 @@ tests/test_weekly_review_regression.py::test_weekly_review_regression_passes PAS
 ============================ 409 passed in 44.60s =============================
 ~~~
 
-## AISC full pytest output
+## Historical AISC full pytest output (163 passed)
+
+The output below is the previous AISC run for reference. The current 191-pass
+summary is above.
 
 Command exit code: **0**
 

@@ -2,10 +2,10 @@
 
 ## Current state
 
-- Last feature commit: `690c68c` (`feat: filter timeline by entity`)
+- Last feature commit: `8d2fb0f` (`feat: validate external adapters locally`)
 - Working tree after the handoff commit: clean
-- Atom Zero tests: **409 passed**
-- AISC tests: **163 passed** (+6 subtests)
+- Atom Zero tests: **421 passed**
+- AISC tests: **191 passed** (+6 subtests)
 - AISC strict audit: **not claimed as passing**; the AISC spec/report update is
   owned by the AISC side. Atom Zero files were not modified in that repo.
 - Build/twine: **PASSED**
@@ -30,21 +30,31 @@
   threshold/profile, citation dropping and explicit refusal. Default is
   `squad_v2_stress` at **0.5**. SQuAD v2 policy simulation: **92/103**
   answerable retained, **18/97** no-answer refused, precision **0.479**.
-  Answerability is still a separate open problem.
+  Answerability was tested as a separate lexical gate and is not shipped; see
+  the decision below.
 - Local isotonic calibration utility (`python -m atomzero.calibrate`) fits a
   PAVA map, reports Brier/ECE and recommends a threshold from score/label CSV
   for `ATOMZERO_CITATION_CALIBRATION`.
-- Answerability experiment: 5-fold context-grouped CV AUC ~**0.56**. This is
-  too weak to ship as a gate or classifier; it is not part of the product.
+- Answerability decision: 15 lexical/type features on 200 SQuAD v2 questions;
+  best univariate AUC **0.599**, context-grouped 5-fold CV AUC **0.562**
+  (logistic) / **0.497** (boost). This is too weak to ship as a gate or
+  classifier; it is not part of the product. Reproducible with
+  `benchmarks/answerability_eval.py`.
+- External adapter validation: `research/adapter_runtime.py`,
+  `research/adapter_check.py` and `research/compare_adapters.py` consume an
+  adapter without importing `streamft`. The accepted adapter (368,640 LoRA
+  params) scored **3.853 -> 3.139** (-18.5%) on the two-row holdout. A 20-step
+  external behavior-mix adapter also loaded and passed the compatibility check.
 
-## Next tasks (tomorrow)
+## Next tasks
 
-1. Decide whether to improve answerability with stronger features or drop it.
-2. Explore a small local adapter with `streamft`/`continual-lora` as external
-   trainers. Keep the repos separate; Atom Zero must not import `streamft`.
-   Model weights are still `0.8.0` and unchanged.
-3. Prepare the `0.6.0` batch release once fresh credentials are available.
-4. After the next code commit, re-run full pytest, AISC, build/twine and
+1. Train a targeted adapter on a real per-domain queue with `streamft` or
+   `continual-lora`; validate it with `research/adapter_check.py` and score a
+   held-out queue with `compare_adapters.py`. Keep the repos separate; Atom
+   Zero must not import `streamft`. Model weights are still `0.8.0` and
+   unchanged.
+2. Prepare the `0.6.0` batch release once fresh credentials are available.
+3. After the next code commit, re-run full pytest, AISC, build/twine and
    refresh `TEST_RESULTS.md`.
 
 ## Resume commands
@@ -59,6 +69,9 @@ python benchmarks/timeline_regression.py
 python benchmarks/contradiction_regression.py
 python benchmarks/turkish_retrieval.py
 python benchmarks/citation_gate_eval.py
+python benchmarks/answerability_eval.py
+python research/adapter_check.py --base <base> --adapter <adapter>
+python research/compare_adapters.py --base <base> --data <holdout.jsonl> --adapters <adapter>
 python -m atomzero.calibrate citations.csv --out my-calibration.json
 python benchmarks/squad_retrieval.py --max-contexts 50 --max-questions 200 --per-context 5 --seed 0```
 

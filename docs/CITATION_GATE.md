@@ -110,8 +110,9 @@ visible snippet contains the gold answer.
 The default retains 92/103 answerable questions, refuses 18/97 no-answer
 questions, and reaches precision 0.479. It is a starting point, not a
 production proof: precision remains near the release-all baseline because the
-rerank score is not an answerability signal. A separate answerability signal
-and target-distribution calibration are still required.
+rerank score is not an answerability signal. A separate lexical answerability
+gate was tested and rejected (see below); target-distribution calibration is
+still required.
 
 Run:
 

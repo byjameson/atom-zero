@@ -38,6 +38,14 @@
 - Added a local isotonic calibration utility: `python -m atomzero.calibrate`
   reads a score/label CSV, fits a PAVA map, reports Brier/ECE and recommends a
   threshold for `ATOMZERO_CITATION_CALIBRATION`.
+- Added local adapter validation: `research/adapter_check.py` and
+  `research/compare_adapters.py` load an adapter produced by the external
+  `streamft` / `continual-lora` trainer, check the base/LoRA shapes and score an
+  assistant-turn holdout without importing the trainer. The accepted adapter
+  moved the two-row holdout loss from 3.853 to 3.139 (-18.5%).
+- Added `benchmarks/answerability_eval.py` and recorded the negative result:
+  context-grouped 5-fold CV AUC was 0.562 (logistic) / 0.497 (boost), so a
+  separate lexical answerability gate is not shipped.
 - Added `benchmarks/graph_path_regression.py` (6/6 checks).
 - Added a **weekly review**: open/recently completed tasks, pending gaps,
   sources indexed within the window and graph highlights.

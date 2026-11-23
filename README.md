@@ -152,7 +152,7 @@ LoRA adapters.
 | document timeline regression | **10/10** |
 | typed relations regression | **12/12** |
 | citation gate, SQuAD v2 (default 0.5) | **92/103 answerable retained; 18/97 no-answer refused; precision 0.479** |
-| test suite | **409 passed** |
+| test suite | **421 passed** |
 
 The raw-model probe asks ten simple general questions with no documents, no
 calculator and no agent. The 49.2M model gets **2/10**. The product gets
@@ -308,6 +308,10 @@ The self-improvement ladder is deliberately split:
   weights change.
 - **Full training:** a new base checkpoint; offline project decision; weights
   change offline.
+
+Adapters are trained by the separate `streamft` / `continual-lora` projects and
+validated locally with `research/adapter_check.py`; the product runtime does not
+import either trainer. See [`docs/ADAPTERS.md`](docs/ADAPTERS.md).
 
 The model never crawls, mutates its own weights or studies topics on its own
 during chat. **Hungry mode** is an explicit, bounded command for growing the

@@ -56,8 +56,10 @@ python benchmarks/citation_gate_eval.py
 The default `squad_v2_stress` / `0.5` keeps most answerable questions but only
 refuses 18/97 no-answer questions. Precision stays near the release-all
 baseline. The `0.6` threshold is not portable: it refuses almost all no-answer
-questions but also almost all answerable questions. A separate answerability
-signal and target-distribution calibration are still required. Raw result:
+questions but also almost all answerable questions. A separate lexical
+answerability gate was tested and rejected (context-grouped CV AUC 0.562); see
+[`CITATION_GATE.md`](CITATION_GATE.md#answerability-is-not-a-separate-shipped-gate).
+Target-distribution calibration is still required. Raw result:
 [`results/citation_gate_eval.json`](results/citation_gate_eval.json).
 
 ## Public retrieval benchmark: SQuAD v2
