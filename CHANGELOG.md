@@ -1,5 +1,28 @@
 # Changelog
 
+## atomzero 0.6.1 - claim evidence and generated AISC specs (2026-11-23)
+
+- Added a content-free **memory lifecycle ledger** (`atomzero-memory-ledger`,
+  `GET /v1/memory/ledger`, `POST /v1/memory/ledger/verify`). Successful
+  document/session deletes append counts/scope only; the ledger validator
+  rejects text, query, answer, chunk and session content fields. The AISC
+  memory spec now includes `LedgerWriter` after `MemoryStore`.
+- Added deterministic **Claim / Evidence Algebra** (`atomzero-claims`):
+  sentence-level claim extraction, best-hit evidence linking, supported/weak/
+  unsupported status and a transparent number/unit/date/code/negation
+  contradiction audit. It is a lexical audit signal, not an NLI model; it makes
+  no model calls and does not change retrievals or weights.
+- Added `atomzero-aisc-spec`: builds an AISC TOML spec from the measured
+  answerability profile, validates the required evidence keys, and supports
+  `--check` drift detection. It never imports AISC and never lowers the target
+  thresholds; the generated spec preserves the measured failures so strict
+  AISC still reports them.
+- Added `docs/CLAIMS.md`, `docs/AISC_SPEC_GENERATOR.md`, the
+  `AtomZeroClaims` AISC spec and a generated
+  `docs/aisc/atomzero-answerability-generated.toml`.
+- Added `docs/ORCHESTRATION.md` for the Planner / Implementer / Reviewer /
+  Release workflow and the batch-push policy.
+
 ## atomzero 0.6.0 - weekly review and task workflow (2026-11-23)
 
 - Answer snippets now score every contiguous window of up to four sentences
@@ -82,11 +105,6 @@
 - Added optional AISC audit integration to `atomzero-doctor --aisc` and the
   `AtomZeroProactive` / `AtomZeroContextBudget` / `AtomZeroMemoryLifecycle`
   specs. Strict calibration warnings remain visible and are not hidden.
-- Added a content-free **memory lifecycle ledger** (`atomzero-memory-ledger`,
-  `GET /v1/memory/ledger`, `POST /v1/memory/ledger/verify`). Successful
-  document/session deletes append counts/scope only; the ledger validator
-  rejects text, query, answer, chunk and session content fields. The AISC
-  memory spec now includes `LedgerWriter` after `MemoryStore`.
 - Added a **weekly review**: open/recently completed tasks, pending gaps,
   sources indexed within the window and graph highlights.
 - Added `atomzero-brief --weekly --days N`, `POST /v1/weekly-review` and a UI

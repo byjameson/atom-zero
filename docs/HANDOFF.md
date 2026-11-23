@@ -2,20 +2,24 @@
 
 ## Current state
 
-- Last feature commit: `ba9d53e` (`feat: add content-free memory lifecycle ledger`)
-- Working tree after the handoff commit: clean
-- Atom Zero tests: **469 passed**
-- AISC tests: **191 passed** (+6 subtests)
-- AISC strict audit: **not claimed as passing**; the AISC spec/report update is
-  owned by the AISC side. Atom Zero files were not modified in that repo.
-- Build/twine: **PASSED**
-- Release status: PyPI `0.6.0`, GitHub `v0.6.0` source/tag/release, Hugging
-  Face, ModelScope, dev.to, Medium and LinkedIn are published.
-  `scripts/verify_release.py --version 0.6.0` reports **0 failures**. The
-  `publish.yml` trusted-publisher run remains a historical failed attempt; the
-  release was completed with a fresh project token. Main is ahead of the tag
-  with the memory ledger and the claim/evidence branch; publish them as
-  `0.6.1`. The ~10-increment batch policy continues.
+- Last feature batch: `0.6.1` on `main` (memory ledger, claim/evidence
+  algebra, generated AISC spec)
+- Working tree after the release-doc commits: clean
+- Atom Zero tests: **512 passed**
+- AISC strict audit: **7 specs PASS** (`Claims`, `ContextBudget`,
+  `MemoryLifecycle`, `Proactive`, `ReadPipeline`, `TaskActions`, `ToolPlan`);
+  `AtomZeroAnswerability` and `AtomZeroAnswerabilityGenerated` remain **FAIL**
+  with the measured Brier 0.244 / ECE 0.130 and refusal-policy misses. This is
+  reported, not hidden.
+- Build/twine: **PASSED** (`atomzero-0.6.1` wheel + sdist)
+- Release status: `0.6.0` is published on PyPI, GitHub, Hugging Face,
+  ModelScope, dev.to, Medium and LinkedIn. `0.6.1` is prepared locally and is
+  **not pushed yet**; per the batch-push policy, `main`, the tag and the public
+  surfaces are pushed once at the release boundary. A fresh PyPI token is
+  required for the `0.6.1` upload.
+- The `publish.yml` trusted-publisher run remains a historical failed attempt;
+  `0.6.0` was completed with a fresh project token. The ~10-increment batch
+  policy continues.
 
 ## Completed in this session
 

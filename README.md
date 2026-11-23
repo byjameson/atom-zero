@@ -13,7 +13,7 @@ ModelScope.
 ## Install
 
 ```powershell
-pip install atomzero==0.6.0
+pip install atomzero==0.6.1
 ```
 
 Optional local MiniLM reranker:
@@ -373,9 +373,9 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 
 ## Links
 
-- PyPI: <https://pypi.org/project/atomzero/0.6.0/>
+- PyPI: <https://pypi.org/project/atomzero/0.6.1/>
 - GitHub source: <https://github.com/byjameson/atom-zero>
-- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v0.6.0>
+- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v0.6.1>
 - Quickstart: <https://github.com/byjameson/atom-zero/blob/main/docs/QUICKSTART_ATOMZERO.md>
 - Model card: <https://github.com/byjameson/atom-zero/blob/main/docs/MODEL_CARD.md>
 - Full project map: <https://github.com/byjameson/atom-zero/blob/main/docs/PROJECT_OVERVIEW.md>
@@ -386,6 +386,8 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Context budget: <https://github.com/byjameson/atom-zero/blob/main/docs/CONTEXT_BUDGET.md>
 - Proactive conversation: <https://github.com/byjameson/atom-zero/blob/main/docs/PROACTIVE.md>
 - Memory lifecycle: <https://github.com/byjameson/atom-zero/blob/main/docs/MEMORY_LIFECYCLE.md>
+- Claim / evidence algebra: <https://github.com/byjameson/atom-zero/blob/main/docs/CLAIMS.md>
+- AISC spec generator: <https://github.com/byjameson/atom-zero/blob/main/docs/AISC_SPEC_GENERATOR.md>
 - Multi-agent orchestration: <https://github.com/byjameson/atom-zero/blob/main/docs/ORCHESTRATION.md>
 - Benchmarks: <https://github.com/byjameson/atom-zero/blob/main/docs/BENCHMARKS.md>
 - AISC architecture audit: <https://github.com/byjameson/atom-zero/blob/main/docs/AISC_AUDIT.md>

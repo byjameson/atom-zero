@@ -3,11 +3,11 @@
 Canonical surfaces: GitHub, Hugging Face, PyPI, dev.to, Medium, LinkedIn and
 ModelScope.
 
-Current local batch: **0.6.0 published.** PyPI, GitHub source/tag/release,
-Hugging Face, ModelScope, dev.to, Medium and LinkedIn are updated.
-`scripts/verify_release.py --version 0.6.0` reports **0 failures**. Main is
-already ahead with the post-release memory ledger and the claim/evidence
-branch; the next batch is `0.6.1`.
+Current local batch: **0.6.1 prepared locally.** It adds the memory lifecycle
+ledger, claim/evidence algebra and the evidence-to-AISC spec generator. Full
+tests, build/twine and the strict AISC audit were run on the batch. Nothing is
+pushed yet: publish `main`, the `v0.6.1` tag and all public surfaces once at the
+release boundary, then run `scripts/verify_release.py --version 0.6.1`.
 
 ## Release cadence
 
