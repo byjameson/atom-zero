@@ -25,6 +25,10 @@ the self-code branch and its planner/runner integration.
 - Added **`atomzero-self-code-diff`**: compares two self-code reports, pairs
   findings by kind/path/message so line shifts are not fake fixes, and reports
   resolved/introduced/persisting plus new high/medium counts.
+- `atomzero-self-improve --self-code-root` now audits the repository before and
+  the agent worktree after the run. If the diff introduces a new high or
+  medium finding, the loop stops with `self_code_regression` and records no
+  decision or scoreboard entry.
 
 ## atomzero 0.19.0 - autonomous opt-in runner loop (2026-11-24)
 

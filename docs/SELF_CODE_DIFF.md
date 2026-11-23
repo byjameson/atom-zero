@@ -56,3 +56,17 @@ returns `0` when `ok` is true, `1` when it is false, and `2` for an input error.
 
 The diff is read-only and content-free: it keeps finding ids, kinds, severity,
 paths, lines and messages, not source text, prompts or queries.
+
+## Loop gate
+
+When `atomzero-self-improve` runs with `--self-code-root`, it audits the base
+repository before the agent and the isolated worktree after the agent. It then
+compares the two reports:
+
+- `ok: true` -> the gated decision can be recorded;
+- `ok: false` (a new high or medium finding) -> the loop returns
+  `self_code_regression` and records **no** decision, ledger entry or
+  scoreboard delta.
+
+This prevents a patch that passes its focused tests from adding a new
+arbitrary-code or broad-exception risk elsewhere in the change.

@@ -118,6 +118,9 @@ The detailed batch is in `docs/BATCH_0.8.0.md`.
 - The signals are lexical and local. They can rank the wrong thing.
 - The planner cannot prove that an action will improve the product.
 - The evaluation gate proves only that selected checks passed.
+- When a self-code audit is used, the loop compares before/after reports and
+  blocks a decision on a new high/medium finding; it does not prove that every
+  finding is a real bug.
 - The decision ledger is local and unsigned; `verify` checks shape and
   content-free rules, not authorship.
 - Human approval is a feature, not a temporary limitation.
