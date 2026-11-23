@@ -846,6 +846,8 @@ def test_ui_collection_scope_contract():
     assert "Daily brief" in page
     assert 'id="briefrefresh"' in page
     assert 'id="briefweekly"' in page
+    assert 'id="weeklytag"' in page
+    assert "weeklytag" in page
     assert 'id="overduebtn"' in page
     assert 'id="overdueres"' in page
     assert 'id="duesoonbtn"' in page
@@ -1416,9 +1418,10 @@ def test_http_weekly_review(tmp_path):
     base = f"http://127.0.0.1:{httpd.server_address[1]}"
     try:
         _post(base + "/v1/agent/chat", {
-            "session_id": "week-1", "message": "add task buy milk"})
+            "session_id": "week-1", "message": "add task buy milk tags home"})
         _post(base + "/v1/agent/chat", {
-            "session_id": "week-1", "message": "add task write report"})
+            "session_id": "week-1",
+            "message": "add task write report tags work,home"})
         _post(base + "/v1/agent/chat", {
             "session_id": "week-1", "message": "complete task 1"})
         review = _post(base + "/v1/weekly-review", {
@@ -1434,6 +1437,24 @@ def test_http_weekly_review(tmp_path):
         assert "write report" in review["text"]
         assert "buy milk" in review["text"]
         assert review["weights_changed"] is False
+        filtered = _post(base + "/v1/weekly-review", {
+            "session_id": "week-1", "days": 7, "tag": "work"})
+        assert filtered["tag"] == "work"
+        assert filtered["task_counts"] == {
+            "open": 1, "completed_recent": 0, "completed_total": 0}
+        assert [task["id"] for task in filtered["open_tasks"]] == [2]
+        assert filtered["tags"] == [
+            {"tag": "home", "open": 1, "done": 0, "total": 1},
+            {"tag": "work", "open": 1, "done": 0, "total": 1},
+        ]
+        assert "| tag=work" in filtered["text"]
+        assert "Tags for #work: 2 distinct" in filtered["text"]
+        assert "write report" in filtered["text"]
+        assert "buy milk" not in filtered["text"]
+        with pytest.raises(urllib.error.HTTPError) as invalid_tag:
+            _post(base + "/v1/weekly-review", {
+                "session_id": "week-1", "days": 7, "tag": "bad tag!"})
+        assert invalid_tag.value.code == 400
         with urllib.request.urlopen(
                 base + "/v1/weekly-review/export"
                        "?session_id=week-1&days=7", timeout=10) as response:
@@ -1450,6 +1471,21 @@ def test_http_weekly_review(tmp_path):
         assert "What is the warranty claim deadline?" in markdown
         assert "`notes/launch.txt`" in markdown
         assert "L-7781" in markdown
+        with urllib.request.urlopen(
+                base + "/v1/weekly-review/export"
+                       "?session_id=week-1&days=7&tag=work",
+                timeout=10) as response:
+            filtered_markdown = response.read().decode("utf-8")
+        assert filtered_markdown.splitlines()[0].endswith("| tag=work")
+        assert "## Tags for #work (2 tags)" in filtered_markdown
+        assert "- [ ] **#2** write report" in filtered_markdown
+        assert "buy milk" not in filtered_markdown
+        with pytest.raises(urllib.error.HTTPError) as invalid_tag:
+            urllib.request.urlopen(
+                base + "/v1/weekly-review/export?"
+                       "session_id=week-1&tag=bad%20tag%21",
+                timeout=10)
+        assert invalid_tag.value.code == 400
         with pytest.raises(urllib.error.HTTPError) as invalid:
             urllib.request.urlopen(
                 base + "/v1/weekly-review/export?days=not-a-number",

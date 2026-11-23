@@ -101,15 +101,19 @@ class WeeklyReportArchive:
         counts = review.get("task_counts", {})
         graph = review.get("graph", {})
         generated = str(review.get("generated", "") or "")
+        tag = str(review.get("tag", "all") or "all")
+        title = f"Weekly review - {generated}" if generated else path.name
+        if tag != "all":
+            title += f" | tag={tag}"
         entry = {
             "id": "",
-            "title": (f"Weekly review - {generated}" if generated
-                      else path.name),
+            "title": title,
             "path": str(path),
             "name": path.name,
             "generated": generated,
             "exported_at": exported_at or time.strftime("%Y-%m-%dT%H:%M:%S"),
             "period_days": int(review.get("period_days", 7) or 7),
+            "tag": tag,
             "task_counts": counts if isinstance(counts, dict) else {},
             "pending_gap_count": int(
                 review.get("pending_gap_count", 0) or 0),
@@ -143,7 +147,8 @@ class WeeklyReportArchive:
     def _matches(entry: dict, needle: str) -> bool:
         if not needle:
             return True
-        fields = ("id", "title", "name", "path", "generated", "exported_at")
+        fields = ("id", "title", "name", "path", "generated", "exported_at",
+                  "tag")
         haystack = " ".join(
             str(entry.get(field, "") or "") for field in fields).lower()
         return needle in haystack

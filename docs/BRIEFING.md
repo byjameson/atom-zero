@@ -191,9 +191,11 @@ atomzero-brief --session data/sessions/default.json `
   --docs data/atomzero_demo.db --weekly --days 7
 ```
 
+Add `--weekly-tag work` to scope the review to one tag.
+
 ```text
 POST /v1/weekly-review
-{"session_id": "default", "days": 7}
+{"session_id": "default", "days": 7, "tag": "work"}
 ```
 
 A weekly review aggregates:
@@ -208,19 +210,29 @@ A weekly review aggregates:
 
 Completions carry `completed` timestamps when tasks are finished through
 `ChatHuman`; older undated completions are listed separately rather than
-silently dropped. The UI **Weekly review** button uses the same endpoint.
+silently dropped. The UI **Weekly review** button and adjacent tag field use
+the same endpoint.
 
 Tag counts cover open tasks plus tasks completed in the window. Tags on older
 completions are excluded; untagged active tasks are counted separately. The
 JSON review includes `tags`, `tag_count`, `tagged_task_count` and
 `untagged_task_count`, and the Markdown export gains a Tags table.
 
+With a tag filter, the task sections, counts and Tags table are limited to
+matching tasks; the table also shows co-occurring tags on those tasks. Gaps,
+recent sources and graph highlights remain global. The JSON review adds
+`"tag"`, the title and Markdown heading show `tag=work` / `#work`, and the
+archive records the tag so it can be searched and displayed in report listings.
+
 Chat also runs the review directly:
 
 ```text
 weekly review
 weekly review for 14 days
+weekly review tag work
+weekly review 14 days tag work
 haftalık özet
+haftalık özet tag work
 haftalık özet 14 gün
 son 14 günün özeti
 ```

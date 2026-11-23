@@ -1130,9 +1130,15 @@ class AgentSession:
             "weights_changed": False,
         }
 
-    def _weekly_review(self, days: int = 7, sort: str = "default") -> dict:
-        review = build_weekly_review(
-            self.human.data, self.gap_store, self.docs, days=days, sort=sort)
+    def _weekly_review(self, days: int = 7, sort: str = "default",
+                       tag: str = "all") -> dict:
+        try:
+            review = build_weekly_review(
+                self.human.data, self.gap_store, self.docs,
+                days=days, sort=sort, tag=tag)
+        except ValueError as exc:
+            return {"reply": str(exc), "tool_calls": [],
+                    "sources": [], "evidence": []}
         sources = []
         for item in review.get("recent_sources", []):
             source = {
@@ -1144,13 +1150,16 @@ class AgentSession:
             }
             if source not in sources:
                 sources.append(source)
+        tool = {
+            "name": "weekly_review",
+            "days": review.get("period_days", days),
+            "sort": review["sort"],
+        }
+        if review.get("tag", "all") != "all":
+            tool["tag"] = review["tag"]
         return {
             "reply": review["text"],
-            "tool_calls": [{
-                "name": "weekly_review",
-                "days": review.get("period_days", days),
-                "sort": review["sort"],
-            }],
+            "tool_calls": [tool],
             "sources": sources,
             "review": review,
             "weights_changed": False,
@@ -1533,6 +1542,21 @@ class AgentSession:
             return self._due_soon(
                 int(days_raw) if days_raw else 7,
                 sort=groups.get("sort") or "default")
+        weekly_tag_match = re.match(
+            r"^(?:(?:weekly|week)\s+(?:review|summary)|"
+            r"haftal[ıi]k\s+(?:özet|rapor|değerlendirme))"
+            r"(?:\s+(?:for|last|son)?\s*(?P<days>\d+)\s*"
+            r"(?:days?|gün))?"
+            r"\s+tag\s+(?P<tag>\S+)"
+            r"(?:\s+(?P<sort>priority))?\??$",
+            text, re.IGNORECASE)
+        if weekly_tag_match:
+            groups = weekly_tag_match.groupdict()
+            days_raw = groups.get("days")
+            return self._weekly_review(
+                int(days_raw) if days_raw else 7,
+                sort=groups.get("sort") or "default",
+                tag=groups.get("tag") or "all")
         weekly_match = re.match(
             r"^(?:(?:weekly|week)\s+(?:review|summary)|"
             r"haftal[ıi]k\s+(?:özet|rapor|değerlendirme))"

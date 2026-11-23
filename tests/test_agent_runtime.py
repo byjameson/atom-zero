@@ -870,8 +870,8 @@ def test_agent_weekly_review_intent(tmp_path):
     gaps.add("What is the warranty claim deadline?")
     agent = AgentSession(
         "s-weekly", tmp_path / "memory.json", docs=docs, gap_store=gaps)
-    agent.chat("add task buy milk")
-    agent.chat("add task write report")
+    agent.chat("add task buy milk tags home")
+    agent.chat("add task write report tags work,home")
     agent.chat("complete task 1")
     result = agent.chat("weekly review")
     assert "Weekly review" in result["reply"]
@@ -888,6 +888,36 @@ def test_agent_weekly_review_intent(tmp_path):
     assert result["review"]["recent_source_count"] == 1
     assert result["sources"][0]["source"] == "notes/launch.txt"
     assert result["weights_changed"] is False
+
+    filtered = agent.chat("weekly review tag work")
+    assert filtered["tool_calls"][0] == {
+        "name": "weekly_review", "days": 7, "sort": "default",
+        "tag": "work"}
+    assert filtered["review"]["tag"] == "work"
+    assert filtered["review"]["task_counts"] == {
+        "open": 1, "completed_recent": 0, "completed_total": 0}
+    assert [task["id"] for task in filtered["review"]["open_tasks"]] == [2]
+    assert filtered["review"]["tags"] == [
+        {"tag": "home", "open": 1, "done": 0, "total": 1},
+        {"tag": "work", "open": 1, "done": 0, "total": 1},
+    ]
+    assert "| tag=work" in filtered["reply"]
+    assert "Tags for #work: 2 distinct" in filtered["reply"]
+    assert "write report" in filtered["reply"]
+    assert "buy milk" not in filtered["reply"]
+    invalid_tag = agent.chat("weekly review tag bad!")
+    assert "letters, numbers" in invalid_tag["reply"]
+    assert invalid_tag["tool_calls"] == []
+    longer_tag = agent.chat("weekly review 14 days tag home")
+    assert longer_tag["tool_calls"][0] == {
+        "name": "weekly_review", "days": 14, "sort": "default",
+        "tag": "home"}
+    assert longer_tag["review"]["task_counts"] == {
+        "open": 1, "completed_recent": 1, "completed_total": 1}
+    assert "write report" in longer_tag["reply"]
+    assert "buy milk" in longer_tag["reply"]
+    turkish_tag = agent.chat("haftalık özet tag work")
+    assert turkish_tag["review"]["tag"] == "work"
 
     turkish = agent.chat("haftalık özet 14 gün")
     assert turkish["tool_calls"][0] == {

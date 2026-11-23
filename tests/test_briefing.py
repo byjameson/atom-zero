@@ -8,7 +8,7 @@ import pytest
 
 from atomzero.briefing import (
     build_briefing, build_weekly_review, load_session, main, plan_goal,
-    rename_task_tag, render_weekly_markdown)
+    rename_task_tag, render_weekly_markdown, render_weekly_report_index)
 from atomzero.doc_memory import DocMemory
 from atomzero.knowledge_gaps import KnowledgeGapStore
 from atomzero.weekly_reports import WeeklyReportArchive
@@ -92,14 +92,81 @@ def test_weekly_review_aggregates_tasks_sources_gaps_and_graph(tmp_path):
     docs.close()
 
 
+def test_weekly_review_tag_filter_and_archive(tmp_path):
+    now = datetime.now()
+    stamp = now.strftime("%Y-%m-%dT%H:%M:%S")
+    old = (now - timedelta(days=10)).strftime("%Y-%m-%dT%H:%M:%S")
+    session = {"tasks": [
+        {"id": 1, "text": "write report", "status": "open",
+         "created": stamp, "completed": "",
+         "tags": ["work", "home"]},
+        {"id": 2, "text": "pay invoice", "status": "done",
+         "created": stamp, "completed": stamp,
+         "tags": ["work", "finance"]},
+        {"id": 3, "text": "archive task", "status": "done",
+         "created": old, "completed": old, "tags": ["archive"]},
+        {"id": 4, "text": "buy milk", "status": "open",
+         "created": stamp, "completed": "", "tags": ["home"]},
+    ]}
+    review = build_weekly_review(
+        session, None, None, days=7, tag="work",
+        now="2026-11-22 09:00")
+    assert review["tag"] == "work"
+    assert review["task_counts"] == {
+        "open": 1, "completed_recent": 1, "completed_total": 1}
+    assert review["tags"] == [
+        {"tag": "work", "open": 1, "done": 1, "total": 2},
+        {"tag": "finance", "open": 0, "done": 1, "total": 1},
+        {"tag": "home", "open": 1, "done": 0, "total": 1},
+    ]
+    assert review["tag_count"] == 3
+    assert review["tagged_task_count"] == 2
+    assert review["untagged_task_count"] == 0
+    assert [task["id"] for task in review["open_tasks"]] == [1]
+    assert [task["id"] for task in review["completed_tasks"]] == [2]
+    assert "| tag=work" in review["text"]
+    assert "Tasks: 1 open | 1 completed this week" in review["text"]
+    assert ("Tags for #work: 3 distinct | work (1 open, 1 done) | "
+            "finance (0 open, 1 done) | home (1 open, 0 done)") in review["text"]
+    assert "write report" in review["text"]
+    assert "pay invoice" in review["text"]
+    assert "buy milk" not in review["text"]
+    assert "archive task" not in review["text"]
+
+    markdown = render_weekly_markdown(review)
+    assert markdown.startswith("# Weekly review - 2026-11-22 09:00 | tag=work")
+    assert "- Open: 1" in markdown
+    assert "- Completed in the last 7 days: 1" in markdown
+    assert "- Completed total: 1" in markdown
+    assert "## Tags for #work (3 tags)" in markdown
+    assert "| work | 1 | 1 | 2 |" in markdown
+    assert "| finance | 0 | 1 | 1 |" in markdown
+    assert "| home | 1 | 0 | 1 |" in markdown
+    assert "- Tagged tasks: 2" in markdown
+    assert "0 untagged" not in markdown
+    assert "buy milk" not in markdown
+    assert "archive task" not in markdown
+
+    report = tmp_path / "weekly.md"
+    report.write_text(markdown, encoding="utf-8")
+    archive = WeeklyReportArchive(tmp_path / "weekly_reports.json")
+    entry = archive.record(report, review)
+    assert entry["tag"] == "work"
+    assert "| tag=work" in entry["title"]
+    listing = render_weekly_report_index(
+        archive.list(), archive.path)
+    assert "tag=work" in listing
+    assert archive.count(query="work") == 1
+
+
 def test_cli_weekly_review(tmp_path, capsys):
     session_path = tmp_path / "session.json"
     now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     session_path.write_text(json.dumps({"tasks": [
         {"id": 1, "text": "open task", "status": "open",
-         "created": now, "completed": ""},
+         "created": now, "completed": "", "tags": ["work"]},
         {"id": 2, "text": "done task", "status": "done",
-         "created": now, "completed": now},
+         "created": now, "completed": now, "tags": ["home"]},
     ]}), encoding="utf-8")
     docs = DocMemory(tmp_path / "docs.db")
     docs.add_text("notes/launch.txt", "The launch code is L-7781.")
@@ -114,6 +181,30 @@ def test_cli_weekly_review(tmp_path, capsys):
     assert review["task_counts"]["open"] == 1
     assert review["task_counts"]["completed_recent"] == 1
     assert review["recent_source_count"] == 1
+    assert review["tag"] == "all"
+
+    assert main([
+        "--session", str(session_path), "--docs", str(tmp_path / "docs.db"),
+        "--gaps", str(gaps_path), "--weekly", "--days", "7",
+        "--weekly-tag", "work", "--json"]) == 0
+    filtered = json.loads(capsys.readouterr().out)
+    assert filtered["tag"] == "work"
+    assert filtered["task_counts"] == {
+        "open": 1, "completed_recent": 0, "completed_total": 0}
+    assert [task["id"] for task in filtered["open_tasks"]] == [1]
+    assert filtered["tags"] == [
+        {"tag": "work", "open": 1, "done": 0, "total": 1}]
+    assert "| tag=work" in filtered["text"]
+    assert "Tags for #work" in filtered["text"]
+
+    assert main([
+        "--session", str(session_path), "--docs", str(tmp_path / "docs.db"),
+        "--gaps", str(gaps_path), "--weekly", "--weekly-tag",
+        "bad tag!"]) == 1
+    assert "letters, numbers" in capsys.readouterr().out
+    with pytest.raises(SystemExit) as exc:
+        main(["--session", str(session_path), "--weekly-tag", "work"])
+    assert exc.value.code == 2
 
 
 def test_cli_overdue_tasks(tmp_path, capsys):
@@ -685,13 +776,27 @@ def test_cli_weekly_markdown_export(tmp_path, capsys):
     assert "## Next week" in markdown
     assert "No model weights were changed." in markdown
 
+    assert main([
+        "--session", str(session_path), "--docs", str(tmp_path / "docs.db"),
+        "--gaps", str(gaps_path), "--weekly", "--days", "7",
+        "--weekly-tag", "home", "--markdown"]) == 0
+    filtered = capsys.readouterr().out
+    assert filtered.splitlines()[0].endswith("| tag=home")
+    assert "## Tags for #home (2 tags)" in filtered
+    assert "| home | 1 | 1 | 2 |" in filtered
+    assert "| work | 1 | 0 | 1 |" in filtered
+    assert "- Tagged tasks: 2" in filtered
+    assert "0 untagged" not in filtered
+    assert "- [ ] **#2** write report" in filtered
+    assert "- [x] **#1** buy milk" in filtered
+
 
 def test_cli_weekly_markdown_out_file(tmp_path, capsys):
     session_path = tmp_path / "session.json"
     now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     session_path.write_text(json.dumps({"tasks": [
         {"id": 1, "text": "raporu yaz", "status": "open",
-         "created": now, "completed": ""},
+         "created": now, "completed": "", "tags": ["work"]},
     ]}), encoding="utf-8")
     docs = DocMemory(tmp_path / "docs.db")
     docs.add_text("notes/launch.txt", "The launch code is L-7781.",
@@ -701,7 +806,7 @@ def test_cli_weekly_markdown_out_file(tmp_path, capsys):
     index_path = tmp_path / "reports" / "index.json"
     assert main([
         "--session", str(session_path), "--docs", str(tmp_path / "docs.db"),
-        "--weekly", "--markdown", "--out", str(out),
+        "--weekly", "--weekly-tag", "work", "--markdown", "--out", str(out),
         "--reports-index", str(index_path)]) == 0
     captured = capsys.readouterr()
     assert "weekly review written to" in captured.out
@@ -711,17 +816,23 @@ def test_cli_weekly_markdown_out_file(tmp_path, capsys):
     assert not payload.startswith(b"\xef\xbb\xbf")
     markdown = payload.decode("utf-8")
     assert markdown.startswith("# Weekly review - ")
+    assert "| tag=work" in markdown.splitlines()[0]
+    assert "## Tags for #work (1 tag)" in markdown
+    assert "| work | 1 | 0 | 1 |" in markdown
     assert "- [ ] **#1** raporu yaz" in markdown
     assert not list(out.parent.glob(f".{out.name}.*.tmp"))
     index = json.loads(index_path.read_text(encoding="utf-8"))
     assert index["reports"][0]["id"] == "w0001"
     assert index["reports"][0]["path"] == str(out.resolve())
     assert index["reports"][0]["period_days"] == 7
+    assert index["reports"][0]["tag"] == "work"
+    assert "| tag=work" in index["reports"][0]["title"]
     assert main(["--reports", "--reports-index", str(index_path)]) == 0
     listing = capsys.readouterr().out
     assert "Weekly report archive:" in listing
     assert "w0001" in listing
     assert "last 7 days" in listing
+    assert "tag=work" in listing
     assert "1 open" in listing
     assert main(["--reports", "--json", "--reports-index",
                  str(index_path)]) == 0

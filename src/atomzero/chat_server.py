@@ -27,7 +27,7 @@ Endpoints:
   POST /v1/hungry/run
   POST /v1/briefing
   POST /v1/weekly-review
-  GET  /v1/weekly-review/export?session_id=...&days=7
+  GET  /v1/weekly-review/export?session_id=...&days=7&tag=work
   GET  /v1/tasks/list?session_id=default&status=open&due=week&priority=high&sort=priority
   GET  /v1/tasks/tags?session_id=default
   POST /v1/tasks/tags/rename  (add "confirm": true to apply)
@@ -288,6 +288,7 @@ graph entities. No provider is required. A goal plan adds cited local context
 and suggested next actions.</p>
 <div class="row"><button id="briefrefresh">Get daily brief</button>
 <button id="briefweekly">Weekly review</button>
+<input id="weeklytag" placeholder="tag" style="width:7em">
 <button id="overduebtn">Overdue tasks</button>
 <input id="duedays" type="number" min="1" max="90" value="7"
        title="Due-soon window in days" style="width:4em">
@@ -1122,12 +1123,15 @@ async function getWeeklyReview() {
   const msg = document.getElementById('briefmsg');
   const box = document.getElementById('briefres');
   const sort = document.getElementById('tasksort').value;
+  const tag = document.getElementById('weeklytag').value.trim();
   msg.textContent = 'building weekly review...';
   box.textContent = '';
   try {
+    const payload = {session_id: sessionId, days: 7, sort};
+    if (tag) payload.tag = tag;
     const r = await fetch('/v1/weekly-review', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({session_id: sessionId, days: 7, sort})});
+      body: JSON.stringify(payload)});
     const j = await r.json();
     if (!r.ok) {
       msg.textContent = 'weekly review error: ' + (j.error || r.status);
@@ -1137,7 +1141,8 @@ async function getWeeklyReview() {
     msg.textContent = 'weekly review | ' + (counts.open || 0) +
       ' open | ' + (counts.completed_recent || 0) + ' completed | ' +
       (j.recent_source_count || 0) + ' new source(s)' +
-      ((j.sort || sort) !== 'default' ? ' | sort=' + (j.sort || sort) : '');
+      ((j.sort || sort) !== 'default' ? ' | sort=' + (j.sort || sort) : '') +
+      ((j.tag || 'all') !== 'all' ? ' | tag=' + j.tag : '');
     const card = document.createElement('div');
     card.className = 'qitem';
     card.textContent = j.text || '';
@@ -1151,7 +1156,9 @@ async function downloadWeeklyMarkdown() {
   msg.textContent = 'exporting weekly review...';
   try {
     const sort = document.getElementById('tasksort').value;
+    const tag = document.getElementById('weeklytag').value.trim();
     const query = new URLSearchParams({session_id: sessionId, days: 7, sort});
+    if (tag) query.set('tag', tag);
     const r = await fetch('/v1/weekly-review/export?' + query.toString());
     if (!r.ok) {
       let detail = r.status;
@@ -3640,7 +3647,9 @@ class Handler(BaseHTTPRequestHandler):
                     session.human.data, _state.get("gaps"),
                     _state.get("docs"), days=days,
                     sort=str(params.get("sort", ["default"])[0]
-                             or "default").strip())
+                             or "default").strip(),
+                    tag=str(params.get("tag", ["all"])[0]
+                            or "all").strip())
                 markdown = render_weekly_markdown(review)
             except Exception as exc:
                 return self._json(400, {"error": str(exc)})
@@ -4611,7 +4620,8 @@ class Handler(BaseHTTPRequestHandler):
             result = build_weekly_review(
                 session.human.data, _state.get("gaps"), _state.get("docs"),
                 days=req.get("days", 7),
-                sort=str(req.get("sort", "default") or "default").strip())
+                sort=str(req.get("sort", "default") or "default").strip(),
+                tag=str(req.get("tag", "all") or "all").strip())
         except Exception as exc:
             return self._json(400, {"error": str(exc)})
         return self._json(200, result)

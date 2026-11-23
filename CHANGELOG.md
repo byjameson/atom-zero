@@ -18,6 +18,9 @@
   windows instead of always “this week”.
 - Weekly review now reports active tag counts (open tasks plus completions in
   the window); Markdown exports include a Tags table.
+- Added weekly-review tag filters: CLI `--weekly-tag`, HTTP `tag`, chat
+  `weekly review tag work` and a UI tag field. Task sections, counts, Markdown
+  and archive metadata are scoped; archive listings show `tag=work`.
 - Added `benchmarks/weekly_chat_regression.py` (6/6 checks).
 - Added weekly-review **Markdown export**:
   `atomzero-brief --weekly --markdown`, `GET /v1/weekly-review/export` and a UI

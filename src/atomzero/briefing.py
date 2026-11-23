@@ -820,9 +820,15 @@ def _source_recent(item: dict, cutoff_ts: float) -> bool:
 
 
 def build_weekly_review(session_data: dict | None, gaps, docs,
-                        days: int = 7, now=None, sort="default") -> dict:
+                        days: int = 7, now=None, sort="default",
+                        tag="all") -> dict:
     """Aggregate tasks, gaps, recent sources and graph highlights."""
     sort = _normalize_task_sort(sort)
+    tag = str(tag or "all").strip().lower().lstrip("#")
+    if tag in ("", "all"):
+        tag = "all"
+    else:
+        tag = normalize_task_tag(tag)
     try:
         days = max(1, min(int(days), 90))
     except (TypeError, ValueError):
@@ -833,11 +839,22 @@ def build_weekly_review(session_data: dict | None, gaps, docs,
     cutoff = datetime.now() - timedelta(days=days)
     cutoff_ts = time.time() - days * 86400
     open_tasks = sort_tasks(_open_tasks(session_data), sort)
-    today = _today_from_now(now)
-    overdue = sort_tasks(_overdue_tasks(session_data, today), sort)
-    due_soon = sort_tasks(
-        due_soon_tasks(session_data, days=7, today=today), sort)
     done_tasks = _done_tasks(session_data)
+    if tag != "all":
+        open_tasks = [task for task in open_tasks
+                      if tag in _task_tags(task)]
+        done_tasks = [task for task in done_tasks
+                      if tag in _task_tags(task)]
+    today = _today_from_now(now)
+    week_end = (date.fromisoformat(today) + timedelta(days=7)).isoformat()
+    overdue = sort_tasks(
+        [task for task in open_tasks
+         if str(task.get("due", "") or "").strip()
+         and str(task["due"]) < today], sort)
+    due_soon = sort_tasks(
+        [task for task in open_tasks
+         if str(task.get("due", "") or "").strip()
+         and today <= str(task["due"]) <= week_end], sort)
     completed_recent = [task for task in done_tasks
                         if _task_recent(task.get("completed"), cutoff)]
     completed_undated = [task for task in done_tasks
@@ -892,6 +909,8 @@ def build_weekly_review(session_data: dict | None, gaps, docs,
     title = f"Weekly review - {stamp} (last {days} days)"
     if sort != "default":
         title += f" | sort={sort}"
+    if tag != "all":
+        title += f" | tag={tag}"
     lines = [
         title,
         f"Tasks: {len(open_tasks)} open | {len(completed_recent)} "
@@ -901,13 +920,15 @@ def build_weekly_review(session_data: dict | None, gaps, docs,
         lines.append(f"Overdue: {len(overdue)}")
     if due_soon:
         lines.append(f"Due soon: {len(due_soon)} (next 7 days)")
+    tag_scope = f" for #{tag}" if tag != "all" else ""
     if weekly_tags:
         preview = " | ".join(
             f"{item['tag']} ({item['open']} open, {item['done']} done)"
             for item in weekly_tags[:5])
-        lines.append(f"Tags: {len(weekly_tags)} distinct | {preview}")
+        lines.append(f"Tags{tag_scope}: {len(weekly_tags)} distinct | "
+                     f"{preview}")
     else:
-        lines.append("Tags: none")
+        lines.append(f"Tags{tag_scope}: none")
     lines.append("Open:")
     lines.extend(
         f"- {task.get('id')}: {task.get('text', '')}"
@@ -936,6 +957,7 @@ def build_weekly_review(session_data: dict | None, gaps, docs,
         "generated": stamp,
         "sort": sort,
         "period_days": days,
+        "tag": tag,
         "open_tasks": open_tasks[:8],
         "overdue_tasks": overdue[:8],
         "overdue_task_count": len(overdue),
@@ -1057,9 +1079,11 @@ def render_plan(plan: dict) -> str:
 def _weekly_report_line(item: dict) -> str:
     counts = item.get("task_counts", {})
     marker = "" if item.get("exists", True) else " [missing]"
+    tag = str(item.get("tag", "all") or "all")
+    tag_part = f" | tag={tag}" if tag != "all" else ""
     return (
         f"- {item.get('id', '?')} | {item.get('exported_at', '')} | "
-        f"last {item.get('period_days', 7)} days | "
+        f"last {item.get('period_days', 7)} days{tag_part} | "
         f"{counts.get('open', 0)} open | "
         f"{item.get('recent_source_count', 0)} source(s) | "
         f"{item.get('path', '')}{marker}")
@@ -1242,6 +1266,9 @@ def render_weekly_markdown(review: dict) -> str:
     title = f"# Weekly review - {review.get('generated', '')}"
     if review.get("sort", "default") != "default":
         title += f" | sort={review['sort']}"
+    tag = str(review.get("tag", "all") or "all")
+    if tag != "all":
+        title += f" | tag={tag}"
     lines = [
         title,
         "",
@@ -1301,12 +1328,14 @@ def render_weekly_markdown(review: dict) -> str:
             for task in undated)
     tags = review.get("tags", [])
     untagged = review.get("untagged_task_count", 0)
-    lines.extend([
-        "",
-        f"## Tags ({review.get('tag_count', len(tags))} tags, "
-        f"{untagged} untagged)",
-        "",
-    ])
+    tag_count = review.get("tag_count", len(tags))
+    tag_word = "tag" if tag_count == 1 else "tags"
+    tag_label = f" for #{tag}" if tag != "all" else ""
+    if tag != "all":
+        heading = f"## Tags{tag_label} ({tag_count} {tag_word})"
+    else:
+        heading = f"## Tags ({tag_count} {tag_word}, {untagged} untagged)"
+    lines.extend(["", heading, ""])
     if tags:
         lines.extend([
             "| Tag | Open | Done | Total |",
@@ -1408,6 +1437,8 @@ def main(argv=None) -> int:
     parser.add_argument("--goal", default="")
     parser.add_argument("--weekly", action="store_true",
                         help="build a weekly review instead of a daily brief")
+    parser.add_argument("--weekly-tag", default=None,
+                        help="filter a weekly review to one task tag")
     parser.add_argument("--overdue", action="store_true",
                         help="list overdue tasks from the session")
     parser.add_argument("--due-soon", action="store_true",
@@ -1504,6 +1535,8 @@ def main(argv=None) -> int:
         parser.error("--due-days requires --due-soon")
     if args.due_days is not None and args.due_days < 1:
         parser.error("--due-days must be at least 1")
+    if args.weekly_tag is not None and not args.weekly:
+        parser.error("--weekly-tag requires --weekly")
     if args.task_sort != "default" and (args.goal or args.reports):
         parser.error("--task-sort cannot be combined with goal/report views")
     if not args.task_list:
@@ -1866,7 +1899,7 @@ def main(argv=None) -> int:
         elif args.weekly:
             result = build_weekly_review(
                 session, gaps, docs, days=args.days,
-                sort=args.task_sort)
+                sort=args.task_sort, tag=args.weekly_tag or "all")
         elif args.goal:
             result = plan_goal(
                 args.goal, docs, gaps, session, args.max_steps)
