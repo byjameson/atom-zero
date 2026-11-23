@@ -162,6 +162,8 @@
   audit` section in weekly Markdown/archive reports.
 - Ported confirmed tag delete, undo and tag audit to the legacy
   `research/chat_human.py` runtime.
+- Daily brief now includes recent tag audit events (last three in text,
+  `tag_audit`/`tag_audit_total` in JSON, scoped by `--brief-tag`).
 - Ported task tags to the legacy `research/chat_human.py` runtime:
   `add task ... tags ...`, `tag task`, tag-filtered `list tasks`, `list tags`
   and confirmed `rename tag` with persistence.

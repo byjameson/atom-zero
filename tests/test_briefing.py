@@ -877,12 +877,38 @@ def test_tag_audit_and_weekly_archive(tmp_path, capsys):
     assert ("delete tag 'work' | 2 task(s) "
             "(1 open, 1 done)") in markdown
 
+    brief = build_briefing(
+        session, None, None, now="2026-11-23 10:00")
+    assert brief["tag_audit_total"] == 2
+    assert [event["action"] for event in brief["tag_audit"]] == [
+        "undo_tag_delete", "delete_tag"]
+    assert "Tag audit: 2 event(s)" in brief["text"]
+    assert ("undo delete tag 'work' | restored 2 task(s)"
+            in brief["text"])
+    assert ("delete tag 'work' | 2 task(s) "
+            "(1 open, 1 done)") in brief["text"]
+    home_brief = build_briefing(
+        session, None, None, now="2026-11-23 10:00", tag="home")
+    assert home_brief["tag_audit_total"] == 0
+    assert "Tag audit" not in home_brief["text"]
+
     session_path = tmp_path / "session.json"
     session_path.write_text(json.dumps(session), encoding="utf-8")
     common = [
         "--session", str(session_path),
         "--docs", str(tmp_path / "missing.db"),
         "--gaps", str(tmp_path / "missing-gaps.json")]
+    assert main(common + ["--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["tag_audit_total"] == 2
+    assert payload["tag_audit"][0]["action"] == "undo_tag_delete"
+    assert main(common) == 0
+    assert "Tag audit: 2 event(s)" in capsys.readouterr().out
+    assert main(common + ["--brief-tag", "home", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["tag_audit_total"] == 0
+    assert payload["tag_audit"] == []
+
     assert main(common + ["--tag-audit", "--json"]) == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["count"] == 2

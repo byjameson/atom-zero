@@ -845,6 +845,8 @@ def test_ui_collection_scope_contract():
     assert "/v1/goals/plan" in page
     assert "Daily brief" in page
     assert 'id="briefrefresh"' in page
+    assert "getBriefing" in page
+    assert 'id="briefres"' in page
     assert 'id="briefweekly"' in page
     assert 'id="brieftag"' in page
     assert 'id="weeklytag"' in page
@@ -2365,6 +2367,21 @@ def test_http_delete_tag(tmp_path):
                        + "&limit=0",
                 timeout=10)
         assert invalid_limit.value.code == 400
+
+        brief = _post(base + "/v1/briefing", {
+            "session_id": session_id})
+        assert brief["tag_audit_total"] == 2
+        assert [event["action"] for event in brief["tag_audit"]] == [
+            "undo_tag_delete", "delete_tag"]
+        assert "Tag audit: 2 event(s)" in brief["text"]
+        fetched_brief = json.loads(urllib.request.urlopen(
+            base + "/v1/briefing?session_id=" + session_id,
+            timeout=10).read().decode("utf-8"))
+        assert fetched_brief["tag_audit_total"] == 2
+        home_brief = _post(base + "/v1/briefing", {
+            "session_id": session_id, "tag": "home"})
+        assert home_brief["tag_audit_total"] == 0
+        assert "Tag audit" not in home_brief["text"]
 
         with pytest.raises(urllib.error.HTTPError) as missing:
             _post(base + "/v1/tasks/tags/delete", {

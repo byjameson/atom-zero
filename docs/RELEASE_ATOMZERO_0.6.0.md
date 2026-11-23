@@ -20,6 +20,7 @@ after `0.5.0`.
   chat `weekly review tag work`, with scoped counts and archive metadata.
 - Optional daily-brief tag filters through `--brief-tag`, GET/POST `/v1/briefing`
   `tag`, chat `brief me tag work` and a UI field, with scoped tasks and counts.
+- Daily brief includes recent tag audit events in text/JSON, scoped by tag.
 - Optional tag filters for overdue and due-soon views through
   `--overdue-tag` / `--due-soon-tag`, HTTP/UI `tag` and chat commands.
 - Weekly Markdown export through `--weekly --markdown [--out PATH]`,

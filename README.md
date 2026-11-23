@@ -195,7 +195,8 @@ short generation. It is **not MMLU, GSM8K or HumanEval**.
   fallback, chain and recipe modes.
 - **Daily brief + weekly review + goal planner:** local tasks, pending gaps,
   index stats and graph entities in one brief (with `--brief-tag`, `brief me
-  tag work` and HTTP/UI tag filters); `atomzero-brief` (including
+  tag work` and HTTP/UI tag filters, plus recent tag audit events);
+  `atomzero-brief` (including
   `--weekly --days 7 --markdown --out reports\weekly.md`) and
   `/v1/weekly-review` aggregate recent work with active task-tag counts,
   optional `--weekly-tag` filtering and a Markdown Tags table.

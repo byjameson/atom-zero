@@ -249,6 +249,11 @@ matching tasks; gaps, index stats and graph stay global. The title shows
 `| tag=work`, the text adds `Tags for #work`, and JSON includes `tag`, `tags`,
 `tag_count`, `tagged_task_count` and `untagged_task_count`.
 
+Recent tag delete/undo events are included too: the brief text adds
+`Tag audit: N event(s)` with the last three events, and JSON includes
+`tag_audit`/`tag_audit_total`. A `--brief-tag` filter also scopes the audit
+events to that tag.
+
 This is local metadata only: there are no background reminders, notifications
 or calendar sync.
 

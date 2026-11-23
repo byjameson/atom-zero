@@ -543,6 +543,25 @@ def undo_delete_task_tag(session_data: dict | None) -> dict:
     }
 
 
+def _tag_audit_event_line(event: dict) -> str:
+    ids = ", ".join(f"#{value}" for value in event.get("task_ids", []))
+    if event.get("action") == "delete_tag":
+        detail = (f"{event.get('updated', 0)} task(s) "
+                  f"({event.get('open', 0)} open, "
+                  f"{event.get('done', 0)} done)"
+                  + (f" [{ids}]" if ids else ""))
+        return (f"{event.get('ts', '')} | delete tag "
+                f"'{event.get('tag', '')}' | {detail}")
+    detail = (f"restored {event.get('restored', 0)} task(s)"
+              + (f" [{ids}]" if ids else ""))
+    if event.get("already"):
+        detail += f" | {event['already']} already had it"
+    if event.get("skipped"):
+        detail += f" | {event['skipped']} skipped"
+    return (f"{event.get('ts', '')} | undo delete tag "
+            f"'{event.get('tag', '')}' | {detail}")
+
+
 def task_tag_audit_view(session_data: dict | None, limit: int = 10,
                         now=None) -> dict:
     """Show the most recent tag delete/undo events, newest first."""
@@ -574,23 +593,7 @@ def task_tag_audit_view(session_data: dict | None, limit: int = 10,
     if not events:
         lines.append("- None")
     for event in events:
-        ids = ", ".join(f"#{value}" for value in event["task_ids"])
-        if event["action"] == "delete_tag":
-            lines.append(
-                f"- {event.get('ts', '')} | delete tag "
-                f"'{event['tag']}' | {event.get('updated', 0)} task(s) "
-                f"({event.get('open', 0)} open, {event.get('done', 0)} done)"
-                + (f" [{ids}]" if ids else ""))
-        else:
-            detail = (f"restored {event.get('restored', 0)} task(s)"
-                      + (f" [{ids}]" if ids else ""))
-            if event.get("already"):
-                detail += f" | {event['already']} already had it"
-            if event.get("skipped"):
-                detail += f" | {event['skipped']} skipped"
-            lines.append(
-                f"- {event.get('ts', '')} | undo delete tag "
-                f"'{event['tag']}' | {detail}")
+        lines.append(f"- {_tag_audit_event_line(event)}")
     return {
         "generated": stamp,
         "limit": limit,
@@ -916,6 +919,13 @@ def build_briefing(session_data: dict | None, gaps, docs,
          and today <= str(task["due"]) <= week_end], sort)
     brief_tags = _tag_counts(tasks)
     tagged_tasks = sum(1 for task in tasks if _task_tags(task))
+    audit_view = task_tag_audit_view(session_data, limit=50, now=now)
+    audit_events = audit_view["events"]
+    if tag != "all":
+        audit_events = [event for event in audit_events
+                        if event.get("tag") == tag]
+    audit_total = len(audit_events)
+    audit_events = audit_events[:5]
     pending = _pending_gaps(gaps)
     sources = docs.sources() if docs is not None else []
     chunks = docs.stats().get("chunks", 0) if docs is not None else 0
@@ -987,6 +997,10 @@ def build_briefing(session_data: dict | None, gaps, docs,
                      f"{preview}")
     elif tag != "all":
         lines.append(f"Tags{tag_scope}: none")
+    if audit_events:
+        lines.append(f"Tag audit: {audit_total} event(s)")
+        lines.extend(f"- {_tag_audit_event_line(event)}"
+                     for event in audit_events[:3])
     lines.extend(
         f"- {task.get('id')}: {task.get('text', '')}"
         f"{_task_priority_label(task)}"
@@ -1017,6 +1031,8 @@ def build_briefing(session_data: dict | None, gaps, docs,
         "tag_count": len(brief_tags),
         "tagged_task_count": tagged_tasks,
         "untagged_task_count": len(tasks) - tagged_tasks,
+        "tag_audit": audit_events,
+        "tag_audit_total": audit_total,
         "pending_gaps": pending[:5],
         "pending_gap_count": len(pending),
         "documents": {
@@ -1626,26 +1642,7 @@ def render_weekly_markdown(review: dict) -> str:
     lines.extend(["", f"## Tag audit ({audit_total})", ""])
     if audit:
         for event in audit:
-            ids = ", ".join(f"#{value}"
-                            for value in event.get("task_ids", []))
-            if event.get("action") == "delete_tag":
-                detail = (f"{event.get('updated', 0)} task(s) "
-                          f"({event.get('open', 0)} open, "
-                          f"{event.get('done', 0)} done)"
-                          + (f" [{ids}]" if ids else ""))
-                lines.append(
-                    f"- {event.get('ts', '')} | delete tag "
-                    f"'{event.get('tag', '')}' | {detail}")
-            else:
-                detail = (f"restored {event.get('restored', 0)} task(s)"
-                          + (f" [{ids}]" if ids else ""))
-                if event.get("already"):
-                    detail += f" | {event['already']} already had it"
-                if event.get("skipped"):
-                    detail += f" | {event['skipped']} skipped"
-                lines.append(
-                    f"- {event.get('ts', '')} | undo delete tag "
-                    f"'{event.get('tag', '')}' | {detail}")
+            lines.append(f"- {_tag_audit_event_line(event)}")
     else:
         lines.append("- None")
     gaps = review.get("pending_gaps", [])
