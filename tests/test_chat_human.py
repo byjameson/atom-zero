@@ -158,6 +158,23 @@ def test_chat_human_confirmed_tag_delete_undo_and_audit(tmp_path):
     limited = reloaded.respond("tag audit 1")
     assert "Tag audit (1 of 2 event(s)):" in limited
     assert "undo delete tag 'work'" in limited
+    tagged_audit = reloaded.respond("tag audit work")
+    assert "Tag audit (2 of 2 event(s)) | tag=work:" in tagged_audit
+    assert "delete tag 'work'" in tagged_audit
+    assert "undo delete tag 'work'" in tagged_audit
+    delete_audit = reloaded.respond("tag audit action delete")
+    assert "Tag audit (1 of 1 event(s)) | action=delete_tag:" in delete_audit
+    assert "delete tag 'work'" in delete_audit
+    assert "undo delete tag 'work'" not in delete_audit
+    combined_audit = reloaded.respond(
+        "tag audit tag work action undo 1")
+    assert ("Tag audit (1 of 1 event(s)) | tag=work | "
+            "action=undo_tag_delete:") in combined_audit
+    assert "undo delete tag 'work'" in combined_audit
+    home_audit = reloaded.respond("tag audit home")
+    assert "Tag audit (0 of 0 event(s)) | tag=home:" in home_audit
+    assert "- None" in home_audit
+    assert "action must be" in reloaded.respond("tag audit work action bad")
     assert reloaded.respond("undo delete tag") == (
         "There is no tag delete to undo")
 

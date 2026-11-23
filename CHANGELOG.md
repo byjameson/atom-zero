@@ -167,6 +167,8 @@
 - Added tag and action filters to the tag audit view: chat `tag audit work` /
   `action delete`, CLI `--tag-audit-tag` / `--tag-audit-action`, HTTP
   `tag`/`action` and UI fields.
+- Ported tag/action audit filters to the legacy `research/chat_human.py`
+  runtime.
 - Ported task tags to the legacy `research/chat_human.py` runtime:
   `add task ... tags ...`, `tag task`, tag-filtered `list tasks`, `list tags`
   and confirmed `rename tag` with persistence.

@@ -492,13 +492,57 @@ class ChatHuman:
             reply = ("Tell me the tag to delete, for example "
                      "'delete tag work'.")
         elif re.match(
-                r"^(?:list|show)?\s*tag\s+audit(?:\s+(\d+))?\??$",
+                r"^(?:list|show)?\s*tag\s+audit(?P<rest>.*?)\??$",
                 text, re.IGNORECASE):
             audit_match = re.match(
-                r"^(?:list|show)?\s*tag\s+audit(?:\s+(\d+))?\??$",
+                r"^(?:list|show)?\s*tag\s+audit(?P<rest>.*?)\??$",
                 text, re.IGNORECASE)
-            limit = int(audit_match.group(1)) if audit_match.group(1) else 10
-            reply = task_tag_audit_view(self.data, limit=limit)["text"]
+            tokens = audit_match.group("rest").split()
+            limit = 10
+            tag = "all"
+            action = "all"
+            index = 0
+            error = ""
+            while index < len(tokens):
+                token = tokens[index].lower()
+                if token == "action":
+                    if index + 1 >= len(tokens):
+                        error = "Action filter needs delete or undo."
+                        break
+                    action = tokens[index + 1]
+                    index += 2
+                    continue
+                if token == "tag":
+                    if index + 1 >= len(tokens):
+                        error = "Tag filter needs a tag name."
+                        break
+                    tag = tokens[index + 1]
+                    index += 2
+                    continue
+                if token == "limit":
+                    if (index + 1 >= len(tokens)
+                            or not tokens[index + 1].isdigit()):
+                        error = "Limit filter needs a number."
+                        break
+                    limit = int(tokens[index + 1])
+                    index += 2
+                    continue
+                if tokens[index].isdigit():
+                    limit = int(tokens[index])
+                    index += 1
+                    continue
+                if tag == "all":
+                    tag = tokens[index]
+                index += 1
+            if error:
+                reply = error
+            else:
+                try:
+                    reply = task_tag_audit_view(
+                        self.data, limit=limit, tag=tag,
+                        action=action)["text"]
+                except ValueError as exc:
+                    reply = str(exc)
         elif low in ("confirm tag rename", "confirm rename tag",
                      "yes rename tag"):
             pending = self.pending_tag_rename

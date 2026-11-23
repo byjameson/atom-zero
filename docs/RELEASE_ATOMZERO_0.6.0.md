@@ -54,8 +54,8 @@ after `0.5.0`.
   UI and weekly Markdown/archive output.
 - Tag audit supports tag/action filters across chat, CLI, HTTP and UI.
 - Tag parity in the legacy `research/chat_human.py` runtime: add/tag/list
-  filters, inventory, confirmed rename and delete, undo and tag audit with
-  persistence.
+  filters, inventory, confirmed rename and delete, undo, and tag audit with
+  tag/action filters and persistence.
 - Rescheduling and confirmed deletion.
 - Task text search plus status/due/priority filters.
 - Priority-first sorting in search, overdue, due-soon, list, brief and review
