@@ -42,6 +42,8 @@ No model or runtime weights changed; the weights remain `0.8.0`.
   (`AtomZeroAnswerability` and its generated mirror).
 - `benchmarks/self_improvement_regression.py`: **12/12 checks passed**.
 - `scripts/verify_release.py --version 0.9.0`: **0 failures**.
+- Hugging Face and ModelScope show the package and weight versions on separate
+  lines: `Package: atomzero 0.9.0`, `Weights: 0.8.0 (unchanged)`.
 - Release commit `b2208b0`, annotated tag `v0.9.0`.
 - LinkedIn is attempted but blocked/unverified.
 - No model weights changed; the weights remain `0.8.0`.
