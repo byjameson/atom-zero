@@ -10,7 +10,7 @@ through the real handler.
 python benchmarks/contradiction_regression.py
 ```
 
-Latest result: **5/5 checks pass**. Raw result:
+Latest result: **7/7 checks pass**. Raw result:
 [`results/contradiction_regression.json`](results/contradiction_regression.json).
 
 `benchmarks/compare_chat_regression.py` checks the chat intent, both snippets,

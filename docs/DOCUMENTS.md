@@ -107,6 +107,8 @@ policy_a.txt ile policy_b.txt kaynaklarını karşılaştır
 Flags are deterministic hints, not a truth verdict:
 
 - `numeric_mismatch` — overlapping claims have different numeric values;
+  formatting differences (`1,500` / `1500` / `1.5k`, `1.5 million` /
+  `1,500,000`, Turkish `1,5` / English `1.5`) are normalized first;
 - `identifier_mismatch` — overlapping claims use different code identifiers;
 - `negation_mismatch` — one claim is negated and the other is not.
 

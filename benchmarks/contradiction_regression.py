@@ -46,6 +46,13 @@ def run(output: str | Path | None = None) -> dict:
                       title="Launch A")
         docs.add_text("launch_b.txt", "The launch code is W-7781.",
                       title="Launch B")
+        docs.add_text("price_a.txt", "The contract value is $1,500,000.",
+                      title="Price A")
+        docs.add_text("price_b.txt",
+                      "The contract value is 1.5 million dollars.",
+                      title="Price B")
+        docs.add_text("price_c.txt", "The contract value is $1,300,000.",
+                      title="Price C")
         docs.add_text("unrelated.txt", "Bananas are yellow.",
                       title="Unrelated")
         old = dict(chat_server._state)
@@ -98,6 +105,25 @@ def run(output: str | Path | None = None) -> dict:
                 any("identifier_mismatch" in conflict["reasons"]
                     for conflict in code["conflicts"]),
                 str(code["summary"]))
+            formatted = _get(
+                base,
+                "/v1/documents/compare?source=price_a.txt"
+                "&against=price_b.txt")
+            formatted_reasons = {reason for conflict in formatted["conflicts"]
+                                 for reason in conflict["reasons"]}
+            check(
+                "numeric_formatting_no_false_positive",
+                "numeric_mismatch" not in formatted_reasons,
+                str(sorted(formatted_reasons)))
+            scaled = _get(
+                base,
+                "/v1/documents/compare?source=price_a.txt"
+                "&against=price_c.txt")
+            check(
+                "numeric_scale_conflict",
+                any("numeric_mismatch" in conflict["reasons"]
+                    for conflict in scaled["conflicts"]),
+                str(scaled["summary"]))
             clean = _get(
                 base,
                 "/v1/documents/compare?source=unrelated.txt"

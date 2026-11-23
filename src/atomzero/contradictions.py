@@ -8,6 +8,7 @@ inspect the evidence.
 from __future__ import annotations
 
 import re
+from decimal import Decimal, InvalidOperation
 
 from atomzero.doc_memory import _identifier_terms, _query_terms
 from atomzero.knowledge_graph import extract_entities
@@ -15,7 +16,20 @@ from atomzero.knowledge_graph import extract_entities
 NEGATION_RE = re.compile(
     r"\b(?:not|no|never|cannot|can't|doesn't|don't|isn't|aren't|won't|"
     r"without|neither|nor)\b", re.IGNORECASE)
-NUMBER_RE = re.compile(r"\b\d+(?:[.,]\d+)?\b")
+NUMBER_RE = re.compile(
+    r"(?<![\w.])(?P<number>"
+    r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|"
+    r"\d{1,3}(?:\.\d{3})+(?:,\d+)?|"
+    r"\d+(?:[.,]\d+)?)"
+    r"(?:\s*(?P<scale>k|thousand|million|billion|trillion))?(?![\w])",
+    re.IGNORECASE)
+SCALES = {
+    "k": 10 ** 3,
+    "thousand": 10 ** 3,
+    "million": 10 ** 6,
+    "billion": 10 ** 9,
+    "trillion": 10 ** 12,
+}
 
 
 def _sentences(text: str) -> list[str]:
@@ -24,8 +38,39 @@ def _sentences(text: str) -> list[str]:
             if part.strip()]
 
 
+def _plain_number(value: Decimal) -> str:
+    if value == value.to_integral_value():
+        return str(value.quantize(Decimal(1)))
+    return format(value.normalize(), "f")
+
+
+def _canonical_number(raw: str, scale: str) -> str:
+    """Normalize grouping, decimal comma and magnitude suffixes.
+
+    ``1,500``, ``1500`` and ``1.5k`` all become ``1500``; ``1.5 million``
+    becomes ``1500000``. A comma followed by exactly three digits is treated
+    as a thousands separator, otherwise it is a decimal comma.
+    """
+    value = raw
+    if re.fullmatch(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?", value):
+        value = value.replace(",", "")
+    elif re.fullmatch(r"\d{1,3}(?:\.\d{3})+(?:,\d+)?", value):
+        value = value.replace(".", "").replace(",", ".")
+    else:
+        value = value.replace(",", ".")
+    try:
+        number = Decimal(value)
+    except InvalidOperation:
+        return raw
+    if scale:
+        number *= SCALES[scale.lower()]
+    return _plain_number(number)
+
+
 def _numbers(text: str) -> set[str]:
-    return {match.replace(",", ".") for match in NUMBER_RE.findall(text)}
+    return {_canonical_number(match.group("number"),
+                              match.group("scale") or "")
+            for match in NUMBER_RE.finditer(text)}
 
 
 def extract_claims(docs, source: str) -> list[dict]:

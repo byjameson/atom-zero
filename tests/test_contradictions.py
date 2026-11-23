@@ -37,6 +37,31 @@ def test_compare_sources_flags_numeric_negation_and_codes(tmp_path):
     docs.close()
 
 
+def test_compare_sources_normalizes_formatted_numbers(tmp_path):
+    docs = DocMemory(tmp_path / "docs.db")
+    docs.add_text("price_a.txt", "The contract value is $1,500,000.",
+                  title="Price A")
+    docs.add_text("price_b.txt",
+                  "The contract value is 1.5 million dollars.",
+                  title="Price B")
+    docs.add_text("price_c.txt", "The contract value is $1,300,000.",
+                  title="Price C")
+    docs.add_text("rate_a.txt", "The rate is 1,5 percent.", title="Rate A")
+    docs.add_text("rate_b.txt", "The rate is 1.5 percent.", title="Rate B")
+
+    equal = compare_sources(docs, "price_a.txt", "price_b.txt")
+    assert equal["conflicts"] == []
+    assert equal["summary"]["numeric_mismatch"] == 0
+
+    conflict = compare_sources(docs, "price_a.txt", "price_c.txt")
+    assert any("numeric_mismatch" in item["reasons"]
+               for item in conflict["conflicts"])
+
+    decimal = compare_sources(docs, "rate_a.txt", "rate_b.txt")
+    assert decimal["conflicts"] == []
+    docs.close()
+
+
 def test_compare_all_sources_and_cli(tmp_path, capsys):
     docs = DocMemory(tmp_path / "docs.db")
     docs.add_text("policy_a.txt", "The warranty period is 24 months.")

@@ -1,6 +1,6 @@
 {
   "benchmark": "atomzero-contradiction-regression",
-  "generated": "2026-11-22T22:33:45",
+  "generated": "2026-11-23T05:26:23",
   "checks": [
     {
       "name": "ui_compare_controls",
@@ -23,12 +23,22 @@
       "detail": "{'conflict_count': 1, 'sources_compared': 1, 'numeric_mismatch': 0, 'identifier_mismatch': 1, 'negation_mismatch': 0}"
     },
     {
+      "name": "numeric_formatting_no_false_positive",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "numeric_scale_conflict",
+      "ok": true,
+      "detail": "{'conflict_count': 1, 'sources_compared': 1, 'numeric_mismatch': 1, 'identifier_mismatch': 0, 'negation_mismatch': 0}"
+    },
+    {
       "name": "no_false_positive",
       "ok": true,
       "detail": "{'conflict_count': 0, 'sources_compared': 1, 'numeric_mismatch': 0, 'identifier_mismatch': 0, 'negation_mismatch': 0}"
     }
   ],
-  "passed": 5,
+  "passed": 7,
   "failed": 0,
   "ok": true
 }
