@@ -2,6 +2,9 @@
 
 ## atomzero 0.9.0 - unreleased
 
+- Added scoreboard HTTP routes: `POST /v1/scoreboard/record`,
+  `/v1/scoreboard/summary` and `/v1/scoreboard/verify`. The record route stores
+  counts and a note hash only.
 - Added **self-improvement scoreboard** (`atomzero-scoreboard`): content-free
   run records (commit, test/benchmark/AISC counts, note hash), latest/previous
   deltas and a green flag for zero test failures. The writer verifies before an

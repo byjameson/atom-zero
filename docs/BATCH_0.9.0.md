@@ -12,7 +12,7 @@ content-free scoreboard tracks whether the numbers actually improve.
 | 2 | Suggested `pytest`/AISC checks on every action | merged on local main |
 | 3 | Content-free scoreboard (`atomzero-scoreboard`) | merged on local main |
 | 4 | Measured regression signal in the improvement plan | merged on local main |
-| 5 | Scoreboard HTTP summary/record routes | planned |
+| 5 | Scoreboard HTTP summary/record routes | merged on local main |
 | 6 | Scoreboard in the weekly review | planned |
 | 7 | Gate report archive linked to decisions | planned |
 | 8 | Improvement trend report (plan + decisions + scoreboard) | planned |

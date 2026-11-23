@@ -3416,6 +3416,41 @@ def test_http_improvement_plan_and_decision(tmp_path):
         chat_server._state.update(old)
 
 
+def test_http_scoreboard_record_summary_and_verify(tmp_path):
+    old = dict(chat_server._state)
+    chat_server._state.update({
+        "api_key": "",
+        "scoreboard_path": str(tmp_path / "scoreboard.jsonl"),
+    })
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        recorded = _post(base + "/v1/scoreboard/record", {
+            "commit": "514632e", "tests_passed": 755, "tests_failed": 0,
+            "benchmark_passed": 10, "benchmark_total": 10,
+            "aisc_passed": 14, "aisc_total": 16,
+            "note": "private note"})
+        assert recorded["latest"]["tests_passed"] == 755
+        assert recorded["green"] is True
+        assert "private note" not in (tmp_path / "scoreboard.jsonl").read_text(
+            encoding="utf-8")
+        summary = _post(base + "/v1/scoreboard/summary", {})
+        assert summary["runs"] == 1
+        verified = _post(base + "/v1/scoreboard/verify", {})
+        assert verified["ok"] is True
+        with pytest.raises(urllib.error.HTTPError) as invalid:
+            _post(base + "/v1/scoreboard/record", {
+                "commit": "bad", "tests_passed": 1})
+        assert invalid.value.code == 400
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
+
+
 def test_http_tool_plan_audit(tmp_path):
     old = dict(chat_server._state)
     chat_server._state.update({"api_key": ""})

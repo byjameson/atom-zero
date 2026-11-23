@@ -4717,6 +4717,8 @@ class Handler(BaseHTTPRequestHandler):
                          "/v1/consensus", "/v1/freshness",
                          "/v1/temporal/filter",
                          "/v1/improvement/plan", "/v1/improvement/decision",
+                         "/v1/scoreboard/record", "/v1/scoreboard/summary",
+                         "/v1/scoreboard/verify",
                          "/v1/reliability/summary", "/v1/reliability/verify",
                          "/v1/documents/diff", "/v1/proactive",
                          "/v1/proactive/config", "/v1/proactive/ack"):
@@ -4826,6 +4828,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self._improvement_plan(req)
             if route == "/v1/improvement/decision":
                 return self._improvement_decision(req)
+            if route == "/v1/scoreboard/record":
+                return self._scoreboard_record(req)
+            if route == "/v1/scoreboard/summary":
+                return self._scoreboard_summary(req)
+            if route == "/v1/scoreboard/verify":
+                return self._scoreboard_verify(req)
             if route == "/v1/reliability/summary":
                 return self._reliability_summary(req)
             if route == "/v1/reliability/verify":
@@ -5998,6 +6006,46 @@ class Handler(BaseHTTPRequestHandler):
                 clean, now=req.get("now"),
                 max_age_days=max_age_days, fresh_days=fresh_days)
         except ValueError as exc:
+            return self._json(400, {"error": str(exc)})
+        return self._json(200, result)
+
+    def _scoreboard_file(self):
+        return Path(_state.get("scoreboard_path", "data/scoreboard.jsonl"))
+
+    def _scoreboard_record(self, req: dict):
+        from atomzero.scoreboard import (
+            load_jsonl, record_run, summarize_runs, write_jsonl)
+        try:
+            path = self._scoreboard_file()
+            runs = load_jsonl(path)
+            record_run(
+                runs, commit=req.get("commit", ""),
+                tests_passed=req.get("tests_passed", 0),
+                tests_failed=req.get("tests_failed", 0),
+                benchmark_passed=req.get("benchmark_passed", 0),
+                benchmark_total=req.get("benchmark_total", 0),
+                aisc_passed=req.get("aisc_passed", 0),
+                aisc_total=req.get("aisc_total", 0),
+                note=req.get("note", ""))
+            write_jsonl(path, runs)
+            summary = summarize_runs(runs)
+        except (OSError, TypeError, ValueError) as exc:
+            return self._json(400, {"error": str(exc)})
+        return self._json(200, summary)
+
+    def _scoreboard_summary(self, req: dict):
+        from atomzero.scoreboard import load_jsonl, summarize_runs
+        try:
+            summary = summarize_runs(load_jsonl(self._scoreboard_file()))
+        except (OSError, ValueError) as exc:
+            return self._json(400, {"error": str(exc)})
+        return self._json(200, summary)
+
+    def _scoreboard_verify(self, req: dict):
+        from atomzero.scoreboard import load_jsonl, verify_runs
+        try:
+            result = verify_runs(load_jsonl(self._scoreboard_file()))
+        except (OSError, ValueError) as exc:
             return self._json(400, {"error": str(exc)})
         return self._json(200, result)
 

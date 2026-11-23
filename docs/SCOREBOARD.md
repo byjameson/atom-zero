@@ -28,6 +28,24 @@ Each JSONL record stores:
 It never stores test output, prompts, queries, source text, logs or the note.
 `verify` rejects those keys, invalid counts and malformed commits.
 
+## HTTP
+
+`POST /v1/scoreboard/record` accepts the same fields as `record_run` and writes
+to `scoreboard_path` (default `data/scoreboard.jsonl`).
+`POST /v1/scoreboard/summary` and `POST /v1/scoreboard/verify` are read-only.
+The record route stores counts and a note hash only; the note text and test
+output are never written.
+
+```powershell
+$body = @{
+  commit = "514632e"; tests_passed = 755; tests_failed = 0
+  benchmark_passed = 10; benchmark_total = 10
+  aisc_passed = 14; aisc_total = 16
+} | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/v1/scoreboard/record `
+  -ContentType "application/json" -Body $body
+```
+
 ## Summary
 
 - `latest` and `previous` records, ordered by timestamp and commit.
