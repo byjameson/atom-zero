@@ -4714,7 +4714,7 @@ class Handler(BaseHTTPRequestHandler):
                          "/v1/research/queue/run",
                          "/v1/agent/chat", "/v1/agent/plan",
                          "/v1/tools/audit", "/v1/claims/audit",
-                         "/v1/proactive",
+                         "/v1/consensus", "/v1/proactive",
                          "/v1/proactive/config", "/v1/proactive/ack"):
             return self._json(404, {"error": "not found"})
         key = _state.get("api_key") or ""
@@ -4812,6 +4812,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._tools_audit(req)
             if route == "/v1/claims/audit":
                 return self._claims_audit(req)
+            if route == "/v1/consensus":
+                return self._consensus_audit(req)
             if route == "/v1/proactive":
                 return self._proactive_next(req)
             if route == "/v1/proactive/config":
@@ -5899,6 +5901,35 @@ class Handler(BaseHTTPRequestHandler):
                 if key in hit
             })
         return self._json(200, audit_answer(query, clean))
+
+    def _consensus_audit(self, req: dict):
+        from atomzero.consensus import audit_consensus
+        hits = req.get("hits")
+        if not isinstance(hits, list):
+            return self._json(400, {"error": "hits must be a list"})
+        if len(hits) > 50:
+            return self._json(400, {"error": "at most 50 hits are allowed"})
+        clean = []
+        for hit in hits:
+            if not isinstance(hit, dict):
+                return self._json(400, {"error": "each hit must be an object"})
+            clean.append({
+                key: hit[key] for key in (
+                    "source", "title", "section", "page", "chunk", "snippet")
+                if key in hit
+            })
+        try:
+            min_overlap = float(req.get("min_overlap", 0.55))
+            min_sources = int(req.get("min_sources", 2))
+        except (TypeError, ValueError):
+            return self._json(400, {
+                "error": "min_overlap and min_sources must be numeric"})
+        try:
+            result = audit_consensus(
+                clean, min_overlap=min_overlap, min_sources=min_sources)
+        except ValueError as exc:
+            return self._json(400, {"error": str(exc)})
+        return self._json(200, result)
 
     def _proactive_next(self, req: dict):
         session_id = str(req.get("session_id", "")).strip()

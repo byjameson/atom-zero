@@ -387,6 +387,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Proactive conversation: <https://github.com/byjameson/atom-zero/blob/main/docs/PROACTIVE.md>
 - Memory lifecycle: <https://github.com/byjameson/atom-zero/blob/main/docs/MEMORY_LIFECYCLE.md>
 - Claim / evidence algebra: <https://github.com/byjameson/atom-zero/blob/main/docs/CLAIMS.md>
+- Cross-source consensus: <https://github.com/byjameson/atom-zero/blob/main/docs/CONSENSUS.md>
 - AISC spec generator: <https://github.com/byjameson/atom-zero/blob/main/docs/AISC_SPEC_GENERATOR.md>
 - Multi-agent orchestration: <https://github.com/byjameson/atom-zero/blob/main/docs/ORCHESTRATION.md>
 - Benchmarks: <https://github.com/byjameson/atom-zero/blob/main/docs/BENCHMARKS.md>

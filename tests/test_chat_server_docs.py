@@ -3136,6 +3136,42 @@ def test_http_claims_audit(tmp_path):
         chat_server._state.update(old)
 
 
+def test_http_consensus_audit(tmp_path):
+    old = dict(chat_server._state)
+    chat_server._state.update({"api_key": ""})
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        result = _post(base + "/v1/consensus", {
+            "hits": [
+                {"source": "a.txt", "chunk": "The battery lasts 8 hours."},
+                {"source": "b.txt", "chunk": "The battery lasts 8 hours."},
+            ],
+        })
+        assert result["summary"]["consensus_clusters"] == 1
+        assert result["weights_changed"] is False
+        conflict = _post(base + "/v1/consensus", {
+            "hits": [
+                {"source": "a.txt", "chunk": "The battery lasts 8 hours."},
+                {"source": "b.txt", "chunk": "The battery lasts 10 hours."},
+            ],
+        })
+        assert conflict["conflict_count"] == 1
+        with pytest.raises(urllib.error.HTTPError) as bad_hits:
+            _post(base + "/v1/consensus", {"hits": "not-a-list"})
+        assert bad_hits.value.code == 400
+        with pytest.raises(urllib.error.HTTPError) as bad_overlap:
+            _post(base + "/v1/consensus", {"hits": [], "min_overlap": 2})
+        assert bad_overlap.value.code == 400
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
+
+
 def test_http_tool_plan_audit(tmp_path):
     old = dict(chat_server._state)
     chat_server._state.update({"api_key": ""})

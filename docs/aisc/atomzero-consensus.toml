@@ -1,0 +1,54 @@
+name = "AtomZeroConsensus"
+version = "0.1.0"
+description = "Deterministic cross-source claim clustering and conflict-aware consensus audit."
+min_assurance = 0.90
+max_context_tokens = 8000
+
+[[components]]
+name = "ClaimExtractor"
+input_type = "Hits"
+output_type = "Claims"
+kind = "evaluator"
+assurance = 0.97
+verified = true
+evidence = "tests/test_consensus.py sentence extraction over retrieved hits"
+assumptions = ["each hit carries a text chunk or snippet"]
+guarantees = ["claim IDs include the hit index and stay deterministic", "empty hits produce an empty claim list"]
+context_tokens = 512
+
+[[components]]
+name = "ConsensusClusterer"
+input_type = "Claims"
+output_type = "Clusters"
+kind = "evaluator"
+assurance = 0.94
+verified = true
+evidence = "tests/test_consensus.py same-claim consensus, single-source and unrelated-claim cases"
+assumptions = ["clustering is lexical overlap, not entailment"]
+guarantees = ["clusters are deterministic", "a cluster with fewer than min_sources distinct sources is single_source"]
+context_tokens = 2048
+
+[[components]]
+name = "ConflictEvaluator"
+input_type = "Clusters"
+output_type = "CheckedClusters"
+kind = "evaluator"
+assurance = 0.93
+verified = true
+evidence = "tests/test_consensus.py numeric mismatch and HTTP conflict cases"
+assumptions = ["conflict pairs are phrase-level hints, not truth verdicts"]
+guarantees = ["claims with conflicting numbers are not merged", "conflict pairs and counts are deterministic"]
+context_tokens = 512
+
+[[components]]
+name = "ConsensusAnswer"
+input_type = "CheckedClusters"
+output_type = "ConsensusReport"
+kind = "tool"
+reversible = true
+assurance = 0.96
+verified = true
+evidence = "tests/test_consensus.py empty input, deterministic output and CLI cases"
+assumptions = ["the report is consumed by a human or a later gate"]
+guarantees = ["the report includes clusters, conflicts, summary and method", "weights_changed is always false"]
+context_tokens = 1024

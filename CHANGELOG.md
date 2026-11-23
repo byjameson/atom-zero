@@ -2,10 +2,14 @@
 
 ## atomzero 0.6.2 - unreleased
 
+- Added **Cross-source consensus** (`atomzero-consensus`,
+  `POST /v1/consensus`): deterministic claim clustering across retrieval hits,
+  consensus/single-source status, and number/date/identifier/negation conflicts
+  kept separate instead of averaged. It makes no model calls and does not
+  persist the request.
 - Added `POST /v1/claims/audit` for the local claim/evidence audit. `query` is
   required, `hits` is a bounded list (maximum 50) and only source/title/
-  section/page/chunk/snippet fields are passed through. The route does not
-  persist the request.
+  section/page/chunk/snippet fields are passed through.
 - Documented AISC 0.5 `batch` and `diff` support, including glob/directory
   expansion and `--fail-on-breaking`, in `docs/AISC_AUDIT.md`.
 
