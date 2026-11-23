@@ -1,0 +1,245 @@
+$ C:\Users\biris\AppData\Local\Programs\Python\Python311\python.exe -m aisc policy C:\Users\biris\AppData\Local\Temp\opencode\atom-zero-clean\benchmarks\results\answerability_hybrid\answerability_observations.csv --thresholds 0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9 --min-refusal-recall 0.9 --min-refusal-precision 0.9 --min-answerable-coverage 0.8 --json
+
+{
+  "n": 200,
+  "points": [
+    {
+      "threshold": 0.1,
+      "accepted": 186,
+      "refused": 14,
+      "true_positive": 102,
+      "false_positive": 84,
+      "precision": 0.548387,
+      "recall": 0.990291,
+      "coverage": 0.93,
+      "precision_wilson_95": [
+        0.476609,
+        0.618207
+      ],
+      "answerable": 103,
+      "no_answer": 97,
+      "answerable_accepted": 102,
+      "no_answer_refused": 13,
+      "answerable_coverage": 0.990291,
+      "no_answer_refusal": 0.134021,
+      "refusal_precision": 0.928571,
+      "overall_accuracy": 0.575
+    },
+    {
+      "threshold": 0.2,
+      "accepted": 186,
+      "refused": 14,
+      "true_positive": 102,
+      "false_positive": 84,
+      "precision": 0.548387,
+      "recall": 0.990291,
+      "coverage": 0.93,
+      "precision_wilson_95": [
+        0.476609,
+        0.618207
+      ],
+      "answerable": 103,
+      "no_answer": 97,
+      "answerable_accepted": 102,
+      "no_answer_refused": 13,
+      "answerable_coverage": 0.990291,
+      "no_answer_refusal": 0.134021,
+      "refusal_precision": 0.928571,
+      "overall_accuracy": 0.575
+    },
+    {
+      "threshold": 0.3,
+      "accepted": 186,
+      "refused": 14,
+      "true_positive": 102,
+      "false_positive": 84,
+      "precision": 0.548387,
+      "recall": 0.990291,
+      "coverage": 0.93,
+      "precision_wilson_95": [
+        0.476609,
+        0.618207
+      ],
+      "answerable": 103,
+      "no_answer": 97,
+      "answerable_accepted": 102,
+      "no_answer_refused": 13,
+      "answerable_coverage": 0.990291,
+      "no_answer_refusal": 0.134021,
+      "refusal_precision": 0.928571,
+      "overall_accuracy": 0.575
+    },
+    {
+      "threshold": 0.4,
+      "accepted": 181,
+      "refused": 19,
+      "true_positive": 100,
+      "false_positive": 81,
+      "precision": 0.552486,
+      "recall": 0.970874,
+      "coverage": 0.905,
+      "precision_wilson_95": [
+        0.479703,
+        0.623087
+      ],
+      "answerable": 103,
+      "no_answer": 97,
+      "answerable_accepted": 100,
+      "no_answer_refused": 16,
+      "answerable_coverage": 0.970874,
+      "no_answer_refusal": 0.164948,
+      "refusal_precision": 0.842105,
+      "overall_accuracy": 0.58
+    },
+    {
+      "threshold": 0.5,
+      "accepted": 180,
+      "refused": 20,
+      "true_positive": 100,
+      "false_positive": 80,
+      "precision": 0.555556,
+      "recall": 0.970874,
+      "coverage": 0.9,
+      "precision_wilson_95": [
+        0.482555,
+        0.626234
+      ],
+      "answerable": 103,
+      "no_answer": 97,
+      "answerable_accepted": 100,
+      "no_answer_refused": 17,
+      "answerable_coverage": 0.970874,
+      "no_answer_refusal": 0.175258,
+      "refusal_precision": 0.85,
+      "overall_accuracy": 0.585
+    },
+    {
+      "threshold": 0.6,
+      "accepted": 116,
+      "refused": 84,
+      "true_positive": 72,
+      "false_positive": 44,
+      "precision": 0.62069,
+      "recall": 0.699029,
+      "coverage": 0.58,
+      "precision_wilson_95": [
+        0.529861,
+        0.70378
+      ],
+      "answerable": 103,
+      "no_answer": 97,
+      "answerable_accepted": 72,
+      "no_answer_refused": 53,
+      "answerable_coverage": 0.699029,
+      "no_answer_refusal": 0.546392,
+      "refusal_precision": 0.630952,
+      "overall_accuracy": 0.625
+    },
+    {
+      "threshold": 0.7,
+      "accepted": 85,
+      "refused": 115,
+      "true_positive": 56,
+      "false_positive": 29,
+      "precision": 0.658824,
+      "recall": 0.543689,
+      "coverage": 0.425,
+      "precision_wilson_95": [
+        0.553129,
+        0.750782
+      ],
+      "answerable": 103,
+      "no_answer": 97,
+      "answerable_accepted": 56,
+      "no_answer_refused": 68,
+      "answerable_coverage": 0.543689,
+      "no_answer_refusal": 0.701031,
+      "refusal_precision": 0.591304,
+      "overall_accuracy": 0.62
+    },
+    {
+      "threshold": 0.8,
+      "accepted": 37,
+      "refused": 163,
+      "true_positive": 25,
+      "false_positive": 12,
+      "precision": 0.675676,
+      "recall": 0.242718,
+      "coverage": 0.185,
+      "precision_wilson_95": [
+        0.514634,
+        0.803669
+      ],
+      "answerable": 103,
+      "no_answer": 97,
+      "answerable_accepted": 25,
+      "no_answer_refused": 85,
+      "answerable_coverage": 0.242718,
+      "no_answer_refusal": 0.876289,
+      "refusal_precision": 0.521472,
+      "overall_accuracy": 0.55
+    },
+    {
+      "threshold": 0.9,
+      "accepted": 36,
+      "refused": 164,
+      "true_positive": 24,
+      "false_positive": 12,
+      "precision": 0.666667,
+      "recall": 0.23301,
+      "coverage": 0.18,
+      "precision_wilson_95": [
+        0.503337,
+        0.797856
+      ],
+      "answerable": 103,
+      "no_answer": 97,
+      "answerable_accepted": 24,
+      "no_answer_refused": 85,
+      "answerable_coverage": 0.23301,
+      "no_answer_refusal": 0.876289,
+      "refusal_precision": 0.518293,
+      "overall_accuracy": 0.545
+    }
+  ],
+  "answerable": 103,
+  "no_answer": 97,
+  "source": "C:\\Users\\biris\\AppData\\Local\\Temp\\opencode\\atom-zero-clean\\benchmarks\\results\\answerability_hybrid\\answerability_observations.csv",
+  "recommendation": {
+    "feasible": false,
+    "threshold": 0.7,
+    "targets": {
+      "refusal_recall": 0.9,
+      "refusal_precision": 0.9,
+      "answerable_coverage": 0.8
+    },
+    "point": {
+      "threshold": 0.7,
+      "accepted": 85,
+      "refused": 115,
+      "true_positive": 56,
+      "false_positive": 29,
+      "precision": 0.658824,
+      "recall": 0.543689,
+      "coverage": 0.425,
+      "precision_wilson_95": [
+        0.553129,
+        0.750782
+      ],
+      "answerable": 103,
+      "no_answer": 97,
+      "answerable_accepted": 56,
+      "no_answer_refused": 68,
+      "answerable_coverage": 0.543689,
+      "no_answer_refusal": 0.701031,
+      "refusal_precision": 0.591304,
+      "overall_accuracy": 0.62
+    },
+    "misses": [
+      "refusal_recall",
+      "refusal_precision",
+      "answerable_coverage"
+    ],
+    "reason": "Hedefleri karşılayan eşik yok"
+  }
+}

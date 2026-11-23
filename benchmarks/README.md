@@ -377,6 +377,14 @@ vocabulary with their paragraph, so lexical features cannot separate them
 reliably. Raw result:
 [`results/answerability_eval.json`](results/answerability_eval.json).
 
+The follow-up signals are in `answerability_signal.py` (42 features),
+`answerability_transformer.py` (DistilBERT cross-encoder) and
+`answerability_hybrid.py` (retrieval features + tiny QA confidence). The best
+hybrid reached held-out AUC **0.663**, Brier **0.244**, ECE **0.130**, but no
+threshold met the 0.90 refusal recall/precision and 0.80 coverage targets. The
+optional gate is off by default. Full report:
+[`../docs/ANSWERABILITY.md`](../docs/ANSWERABILITY.md).
+
 ## External adapter holdout
 
 `research/adapter_check.py` and `research/compare_adapters.py` validate an

@@ -45,9 +45,19 @@
   moved the two-row holdout loss from 3.853 to 3.139 (-18.5%). A format queue
   already known to the base was a negative control: both tested adapters
   regressed the holdout and were rejected.
-- Added `benchmarks/answerability_eval.py` and recorded the negative result:
-  context-grouped 5-fold CV AUC was 0.562 (logistic) / 0.497 (boost), so a
-  separate lexical answerability gate is not shipped.
+- Added `benchmarks/answerability_eval.py` and recorded the initial negative
+  result: context-grouped 5-fold CV AUC was 0.562 (logistic) / 0.497 (boost).
+- Added an independent optional answerability gate
+  (`src/atomzero/answerability.py`) with 42 retrieval/answer-type features,
+  optional shadow/enforce env modes and CitationGate kept as a separate gate.
+  Default is off; CitationGate remains at 0.5.
+- Added `benchmarks/answerability_signal.py`,
+  `benchmarks/answerability_transformer.py` and
+  `benchmarks/answerability_hybrid.py`. The best hybrid (tiny local QA
+  confidence + retrieval features) reached held-out AUC 0.663, Brier 0.244,
+  ECE 0.130; it still misses the 0.90 refusal recall/precision and 0.80
+  coverage targets, so it is not enabled by default. See
+  [`docs/ANSWERABILITY.md`](docs/ANSWERABILITY.md).
 - Added `benchmarks/graph_path_regression.py` (6/6 checks).
 - Added a **weekly review**: open/recently completed tasks, pending gaps,
   sources indexed within the window and graph highlights.

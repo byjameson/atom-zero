@@ -1,0 +1,18 @@
+$ C:\Users\biris\AppData\Local\Programs\Python\Python311\python.exe -m aisc check C:\Users\biris\AppData\Local\Temp\opencode\atom-zero-clean\benchmarks\results\answerability_signal\answerability.toml --require-calibration --strict
+
+AISC check — AtomZeroAnswerability
+Kaynak: C:\Users\biris\AppData\Local\Temp\opencode\atom-zero-clean\benchmarks\results\answerability_signal\answerability.toml
+Topoloji: sequential
+Bileşen: 1
+Güvence sınırı: 0.80 (hedef 0.80)
+Bağımsız başarı referansı: 0.800
+Bağımlı başarı referansı (ρ=0.00): 0.800
+Doğrulama borcu: 0
+Geri dönüşsüz: 0
+Bağlam: 2000 / 50000 token
+
+2 bulgu:
+ - WARNING ANSWERABILITY_POOR: Answerability kalibrasyonu zayıf: Brier=0.270, ECE=0.141 (üst sınır Brier≤0.15, ECE≤0.10). Öneri: Answerability sinyalini iyileştirin veya daha fazla etiketli gözlem toplayın.
+ - WARNING REFUSAL_POLICY_MISMATCH: Ret politikası hedefleri karşılamıyor: refusal recall 0.433 < 0.90; refusal precision 0.553 < 0.90; answerable coverage 0.670 < 0.80. Eşik=0.60. Öneri: Answerability sinyalini ve refusal eşiğini hedef dağıtımda yeniden kalibre edin.
+
+Sonuç: FAIL (0 kritik, 2 uyarı)
