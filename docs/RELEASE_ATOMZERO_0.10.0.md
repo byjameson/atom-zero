@@ -36,6 +36,8 @@ model or runtime weights changed; the weights remain `0.8.0`.
 - Both closed cycles have a content-free gate archive and decision-ledger
   record.
 - `scripts/verify_release.py --version 0.10.0`: **0 failures**.
+- The read-only Release agent returned **release gate: PASS** after the stale
+  Medium PyPI link and `783` count were corrected to 0.10.0 / 794.
 - Release commit `ceb26a0`, annotated tag `v0.10.0`.
 - LinkedIn is blocked/unverified.
 - No model weights changed; the weights remain `0.8.0`.
