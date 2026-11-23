@@ -3440,6 +3440,9 @@ def test_http_scoreboard_record_summary_and_verify(tmp_path):
         assert summary["runs"] == 1
         verified = _post(base + "/v1/scoreboard/verify", {})
         assert verified["ok"] is True
+        weekly = _post(base + "/v1/weekly-review", {})
+        assert weekly["scoreboard"]["runs"] == 1
+        assert weekly["scoreboard"]["latest"]["tests_passed"] == 755
         with pytest.raises(urllib.error.HTTPError) as invalid:
             _post(base + "/v1/scoreboard/record", {
                 "commit": "bad", "tests_passed": 1})

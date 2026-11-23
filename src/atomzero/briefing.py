@@ -1188,7 +1188,7 @@ def _source_recent(item: dict, cutoff_ts: float) -> bool:
 def build_weekly_review(session_data: dict | None, gaps, docs,
                         days: int = 7, now=None, sort="default",
                         tag="all", audit_action="all",
-                        improvement=None) -> dict:
+                        improvement=None, scoreboard=None) -> dict:
     """Aggregate tasks, gaps, recent sources and graph highlights."""
     sort = _normalize_task_sort(sort)
     tag = str(tag or "all").strip().lower().lstrip("#")
@@ -1357,6 +1357,7 @@ def build_weekly_review(session_data: dict | None, gaps, docs,
         "tagged_task_count": tagged_active,
         "untagged_task_count": len(active_tasks) - tagged_active,
         "improvement": improvement or {},
+        "scoreboard": scoreboard or {},
         "tag_audit": tag_audit["events"],
         "tag_audit_total": tag_audit["total"],
         "tag_audit_action": tag_audit["action"],
@@ -1762,6 +1763,28 @@ def render_weekly_markdown(review: dict) -> str:
     if audit:
         for event in audit:
             lines.append(f"- {_tag_audit_event_line(event)}")
+    else:
+        lines.append("- None")
+    scoreboard = review.get("scoreboard") or {}
+    lines.extend([
+        "",
+        f"## Scoreboard ({scoreboard.get('runs', 0)} runs)",
+        "",
+    ])
+    if scoreboard.get("latest"):
+        latest = scoreboard["latest"]
+        lines.append(
+            f"- Latest `{latest.get('commit', '')}`: "
+            f"{latest.get('tests_passed', 0)} tests passed, "
+            f"{latest.get('tests_failed', 0)} failed")
+        lines.append(
+            f"- Benchmark: {latest.get('benchmark_passed', 0)}/"
+            f"{latest.get('benchmark_total', 0)}; AISC: "
+            f"{latest.get('aisc_passed', 0)}/{latest.get('aisc_total', 0)}")
+        if scoreboard.get("delta"):
+            lines.append("- Delta: " + ", ".join(
+                f"{key}={value:+d}"
+                for key, value in sorted(scoreboard["delta"].items())))
     else:
         lines.append("- None")
     improvement = review.get("improvement") or {}

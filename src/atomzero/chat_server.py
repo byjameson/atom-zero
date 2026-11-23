@@ -5533,6 +5533,12 @@ class Handler(BaseHTTPRequestHandler):
                 improvement = summarize_ledger(ledger)
             except (OSError, ValueError):
                 improvement = {}
+            try:
+                from atomzero.scoreboard import load_jsonl, summarize_runs
+                scoreboard = summarize_runs(
+                    load_jsonl(self._scoreboard_file()))
+            except (OSError, ValueError):
+                scoreboard = {}
             result = build_weekly_review(
                 session.human.data, _state.get("gaps"), _state.get("docs"),
                 days=req.get("days", 7),
@@ -5540,7 +5546,7 @@ class Handler(BaseHTTPRequestHandler):
                 tag=str(req.get("tag", "all") or "all").strip(),
                 audit_action=str(
                     req.get("audit_action", "all") or "all").strip(),
-                improvement=improvement)
+                improvement=improvement, scoreboard=scoreboard)
         except Exception as exc:
             return self._json(400, {"error": str(exc)})
         return self._json(200, result)

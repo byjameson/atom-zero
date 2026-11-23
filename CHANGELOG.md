@@ -2,6 +2,8 @@
 
 ## atomzero 0.9.0 - unreleased
 
+- The weekly review and its Markdown export include the scoreboard's latest
+  measured run and delta.
 - Added scoreboard HTTP routes: `POST /v1/scoreboard/record`,
   `/v1/scoreboard/summary` and `/v1/scoreboard/verify`. The record route stores
   counts and a note hash only.

@@ -46,6 +46,10 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/v1/scoreboard/record `
   -ContentType "application/json" -Body $body
 ```
 
+The weekly review includes the scoreboard summary (latest run and delta), and
+its Markdown export has a `Scoreboard` section. This keeps a measured trend
+next to tasks, gaps and improvement decisions.
+
 ## Summary
 
 - `latest` and `previous` records, ordered by timestamp and commit.
