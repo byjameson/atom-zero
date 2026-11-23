@@ -1,6 +1,10 @@
 # Changelog
 
-## atomzero 0.8.0 - unreleased
+## atomzero 0.8.0 - human-gated self-improvement loop (2026-11-23)
+
+This batch turns local weakness signals into a prioritized plan, requires human
+approval, runs an allowlisted evaluation gate and records a content-free
+decision. It does not update weights automatically.
 
 - Added **improvement reminders** to proactive conversation: a pending,
   human-gated plan can start a local check-in with the actions `show
