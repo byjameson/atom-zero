@@ -394,6 +394,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Document version diff: <https://github.com/byjameson/atom-zero/blob/main/docs/DOCUMENT_DIFF.md>
 - Evaluation gate: <https://github.com/byjameson/atom-zero/blob/main/docs/EVALUATION_GATE.md>
 - Self-improvement architecture: <https://github.com/byjameson/atom-zero/blob/main/docs/SELF_IMPROVEMENT.md>
+- First measured loop cycle: <https://github.com/byjameson/atom-zero/blob/main/docs/LOOP_CYCLE.md>
 - Improvement loop: <https://github.com/byjameson/atom-zero/blob/main/docs/IMPROVEMENT_LOOP.md>
 - Self-improvement scoreboard: <https://github.com/byjameson/atom-zero/blob/main/docs/SCOREBOARD.md>
 - Improvement trend: <https://github.com/byjameson/atom-zero/blob/main/docs/TREND.md>

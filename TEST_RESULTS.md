@@ -15,7 +15,7 @@
 | Suite | Passed | Failed | Exit | Duration |
 |---|---:|---:|---:|---:|
 | Atom Zero `pytest tests -q` (0.9.0 release) | **783** | **0** | 0 | 67.93s |
-| Atom Zero `pytest tests -q` (post-release main) | **792** | **0** | 0 | 67.55s |
+| Atom Zero `pytest tests -q` (post-release main) | **793** | **0** | 0 | 73.85s |
 | AISC `pytest tests -q` (0.5.1) | **223** (+6 subtests) | **0** | 0 | 17.13s |
 | AISC strict specs | **16 PASS / 2 FAIL (expected)** | 0 critical | 1 | - |
 | Build (`python -m build`) | **2 artifacts** | **0** | 0 | - |
@@ -34,10 +34,11 @@ release evidence is the clean `755 passed` run.
   and document-diff routes are covered. Full release suite **646 passed**.
 - Post-release self-improvement loop: improvement planner and decisions,
   evaluation gate, weekly-review ledger summary and proactive reminders.
-  Full main suite **792 passed**; `benchmarks/self_improvement_regression.py`
-  reports **12/12 checks passed** after the end-to-end loop check was added.
-  The content-free scoreboard, gate archive, trend report and calibration
-  drift monitor are covered.
+  Full main suite **793 passed**; `benchmarks/self_improvement_regression.py`
+  reports **12/12 checks passed**. A completed measured cycle is recorded in
+  `docs/LOOP_CYCLE.md`: one HTTP flake fixed, focused gate passed with
+  `gate_id ab5fe9b0fa0f48bc`, approval stored with `gate_ok: true`, and the
+  scoreboard moved from `792/1` to `793/0` with no trend alerts.
 - `0.7.0` cross-source consensus branch: **12 passed**
   (`tests/test_consensus.py`); the `AtomZeroConsensus` AISC spec is **PASS**
   (4 verified components, assurance bound 0.93, 0 irreversible).

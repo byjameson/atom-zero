@@ -57,6 +57,14 @@ plan and prepare the evidence. A human still owns the irreversible acceptance
 step. That is the difference between a self-improving system and an uncontrolled
 one.
 
+## First completed cycle
+
+`docs/LOOP_CYCLE.md` records a real signal -> change -> gate -> gated approval
+-> scoreboard cycle: a reproducible Windows HTTP flake was fixed, the focused
+gate passed (`gate_id ab5fe9b0fa0f48bc`), the approval was recorded with
+`gate_ok: true`, and the measured result moved from `792 passed / 1 failed` to
+`793 passed / 0 failed` with no trend alerts.
+
 ## Near-term roadmap
 
 1. Human-gated improvement planner (in progress).
