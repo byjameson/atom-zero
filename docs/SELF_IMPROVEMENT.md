@@ -65,6 +65,12 @@ gate passed (`gate_id ab5fe9b0fa0f48bc`), the approval was recorded with
 `gate_ok: true`, and the measured result moved from `792 passed / 1 failed` to
 `793 passed / 0 failed` with no trend alerts.
 
+`docs/LOOP_CYCLE_2.md` records a second cycle selected from a live claim audit:
+date/code digits no longer double-count as numeric conflicts, the two-target
+gate passed (`gate_id ac1eb8a7ee8b5271`), approval was recorded with
+`gate_ok: true`, and the scoreboard moved from `793` to `794` passed with no
+trend alerts.
+
 ## Near-term roadmap
 
 1. Human-gated improvement planner (in progress).

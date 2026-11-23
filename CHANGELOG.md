@@ -1,6 +1,9 @@
 # Changelog
 
-## atomzero 0.10.0 - unreleased
+## atomzero 0.10.0 - calibrated loop (2026-11-23)
+
+This batch adds calibration-drift monitoring and closes two measured
+improvement cycles with gated approvals.
 
 - Added **calibration drift monitor** (`atomzero-drift`): compares a current
   answerability/calibration profile with a baseline, reports Brier/ECE deltas,
