@@ -3,15 +3,15 @@
 Canonical surfaces: GitHub, Hugging Face, PyPI, dev.to, Medium, LinkedIn and
 ModelScope.
 
-Current batch: **0.10.0 prepared locally.** It adds calibration-drift
-monitoring and two measured closed cycles (HTTP flake and structured-token
-conflict noise). `794` Atom Zero tests pass; AISC 0.5.1 has `223` tests and
+Current batch: **0.10.0 published.** It adds calibration-drift monitoring and
+two measured closed cycles (HTTP flake and structured-token conflict noise).
+`794` Atom Zero tests pass; AISC 0.5.1 has `223` tests and
 `benchmarks/self_improvement_regression.py` passes 12/12.
+`scripts/verify_release.py --version 0.10.0` reports **0 failures**. LinkedIn
+remains blocked/unverified.
 
-Publish at this boundary: push `main` and the tag once, create the GitHub
-release with both assets, upload to PyPI, update the Hugging Face/ModelScope
-cards, dev.to, Medium and LinkedIn, then run
-`scripts/verify_release.py --version 0.10.0` and the read-only Release agent.
+Post-release work starts the next batch. Do not push intermediate commits; the
+next boundary is the next ten-increment batch.
 
 ## Release cadence
 

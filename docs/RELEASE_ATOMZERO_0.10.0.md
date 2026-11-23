@@ -1,8 +1,12 @@
 # atomzero 0.10.0 - calibrated loop
 
-Status: **prepared locally; publication pending.** This batch adds calibration
-drift monitoring and closes two measured improvement cycles. No model or
-runtime weights changed; the weights remain `0.8.0`.
+Status: **published.** PyPI `0.10.0`, GitHub source/tag/release `v0.10.0`,
+Hugging Face, ModelScope, dev.to and Medium are updated.
+`scripts/verify_release.py --version 0.10.0` reports **0 failures**. LinkedIn
+accepted the publish action but the profile feed still showed the older post;
+treat LinkedIn as **blocked/unverified**, not green. This batch adds
+calibration drift monitoring and closes two measured improvement cycles. No
+model or runtime weights changed; the weights remain `0.8.0`.
 
 ## What is in this batch
 
@@ -31,6 +35,9 @@ runtime weights changed; the weights remain `0.8.0`.
 - `benchmarks/self_improvement_regression.py`: **12/12 checks passed**.
 - Both closed cycles have a content-free gate archive and decision-ledger
   record.
+- `scripts/verify_release.py --version 0.10.0`: **0 failures**.
+- Release commit `ceb26a0`, annotated tag `v0.10.0`.
+- LinkedIn is blocked/unverified.
 - No model weights changed; the weights remain `0.8.0`.
 
 ## Install
