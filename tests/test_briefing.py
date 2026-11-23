@@ -807,6 +807,24 @@ def test_cli_delete_tag(tmp_path, capsys):
     assert tags["tag_count"] == 2
     assert [item["tag"] for item in tags["tags"]] == ["home", "finance"]
 
+    assert main(common + ["--undo-delete-tag", "--json"]) == 0
+    undone = json.loads(capsys.readouterr().out)
+    assert undone["tag"] == "work"
+    assert undone["restored"] == 2
+    assert undone["task_ids"] == [1, 2]
+    assert undone["already"] == []
+    assert undone["skipped"] == []
+    saved = json.loads(session_path.read_text(encoding="utf-8"))
+    assert saved["tasks"][0]["tags"] == ["work", "home"]
+    assert saved["tasks"][1]["tags"] == ["work", "finance"]
+    assert saved["tasks"][2]["tags"] == ["home"]
+    assert "tag_delete_undo" not in saved
+    assert main(common + ["--undo-delete-tag"]) == 1
+    assert "no tag delete to undo" in capsys.readouterr().out
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--undo-delete-tag", "--weekly"])
+    assert exc.value.code == 2
+
     assert main(common + ["--delete-tag", "missing"]) == 1
     assert "tag 'missing' is not used" in capsys.readouterr().out
     assert main(common + ["--delete-tag", "bad tag!"]) == 1

@@ -29,6 +29,7 @@ from atomzero.weekly_reports import (
 TASK_SEARCH_STATUSES = ("all", "open", "done")
 TASK_SEARCH_DUE_FILTERS = ("all", "overdue", "today", "week", "none")
 TASK_PRIORITIES = ("low", "normal", "high")
+TASK_TAG_LIMIT = 5
 TASK_SEARCH_PRIORITIES = ("all",) + TASK_PRIORITIES
 TASK_SORTS = ("default", "priority")
 TASK_EXPORT_FORMATS = ("text", "csv", "markdown")
@@ -411,6 +412,7 @@ def delete_task_tag(session_data: dict | None, tag) -> dict:
     if not isinstance(tasks, list):
         raise ValueError("session tasks must be a list")
     updated = []
+    snapshot = []
     stamp = time.strftime("%Y-%m-%dT%H:%M:%S")
     for task in tasks:
         if not isinstance(task, dict):
@@ -418,6 +420,12 @@ def delete_task_tag(session_data: dict | None, tag) -> dict:
         tags = _task_tags(task)
         if tag not in tags:
             continue
+        try:
+            task_id = int(task.get("id"))
+        except (TypeError, ValueError):
+            task_id = None
+        if task_id is not None:
+            snapshot.append({"id": task_id, "tags": list(tags)})
         kept = []
         for item in tags:
             if item == tag or item in kept:
@@ -425,16 +433,79 @@ def delete_task_tag(session_data: dict | None, tag) -> dict:
             kept.append(item)
         task["tags"] = kept
         task["tag_removed"] = stamp
-        try:
-            updated.append(int(task.get("id")))
-        except (TypeError, ValueError):
-            continue
+        if task_id is not None:
+            updated.append(task_id)
     if not updated:
         raise ValueError(f"tag '{tag}' is not used")
+    data["tag_delete_undo"] = {
+        "tag": tag,
+        "deleted_at": stamp,
+        "tasks": snapshot,
+    }
     return {
         "tag": tag,
         "updated": len(updated),
         "task_ids": updated,
+        "undo_available": True,
+    }
+
+
+def undo_delete_task_tag(session_data: dict | None) -> dict:
+    """Restore the tag from the last confirmed tag deletion snapshot."""
+    data = session_data if isinstance(session_data, dict) else {}
+    record = data.get("tag_delete_undo")
+    if not isinstance(record, dict) or not record.get("tag"):
+        raise ValueError("There is no tag delete to undo")
+    tag = normalize_task_tag(record.get("tag"))
+    tasks = data.get("tasks", [])
+    if not isinstance(tasks, list):
+        raise ValueError("session tasks must be a list")
+    by_id = {}
+    for task in tasks:
+        if not isinstance(task, dict):
+            continue
+        try:
+            by_id[int(task.get("id"))] = task
+        except (TypeError, ValueError):
+            continue
+    restored = []
+    already = []
+    skipped = []
+    stamp = time.strftime("%Y-%m-%dT%H:%M:%S")
+    for entry in record.get("tasks", []):
+        if not isinstance(entry, dict):
+            continue
+        try:
+            task_id = int(entry.get("id"))
+        except (TypeError, ValueError):
+            continue
+        task = by_id.get(task_id)
+        if task is None:
+            skipped.append(task_id)
+            continue
+        tags = _task_tags(task)
+        if tag in tags:
+            already.append(task_id)
+            continue
+        if len(tags) >= TASK_TAG_LIMIT:
+            skipped.append(task_id)
+            continue
+        previous = [str(value).strip().lower().lstrip("#")
+                    for value in entry.get("tags", [])
+                    if str(value).strip()]
+        position = previous.index(tag) if tag in previous else len(tags)
+        tags.insert(min(position, len(tags)), tag)
+        task["tags"] = tags
+        task["tag_restored"] = stamp
+        restored.append(task_id)
+    data.pop("tag_delete_undo", None)
+    return {
+        "tag": tag,
+        "restored": len(restored),
+        "task_ids": restored,
+        "already": already,
+        "skipped": skipped,
+        "deleted_at": str(record.get("deleted_at", "") or ""),
     }
 
 
@@ -1586,6 +1657,8 @@ def main(argv=None) -> int:
                         help="preview deleting one task tag everywhere")
     parser.add_argument("--confirm-delete-tag", action="store_true",
                         help="apply the --delete-tag preview")
+    parser.add_argument("--undo-delete-tag", action="store_true",
+                        help="restore the last confirmed tag deletion")
     parser.add_argument("--task-status", choices=TASK_SEARCH_STATUSES,
                         default=None, help="task-list status filter")
     parser.add_argument("--task-due", choices=TASK_SEARCH_DUE_FILTERS,
@@ -1709,6 +1782,15 @@ def main(argv=None) -> int:
             or args.rename_tag is not None
             or args.task_sort != "default"):
         parser.error("--delete-tag cannot be combined with other views")
+    if args.undo_delete_tag and (
+            args.task_list or args.list_tags or args.weekly or args.goal
+            or args.reports or args.markdown or args.out or args.overdue
+            or args.due_soon or args.search_tasks is not None
+            or args.set_task_priority is not None
+            or args.rename_tag is not None
+            or args.delete_tag is not None
+            or args.task_sort != "default"):
+        parser.error("--undo-delete-tag cannot be combined with other views")
     if args.set_task_priority is not None:
         raw_id, raw_priority = args.set_task_priority
         try:
@@ -2004,12 +2086,40 @@ def main(argv=None) -> int:
             print(json.dumps(payload, indent=2, ensure_ascii=False))
         elif payload["applied"]:
             print(f"Deleted tag '{tag}' from "
-                  f"{payload['updated']} task(s).")
+                  f"{payload['updated']} task(s). "
+                  "Undo with --undo-delete-tag.")
         else:
             print(f"Would delete tag '{tag}' from "
                   f"{payload['would_update']} task(s) "
                   f"({payload['open']} open, {payload['done']} done); "
                   "rerun with --confirm-delete-tag to apply.")
+        return 0
+    if args.undo_delete_tag:
+        try:
+            session = load_session(session_path)
+            if not session:
+                raise ValueError(f"cannot read session: {session_path}")
+            result = undo_delete_task_tag(session)
+            write_text_atomic(
+                session_path,
+                json.dumps(session, indent=2, ensure_ascii=False) + "\n")
+        except (ValueError, OSError) as exc:
+            if args.json:
+                print(json.dumps({"ok": False, "error": str(exc)},
+                                 indent=2, ensure_ascii=False))
+            else:
+                print(f"briefing error: {exc}")
+            return 1
+        payload = {**result, "session": str(session_path)}
+        if args.json:
+            print(json.dumps(payload, indent=2, ensure_ascii=False))
+        else:
+            print(f"Restored tag '{result['tag']}' on "
+                  f"{result['restored']} task(s).")
+            if result["already"]:
+                print(f"{len(result['already'])} task(s) already had it.")
+            if result["skipped"]:
+                print(f"{len(result['skipped'])} task(s) skipped.")
         return 0
     if args.list_tags:
         try:

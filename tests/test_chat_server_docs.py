@@ -895,7 +895,9 @@ def test_ui_collection_scope_contract():
     assert 'id="deletetagconfirm"' in page
     assert 'id="deletetagbtn"' in page
     assert 'id="deletetagmsg"' in page
+    assert 'id="undotagdeletebtn"' in page
     assert "deleteTag" in page
+    assert "undoTagDelete" in page
     assert '<option value="open" selected>Open</option>' in page
     assert "getTaskList" in page
     assert "getTaskTags" in page
@@ -2320,6 +2322,23 @@ def test_http_delete_tag(tmp_path):
         assert after["tag_count"] == 2
         assert after["tagged_task_count"] == 2
         assert after["untagged_task_count"] == 1
+
+        undo = _post(base + "/v1/tasks/tags/undo-delete", {
+            "session_id": session_id})
+        assert undo["tag"] == "work"
+        assert undo["restored"] == 2
+        assert undo["task_ids"] == [1, 2]
+        assert undo["already"] == []
+        assert undo["skipped"] == []
+        restored = tags()
+        assert [item["tag"] for item in restored["tags"]] == [
+            "work", "finance", "home"]
+        assert restored["tag_count"] == 3
+        assert restored["tagged_task_count"] == 2
+        with pytest.raises(urllib.error.HTTPError) as no_undo:
+            _post(base + "/v1/tasks/tags/undo-delete", {
+                "session_id": session_id})
+        assert no_undo.value.code == 404
 
         with pytest.raises(urllib.error.HTTPError) as missing:
             _post(base + "/v1/tasks/tags/delete", {

@@ -33,6 +33,7 @@ Endpoints:
   GET  /v1/tasks/tags?session_id=default
   POST /v1/tasks/tags/rename  (add "confirm": true to apply)
   POST /v1/tasks/tags/delete  (add "confirm": true to apply)
+  POST /v1/tasks/tags/undo-delete
   GET  /v1/tasks/export?session_id=default&status=open&due=week&priority=high&sort=priority&format=csv
   GET  /v1/tasks/overdue?session_id=default&sort=priority&tag=work
   GET  /v1/tasks/due-soon?session_id=default&days=7&sort=priority&tag=work
@@ -361,6 +362,7 @@ Confirm tag rename</label>
 <label class="hint"><input id="deletetagconfirm" type="checkbox">
 Confirm tag delete</label>
 <button id="deletetagbtn">Delete tag</button>
+<button id="undotagdeletebtn">Undo tag delete</button>
 <input id="rescheduletaskid" type="number" min="1" placeholder="task ID"
        style="width:5em">
 <input id="rescheduledue" placeholder="new due date" style="width:9em">
@@ -1045,7 +1047,7 @@ async function deleteTag() {
       return;
     }
     msg.textContent = "deleted tag '" + j.tag + "' from " +
-      j.updated + ' task(s)';
+      j.updated + ' task(s); undo available';
     document.getElementById('deletetag').value = '';
     document.getElementById('deletetagconfirm').checked = false;
     const listFilter = document.getElementById('tasklisttag');
@@ -1064,6 +1066,30 @@ async function deleteTag() {
     }
   } catch (e) {
     msg.textContent = 'tag delete error: ' + e;
+  }
+}
+async function undoTagDelete() {
+  const msg = document.getElementById('deletetagmsg');
+  msg.textContent = 'restoring last tag deletion...';
+  try {
+    const r = await fetch('/v1/tasks/tags/undo-delete', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({session_id: sessionId})});
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'tag undo error: ' + (j.error || r.status);
+      return;
+    }
+    msg.textContent = "restored tag '" + j.tag + "' on " +
+      j.restored + ' task(s)' +
+      (j.already && j.already.length
+        ? '; ' + j.already.length + ' already had it' : '') +
+      (j.skipped && j.skipped.length
+        ? '; ' + j.skipped.length + ' skipped' : '');
+    getTaskTags();
+    getTaskList();
+  } catch (e) {
+    msg.textContent = 'tag undo error: ' + e;
   }
 }
 async function downloadTaskList(format) {
@@ -1700,6 +1726,7 @@ document.getElementById('tasklistbtn').onclick = () => getTaskList();
 document.getElementById('tasktagsbtn').onclick = () => getTaskTags();
 document.getElementById('renametagbtn').onclick = () => renameTag();
 document.getElementById('deletetagbtn').onclick = () => deleteTag();
+document.getElementById('undotagdeletebtn').onclick = () => undoTagDelete();
 document.getElementById('tasklistcsv').onclick = () => downloadTaskList('csv');
 document.getElementById('tasklistmd').onclick = () => downloadTaskList('markdown');
 document.getElementById('rescheduletaskbtn').onclick = () => rescheduleTask();
@@ -4008,6 +4035,7 @@ class Handler(BaseHTTPRequestHandler):
                          "/v1/tasks/reschedule", "/v1/tasks/priority",
                          "/v1/tasks/delete", "/v1/tasks/tags/rename",
                          "/v1/tasks/tags/delete",
+                         "/v1/tasks/tags/undo-delete",
                          "/v1/weekly-review/reports/prune",
                          "/v1/weekly-review/reports/keep",
                          "/v1/weekly-review/reports/delete",
@@ -4097,6 +4125,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._tasks_tags_rename(req)
             if route == "/v1/tasks/tags/delete":
                 return self._tasks_tags_delete(req)
+            if route == "/v1/tasks/tags/undo-delete":
+                return self._tasks_tags_undo_delete(req)
             if route == "/v1/goals/plan":
                 return self._goal_plan(req)
             if route == "/v1/research/queue":
@@ -4663,6 +4693,21 @@ class Handler(BaseHTTPRequestHandler):
         return self._json(200, {
             "session_id": session_id,
             "applied": True,
+            **result,
+        })
+
+    def _tasks_tags_undo_delete(self, req: dict):
+        session_id = str(req.get("session_id", "default")).strip() or "default"
+        try:
+            session = self._session(session_id)
+            result = session.human.undo_delete_task_tag()
+        except ValueError as exc:
+            code = 404 if "no tag delete" in str(exc).lower() else 400
+            return self._json(code, {"error": str(exc)})
+        except Exception as exc:
+            return self._json(400, {"error": str(exc)})
+        return self._json(200, {
+            "session_id": session_id,
             **result,
         })
 

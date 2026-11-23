@@ -373,6 +373,13 @@ class ChatHuman:
         self.save()
         return result
 
+    def undo_delete_task_tag(self) -> dict:
+        from atomzero.briefing import undo_delete_task_tag
+
+        result = undo_delete_task_tag(self.data)
+        self.save()
+        return result
+
     def reschedule_task(self, tid: int, due: str) -> dict | None:
         normalized = _parse_due(due)
         if not normalized:

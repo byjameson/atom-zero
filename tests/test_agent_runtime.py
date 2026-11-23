@@ -436,19 +436,34 @@ def test_agent_deletes_tag_with_confirmation(tmp_path):
 
     applied = agent.chat("confirm tag delete")
     assert applied["tool_calls"] == [
-        {"name": "delete_task_tag", "tag": "work", "updated": 2}]
-    assert applied["reply"] == "Deleted tag 'work' from 2 task(s)."
+        {"name": "delete_task_tag", "tag": "work", "updated": 2,
+         "undo_available": True}]
+    assert applied["reply"] == (
+        "Deleted tag 'work' from 2 task(s). "
+        'Reply "undo delete tag" to restore it.')
     assert [task["tags"] for task in agent.human.data["tasks"]] == [
         ["home"], [], []]
     assert agent.human.data["tasks"][0]["tag_removed"]
     assert agent.chat("confirm tag delete")["reply"] == (
         "There is no pending tag delete.")
 
+    undone = agent.chat("undo delete tag")
+    assert undone["tool_calls"] == [
+        {"name": "undo_delete_tag", "tag": "work", "restored": 2,
+         "already": 0, "skipped": 0}]
+    assert undone["reply"] == "Restored tag 'work' on 2 task(s)."
+    assert undone["tag_restore"]["task_ids"] == [1, 2]
+    assert [task["tags"] for task in agent.human.data["tasks"]] == [
+        ["work", "home"], ["work"], []]
+    assert agent.human.data["tasks"][0]["tag_restored"]
+    assert agent.chat("undo delete tag")["reply"] == (
+        "There is no tag delete to undo")
+
     tags = agent.chat("tags")
-    assert tags["task_tags"]["tag_count"] == 1
-    assert tags["task_tags"]["tagged_task_count"] == 1
-    assert tags["task_tags"]["untagged_task_count"] == 2
-    assert tags["task_tags"]["tags"][0]["tag"] == "home"
+    assert tags["task_tags"]["tag_count"] == 2
+    assert tags["task_tags"]["tagged_task_count"] == 2
+    assert tags["task_tags"]["untagged_task_count"] == 1
+    assert tags["task_tags"]["tags"][0]["tag"] == "work"
 
     missing = agent.chat("delete tag missing")
     assert missing["reply"] == "Tag 'missing' is not used."
@@ -465,7 +480,7 @@ def test_agent_deletes_tag_with_confirmation(tmp_path):
         "Tag delete cancelled.")
     assert agent.pending_task_action is None
     assert [task["tags"] for task in agent.human.data["tasks"]] == [
-        ["home"], [], []]
+        ["work", "home"], ["work"], []]
 
 
 def test_agent_priority_sort_task_views(tmp_path):

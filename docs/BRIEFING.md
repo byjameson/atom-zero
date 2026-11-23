@@ -135,6 +135,24 @@ the UI has a tag field, **Confirm tag delete** checkbox and **Delete tag**
 button. Other tags on each task are preserved; a task can become untagged. An
 unused tag is reported instead of creating a no-op.
 
+The last confirmed tag deletion can be undone from the per-task snapshot:
+
+```text
+undo delete tag
+# Restored tag 'work' on 2 task(s).
+```
+
+```powershell
+atomzero-brief --session data/sessions/default.json --undo-delete-tag
+```
+
+HTTP uses `POST /v1/tasks/tags/undo-delete`; the UI has an **Undo tag delete**
+button. The snapshot stores the affected task ids and their previous tags in
+the session, so a separate CLI or HTTP process can undo. Only the last deletion
+is kept; a successful undo clears the snapshot. If a task was edited meanwhile,
+its current other tags are preserved and the deleted tag is re-inserted; tags
+already present are reported separately.
+
 Priority can also be updated outside chat:
 
 ```powershell

@@ -1142,13 +1142,43 @@ class AgentSession:
                     "sources": [], "evidence": []}
         return {
             "reply": (f"Deleted tag '{result['tag']}' from "
-                      f"{result['updated']} task(s)."),
+                      f"{result['updated']} task(s). "
+                      'Reply "undo delete tag" to restore it.'),
             "tool_calls": [{"name": "delete_task_tag",
                             "tag": result["tag"],
-                            "updated": result["updated"]}],
+                            "updated": result["updated"],
+                            "undo_available": True}],
             "sources": [],
             "evidence": [],
             "tag_delete": {**result, "applied": True},
+        }
+
+    def _undo_tag_delete(self) -> dict:
+        self.pending_task_action = None
+        try:
+            result = self.human.undo_delete_task_tag()
+        except ValueError as exc:
+            return {"reply": str(exc), "tool_calls": [],
+                    "sources": [], "evidence": []}
+        if result["restored"]:
+            reply = (f"Restored tag '{result['tag']}' on "
+                     f"{result['restored']} task(s).")
+        else:
+            reply = (f"No tasks needed tag '{result['tag']}' restored.")
+        if result.get("already"):
+            reply += f" {len(result['already'])} already had it."
+        if result.get("skipped"):
+            reply += f" {len(result['skipped'])} skipped."
+        return {
+            "reply": reply,
+            "tool_calls": [{"name": "undo_delete_tag",
+                            "tag": result["tag"],
+                            "restored": result["restored"],
+                            "already": len(result.get("already", [])),
+                            "skipped": len(result.get("skipped", []))}],
+            "sources": [],
+            "evidence": [],
+            "tag_restore": result,
         }
 
     def _cancel_tag_delete(self) -> dict:
@@ -1435,6 +1465,9 @@ class AgentSession:
             return self._apply_tag_delete()
         if low in ("cancel tag delete", "cancel delete tag"):
             return self._cancel_tag_delete()
+        if low in ("undo delete tag", "undo tag delete",
+                   "restore tag", "restore deleted tag"):
+            return self._undo_tag_delete()
         delete_tag = re.match(
             r"^(?:delete|remove)\s+tag\s+(\S+?)\??$",
             text, re.IGNORECASE)

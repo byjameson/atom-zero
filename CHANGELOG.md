@@ -154,6 +154,9 @@
 - Added confirmed global tag delete: chat `delete tag TAG` then
   `confirm tag delete`, CLI `--delete-tag TAG --confirm-delete-tag`, HTTP
   `/v1/tasks/tags/delete` and UI tag field with a confirmation checkbox.
+- Added undo for the last confirmed tag delete: chat `undo delete tag`, CLI
+  `--undo-delete-tag`, HTTP `/v1/tasks/tags/undo-delete` and a UI undo button,
+  restoring from a per-task session snapshot.
 - Ported task tags to the legacy `research/chat_human.py` runtime:
   `add task ... tags ...`, `tag task`, tag-filtered `list tasks`, `list tags`
   and confirmed `rename tag` with persistence.

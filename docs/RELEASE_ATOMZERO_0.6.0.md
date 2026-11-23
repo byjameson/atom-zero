@@ -47,6 +47,8 @@ after `0.5.0`.
   other tags and deduplicates.
 - Confirmed global tag delete in chat, CLI, HTTP and UI; deleting preserves
   other tags and can leave a task untagged.
+- Undo for the last confirmed tag delete in chat, CLI, HTTP and UI, restoring
+  from a per-task snapshot stored in the session.
 - Tag parity in the legacy `research/chat_human.py` runtime: add/tag/list
   filters, inventory and confirmed rename with persistence.
 - Rescheduling and confirmed deletion.
