@@ -22,6 +22,35 @@ The AST-based checks avoid text false positives: a docstring saying
 finding. Findings are capped per kind (`--max-per-kind`, default `20`), sorted
 and assigned a stable `finding_id`.
 
+## Inline suppression markers
+
+A finding can be ignored with a marker on its own line or on the line
+immediately above it. The marker is a comment and the match is
+case-insensitive:
+
+```python
+subprocess.run(command, shell=True)  # self-code: ignore
+
+try:
+    run_step()
+# self-code: ignore broad_exception,shell_true
+except Exception:
+    run_step()
+
+try:
+    run_step()
+except Exception:  # self-code: ignore broad_exception  TODO later
+    run_step()
+```
+
+- `# self-code: ignore` ignores every kind on the guarded line.
+- `# self-code: ignore kind1,kind2` ignores only the listed kinds. Other
+  findings on the same line, such as a task marker in the same comment, still
+  appear.
+- The rule applies to AST findings and to task markers in Python, Markdown and
+  the other scanned text formats.
+- Suppressed findings do not consume the `--max-per-kind` budget.
+
 ## Usage
 
 ```powershell
@@ -79,6 +108,30 @@ The loop still requires both `--opt-in` and `--approve`; `--veto` stops before
 a worktree is created. It records a gated decision only after the gate passes.
 It never merges, pushes, tags or publishes.
 
+### Targeting one file
+
+Pass `--target-path` with `--self-code-root` (or with a `self_code` signal
+report) to work on one exact repo-relative path:
+
+```powershell
+atomzero-self-improve --self-code-root . `
+  --target-path src/atomzero/agent_runner.py `
+  --opt-in --approve `
+  --runner "opencode run --dir {worktree} --auto <prompt>" `
+  --repo . --base main --ledger data/improvement_ledger.jsonl
+```
+
+- Backslashes are normalized and a leading `./` is stripped before matching.
+- The report is reduced to the findings and proposals for that path. The
+  planner still produces the action for the target's severity
+  (`self_code_high` or `self_code_medium`) and the packet takes
+  `allowed_files` and `checks` from the matching proposal.
+- A missing path, a low-severity-only target, or a report without a matching
+  proposal raises a clear input error instead of silently falling back to
+  another file.
+- Target selection does not bypass `--opt-in`, `--approve`, `--veto`, scope
+  checks or the evaluation gate.
+
 ## Safety boundary
 
 - Scope is limited to the proposal's `allowed_files`.
@@ -91,10 +144,10 @@ It never merges, pushes, tags or publishes.
 ## Tests and evidence
 
 - `tests/test_self_code.py`: AST false positives, determinism, bounds,
-  proposal shape and CLI JSON.
+  suppression markers, proposal shape and CLI JSON.
 - `tests/test_improvement.py`: high/medium signal mapping and plan actions.
-- `tests/test_self_improve.py`: proposal-derived scope and clean-tree
-  `no_action`.
+- `tests/test_self_improve.py`: proposal-derived scope, target selection,
+  clean-tree `no_action` and CLI pass-through.
 - `benchmarks/self_improvement_regression.py`: audit -> plan regression check.
 - `docs/LOOP_CYCLE_6.md`: the first measured cycle fed by this audit; the
   external agent narrowed `agent_runner.verify`'s broad handler and added two

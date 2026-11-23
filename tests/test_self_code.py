@@ -95,6 +95,64 @@ def broad():
     assert high_proposal["requires_human"] is True
 
 
+def test_ignore_all_on_same_line_and_previous_line(tmp_path):
+    _write(tmp_path, "src/pkg/mod.py", '''\
+def same(expression):
+    return eval(expression)  # Self-Code: IGNORE
+
+
+def previous():
+    try:
+        return 1
+    # self-code: ignore
+    except Exception:
+        return None
+''')
+    assert audit_tree(tmp_path) == []
+
+
+def test_ignore_all_hides_todo_markers(tmp_path):
+    _write(tmp_path, "src/pkg/mod.py", '''\
+# self-code: ignore
+# TODO: hidden
+# FIXME: visible
+''')
+    findings = audit_tree(tmp_path)
+    assert [(item["kind"], item["line"]) for item in findings] == [
+        ("todo_marker", 3)]
+
+
+def test_ignore_all_hides_markdown_todo(tmp_path):
+    _write(tmp_path, "docs/notes.md",
+           "# self-code: ignore\nTODO: hidden\n\n# TODO: visible\n")
+    assert [item["line"] for item in audit_tree(tmp_path)] == [4]
+
+
+def test_kind_specific_ignore_keeps_unlisted_kinds(tmp_path):
+    _write(tmp_path, "src/pkg/mod.py", '''\
+def broad():
+    try:
+        return 1
+    except Exception:  # self-code: ignore broad_exception,shell_true TODO
+        return None
+''')
+    findings = audit_tree(tmp_path)
+    assert [item["kind"] for item in findings] == ["todo_marker"]
+
+
+def test_wrong_kind_does_not_hide_finding(tmp_path):
+    _write(tmp_path, "src/pkg/mod.py", '''\
+def broad():
+    try:
+        return 1
+    # self-code: ignore todo_marker
+    except Exception:
+        return None
+''')
+    findings = audit_tree(tmp_path)
+    assert [item["kind"] for item in findings] == ["broad_exception"]
+
+
 def test_audit_report_summary_and_json(tmp_path, capsys):
     _write(tmp_path, "src/pkg/mod.py", "def f():\n    return 1\n# FIXME later\n")
     report = audit_report(tmp_path, propose=True)

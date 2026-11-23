@@ -28,6 +28,10 @@ _SKIP_DIRS = {
 }
 _SCAN_SUFFIXES = {".py", ".md", ".toml", ".json", ".yml", ".yaml"}
 _MARKER_RE = re.compile(r"\b(TODO|FIXME|XXX)\b", re.IGNORECASE)
+_SUPPRESSION_RE = re.compile(
+    r"#\s*self-code\s*:\s*ignore\b"
+    r"(?:\s+([A-Za-z][A-Za-z0-9_-]*(?:\s*,\s*[A-Za-z][A-Za-z0-9_-]*)*))?",
+    re.IGNORECASE)
 _SHELL_CALLS = {"run", "call", "check_call", "check_output", "Popen"}
 _BROAD_EXCEPTIONS = {"Exception", "BaseException"}
 
@@ -54,6 +58,42 @@ def _finding(kind, severity, path, line, message, evidence=""):
         "message": message,
         "evidence": str(evidence)[:200],
     }
+
+
+def _suppression_marker(line: str) -> set[str] | bool | None:
+    """Return True for all kinds, a kind set, or None when not suppressed.
+
+    The marker is a comment: ``# self-code: ignore`` hides every kind on the
+    line, while ``# self-code: ignore kind1,kind2`` hides only those kinds.
+    """
+    match = _SUPPRESSION_RE.search(line)
+    if match is None:
+        return None
+    raw = match.group(1)
+    if not raw:
+        return True
+    kinds = {part.strip().lower() for part in raw.split(",") if part.strip()}
+    return kinds or True
+
+
+def _suppression_map(lines) -> dict[int, set[str] | bool]:
+    suppressions = {}
+    for number, line in enumerate(lines, start=1):
+        marker = _suppression_marker(line)
+        if marker is not None:
+            suppressions[number] = marker
+    return suppressions
+
+
+def _is_suppressed(kind: str, line: int, suppressions) -> bool:
+    """Check the finding line and the immediately preceding line."""
+    for number in (line, line - 1):
+        marker = suppressions.get(number)
+        if marker is True:
+            return True
+        if isinstance(marker, set) and kind.lower() in marker:
+            return True
+    return False
 
 
 def _comment_markers(source: str):
@@ -144,17 +184,24 @@ def audit_tree(root=".", max_per_kind=20) -> list[dict]:
         except (OSError, UnicodeDecodeError):
             continue
         lines = source.splitlines()
+        suppressions = _suppression_map(lines)
 
         if is_python:
             for finding in _ast_code_findings(rel, source, is_test=is_test):
-                add(finding)
+                if not _is_suppressed(
+                        finding["kind"], finding["line"], suppressions):
+                    add(finding)
             for number, marker in _comment_markers(source):
-                add(_finding(
-                    "todo_marker", "low", rel, number,
-                    "unresolved task marker", marker))
+                if not _is_suppressed(
+                        "todo_marker", number, suppressions):
+                    add(_finding(
+                        "todo_marker", "low", rel, number,
+                        "unresolved task marker", marker))
         else:
             for number, line in enumerate(lines, start=1):
-                if _MARKER_RE.search(line):
+                if (_MARKER_RE.search(line)
+                        and not _is_suppressed(
+                            "todo_marker", number, suppressions)):
                     add(_finding(
                         "todo_marker", "low", rel, number,
                         "unresolved task marker", line.strip()))
