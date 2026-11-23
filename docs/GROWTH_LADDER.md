@@ -59,6 +59,25 @@ deterministic policy engine, not a model and not an agent:
 The router never calls the network, never starts an agent and never changes
 weights. It only returns a decision.
 
+```powershell
+atomzero-escalate --task-json task.json --policy-json policy.json --json
+atomzero-escalate --summary-json growth.jsonl --json
+```
+
+Example task metadata:
+
+```json
+{"kind": "answer", "confidence": 0.18, "privacy": "public",
+ "requires_freshness": true}
+```
+
+Example policy:
+
+```json
+{"teacher_enabled": true, "agent_enabled": true, "allow_external": true,
+ "max_external_calls": 2, "max_agent_calls": 1}
+```
+
 ## Growth metrics
 
 The scoreboard and growth ledger track:
