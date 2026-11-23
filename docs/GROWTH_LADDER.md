@@ -115,8 +115,9 @@ citation quality.
 3. Teacher answer verification and content-free promotion events (implemented).
 4. Adapter-candidate export from verified teacher traces (implemented).
 5. Held-out loss/perplexity gate for candidate promotion (implemented).
-6. External adapter training and before/after benchmark (next).
-7. Checkpoint upcycling path, offline and evaluated.
+6. Real LoRA training harness and autonomous trainer gate (implemented).
+7. Diverse real teacher queue and cross-distribution evaluation (next).
+8. Checkpoint upcycling path, offline and evaluated.
 7. Product packaging: one command to inspect the ladder, budgets and current
    capability level.
 

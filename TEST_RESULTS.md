@@ -15,7 +15,7 @@
 | Suite | Passed | Failed | Exit | Duration |
 |---|---:|---:|---:|---:|
 | Atom Zero `pytest tests -q` (0.19.0 release) | **846** | **0** | 0 | 79.99s |
-| Atom Zero `pytest tests -q` (post-release main) | **1081** | **0** | 0 | 129.82s |
+| Atom Zero `pytest tests -q` (post-release main) | **1083** | **0** | 0 | 133.51s |
 | AISC `pytest tests -q` (0.5.1) | **223** (+6 subtests) | **0** | 0 | 17.13s |
 | AISC strict specs (26 specs) | **24 PASS / 2 FAIL (expected)** | 0 critical | 1 | - |
 | Build (`python -m build`) | **2 artifacts** | **0** | 0 | - |
@@ -23,7 +23,7 @@
 
 The full-suite run is subject to a known Windows socket flake in one long HTTP
 test (`WinError 10053`); the same test and the full suite pass on rerun. The
-current post-release evidence is the clean `1081 passed` run.
+current post-release evidence is the clean `1083 passed` run.
 
 **Failed tests: none.** Release verification
 (`scripts/verify_release.py --version 0.19.0`) reports **0 failures**.
@@ -34,7 +34,7 @@ current post-release evidence is the clean `1081 passed` run.
   and document-diff routes are covered. Full release suite **646 passed**.
 - Post-release self-improvement loop: improvement planner and decisions,
   evaluation gate, weekly-review ledger summary and proactive reminders.
-  Full main suite **1081 passed**; `benchmarks/self_improvement_regression.py`
+  Full main suite **1083 passed**; `benchmarks/self_improvement_regression.py`
   reports **20/20 checks passed**. Eight measured cycles are recorded:
   `docs/LOOP_CYCLE.md` (HTTP flake, `gate_id ab5fe9b0fa0f48bc`, 792/1 ->
   793/0), `docs/LOOP_CYCLE_2.md` (live claim conflict, `gate_id
@@ -49,6 +49,11 @@ current post-release evidence is the clean `1081 passed` run.
   `docs/LOOP_CYCLE_8.md` (fully autonomous, `gate_id da83c0302933d484`,
   1064/0 -> 1066/0). All eight approvals have `gate_ok: true` and no trend
   alerts.
+- Real adapter cycle 2: local `0.8.0` base checkpoint, LoRA MLP rank 8
+  (368,640 trainable parameters), 241 train / 60 held-out examples. Held-out
+  loss moved **5.9941 -> 0.7949** and perplexity **401.04 -> 2.214**; the
+  held-out gate passed (`loss_improved`, `ppl_not_worse`). The adapter is a
+  local candidate; no product weights changed. See `docs/ADAPTER_TRAINING.md`.
 - `0.7.0` cross-source consensus branch: **12 passed**
   (`tests/test_consensus.py`); the `AtomZeroConsensus` AISC spec is **PASS**
   (4 verified components, assurance bound 0.93, 0 irreversible).

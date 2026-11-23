@@ -13,10 +13,11 @@
   `gate_id da83c0302933d484`, `1064/0 -> 1066/0`). Per-change human approval is
   now optional (`--require-approval`); the default loop merges locally after
   its gates. Verified-teacher adapter candidates and a held-out loss/perplexity
-  gate are added for the capability-growth step (`docs/ADAPTER_CYCLE_1.md`).
-  Accumulating for the **1.0.0** boundary; not pushed yet.
+  gate are added for the capability-growth step; a real LoRA run on the local
+  `0.8.0` base passed the gate (`docs/ADAPTER_TRAINING.md`). Accumulating for
+  the **1.0.0** boundary; not pushed yet.
 - Working tree after the release-doc commits: clean
-- Atom Zero tests: **1081 passed**
+- Atom Zero tests: **1083 passed**
 - AISC strict audit: **26 specs, 24 PASS, 0 errors**; `AtomZeroAnswerability`
   and `AtomZeroAnswerabilityGenerated` remain **FAIL** with the measured
   Brier 0.233 / ECE 0.064 and refusal-policy misses. The ECE target is met;
