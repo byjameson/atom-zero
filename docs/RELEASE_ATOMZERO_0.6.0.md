@@ -28,6 +28,8 @@ after `0.5.0`.
 - Archive list/download/search/sort, retention, dry-run preview, deletion,
   integrity verification, metadata repair and report comparison.
 - Exact report-tag filtering through `--reports --tag`, HTTP/UI `tag`.
+- Chat archive commands accept report tags (`find report tag work`,
+  `list reports tag work`) with `tag` in the structured tool call.
 - Priority-first brief/review sorting through `--task-sort priority`,
   HTTP `sort=priority`, chat `brief me priority` / `weekly review priority`
   and a shared UI selector.

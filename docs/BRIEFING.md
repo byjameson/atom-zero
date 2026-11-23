@@ -350,7 +350,7 @@ POST /v1/weekly-review/reports/delete
 {"id": "w0001"}
 ```
 
-The UI **Recent reports** panel has a search box and a
+The UI **Recent reports** panel has a search box, a tag field and a
 newest/oldest/largest sort selector, lists the archive, downloads an indexed
 Markdown file, exposes **Delete** for one entry, **Prune missing** for deleted
 files, **Verify files** for size/SHA-256 checks, **Repair metadata** for changed
@@ -373,6 +373,12 @@ weekly review
 find report weekly
 -> archived report matches with id, date, path and missing-file marker
 -> Turkish: "rapor ara weekly"
+
+find report tag work
+list reports tag work
+find report weekly tag work oldest
+-> exact report-tag filter; combines with text query, sort and limit
+-> the tool call and reply include the tag; invalid tags are rejected
 
 list reports
 list reports oldest

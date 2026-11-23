@@ -620,11 +620,13 @@ def test_agent_brief_me_returns_local_brief(tmp_path):
 def test_agent_searches_weekly_report_archive(tmp_path):
     index_path = tmp_path / "weekly_reports.json"
     archive = WeeklyReportArchive(index_path)
-    for number, name in enumerate(("alpha-report", "beta-report"), start=1):
+    for number, (name, tag) in enumerate(
+            zip(("alpha-report", "beta-report"), ("work", "home")), start=1):
         report = tmp_path / f"{name}.md"
         report.write_text(f"# {name}\n", encoding="utf-8")
         archive.record(report, {
             "generated": f"2026-11-2{number} 09:00", "period_days": 7,
+            "tag": tag,
             "task_counts": {"open": number}, "recent_source_count": 1,
             "graph": {"entities": [], "connections": []},
         }, exported_at=f"2026-11-2{number}T09:00:00")
@@ -648,6 +650,40 @@ def test_agent_searches_weekly_report_archive(tmp_path):
     assert "Archived weekly reports (2 of 2)" in listed["reply"]
     assert listed["tool_calls"][0]["name"] == "list_weekly_reports"
     assert listed["tool_calls"][0]["limit"] == 10
+    tag_search = agent.chat("find report tag work")
+    assert tag_search["tool_calls"][0] == {
+        "name": "search_weekly_reports", "query": "", "sort": "newest",
+        "tag": "work", "matches": 1}
+    assert tag_search["matched"] == 1
+    assert tag_search["total"] == 2
+    assert tag_search["reports"][0]["name"] == "alpha-report.md"
+    assert 'tagged "work"' in tag_search["reply"]
+    assert "tag=work" in tag_search["reply"]
+    tag_list = agent.chat("list reports tag home")
+    assert tag_list["tool_calls"][0]["name"] == "list_weekly_reports"
+    assert tag_list["tool_calls"][0]["tag"] == "home"
+    assert tag_list["reports"][0]["name"] == "beta-report.md"
+    assert 'tagged "home"' in tag_list["reply"]
+    tag_limit = agent.chat("list reports 1 tag work")
+    assert tag_limit["tool_calls"][0]["limit"] == 1
+    assert tag_limit["tool_calls"][0]["tag"] == "work"
+    assert len(tag_limit["reports"]) == 1
+    tag_query = agent.chat("find report weekly tag work")
+    assert tag_query["query"] == "weekly"
+    assert tag_query["tag"] == "work"
+    assert tag_query["matched"] == 1
+    assert 'matching "weekly" with tag "work"' in tag_query["reply"]
+    tag_sort = agent.chat("find report tag work oldest")
+    assert tag_sort["sort"] == "oldest"
+    assert tag_sort["tag"] == "work"
+    assert tag_sort["matched"] == 1
+    missing_tag = agent.chat("find report tag missing")
+    assert missing_tag["matched"] == 0
+    assert ('No archived weekly reports tagged "missing"'
+            in missing_tag["reply"])
+    invalid_tag = agent.chat("find report tag bad!")
+    assert "letters, numbers" in invalid_tag["reply"]
+    assert invalid_tag["tool_calls"] == []
     limited = agent.chat("show report archive 1")
     assert "Archived weekly reports (1 of 2)" in limited["reply"]
     assert len(limited["reports"]) == 1

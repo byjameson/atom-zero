@@ -9,9 +9,10 @@ from pathlib import Path
 
 from atomzero.briefing import (
     build_briefing, build_weekly_review, due_soon_view, overdue_view,
-    normalize_tag_rename, plan_goal, render_due_soon_view,
-    render_overdue_view, render_task_search_view, render_task_tag_view,
-    render_weekly_report_comparison, task_search_view, task_tag_view)
+    normalize_tag_rename, normalize_task_tag, plan_goal,
+    render_due_soon_view, render_overdue_view, render_task_search_view,
+    render_task_tag_view, render_weekly_report_comparison,
+    task_search_view, task_tag_view)
 from atomzero.contradictions import compare_sources
 from atomzero.doc_memory import format_citation, grounded_answer
 from atomzero.knowledge_gaps import KnowledgeGapError
@@ -410,16 +411,21 @@ class AgentSession:
         }
 
     def _search_weekly_reports(self, query: str,
-                               order: str = "newest") -> dict:
+                               order: str = "newest",
+                               tag: str = "all") -> dict:
         query = str(query or "").strip()
         order = str(order or "newest").strip().lower()
+        tag = str(tag or "all").strip().lower().lstrip("#") or "all"
         tool = [{"name": "search_weekly_reports", "query": query,
                  "sort": order}]
+        if tag != "all":
+            tool[0]["tag"] = tag
         try:
             archive = WeeklyReportArchive(self.weekly_reports_path)
-            reports = archive.list(limit=10, query=query, order=order)
+            reports = archive.list(
+                limit=10, query=query, order=order, tag=tag)
             total = archive.count()
-            matched = archive.count(query=query)
+            matched = archive.count(query=query, tag=tag)
         except (WeeklyReportError, OSError) as exc:
             return {
                 "reply": f"report archive error: {exc}",
@@ -428,26 +434,43 @@ class AgentSession:
                 "evidence": [],
                 "reports": [],
                 "query": query,
+                "tag": tag,
             }
         tool[0]["matches"] = len(reports)
         if not reports:
             if total == 0:
                 reply = ("No archived weekly reports yet. Create one with "
                          "atomzero-brief --weekly --markdown --out PATH.")
+            elif tag != "all" and query:
+                reply = (f'No archived weekly reports match "{query}" '
+                         f'with tag "{tag}" ({total} total).')
+            elif tag != "all":
+                reply = (f'No archived weekly reports tagged "{tag}" '
+                         f"({total} total).")
             else:
                 reply = (f'No archived weekly reports match "{query}" '
                          f"({total} total).")
         else:
+            if tag != "all" and query:
+                scope = (f'matching "{query}" with tag "{tag}"')
+            elif tag != "all":
+                scope = f'tagged "{tag}"'
+            else:
+                scope = f'matching "{query}"'
             lines = [
-                f'Archived weekly reports matching "{query}" '
+                f"Archived weekly reports {scope} "
                 f"({matched} of {total}) | sort: {order}:"
             ]
             for item in reports:
                 marker = "" if item.get("exists", True) else " [missing]"
+                item_tag = str(item.get("tag", "all") or "all")
+                tag_part = (f" | tag={item_tag}"
+                            if item_tag != "all" else "")
                 lines.append(
                     f"- {item.get('id', '?')} | "
                     f"exported {item.get('exported_at', '')} | "
-                    f"last {item.get('period_days', 7)} days | "
+                    f"last {item.get('period_days', 7)} days"
+                    f"{tag_part} | "
                     f"{item.get('path', '')}{marker}")
             lines.append(
                 "Report files stay on your disk; use "
@@ -460,13 +483,15 @@ class AgentSession:
             "evidence": [],
             "reports": reports,
             "query": query,
+            "tag": tag,
             "matched": matched,
             "total": total,
             "sort": order,
         }
 
     def _list_weekly_reports(self, limit: int = 10,
-                             order: str = "newest") -> dict:
+                             order: str = "newest",
+                             tag: str = "all") -> dict:
         try:
             limit = int(limit)
         except (TypeError, ValueError):
@@ -477,12 +502,16 @@ class AgentSession:
                     "tool_calls": [], "sources": [], "evidence": []}
         limit = min(limit, 100)
         order = str(order or "newest").strip().lower()
+        tag = str(tag or "all").strip().lower().lstrip("#") or "all"
         tool = [{"name": "list_weekly_reports", "limit": limit,
                  "sort": order}]
+        if tag != "all":
+            tool[0]["tag"] = tag
         try:
             archive = WeeklyReportArchive(self.weekly_reports_path)
-            reports = archive.list(limit=limit, order=order)
+            reports = archive.list(limit=limit, order=order, tag=tag)
             total = archive.count()
+            matched = archive.count(tag=tag)
         except (WeeklyReportError, OSError) as exc:
             return {
                 "reply": f"report archive error: {exc}",
@@ -492,20 +521,36 @@ class AgentSession:
                 "reports": [],
                 "limit": limit,
                 "sort": order,
+                "tag": tag,
             }
         tool[0]["matches"] = len(reports)
         if not reports:
-            reply = ("No archived weekly reports yet. Create one with "
-                     "atomzero-brief --weekly --markdown --out PATH.")
+            if total == 0:
+                reply = ("No archived weekly reports yet. Create one with "
+                         "atomzero-brief --weekly --markdown --out PATH.")
+            elif tag != "all":
+                reply = (f'No archived weekly reports tagged "{tag}" '
+                         f"({total} total).")
+            else:
+                reply = ("No archived weekly reports.")
         else:
-            lines = [f"Archived weekly reports ({len(reports)} of {total}) "
-                     f"| sort: {order}:"]
+            if tag != "all":
+                lines = [
+                    f'Archived weekly reports tagged "{tag}" '
+                    f"({len(reports)} of {matched}) | sort: {order}:"]
+            else:
+                lines = [f"Archived weekly reports ({len(reports)} of "
+                         f"{total}) | sort: {order}:"]
             for item in reports:
                 marker = "" if item.get("exists", True) else " [missing]"
+                item_tag = str(item.get("tag", "all") or "all")
+                tag_part = (f" | tag={item_tag}"
+                            if item_tag != "all" else "")
                 lines.append(
                     f"- {item.get('id', '?')} | "
                     f"exported {item.get('exported_at', '')} | "
-                    f"last {item.get('period_days', 7)} days | "
+                    f"last {item.get('period_days', 7)} days"
+                    f"{tag_part} | "
                     f"{item.get('path', '')}{marker}")
             lines.append(
                 "Report files stay on your disk; use "
@@ -518,6 +563,8 @@ class AgentSession:
             "evidence": [],
             "reports": reports,
             "limit": limit,
+            "tag": tag,
+            "matched": matched,
             "total": total,
             "sort": order,
         }
@@ -1388,6 +1435,7 @@ class AgentSession:
         if show_match:
             return self._show_weekly_report(show_match.group(1))
         report_sort = "newest"
+        report_tag = "all"
         report_text = text
         if re.match(r"^(?:find|search|show|list)\s+", text,
                     re.IGNORECASE):
@@ -1397,6 +1445,17 @@ class AgentSession:
             if sort_match:
                 report_sort = sort_match.group(1).lower()
                 report_text = text[:sort_match.start()].rstrip()
+            tag_match = re.search(
+                r"\s+tag\s+(\S+?)\s*\??$", report_text,
+                re.IGNORECASE)
+            if tag_match:
+                try:
+                    report_tag = normalize_task_tag(
+                        tag_match.group(1).rstrip("?"))
+                except ValueError as exc:
+                    return {"reply": str(exc), "tool_calls": [],
+                            "sources": [], "evidence": []}
+                report_text = report_text[:tag_match.start()].rstrip()
         list_match = re.match(
             r"^(?:list|show)\s+(?:the\s+)?"
             r"(?:reports?|report\s+archive|weekly\s+reports?)"
@@ -1410,7 +1469,15 @@ class AgentSession:
         if list_match:
             return self._list_weekly_reports(
                 int(list_match.group(1)) if list_match.group(1) else 10,
-                order=report_sort)
+                order=report_sort, tag=report_tag)
+        if report_tag != "all":
+            no_query = re.match(
+                r"^(?:find|search|show)\s+(?:the\s+)?"
+                r"(?:report\s+archive|reports?|weekly\s+reports?)\s*\??$",
+                report_text, re.IGNORECASE)
+            if no_query:
+                return self._search_weekly_reports(
+                    "", order=report_sort, tag=report_tag)
         report_query = re.match(
             r"^(?:find|search|show)\s+(?:the\s+)?report\s+archive\s+"
             r"(?:for\s+)?(.+?)\??$", report_text, re.IGNORECASE)
@@ -1429,7 +1496,8 @@ class AgentSession:
                 r"(.+?)\s+ara\??$", report_text, re.IGNORECASE)
         if report_query:
             return self._search_weekly_reports(
-                report_query.group(1).strip(), order=report_sort)
+                report_query.group(1).strip(), order=report_sort,
+                tag=report_tag)
         repair_match = re.match(
             r"^(?:repair|fix)\s+(?:the\s+)?"
             r"(?:report\s+archive|reports?|report\s+metadata)"

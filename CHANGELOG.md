@@ -31,6 +31,9 @@
 - Added exact tag filtering to the weekly report archive: CLI
   `--reports --tag work`, HTTP `?tag=work` and a UI tag field; listings show
   the stored report tag.
+- Added report-tag filtering to chat archive commands: `find report tag work`,
+  `list reports tag work`, combined query/sort/limit, with `tag` in the tool
+  call and reply.
 - Added `benchmarks/weekly_chat_regression.py` (6/6 checks).
 - Added weekly-review **Markdown export**:
   `atomzero-brief --weekly --markdown`, `GET /v1/weekly-review/export` and a UI

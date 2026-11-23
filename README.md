@@ -210,7 +210,8 @@ short generation. It is **not MMLU, GSM8K or HumanEval**.
   `--reports --verify` checks stored size/SHA-256 values and
   `--reports --repair` recomputes changed metadata.
   `/v1/goals/plan` produces a cited plan skeleton. Chat supports `brief me`,
-  `find report weekly` / `rapor ara weekly`, `list reports` (optional limit and
+  `find report weekly` / `rapor ara weekly`, `find report tag work`,
+  `list reports tag work`, `list reports` (optional limit and
   newest/oldest/largest sort), `show report w0001`,
   `verify report archive` / `verify report w0001`,
   `repair report archive` / `repair report w0001` with `confirm reports`,
