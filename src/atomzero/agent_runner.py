@@ -106,12 +106,20 @@ def prepare(packet: dict, *, repo_root, base: str = "main",
     }
 
 
-def _changed_files(worktree: Path) -> list[str]:
+def _changed_files(worktree: Path, base: str = "main") -> list[str]:
+    files = set()
+    committed = _git(["diff", "--name-only", f"{base}...HEAD"], cwd=worktree)
+    if committed.returncode != 0:
+        raise RunnerError(
+            "git diff failed: " + (committed.stderr or "").strip())
+    for line in committed.stdout.splitlines():
+        path = line.strip().replace("\\", "/")
+        if path and path != ".agent-task.json":
+            files.add(path)
     completed = _git(["status", "--porcelain"], cwd=worktree)
     if completed.returncode != 0:
         raise RunnerError(
             "git status failed: " + (completed.stderr or "").strip())
-    files = []
     for line in completed.stdout.splitlines():
         if not line.strip():
             continue
@@ -121,18 +129,18 @@ def _changed_files(worktree: Path) -> list[str]:
         normalized = path.replace("\\", "/")
         if normalized == ".agent-task.json":
             continue
-        files.append(normalized)
-    return sorted(set(files))
+        files.add(normalized)
+    return sorted(files)
 
 
-def verify(packet: dict, *, worktree, aisc_path: str = "",
-           archive=None, timeout: int = 300) -> dict:
+def verify(packet: dict, *, worktree, base: str = "main",
+           aisc_path: str = "", archive=None, timeout: int = 300) -> dict:
     """Check scope and run the packet's allowlisted gate."""
     packet = _packet(packet)
     path = Path(worktree).expanduser().resolve()
     if not path.is_dir():
         raise RunnerError(f"worktree not found: {path}")
-    changed = _changed_files(path)
+    changed = _changed_files(path, base)
     allowed = {str(value).replace("\\", "/") for value in packet["allowed_files"]}
     out_of_scope = [name for name in changed if name not in allowed]
     checks = [{"name": item.split(":", 1)[-1], "kind": item.split(":", 1)[0],
@@ -205,7 +213,7 @@ def run_packet(packet: dict, *, opt_in: bool, repo_root, runner_command=None,
         if completed.returncode != 0:
             prepared["status"] = "runner_failed"
             return prepared
-    result = verify(packet, worktree=worktree, aisc_path=aisc_path,
+    result = verify(packet, worktree=worktree, base=base, aisc_path=aisc_path,
                     archive=archive)
     result.update({
         "branch": prepared["branch"],
@@ -259,8 +267,8 @@ def main(argv=None) -> int:
             if not args.worktree:
                 raise RunnerError("--worktree is required for verify")
             result = verify(
-                packet, worktree=args.worktree, aisc_path=args.aisc_path,
-                archive=args.archive or None)
+                packet, worktree=args.worktree, base=args.base,
+                aisc_path=args.aisc_path, archive=args.archive or None)
     except (OSError, RunnerError, ValueError, json.JSONDecodeError) as exc:
         print(f"input error: {exc}", file=sys.stderr)
         return 2
