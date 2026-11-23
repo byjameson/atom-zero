@@ -9,7 +9,7 @@
   AISC 0.5 `batch`/`diff` documentation. Not pushed yet; the next batch push
   is the `0.6.2` release boundary.
 - Working tree after the release-doc commits: clean
-- Atom Zero tests: **527 passed** (512 at the `0.6.1` tag)
+- Atom Zero tests: **617 passed** (512 at the `0.6.1` tag)
 - AISC strict audit: **7 specs PASS** (`Claims`, `ContextBudget`,
   `MemoryLifecycle`, `Proactive`, `ReadPipeline`, `TaskActions`, `ToolPlan`);
   `AtomZeroAnswerability` and `AtomZeroAnswerabilityGenerated` remain **FAIL**

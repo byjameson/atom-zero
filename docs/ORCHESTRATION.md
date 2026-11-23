@@ -67,7 +67,7 @@ of truth.
 |---|---|---|---|---|---|
 | `0.6.1` claims | task packet | isolated `feat/claim-evidence-algebra`, commit `3bc41f2` | read-only diff + full suite + AISC, PASS | read-only surface verification, release gate PASS | merged, released as `v0.6.1` (`c874ef4`), 512 tests |
 | `0.6.1` AISC spec | task packet | isolated `feat/aisc-spec-generator`, commit `6693b30` | focused/full suite, AISC PASS | same release gate | merged, generated spec shipped |
-| `0.6.2` consensus | task packet | main-agent implementation, commit `a0808c2` | full suite + AISC, PASS | held for batch boundary | on `main`, 527 tests |
+| `0.6.2` consensus | task packet | main-agent implementation, commit `a0808c2` | full suite + AISC, PASS | held for batch boundary | on `main`, 617 tests |
 | `0.6.2` freshness | task packet | isolated `feat/freshness-algebra`, running | pending | pending | in progress |
 
 The `0.6.1` cycle used two parallel Implementer worktrees, a separate Reviewer
@@ -90,8 +90,8 @@ spec generator; the LinkedIn activity feed contains the `0.6.1` post.
 - Post-release: cross-source consensus algebra
   (`atomzero-consensus`, `POST /v1/consensus`), merged on `main` with the
   claims HTTP route and the aggregate `atomzero-audit --summary`.
-- AISC side: version `0.5.0` adds native `batch` and `diff`; 209 tests pass.
-- Reviewer gate: 527 Atom Zero tests, 8 passing AISC specs, 2 expected
+- AISC side: version `0.5.0` adds native `batch` and `diff`; 223 tests pass.
+- Reviewer gate: 617 Atom Zero tests, 11 passing AISC specs, 2 expected
   answerability failures.
 - In progress: freshness Implementer in `feat/freshness-algebra`, source
   reliability Implementer in `feat/source-reliability`, and an AISC

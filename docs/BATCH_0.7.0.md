@@ -11,13 +11,13 @@ on local `main` and is pushed once at the `0.7.0` boundary.
 | 1 | `POST /v1/claims/audit` | merged on local main |
 | 2 | Cross-source consensus (`atomzero-consensus`, `POST /v1/consensus`) | merged on local main |
 | 3 | Aggregate `atomzero-audit --summary` | merged on local main |
-| 4 | Freshness algebra | implementer in `feat/freshness-algebra` |
-| 5 | Content-free source reliability ledger | implementer in `feat/source-reliability` |
-| 6 | AISC `batch --baseline` regression gate | implementer in AISC |
-| 7 | Temporal validity / as-of filtering extension | planned |
-| 8 | Claim-aware proactive conversation | planned |
-| 9 | AISC spec coverage report | planned |
-| 10 | Document version/change diff | planned |
+| 4 | Freshness algebra + `POST /v1/freshness` | merged on local main |
+| 5 | Content-free source reliability ledger + HTTP summary/verify | merged on local main |
+| 6 | AISC `batch --baseline` regression gate | implemented in AISC 0.5.1 |
+| 7 | Document version diff (`atomzero-doc-diff`, `POST /v1/documents/diff`) | merged on local main |
+| 8 | Temporal validity / as-of filtering extension | planned |
+| 9 | Claim-aware proactive conversation | planned |
+| 10 | AISC spec coverage report | planned |
 
 The research scan behind these choices is in `docs/BRANCH_RESEARCH.md`.
 

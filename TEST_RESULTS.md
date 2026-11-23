@@ -8,16 +8,16 @@
   the test run used the same code and test contents as `fdabbe0`
 - AISC path: `C:\Users\biris\Desktop\opencode\yeni dal\ai-systems-algebra`
 - AISC source status: directory is not a Git repository; no commit hash is available
-- AISC package version: `0.5.0` (batch/diff branch)
+- AISC package version: `0.5.1` (batch/diff/baseline branch)
 
 ## Summary
 
 | Suite | Passed | Failed | Exit | Duration |
 |---|---:|---:|---:|---:|
 | Atom Zero `pytest tests -q` (0.6.1 release) | **512** | **0** | 0 | 61.70s |
-| Atom Zero `pytest tests -q` (post-release main) | **527** | **0** | 0 | 60.90s |
-| AISC `pytest tests -q` (0.5.0) | **209** (+6 subtests) | **0** | 0 | 16.94s |
-| AISC strict specs | **8 PASS / 2 FAIL (expected)** | 0 critical | 1 | - |
+| Atom Zero `pytest tests -q` (post-release main) | **617** | **0** | 0 | 60.90s |
+| AISC `pytest tests -q` (0.5.0) | **223** (+6 subtests) | **0** | 0 | 16.94s |
+| AISC strict specs | **11 PASS / 2 FAIL (expected)** | 0 critical | 1 | - |
 | Build (`python -m build`) | **2 artifacts** | **0** | 0 | - |
 | `twine check` | **2 PASSED** | **0** | 0 | - |
 
@@ -31,7 +31,7 @@ release evidence is the clean `512 passed` run.
 
 - Post-release `0.6.2` HTTP integration: **2 passed**
   (`test_http_claims_audit`, `test_http_consensus_audit`), full main suite
-  **527 passed**.
+  **617 passed**.
 - `0.6.2` cross-source consensus branch: **12 passed**
   (`tests/test_consensus.py`); the `AtomZeroConsensus` AISC spec is **PASS**
   (4 verified components, assurance bound 0.93, 0 irreversible).
@@ -39,15 +39,22 @@ release evidence is the clean `512 passed` run.
 - `0.6.1` AISC spec generator: **33 passed** (`tests/test_aisc_spec.py`); the
   generated spec matches `docs/aisc/atomzero-answerability-generated.toml` in
   `--check` mode.
-- AISC strict after merge: 10 specs, **8 PASS**; `AtomZeroAnswerability` and
+- AISC strict after merge: 13 specs, **11 PASS**; `AtomZeroAnswerability` and
   `AtomZeroAnswerabilityGenerated` both **FAIL** with 0 critical and 2 warnings
   (`ANSWERABILITY_POOR`, `REFUSAL_POLICY_MISMATCH`). The warnings repeat
   because the generated spec intentionally mirrors the measured profile.
-- AISC 0.5 development: **209 passed** (+6 subtests), up from 191. New
+- AISC 0.5.1 development: **223 passed** (+6 subtests), up from 191. New
   `aisc batch` and `aisc diff` cover glob/directory expansion, aggregate
-  pass/fail/error counts, structured spec diffs and `--fail-on-breaking`.
+  pass/fail/error counts, structured spec diffs and `--fail-on-breaking`;
+  `batch --baseline` adds regression classification and exit codes.
   `python -m aisc batch docs/aisc/atomzero-*.toml --strict` reports
-  10 specs: 8 PASS, 2 FAIL, 0 errors, exit 1.
+  13 specs: 11 PASS, 2 FAIL, 0 errors, exit 1.
+- Freshness branch: **31 passed**; AISC `AtomZeroFreshness` PASS
+  (assurance 0.96, 0 irreversible).
+- Reliability branch: **39 passed** (after verify-before-write hardening);
+  AISC `AtomZeroSourceReliability` PASS (assurance 0.96, 0 irreversible).
+- Document diff branch: **17 passed** plus the HTTP route; AISC
+  `AtomZeroDocumentDiff` PASS (assurance 0.93, 0 irreversible).
 - Adapter runtime tests: **15 passed** (`tests/test_adapter_runtime.py`,
   `tests/test_compare_adapters.py`, `tests/test_answerability.py`).
 - Answerability gate tests: **11 passed** (`tests/test_answerability_gate.py`,
