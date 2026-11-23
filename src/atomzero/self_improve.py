@@ -120,7 +120,8 @@ def run_loop(
     ledger = _load_ledger(ledger_path) if ledger_path else []
     record = record_gated_decision(
         ledger, action, "approve", gate,
-        note="self-improve loop: gate passed and human approved")
+        note=(f"self-improve loop: {action['action_id']} gate "
+              f"{gate.get('gate_id', 'no-gate')} passed and human approved"))
     if ledger_path:
         path = Path(ledger_path)
         path.parent.mkdir(parents=True, exist_ok=True)

@@ -1,3 +1,4 @@
+import hashlib
 import json
 import subprocess
 import sys
@@ -62,6 +63,12 @@ def test_loop_completes_and_records(tmp_path):
     assert (tmp_path / "scoreboard.jsonl").is_file()
     assert result["trend"]["ok"] is True
     assert result["runner"]["changed_files"] == ["a.txt"]
+    action_id = result["packet"]["action_id"]
+    gate_id = result["runner"]["gate"].get("gate_id", "no-gate")
+    note = (f"self-improve loop: {action_id} gate {gate_id} "
+            "passed and human approved")
+    expected = hashlib.sha256(note.encode("utf-8")).hexdigest()[:16]
+    assert result["decision"]["note_id"] == expected
 
 
 def test_loop_veto_does_nothing(tmp_path):
