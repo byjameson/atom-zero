@@ -1,11 +1,26 @@
+import sys
+import types
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
+from atomzero import aisc_coverage
 from atomzero.aisc_coverage import (
     component_coverage,
+    coverage_report,
     evidence_files,
     spec_coverage,
 )
+
+
+def _install_fake_aisc(monkeypatch, load_spec):
+    package = types.ModuleType("aisc")
+    module = types.ModuleType("aisc.spec")
+    module.load_spec = load_spec
+    package.spec = module
+    monkeypatch.setitem(sys.modules, "aisc", package)
+    monkeypatch.setitem(sys.modules, "aisc.spec", module)
 
 
 def _component(name="Reader", evidence="tests/test_demo.py", verified=True,
@@ -61,3 +76,25 @@ def test_component_coverage_empty_evidence():
     entry = component_coverage(_component(evidence=""), Path("."))
     assert entry["has_evidence"] is False
     assert entry["evidence_files"] == []
+
+
+def test_coverage_report_records_expected_bad_spec(monkeypatch, tmp_path):
+    def bad_load_spec(path):
+        raise ValueError("bad spec")
+
+    _install_fake_aisc(monkeypatch, bad_load_spec)
+    report = coverage_report(["broken.toml"], project_root=tmp_path)
+    assert report["ok"] is False
+    assert report["summary"]["errors"] == 1
+    assert report["specs"][0]["error"].startswith("ValueError:")
+
+
+def test_coverage_report_propagates_unexpected_errors(monkeypatch, tmp_path):
+    _install_fake_aisc(monkeypatch, lambda path: object())
+
+    def boom(definition, project_root):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(aisc_coverage, "spec_coverage", boom)
+    with pytest.raises(RuntimeError, match="boom"):
+        coverage_report(["spec.toml"], project_root=tmp_path)
