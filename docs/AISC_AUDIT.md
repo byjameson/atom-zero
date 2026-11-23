@@ -1,6 +1,6 @@
 # AISC architecture audit
 
-Atom Zero ships fourteen optional AISC architecture specs:
+Atom Zero ships fifteen optional AISC architecture specs:
 
 - [`docs/aisc/atomzero-read.toml`](aisc/atomzero-read.toml): local retrieval,
   grounded answer, citation gate and renderer.
@@ -39,6 +39,9 @@ Atom Zero ships fourteen optional AISC architecture specs:
 - [`docs/aisc/atomzero-temporal.toml`](aisc/atomzero-temporal.toml):
   date parsing, validity evaluation and as-of filtering with explicit
   included/excluded evidence.
+- [`docs/aisc/atomzero-evaluation.toml`](aisc/atomzero-evaluation.toml):
+  an allowlisted evaluation gate for proposed improvements; no generic shell
+  and no auto-apply.
 
 AISC is a separate local prototype; Atom Zero imports it only when the audit
 command runs. The packaged entry point is `atomzero-audit` (also
@@ -114,6 +117,7 @@ AtomZeroDocumentDiff     assurance 0.93, verification debt 0, no irreversible
 AtomZeroFreshness        assurance 0.96, verification debt 0, no irreversible
 AtomZeroSourceReliability assurance 0.96, verification debt 0, no irreversible
 AtomZeroTemporal        assurance 0.95, verification debt 0, no irreversible
+AtomZeroEvaluationGate  assurance 0.95, verification debt 0, no irreversible
 ```
 
 `--strict --require-calibration` is **not green**:

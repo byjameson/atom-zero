@@ -1,5 +1,12 @@
 # Changelog
 
+## atomzero 0.8.0 - unreleased
+
+- Added **Evaluation gate** (`atomzero-gate`): allowlisted pytest, AISC and
+  manual checks for proposed improvements. No generic shell, timeouts fail,
+  manual checks are not auto-passed, and `auto_apply`/`weights_changed` are
+  always false.
+
 ## atomzero 0.7.0 - evidence and temporal loop (2026-11-23)
 
 This is the ten-increment batch accumulated after `0.6.1`: claim and consensus

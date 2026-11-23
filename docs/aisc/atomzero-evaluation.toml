@@ -1,0 +1,43 @@
+name = "AtomZeroEvaluationGate"
+version = "0.1.0"
+description = "Allowlisted pytest/AISC/manual evaluation gate for proposed improvements."
+min_assurance = 0.90
+max_context_tokens = 8000
+
+[[components]]
+name = "EvaluationPlan"
+input_type = "Checks"
+output_type = "ValidatedChecks"
+kind = "evaluator"
+assurance = 0.97
+verified = true
+evidence = "tests/test_evaluation.py parse_check valid and invalid cases"
+assumptions = ["checks are supplied by a local planner or human"]
+guarantees = ["only pytest, aisc and manual kinds are accepted", "invalid checks fail before execution"]
+context_tokens = 512
+
+[[components]]
+name = "AllowlistedRunner"
+input_type = "ValidatedChecks"
+output_type = "CheckResults"
+kind = "tool"
+reversible = true
+assurance = 0.95
+verified = true
+evidence = "tests/test_evaluation.py command construction, timeout and result parsing cases"
+assumptions = ["the local Python environment and selected test files are trusted"]
+guarantees = ["no generic shell command is executed", "timeouts are failures", "output is truncated to the report cap"]
+context_tokens = 2048
+
+[[components]]
+name = "GateReport"
+input_type = "CheckResults"
+output_type = "GateReport"
+kind = "tool"
+reversible = true
+assurance = 0.97
+verified = true
+evidence = "tests/test_evaluation.py all-pass, failure, manual and CLI cases"
+assumptions = ["a caller reads the report before accepting a plan"]
+guarantees = ["manual checks are not counted as passed", "auto_apply and weights_changed are always false"]
+context_tokens = 1024
