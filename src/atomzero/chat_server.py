@@ -303,6 +303,23 @@ button:disabled{opacity:.55; cursor:not-allowed; transform:none}
 .qitem .src{font-size:12px; color:var(--muted); word-break:break-word; margin-top:5px; max-height:140px; overflow:auto}
 .msg .actions{display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:8px}
 .msg .actions button{font-size:11.5px; padding:4px 8px; box-shadow:none; font-weight:500}
+.topbar{display:flex; justify-content:flex-end; margin:14px 0}
+.composer{display:flex; gap:8px; align-items:stretch; padding:8px; border:1px solid var(--border); border-radius:16px; background:var(--panel); box-shadow:var(--shadow-md)}
+.composer input{flex:1; min-width:0; border:0; box-shadow:none; background:transparent; padding:10px}
+.composer input:focus-visible{box-shadow:none}
+.composer #g{flex:0 0 auto; align-self:stretch}
+.attach{display:inline-flex; align-items:center; justify-content:center; padding:0 13px; border:1px solid var(--border); border-radius:10px; background:var(--panel-soft); color:var(--muted); cursor:pointer; font-weight:600; font-size:13px; transition:border-color .15s, background .15s, color .15s}
+.attach:hover{border-color:var(--border-strong); color:var(--accent); background:var(--accent-soft)}
+.attach input{display:none}
+.attach-status{margin:8px 2px 0}
+.attach-status b{color:var(--text); font-weight:600}
+.advanced{margin-top:26px; border:1px solid var(--border); border-radius:16px; background:color-mix(in srgb, var(--panel) 86%, transparent); box-shadow:var(--shadow-sm); overflow:hidden}
+.advanced summary{cursor:pointer; padding:14px 16px; font-weight:700; list-style:none; display:flex; align-items:center; gap:10px; user-select:none}
+.advanced summary::-webkit-details-marker{display:none}
+.advanced summary::before{content:"+"; display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:8px; background:var(--accent-soft); color:var(--accent); font-size:18px; line-height:1}
+.advanced[open] summary::before{content:"–"}
+.advanced-body{padding:0 18px 18px; border-top:1px solid var(--border)}
+.advanced-body > h3:first-of-type{margin-top:22px}
 #graphnodes button{background:var(--accent-soft); color:var(--accent); border-color:transparent; font-weight:600}
 #graphnodes button:hover{background:var(--accent); color:#fff}
 #docresults,#evidence,#cmpresult,#timeline,#graphnodes,#graphedges,#graphevidence,#relations,#docanswer,#tasklistres,#tasktagsres,#tagauditres,#briefres,#overdueres,#dueres,#tasksearchres,#weeklyreports,#weeklyreportspreview,#weeklyreportscheck,#weeklyreportscompareout{display:flex; flex-direction:column; gap:2px; overflow-x:auto}
@@ -324,6 +341,9 @@ a{color:var(--accent)}
   .row{align-items:stretch}
   .row input,.row select{flex:1 1 100%}
   .row label{white-space:normal}
+  .composer{flex-wrap:wrap}
+  .composer input{flex:1 1 100%}
+  .composer #g,.attach{flex:1 1 auto}
   .msg{max-width:95%}
   #chat{max-height:none; padding:12px}
   select{max-width:none}
@@ -332,26 +352,42 @@ a{color:var(--accent)}
 <h1>Atom Zero</h1>
 <p class="hint">local-first personal assistant</p>
 <p id="m" class="hint">loading...</p>
-<div class="row"><button id="newsession">New session</button></div>
+<div class="topbar"><button id="newsession">New session</button></div>
 <div id="chat"></div>
-<div class="row"><input id="p" placeholder="Ask, add a task, search your notes...">
-<button id="g">Send</button></div>
+<div class="composer">
+<input id="p" placeholder="Ask, command, or attach a PDF/note...">
+<label class="attach" title="Attach a PDF, DOCX, HTML, Markdown or text file">
+<input id="pfile" type="file"
+ accept=".txt,.md,.markdown,.html,.htm,.pdf,.docx,text/plain,text/html,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+<span>Attach</span>
+</label>
+<button id="g">Send</button>
+</div>
+<p id="attachstatus" class="hint attach-status">Attach a file, then type <b>bunu öğren</b> to learn it or <b>bu bilgileri unut</b> to forget it.</p>
 <div class="chips">
 <button data-q="what can you do?">what can it do</button>
+<button data-q="brief me">brief me</button>
+<button data-q="list tasks">tasks</button>
+<button data-q="weekly review">weekly review</button>
+<button data-q="what do you remember?">memory</button>
+</div>
+<details id="advanced" class="advanced">
+<summary>Advanced tools &amp; data</summary>
+<div class="advanced-body">
+<hr>
+<p class="hint">Quick command demos</p>
+<div class="chips">
 <button data-q="add task buy milk">add task</button>
-<button data-q="list tasks">list tasks</button>
 <button data-q="list tasks priority">priority list</button>
 <button data-q="list tasks done">done list</button>
 <button data-q="list tasks due week priority high">filtered list</button>
 <button data-q="list tags">tags</button>
 <button data-q="my name is Alex">remember my name</button>
-<button data-q="what do you remember?">recall</button>
 <button data-q="what is 12 * 7?">calculate</button>
 <button data-q="what is the launch code?">launch code</button>
 <button data-q="how long do I have to submit a warranty claim?">warranty</button>
 <button data-q="what is the visitor badge code?">visitor badge</button>
 <button data-q="what is the population of Paris?">no-source demo</button>
-<button data-q="brief me">brief me</button>
 <button data-q="brief me priority">priority brief</button>
 <button data-q="weekly review priority">priority review</button>
 <button data-q="due soon">due soon</button>
@@ -367,7 +403,6 @@ a{color:var(--accent)}
 <button data-q="keep reports 2 dry-run">report dry-run</button>
 <button data-q="plan goal prepare the warranty page">plan goal</button>
 </div>
-<hr>
 <h3>Daily brief</h3>
 <p class="hint">A local summary of open tasks, pending gaps, index status and
 graph entities. No provider is required. A goal plan adds cited local context
@@ -691,6 +726,8 @@ Atom Zero after adding files.</p>
 <div class="row"><select id="chainrecipe"><option value="">named recipe</option></select>
 <button id="chainreciperun">Run recipe</button></div>
 <div id="chainresult"></div>
+</div>
+</details>
 <script>
 function getSessionId() {
   try {
@@ -755,10 +792,110 @@ function extra(result) {
   }).join('; '));
   return parts.join(' | ');
 }
+function currentAttach() {
+  const input = document.getElementById('pfile');
+  return input && input.files ? input.files[0] : null;
+}
+function fileIntent(text) {
+  const low = String(text || '').toLowerCase();
+  if (/(öğren|ogren|learn|ekle|kaydet|index)/.test(low)) return 'learn';
+  if (/(unut|forget|sil|kaldır|kaldir)/.test(low)) return 'forget';
+  return '';
+}
+function setAttachStatus(text, isError) {
+  const el = document.getElementById('attachstatus');
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = isError ? 'var(--danger)' : '';
+}
+async function learnFile(file) {
+  setAttachStatus('Öğreniyorum: ' + file.name + '...');
+  const source = file.name;
+  const query = new URLSearchParams({source, title: file.name});
+  try {
+    const r = await fetch('/v1/documents/upload?' + query.toString(), {
+      method: 'POST',
+      headers: {'Content-Type': 'application/octet-stream'},
+      body: file,
+    });
+    const j = await r.json();
+    if (!r.ok) {
+      add('bot', 'Dosya öğrenilemedi: ' + (j.error || r.status), '', true);
+      setAttachStatus('Dosya öğrenilemedi.', true);
+      return;
+    }
+    add('bot',
+      'Öğrendim: ' + (j.source || source) + ' — ' + (j.chunks || 0) +
+      ' parça yerel indekse eklendi. Artık bu dosya hakkında soru sorabilirsin.',
+      'source: ' + (j.source || source));
+    setAttachStatus('Öğrenildi: ' + (j.source || source));
+    refreshDocs();
+    refreshHealth();
+  } catch (e) {
+    add('bot', 'Dosya öğrenilemedi: ' + e, '', true);
+    setAttachStatus('Dosya öğrenilemedi.', true);
+  } finally {
+    const input = document.getElementById('pfile');
+    if (input) input.value = '';
+  }
+}
+async function forgetFile(file) {
+  const source = file.name;
+  setAttachStatus('Unutuyorum: ' + source + '...');
+  try {
+    const r = await fetch('/v1/documents/forget', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({source}),
+    });
+    const j = await r.json();
+    if (!r.ok) {
+      add('bot', 'Dosya unutulamadı: ' + (j.error || r.status), '', true);
+      setAttachStatus('Dosya unutulamadı.', true);
+      return;
+    }
+    add('bot',
+      'Unuttum: ' + source + ' — ' + (j.chunks_deleted || 0) +
+      ' parça ve ' + (j.meta_deleted || 0) + ' metadata satırı silindi.',
+      'source: ' + source);
+    setAttachStatus('Unutuldu: ' + source);
+    refreshDocs();
+    refreshHealth();
+  } catch (e) {
+    add('bot', 'Dosya unutulamadı: ' + e, '', true);
+    setAttachStatus('Dosya unutulamadı.', true);
+  } finally {
+    const input = document.getElementById('pfile');
+    if (input) input.value = '';
+  }
+}
 async function send(message) {
-  const text = (message || document.getElementById('p').value).trim();
+  const input = document.getElementById('p');
+  const text = (message || input.value).trim();
+  const file = currentAttach();
+  if (file) {
+    const intent = fileIntent(text);
+    if (!intent) {
+      add('user', text || file.name);
+      add('bot',
+        'Dosya ekli. Öğrenmek için "bunu öğren", unutmak için ' +
+        '"bu bilgileri unut" yaz.', '', false);
+      return;
+    }
+    const label = text || (intent === 'learn' ? 'bunu öğren'
+                                               : 'bu bilgileri unut');
+    add('user', label + ' [' + file.name + ']');
+    if (input) input.value = '';
+    if (file.size > 10000000) {
+      add('bot', 'Dosya çok büyük (en fazla 10 MB).', '', true);
+      setAttachStatus('Dosya çok büyük.', true);
+      return;
+    }
+    if (intent === 'learn') await learnFile(file);
+    else await forgetFile(file);
+    return;
+  }
   if (!text) return;
-  document.getElementById('p').value = '';
+  if (input) input.value = '';
   add('user', text);
   try {
     const r = await fetch('/v1/agent/chat', {method: 'POST',
@@ -773,6 +910,25 @@ async function send(message) {
     add('bot', 'error: ' + e, '', true);
   }
 }
+document.getElementById('pfile').onchange = () => {
+  const file = currentAttach();
+  if (!file) {
+    setAttachStatus('Attach a file, then type "bunu öğren" or "bu bilgileri unut".');
+    return;
+  }
+  if (file.size > 10000000) {
+    setAttachStatus('Dosya çok büyük (en fazla 10 MB).', true);
+    return;
+  }
+  setAttachStatus('Seçildi: ' + file.name +
+    ' — şimdi "bunu öğren" veya "bu bilgileri unut" yaz.');
+};
+document.getElementById('p').addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    send();
+  }
+});
 function addFeedback(box, user, assistant) {
   const row = document.createElement('div');
   row.className = 'actions';

@@ -72,6 +72,11 @@ def test_demo_page_uses_daily_agent_endpoint():
     assert "/v1/graph/relations" in page
     assert 'id="relationsbtn"' in page
     assert "showrelations" in page
+    assert 'id="pfile"' in page
+    assert 'id="advanced"' in page
+    assert "attachstatus" in page
+    assert "bunu öğren" in page
+    assert "bu bilgileri unut" in page
     assert "/v1/hungry/run" in page
     assert "hungry mode" in page
     assert "grounded answer" in page
