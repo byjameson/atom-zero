@@ -1,0 +1,42 @@
+name = "AtomZeroAgentBridge"
+version = "0.1.0"
+description = "Bounded, human-gated task packet handoff from an improvement action to an external agent harness."
+min_assurance = 0.90
+max_context_tokens = 8000
+
+[[components]]
+name = "PlanExtractor"
+input_type = "ImprovementPlan"
+output_type = "SelectedAction"
+kind = "evaluator"
+assurance = 0.97
+verified = true
+evidence = "tests/test_agent_bridge.py action selection, empty plan and missing action cases"
+assumptions = ["the plan is produced by the human-gated improvement loop"]
+guarantees = ["the selected action must require human approval", "invalid plans are rejected"]
+context_tokens = 512
+
+[[components]]
+name = "TaskPacketBuilder"
+input_type = "SelectedAction"
+output_type = "TaskPacket"
+kind = "tool"
+reversible = true
+assurance = 0.96
+verified = true
+evidence = "tests/test_agent_bridge.py allowed files, checks, constraints and packet shape cases"
+assumptions = ["the packet is data only and is executed by an external harness"]
+guarantees = ["only pytest, aisc and manual checks are accepted", "auto_start is false", "weights_changed is false"]
+context_tokens = 1024
+
+[[components]]
+name = "HumanHandoff"
+input_type = "TaskPacket"
+output_type = "AgentTaskBrief"
+kind = "human"
+assurance = 0.99
+verified = true
+evidence = "tests/test_agent_bridge.py human gate, markdown and CLI cases"
+assumptions = ["a human decides whether to start the external harness"]
+guarantees = ["no agent is spawned by this module", "no merge, push or publish is performed", "acceptance remains explicit"]
+context_tokens = 256

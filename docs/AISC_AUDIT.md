@@ -1,6 +1,6 @@
 # AISC architecture audit
 
-Atom Zero ships nineteen optional AISC architecture specs:
+Atom Zero ships twenty optional AISC architecture specs:
 
 - [`docs/aisc/atomzero-read.toml`](aisc/atomzero-read.toml): local retrieval,
   grounded answer, citation gate and renderer.
@@ -51,6 +51,9 @@ Atom Zero ships nineteen optional AISC architecture specs:
   decision/scoreboard trend inputs, regression alerts and a trend report.
 - [`docs/aisc/atomzero-drift.toml`](aisc/atomzero-drift.toml):
   calibration profile normalization, drift evaluation and a drift report.
+- [`docs/aisc/atomzero-agent-bridge.toml`](aisc/atomzero-agent-bridge.toml):
+  action selection, bounded task packet and human handoff to an external
+  harness. The module spawns no agent.
 
 AISC is a separate local prototype; Atom Zero imports it only when the audit
 command runs. The packaged entry point is `atomzero-audit` (also
@@ -131,6 +134,7 @@ AtomZeroImprovementLoop assurance 0.95, verification debt 0, no irreversible
 AtomZeroScoreboard     assurance 0.95, verification debt 0, no irreversible
 AtomZeroTrend          assurance 0.95, verification debt 0, no irreversible
 AtomZeroCalibrationDrift assurance 0.95, verification debt 0, no irreversible
+AtomZeroAgentBridge   assurance 0.96, verification debt 0, no irreversible
 ```
 
 `--strict --require-calibration` is **not green**:

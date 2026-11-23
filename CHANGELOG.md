@@ -1,5 +1,12 @@
 # Changelog
 
+## atomzero 0.13.0 - unreleased
+
+- Added **agent handoff bridge** (`atomzero-agent-bridge`): a human-gated
+  improvement action becomes a bounded task packet (allowed files, allowlisted
+  checks, constraints) for an external agent harness. It does not spawn agents,
+  edit source, run commands, merge, push or change weights.
+
 ## atomzero 0.10.0 - calibrated loop (2026-11-23)
 
 This batch adds calibration-drift monitoring and closes two measured
