@@ -2,8 +2,8 @@
 
 - Date: 2026-11-23 23:30
 - Atom Zero repository: `C:\Users\biris\AppData\Local\Temp\opencode\atom-zero-clean`
-- Tested Atom Zero batch: `0.13.0` (agent bridge and calibrated profiles),
-  release commit `ce08d8f`
+- Tested Atom Zero batch: `0.16.0` (opt-in runner and policy drift),
+  release commit `d687f32`
 - Atom Zero working tree at test start: clean; the test run used the release
   commit contents
 - AISC path: `C:\Users\biris\Desktop\opencode\yeni dal\ai-systems-algebra`
@@ -14,10 +14,10 @@
 
 | Suite | Passed | Failed | Exit | Duration |
 |---|---:|---:|---:|---:|
-| Atom Zero `pytest tests -q` (0.13.0 release) | **813** | **0** | 0 | 68.70s |
+| Atom Zero `pytest tests -q` (0.16.0 release) | **839** | **0** | 0 | 68.12s |
 | Atom Zero `pytest tests -q` (post-release main) | **839** | **0** | 0 | 78.68s |
 | AISC `pytest tests -q` (0.5.1) | **223** (+6 subtests) | **0** | 0 | 17.13s |
-| AISC strict specs | **18 PASS / 2 FAIL (expected)** | 0 critical | 1 | - |
+| AISC strict specs | **19 PASS / 2 FAIL (expected)** | 0 critical | 1 | - |
 | Build (`python -m build`) | **2 artifacts** | **0** | 0 | - |
 | `twine check` | **2 PASSED** | **0** | 0 | - |
 
@@ -26,7 +26,7 @@ test (`WinError 10053`); the same test and the full suite pass on rerun. The
 release evidence is the clean `755 passed` run.
 
 **Failed tests: none.** Release verification
-(`scripts/verify_release.py --version 0.13.0`) reports **0 failures**.
+(`scripts/verify_release.py --version 0.16.0`) reports **0 failures**.
 
 ## Current evidence
 

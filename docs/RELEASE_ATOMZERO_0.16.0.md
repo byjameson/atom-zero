@@ -1,7 +1,10 @@
 # atomzero 0.16.0 - opt-in runner and policy drift
 
-Status: **prepared locally; publication pending.** This release follows the
-0.3 cadence after `0.13.0`. It adds the opt-in agent runner and policy-metric
+Status: **published.** PyPI `0.16.0`, GitHub source/tag/release `v0.16.0`,
+Hugging Face, ModelScope, dev.to and Medium are updated.
+`scripts/verify_release.py --version 0.16.0` reports **0 failures**. LinkedIn
+remains **blocked/unverified**. This release follows the 0.3 cadence after
+`0.13.0`. It adds the opt-in agent runner and policy-metric
 drift alerts, and closes a fourth measured cycle. No model or runtime weights
 changed; the weights remain `0.8.0`.
 
@@ -35,6 +38,9 @@ changed; the weights remain `0.8.0`.
 - `benchmarks/self_improvement_regression.py`: **12/12 checks passed**.
 - Four measured cycles have content-free gate archives and `gate_ok: true`
   decisions.
+- `scripts/verify_release.py --version 0.16.0`: **0 failures**.
+- Release commit `d687f32`, annotated tag `v0.16.0`.
+- LinkedIn is blocked/unverified.
 - No model weights changed; the weights remain `0.8.0`.
 
 ## Install

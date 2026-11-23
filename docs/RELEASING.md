@@ -3,20 +3,26 @@
 Canonical surfaces: GitHub, Hugging Face, PyPI, dev.to, Medium, LinkedIn and
 ModelScope.
 
-Current batch: **0.16.0 prepared locally.** It adds the opt-in agent runner,
+Current batch: **0.16.0 published.** It adds the opt-in agent runner,
 policy-metric drift alerts, the fourth measured cycle and the worktree gate
 isolation fix. `839` Atom Zero tests pass; AISC 0.5.1 has `223` tests and
 `benchmarks/self_improvement_regression.py` passes 12/12.
 
+`scripts/verify_release.py --version 0.16.0` reports **0 failures**. LinkedIn
+remains blocked/unverified.
+
 ## Release cadence
 
-Releases follow **0.3 minor steps**, not every 0.1. The current batch is
+Releases follow **0.3 minor steps**, not every 0.1. The current version is
 `0.16.0`; the next release boundary is **`0.19.0`**. Do not publish `0.17.x` or
 `0.18.x`.
 
 Intermediate commits stay local. A release batch can contain roughly ten
 development increments, but it is only published when the minor version has
 advanced by 0.3. A hotfix is the only exception and still gets one push.
+
+`scripts/verify_release.py --version 0.16.0` reports **0 failures**. LinkedIn
+remains blocked/unverified.
 
 ## Release cadence
 
