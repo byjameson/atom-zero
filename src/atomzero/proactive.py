@@ -31,6 +31,7 @@ __all__ = [
     "build_candidate",
     "configure",
     "next_tick",
+    "note_claim_audit",
     "proactive_state",
     "should_initiate",
 ]
@@ -48,6 +49,7 @@ REASON_OVERDUE = "overdue_tasks"
 REASON_DUE_TODAY = "tasks_due_today"
 REASON_DUE_SOON = "tasks_due_soon"
 REASON_GAPS = "pending_gaps"
+REASON_CLAIMS = "claim_gaps"
 REASON_SOURCES = "recent_sources"
 REASON_CHECK_IN = "check_in"
 
@@ -559,6 +561,69 @@ def _empty_candidate(next_check_seconds: int = 21600) -> dict:
     }
 
 
+def note_claim_audit(session, audit, now=None) -> dict:
+    """Record only the counts from a claim/consensus audit on the session.
+
+    The stored record is content-free: counts and a method label, never the
+    query, claim text, evidence chunk or source label. This is what lets the
+    proactive layer start a check-in about unsupported or single-source claims.
+    """
+    if not isinstance(audit, dict):
+        raise ProactiveError("audit must be an object")
+    summary = audit.get("summary")
+    if not isinstance(summary, dict):
+        raise ProactiveError("audit.summary must be an object")
+    status = summary.get("status_counts")
+    status = status if isinstance(status, dict) else {}
+    entry = {
+        "at": _stamp(_now_local(now)),
+        "claim_count": _safe_int(summary.get("claim_count")),
+        "supported": _safe_int(status.get("supported")),
+        "weak": _safe_int(status.get("weak")),
+        "unsupported": _safe_int(status.get("unsupported")),
+        "single_source": _safe_int(summary.get("single_source_clusters")),
+        "conflict_count": _safe_int(summary.get("conflict_count")),
+        "method": str(audit.get("method") or "")[:60],
+    }
+    for key in ("claim_count", "supported", "weak", "unsupported",
+                "single_source", "conflict_count"):
+        if entry[key] < 0:
+            raise ProactiveError(f"{key} must be non-negative")
+    data = _human_data(session)
+    data["claim_audit"] = entry
+    _save(session)
+    return dict(entry)
+
+
+def _claim_candidate(data: dict, moment: datetime) -> dict | None:
+    audit = data.get("claim_audit")
+    if not isinstance(audit, dict):
+        return None
+    unsupported = _safe_int(audit.get("unsupported"))
+    conflicts = _safe_int(audit.get("conflict_count"))
+    single_source = _safe_int(audit.get("single_source"))
+    if not (unsupported or conflicts or single_source):
+        return None
+    parts = []
+    if unsupported:
+        parts.append(f"{unsupported} unsupported "
+                     f"{_plural(unsupported, 'claim')}")
+    if conflicts:
+        parts.append(f"{conflicts} "
+                     f"{_plural(conflicts, 'conflict')}")
+    if single_source:
+        parts.append(f"{single_source} single-source "
+                     f"{_plural(single_source, 'cluster')}")
+    message = (
+        "In the last evidence audit I found " + ", ".join(parts) +
+        ". Want to review the evidence or compare sources?")
+    return _make_candidate(
+        REASON_CLAIMS, message, ["show claims", "run consensus"],
+        priority=65, next_check_seconds=21600,
+        key=f"{unsupported}:{conflicts}:{single_source}",
+        moment=moment)
+
+
 def build_candidate(session, now=None, config=None) -> dict:
     """Build the highest-priority local conversation candidate.
 
@@ -656,6 +721,10 @@ def build_candidate(session, now=None, config=None) -> dict:
             priority=60, next_check_seconds=21600,
             key=f"{count}:{_gap_name(gap)}",
             moment=moment)
+
+    claim_candidate = _claim_candidate(data, moment)
+    if claim_candidate is not None:
+        return claim_candidate
 
     recent_sources = _recent_sources(session, moment)
     if recent_sources and not _recent_brief(session, moment):

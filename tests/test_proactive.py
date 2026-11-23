@@ -42,6 +42,70 @@ def overdue_task(text="Send the report", task_id=1, due="2026-11-20"):
     return {"id": task_id, "text": text, "status": "open", "due": due}
 
 
+def test_note_claim_audit_is_content_free():
+    session = make_session()
+    entry = proactive.note_claim_audit(session, {
+        "summary": {
+            "claim_count": 4,
+            "status_counts": {"supported": 1, "weak": 1, "unsupported": 2},
+            "conflict_count": 1,
+        },
+        "method": "deterministic_claim_evidence_v1",
+        "query": "should not be stored",
+        "claims": [{"text": "should not be stored"}],
+    }, now=NOW)
+    stored = session.human.data["claim_audit"]
+    assert stored["unsupported"] == 2
+    assert stored["conflict_count"] == 1
+    assert stored["method"] == "deterministic_claim_evidence_v1"
+    assert "query" not in stored
+    assert "claims" not in stored
+    assert entry == stored
+
+
+def test_consensus_summary_feeds_claim_gap_candidate():
+    session = make_session()
+    enable(session)
+    proactive.note_claim_audit(session, {
+        "summary": {
+            "claim_count": 3,
+            "single_source_clusters": 2,
+            "conflict_count": 1,
+        },
+        "method": "deterministic_cross_source_consensus_v1",
+    }, now=NOW)
+    decision = proactive.should_initiate(session, now=NOW)
+    assert decision["due"] is True
+    assert decision["reason"] == "claim_gaps"
+    candidate = proactive.build_candidate(session, now=NOW)
+    assert "unsupported" not in candidate["message"]
+    assert "single-source" in candidate["message"]
+    assert "1 conflict" in candidate["message"]
+    assert candidate["actions"] == ["show claims", "run consensus"]
+
+
+def test_claim_audit_without_gaps_uses_fallback():
+    session = make_session()
+    enable(session)
+    proactive.note_claim_audit(session, {
+        "summary": {
+            "claim_count": 1,
+            "status_counts": {"supported": 1, "weak": 0, "unsupported": 0},
+            "conflict_count": 0,
+        },
+    }, now=NOW)
+    decision = proactive.should_initiate(session, now=NOW)
+    assert decision["due"] is True
+    assert decision["reason"] == "check_in"
+
+
+def test_note_claim_audit_rejects_invalid_input():
+    with pytest.raises(proactive.ProactiveError):
+        proactive.note_claim_audit({}, "bad")
+    with pytest.raises(proactive.ProactiveError):
+        proactive.note_claim_audit({}, {"summary": "bad"})
+
+
 def test_default_config_and_disabled_gate():
     assert proactive.DEFAULT_CONFIG == {
         "enabled": False,

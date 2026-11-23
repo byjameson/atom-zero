@@ -5913,7 +5913,15 @@ class Handler(BaseHTTPRequestHandler):
                     "source", "title", "section", "page", "chunk", "snippet")
                 if key in hit
             })
-        return self._json(200, audit_answer(query, clean))
+        result = audit_answer(query, clean)
+        session_id = str(req.get("session_id", "")).strip()
+        if session_id:
+            try:
+                from atomzero.proactive import note_claim_audit
+                note_claim_audit(self._session(session_id), result)
+            except Exception as exc:
+                return self._json(400, {"error": str(exc)})
+        return self._json(200, result)
 
     def _consensus_audit(self, req: dict):
         from atomzero.consensus import audit_consensus
@@ -5942,6 +5950,13 @@ class Handler(BaseHTTPRequestHandler):
                 clean, min_overlap=min_overlap, min_sources=min_sources)
         except ValueError as exc:
             return self._json(400, {"error": str(exc)})
+        session_id = str(req.get("session_id", "")).strip()
+        if session_id:
+            try:
+                from atomzero.proactive import note_claim_audit
+                note_claim_audit(self._session(session_id), result)
+            except Exception as exc:
+                return self._json(400, {"error": str(exc)})
         return self._json(200, result)
 
     def _freshness_audit(self, req: dict):

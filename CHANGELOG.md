@@ -7,6 +7,10 @@
   consensus/single-source status, and number/date/identifier/negation conflicts
   kept separate instead of averaged. It makes no model calls and does not
   persist the request.
+- Added **claim-aware proactive conversation**: claim and consensus audits can
+  record content-free counts on a local session, and proactive check-ins can
+  start from unsupported claims, conflicts or single-source clusters. Query,
+  claim text, chunks and source labels are not stored.
 - Added **Temporal validity / as-of filtering** (`atomzero-temporal`,
   `POST /v1/temporal/filter`): explicit `valid_from`/`valid_until` windows,
   valid/expired/not_yet/undated status and an included/excluded evidence

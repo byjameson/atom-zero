@@ -2,8 +2,8 @@
 
 Atom Zero can start a short conversation from local state instead of only
 answering. The feature is **opt-in**, local and deterministic: it uses tasks,
-knowledge gaps and recent sources, never a remote service, and never sends a
-message while consent is off.
+knowledge gaps, recent sources and content-free claim-audit counts, never a
+remote service, and never sends a message while consent is off.
 
 ## Policy
 
@@ -15,6 +15,19 @@ message while consent is off.
   acknowledges it.
 - A message is short and offers local command actions, for example
   `list tasks` or `brief me`.
+
+## Claim signals
+
+`POST /v1/claims/audit` and `POST /v1/consensus` accept an optional
+`session_id`. When present, `note_claim_audit` stores only counts on the local
+session: claim count, supported/weak/unsupported counts, single-source cluster
+count, conflict count, method label and timestamp. It never stores the query,
+claim text, evidence chunk, source label or answer.
+
+If the last audit found unsupported claims, conflicts or single-source clusters,
+the proactive layer can start a local check-in with the actions `show claims`
+and `run consensus`. The normal consent, quiet-hours, cooldown, daily-limit and
+duplicate-reason rules still apply.
 
 ## API
 
@@ -51,6 +64,9 @@ path as `SignalCollector -> ConsentGate -> ProactivePolicy -> MessageComposer
 
 - This is not a background daemon. Messages are delivered only while the local
   UI is open and polling.
-- It does not generate new facts; it routes to existing task/gap/brief data.
+- It does not generate new facts; it routes to existing task/gap/brief data
+  and to counts from the last claim audit.
+- The claim signal is a count summary, not a truth verdict; it inherits the
+  lexical claim audit's limits.
 - It does not replace notifications, email or any external channel.
 - Rate limits are per session and stored in the local session memory.

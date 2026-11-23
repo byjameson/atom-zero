@@ -1,6 +1,6 @@
 name = "AtomZeroProactive"
-version = "0.6.0"
-description = "Local, consent-gated, rate-limited AI-initiated conversation from tasks, gaps and local state."
+version = "0.6.2"
+description = "Local, consent-gated, rate-limited AI-initiated conversation from tasks, gaps, sources and content-free claim-audit counts."
 min_assurance = 0.90
 max_context_tokens = 8192
 
@@ -13,8 +13,20 @@ assurance = 0.95
 verified = true
 evidence = "tests/test_proactive.py task, gap, due-date and malformed-state cases"
 assumptions = ["local session state is readable"]
-guarantees = ["only local task, gap and source signals are used"]
+guarantees = ["only local task, gap, source and claim-count signals are used"]
 context_tokens = 1024
+
+[[components]]
+name = "ClaimGapReader"
+input_type = "Signals"
+output_type = "Signals"
+kind = "evaluator"
+assurance = 0.94
+verified = true
+evidence = "tests/test_proactive.py note_claim_audit, consensus summary and HTTP claim check-in cases"
+assumptions = ["claim audits are optional and supplied by the caller"]
+guarantees = ["only counts and a method label are stored", "query, claim text, chunks and source labels are not stored"]
+context_tokens = 128
 
 [[components]]
 name = "ConsentGate"

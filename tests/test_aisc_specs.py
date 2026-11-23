@@ -25,6 +25,12 @@ def test_aisc_architecture_specs_are_safe_and_verified():
     proactive = _load("atomzero-proactive.toml")
     memory = _load("atomzero-memory-lifecycle.toml")
     answerability = _load("atomzero-answerability.toml")
+    claims = _load("atomzero-claims.toml")
+    consensus = _load("atomzero-consensus.toml")
+    doc_diff = _load("atomzero-document-diff.toml")
+    freshness = _load("atomzero-freshness.toml")
+    reliability = _load("atomzero-reliability.toml")
+    temporal = _load("atomzero-temporal.toml")
 
     read_components = read["components"]
     task_components = task["components"]
@@ -49,14 +55,20 @@ def test_aisc_architecture_specs_are_safe_and_verified():
     assert answerability["min_answerable_coverage"] == 0.80
     assert answerability["refusal_threshold"] == 0.60
     assert [item["name"] for item in proactive["components"]] == [
-        "SignalCollector", "ConsentGate", "ProactivePolicy",
-        "MessageComposer", "UserChannel"]
+        "SignalCollector", "ClaimGapReader", "ConsentGate",
+        "ProactivePolicy", "MessageComposer", "UserChannel"]
     assert [item["name"] for item in memory["components"]] == [
         "MemoryRequestParser", "ScopeResolver", "HumanConfirmation",
         "MemoryStore", "LedgerWriter"]
     assert memory["components"][-2]["reversible"] is False
     assert memory["components"][-3]["kind"] == "human"
     assert memory["components"][-1]["reversible"] is True
+
+    for spec in (claims, consensus, doc_diff, freshness, reliability, temporal):
+        assert spec["min_assurance"] >= 0.90
+        assert all(item["verified"] is True for item in spec["components"])
+        assert all(item.get("reversible", True) is True
+                   for item in spec["components"])
 
     for components in (task_components, plan_components):
         irreversible = [index for index, item in enumerate(components)

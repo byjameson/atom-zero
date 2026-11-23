@@ -3310,6 +3310,40 @@ def test_http_temporal_filter(tmp_path):
         chat_server._state.update(old)
 
 
+def test_http_claim_audit_starts_proactive_checkin(tmp_path):
+    old = dict(chat_server._state)
+    chat_server._state.update({
+        "api_key": "", "model": None, "tok": None, "docs": None,
+        "session_dir": str(tmp_path / "sessions"), "sessions": {},
+    })
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        audit = _post(base + "/v1/claims/audit", {
+            "session_id": "claim-proactive",
+            "query": "The battery lasts 8 hours.",
+            "hits": [{"source": "sky.txt", "chunk": "The sky is blue."}],
+        })
+        assert audit["summary"]["status_counts"]["unsupported"] == 1
+        configured = _post(base + "/v1/proactive/config", {
+            "session_id": "claim-proactive", "enabled": True,
+            "quiet_start": "00:00", "quiet_end": "00:00",
+            "min_interval_minutes": 0})
+        assert configured["state"]["enabled"] is True
+        tick = _post(base + "/v1/proactive", {
+            "session_id": "claim-proactive", "ack": True})
+        assert tick["due"] is True
+        assert tick["reason"] == "claim_gaps"
+        assert "unsupported claim" in tick["message"]
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
+
+
 def test_http_tool_plan_audit(tmp_path):
     old = dict(chat_server._state)
     chat_server._state.update({"api_key": ""})
