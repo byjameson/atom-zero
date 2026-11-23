@@ -38,6 +38,9 @@ the self-code branch and its planner/runner integration.
 - Added `docs/GROWTH_LADDER.md` and `docs/ESCALATION.md` describing the honest
   snowball path: retrieval memory -> skills -> distilled adapters -> offline
   checkpoint upcycling -> agentic code improvement.
+- Added **`atomzero-growth`**: one content-free report combining escalation
+  growth, scoreboard measurements and an optional self-code diff; it blocks on
+  failed tests or a self-code regression and never changes weights.
 
 ## atomzero 0.19.0 - autonomous opt-in runner loop (2026-11-24)
 
