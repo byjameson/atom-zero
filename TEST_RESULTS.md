@@ -1,8 +1,8 @@
 # Atom Zero and AISC Test Results
 
-- Date: 2026-11-23 20:04:31
+- Date: 2026-11-23 20:35:07
 - Atom Zero repository: `C:\Users\biris\AppData\Local\Temp\opencode\atom-zero-clean`
-- Tested Atom Zero commit: `4628feddf0272a201f9d409997ffa4306dcdc011`
+- Tested Atom Zero commit: `ba9d53e72971b7556d2f73094eb1cb9bcdcbbf48`
 - Atom Zero working tree at test start: clean
 - AISC path: `C:\Users\biris\Desktop\opencode\yeni dal\ai-systems-algebra`
 - AISC source status: directory is not a Git repository; no commit hash is available
@@ -12,7 +12,7 @@
 
 | Suite | Passed | Failed | Exit | Duration |
 |---|---:|---:|---:|---:|
-| Atom Zero `pytest tests -q` | **465** | **0** | 0 | 63.38s |
+| Atom Zero `pytest tests -q` | **469** | **0** | 0 | 63.65s |
 | AISC `pytest tests -q` | **191** (+6 subtests) | **0** | 0 | 16.65s |
 
 **Failed tests: none.**
@@ -40,8 +40,9 @@
 - New branch tests: AISC strict audit (`tests/test_audit.py`,
   `tests/test_doctor.py`), plan audit (`tests/test_plan_audit.py`), context
   budget (`tests/test_context_budget.py`), proactive conversation
-  (`tests/test_proactive.py`, HTTP `test_http_proactive_conversation`) and the
-  memory confirmation gate (`test_http_privacy_forget_document_and_session`).
+  (`tests/test_proactive.py`, HTTP `test_http_proactive_conversation`), the
+  memory confirmation gate and content-free ledger
+  (`tests/test_memory_ledger.py`, `test_http_privacy_forget_document_and_session`).
 - AISC strict architecture audit (without `--require-calibration`): six specs
   PASS; `AtomZeroAnswerability` remains **FAIL** with
   `ANSWERABILITY_POOR` + `REFUSAL_POLICY_MISMATCH`.

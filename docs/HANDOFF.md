@@ -2,9 +2,9 @@
 
 ## Current state
 
-- Last feature commit: `813e356` (`ci: add manual PyPI trusted-publishing workflow`)
+- Last feature commit: `ba9d53e` (`feat: add content-free memory lifecycle ledger`)
 - Working tree after the handoff commit: clean
-- Atom Zero tests: **465 passed**
+- Atom Zero tests: **469 passed**
 - AISC tests: **191 passed** (+6 subtests)
 - AISC strict audit: **not claimed as passing**; the AISC spec/report update is
   owned by the AISC side. Atom Zero files were not modified in that repo.
@@ -13,7 +13,9 @@
   ModelScope card and the dev.to article are published. PyPI `0.6.0` is blocked
   on a fresh token or a configured trusted publisher; Medium remains on the
   prior version. The `publish.yml` workflow reports `invalid-publisher` (no
-  matching trusted publisher). The ~10-increment batch policy continues.
+  matching trusted publisher). Main now has the post-release memory ledger;
+  publish it as `0.6.1` after the PyPI blocker is cleared. The ~10-increment
+  batch policy continues.
 
 ## Completed in this session
 
@@ -76,6 +78,12 @@
   explicit server-side `confirm: true` (409 without it, 400 for a non-boolean),
   and the AISC `AtomZeroMemoryLifecycle` spec places `HumanConfirmation` before
   the irreversible `MemoryStore`.
+- Added the **content-free memory ledger**:
+  `atomzero-memory-ledger`, `GET /v1/memory/ledger` and
+  `POST /v1/memory/ledger/verify`. Successful deletes append counts/scope only;
+  the validator rejects text, query, answer, chunk and session content fields.
+  `LedgerWriter` now follows `MemoryStore` in the AISC spec. Main is ahead of
+  the `v0.6.0` release assets; the ledger belongs to the next patch batch.
 
 ## Next tasks
 
