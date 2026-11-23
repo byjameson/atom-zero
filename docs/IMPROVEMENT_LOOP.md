@@ -96,7 +96,56 @@ The plan always reports:
 `plan_from_inputs(**inputs, limit=5)` is a convenience wrapper that composes
 signal collection and planning.
 
-### 3. Require human approval
+### 3. Adjust priorities with decision history
+
+`collect_signals(..., history=[...])` and `plan_from_inputs(..., history=[...])`
+accept an optional list of existing decision-ledger records. Only `kind` and
+`decision` are read; every other field is ignored, so no note text or content
+is needed.
+
+For each known signal kind:
+
+```text
+adjustment = clamp(approvals * 2 - rejections * 3, -12, +12)
+priority   = SIGNAL_PRIORITIES[kind] + adjustment
+```
+
+`defer`, unrecognised decisions and unknown kinds have no effect. The base
+priority table is never changed; the bounded adjustment applies to the emitted
+signals of that call only. A kind can therefore move at most 12 points up or
+down. Ordering stays deterministic: higher adjusted priority first, then kind.
+
+The stdin key is `history`; `ledger` and `decisions` are accepted aliases.
+`--history-json` reads the same list from a file. The input is the same
+content-free record written by `record_decision`:
+
+```json
+[
+  {
+    "version": 1,
+    "at": "2026-01-01T12:00:00Z",
+    "action_id": "imp-01-unsupported_claims",
+    "kind": "unsupported_claims",
+    "decision": "reject",
+    "note_id": ""
+  },
+  {
+    "version": 1,
+    "at": "2026-01-02T12:00:00Z",
+    "action_id": "imp-01-unsupported_claims",
+    "kind": "unsupported_claims",
+    "decision": "approve",
+    "note_id": ""
+  }
+]
+```
+
+With one approval and one rejection the adjustment is `+2 - 3 = -1`, so
+`unsupported_claims` is emitted at priority `80 - 1 = 79`. Malformed history
+(non-list input, non-mapping records, missing or non-string kind/decision)
+raises `ValueError`.
+
+### 4. Require human approval
 
 `requires_human` is always `true`. The plan is a proposal. A person may approve,
 reject or defer each action with `record_decision(...)`. The planning layer
@@ -110,7 +159,7 @@ A typical follow-up is:
 3. the relevant pytest or AISC check is run;
 4. the next audit/freshness/reliability summary is collected.
 
-### 4. Evaluate before accepting
+### 5. Evaluate before accepting
 
 Acceptance strings are concrete gates, for example:
 
@@ -123,7 +172,7 @@ Acceptance strings are concrete gates, for example:
 An improvement is "accepted" only after its gate is satisfied. The improvement
 loop does not mark an action accepted by itself.
 
-### 5. Record decisions without content
+### 6. Record decisions without content
 
 `record_decision(ledger, action, decision, note="", now=None)` appends a
 content-free record to a caller-owned list:
@@ -154,6 +203,7 @@ malformed fields.
 $env:PYTHONPATH="$PWD\src"
 python -m atomzero.improvement --claims-json claims.json --gaps-json gaps.json --json
 python -m atomzero.improvement --freshness-json freshness.json --limit 3
+python -m atomzero.improvement --claims-json claims.json --history-json ledger.json --json
 python -m atomzero.improvement < payload.json
 ```
 
@@ -165,14 +215,16 @@ Flags:
 - `--feedback-json`: list of feedback items;
 - `--freshness-json`: freshness or consensus summary;
 - `--reliability-json`: reliability summary;
+- `--history-json`: content-free decision-ledger records used for bounded
+  priority adjustment;
 - `--limit`: maximum number of actions (1..20);
 - `--json`: machine-readable plan.
 
 With no file flags, stdin must contain one JSON object with any of
-`claim_audit` (alias `claims`), `gaps`, `feedback`, `freshness` or
-`reliability`. Invalid JSON, an empty stdin payload or an invalid limit exits
-with code 2. A valid payload exits 0, including a clean payload that produces
-zero actions.
+`claim_audit` (alias `claims`), `gaps`, `feedback`, `freshness`, `reliability`
+or `history` (aliases `ledger` and `decisions`). Invalid JSON, malformed
+history, an empty stdin payload or an invalid limit exits with code 2. A valid
+payload exits 0, including a clean payload that produces zero actions.
 
 ## Integration example
 
@@ -189,8 +241,12 @@ plan = plan_from_inputs(
         {"source_id": "0123456789abcdef", "status": "weak",
          "observations": 1},
     ]},
+    history=[
+        {"kind": "unsupported_claims", "decision": "reject"},
+    ],
     limit=3,
 )
+# unsupported_claims is emitted at 80 - 3 = 77 for this call.
 
 ledger = []
 record_decision(ledger, plan["actions"][0], "defer",
@@ -259,9 +315,12 @@ Invoke-RestMethod -Method Post `
   statistical confidence.
 - **Caller-maintained statuses.** Closed gaps and approved/exported feedback are
   only as accurate as the local store. A stale status can hide real work.
-- **Fixed priorities.** Signal priorities are a documented local heuristic, not
-  a learned policy. The limit can hide lower-priority signals, so the full
-  signal list should be reviewed when needed.
+- **Bounded, heuristic priorities.** Signal priorities start from a documented
+  local heuristic, not a learned policy, and decision history can move each
+  kind by at most 12 points. The adjustment counts approvals and rejections
+  only; it does not learn why a decision was made. The limit can hide
+  lower-priority signals, so the full signal list should be reviewed when
+  needed.
 - **The ledger is not a reasoning log.** It records only the action id, kind,
   decision and note hash. The human's reasoning must be stored separately if it
   is needed.

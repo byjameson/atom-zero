@@ -15,7 +15,8 @@ caller already has and turns them into a reviewable plan.
     python -m atomzero.improvement < payload.json
 
 The stdin form accepts one JSON object with any of ``claim_audit`` (alias
-``claims``), ``gaps``, ``feedback``, ``freshness`` or ``reliability``.
+``claims``), ``gaps``, ``feedback``, ``freshness``, ``reliability`` or
+``history`` (aliases ``ledger`` and ``decisions``).
 """
 from __future__ import annotations
 
@@ -45,6 +46,9 @@ VERSION = 1
 NOTE_ID_LENGTH = 16
 MIN_LIMIT = 1
 MAX_LIMIT = 20
+HISTORY_APPROVAL_BONUS = 2
+HISTORY_REJECTION_PENALTY = 3
+HISTORY_MAX_ADJUSTMENT = 12
 
 VALID_DECISIONS = frozenset({"approve", "reject", "defer"})
 CLOSED_GAP_STATUSES = frozenset({"done", "dismissed", "closed"})
@@ -189,6 +193,7 @@ RECORD_KEYS = frozenset({
 _INPUT_KEYS = frozenset({
     "claim_audit", "gaps", "feedback", "freshness", "reliability",
     "aisc_coverage", "scoreboard", "drift", "runner_audit", "self_code",
+    "history",
 })
 _STDIN_ALIASES = {
     "claim_audit": "claim_audit",
@@ -206,6 +211,9 @@ _STDIN_ALIASES = {
     "runner_audit": "runner_audit",
     "self_code": "self_code",
     "self_code_audit": "self_code",
+    "history": "history",
+    "ledger": "history",
+    "decisions": "history",
 }
 _NOTE_ID_RE = re.compile(r"\A(?:[0-9a-f]{1,64})?\Z")
 
@@ -252,11 +260,54 @@ def _signal(kind: str, count: int, title: str, detail: str,
     }
 
 
+def _history_adjustments(history) -> dict[str, int]:
+    """Return bounded priority deltas from approve/reject history.
+
+    Only ``kind`` and ``decision`` are read. Unknown kinds and decisions other
+    than ``approve`` or ``reject`` (including ``defer``) have no effect.
+    """
+    if history is None:
+        return {}
+    if not isinstance(history, list):
+        raise ValueError("history must be a list")
+    counts: dict[str, list[int]] = {}
+    for index, record in enumerate(history):
+        if not isinstance(record, dict):
+            raise ValueError(f"history[{index}] must be a mapping")
+        kind = record.get("kind")
+        if not isinstance(kind, str) or not kind.strip():
+            raise ValueError(
+                f"history[{index}].kind must be a non-empty string")
+        decision = record.get("decision")
+        if not isinstance(decision, str) or not decision.strip():
+            raise ValueError(
+                f"history[{index}].decision must be a non-empty string")
+        kind = kind.strip()
+        decision = decision.strip()
+        if kind not in SIGNAL_PRIORITIES:
+            continue
+        if decision not in ("approve", "reject"):
+            continue
+        tallies = counts.setdefault(kind, [0, 0])
+        if decision == "approve":
+            tallies[0] += 1
+        else:
+            tallies[1] += 1
+    adjustments = {}
+    for kind, (approvals, rejections) in counts.items():
+        raw = (approvals * HISTORY_APPROVAL_BONUS
+               - rejections * HISTORY_REJECTION_PENALTY)
+        adjustments[kind] = max(
+            -HISTORY_MAX_ADJUSTMENT,
+            min(HISTORY_MAX_ADJUSTMENT, raw))
+    return adjustments
+
+
 def collect_signals(*, claim_audit=None, gaps=None, feedback=None,
                     freshness=None, reliability=None,
                     aisc_coverage=None, scoreboard=None,
                     drift=None, runner_audit=None,
-                    self_code=None) -> list[dict]:
+                    self_code=None, history=None) -> list[dict]:
     """Collect deterministic weakness signals from local summaries.
 
     ``claim_audit`` is the content-free record written by
@@ -265,10 +316,16 @@ def collect_signals(*, claim_audit=None, gaps=None, feedback=None,
     ``freshness`` a freshness/consensus summary and ``reliability`` a
     reliability summary from :func:`atomzero.reliability.summarize`.
 
+    ``history`` is an optional list of content-free decision records. Only the
+    ``kind`` and ``decision`` fields are used: each ``approve`` adds 2 and each
+    ``reject`` subtracts 3 from the signal priority, clamped to +/-12. Other
+    decisions and unknown kinds are ignored.
+
     Only signals with a positive count are returned. Output is sorted by
     priority (highest first), then by kind, so equal inputs always produce the
     same list. No source text or model call is involved.
     """
+    adjustments = _history_adjustments(history)
     if claim_audit is not None and not isinstance(claim_audit, dict):
         raise ValueError("claim_audit must be a mapping")
     if gaps is not None and not isinstance(gaps, list):
@@ -535,6 +592,9 @@ def collect_signals(*, claim_audit=None, gaps=None, feedback=None,
                 "The calibration profile has "
                 + ", ".join(str(alert) for alert in alerts) + ".",
                 ["drift"]))
+
+    for signal in signals:
+        signal["priority"] += adjustments.get(signal["kind"], 0)
 
     return sorted(
         signals, key=lambda item: (-item["priority"], item["kind"]))
@@ -870,7 +930,8 @@ def _payload_from_args(args) -> dict:
             ("scoreboard_json", "scoreboard"),
             ("drift_json", "drift"),
             ("runner_audit_json", "runner_audit"),
-            ("self_code_json", "self_code")):
+            ("self_code_json", "self_code"),
+            ("history_json", "history")):
         path = getattr(args, dest)
         if not path:
             continue
@@ -946,6 +1007,8 @@ def main(argv=None) -> int:
                         help="JSON file with a runner scope audit")
     parser.add_argument("--self-code-json", default="",
                         help="JSON file with an atomzero-self-code report")
+    parser.add_argument("--history-json", default="",
+                        help="JSON file with a content-free decision ledger")
     parser.add_argument("--limit", type=int, default=5,
                         help="maximum number of actions (1..20)")
     parser.add_argument("--json", action="store_true",

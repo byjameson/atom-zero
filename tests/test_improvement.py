@@ -337,6 +337,118 @@ def test_plan_from_inputs_rejects_unknown_input():
         plan_from_inputs(weights="not-allowed")
 
 
+def test_history_approvals_raise_signal_priority():
+    signals = collect_signals(**_full_inputs(), history=[
+        {"kind": "pending_feedback", "decision": "approve"},
+        {"kind": "pending_feedback", "decision": "approve"},
+    ])
+    by_kind = _by_kind(signals)
+    assert by_kind["pending_feedback"]["priority"] == (
+        SIGNAL_PRIORITIES["pending_feedback"] + 4)
+    assert by_kind["unsupported_claims"]["priority"] == (
+        SIGNAL_PRIORITIES["unsupported_claims"])
+
+
+def test_history_rejections_lower_signal_priority():
+    signals = collect_signals(**_full_inputs(), history=[
+        {"kind": "unsupported_claims", "decision": "reject"},
+        {"kind": "unsupported_claims", "decision": "reject"},
+    ])
+    by_kind = _by_kind(signals)
+    assert by_kind["unsupported_claims"]["priority"] == (
+        SIGNAL_PRIORITIES["unsupported_claims"] - 6)
+    assert by_kind["conflicts"]["priority"] == SIGNAL_PRIORITIES["conflicts"]
+
+
+def test_history_priority_adjustment_is_clamped_at_both_bounds():
+    approvals = collect_signals(
+        claim_audit={"unsupported": 1},
+        history=[{"kind": "unsupported_claims", "decision": "approve"}] * 20)
+    rejections = collect_signals(
+        claim_audit={"unsupported": 1},
+        history=[{"kind": "unsupported_claims", "decision": "reject"}] * 20)
+    assert approvals[0]["priority"] == (
+        SIGNAL_PRIORITIES["unsupported_claims"] + 12)
+    assert rejections[0]["priority"] == (
+        SIGNAL_PRIORITIES["unsupported_claims"] - 12)
+
+
+@pytest.mark.parametrize("decision", ["defer", "unknown"])
+def test_history_other_decisions_have_no_effect(decision):
+    signals = collect_signals(
+        claim_audit={"unsupported": 1},
+        history=[
+            {"kind": "unsupported_claims", "decision": decision},
+            {"kind": "unsupported_claims", "decision": decision},
+        ])
+    assert signals[0]["priority"] == SIGNAL_PRIORITIES["unsupported_claims"]
+
+
+def test_history_unknown_kind_has_no_effect():
+    signals = collect_signals(
+        claim_audit={"unsupported": 1},
+        history=[{"kind": "unknown_kind", "decision": "approve"}] * 5)
+    assert signals[0]["priority"] == SIGNAL_PRIORITIES["unsupported_claims"]
+
+
+@pytest.mark.parametrize(
+    "history",
+    [
+        "not-a-list",
+        {"kind": "unsupported_claims", "decision": "approve"},
+        [None],
+        ["not-a-mapping"],
+        [{}],
+        [{"kind": 3, "decision": "approve"}],
+        [{"kind": "", "decision": "approve"}],
+        [{"kind": "unsupported_claims"}],
+        [{"kind": "unsupported_claims", "decision": None}],
+        [{"kind": "unsupported_claims", "decision": 1}],
+    ],
+)
+def test_collect_signals_rejects_malformed_history(history):
+    with pytest.raises(ValueError, match="history"):
+        collect_signals(
+            claim_audit={"unsupported": 1}, history=history)
+
+
+def test_history_rejection_changes_priority_order():
+    signals = collect_signals(
+        claim_audit={"unsupported": 1, "conflict_count": 0,
+                     "single_source": 0},
+        gaps=[{"id": "g1", "query": "Q", "status": "pending", "count": 1}],
+        history=[{"kind": "unsupported_claims", "decision": "reject"}] * 4,
+    )
+    assert [signal["kind"] for signal in signals] == [
+        "knowledge_gaps", "unsupported_claims"]
+    assert [signal["priority"] for signal in signals] == [70, 68]
+
+
+def test_history_approval_changes_priority_order():
+    signals = collect_signals(
+        feedback=[{"id": "f1", "status": "pending"}],
+        reliability={"sources": [
+            {"source_id": "a" * 16, "status": "weak", "observations": 1}]},
+        history=[{"kind": "pending_feedback", "decision": "approve"}] * 6,
+    )
+    assert [signal["kind"] for signal in signals] == [
+        "pending_feedback", "weak_sources"]
+    assert [signal["priority"] for signal in signals] == [52, 50]
+
+
+def test_plan_from_inputs_applies_history():
+    plan = plan_from_inputs(
+        claim_audit={"unsupported": 1},
+        history=[{"kind": "unsupported_claims", "decision": "reject"}] * 2,
+    )
+    action = plan["actions"][0]
+    assert action["kind"] == "unsupported_claims"
+    assert action["priority"] == SIGNAL_PRIORITIES["unsupported_claims"] - 6
+    assert action["requires_human"] is True
+    assert plan["auto_apply"] is False
+    assert plan["weights_changed"] is False
+
+
 def test_record_decision_appends_content_free_hashed_record():
     ledger = []
     record = record_decision(
@@ -676,6 +788,40 @@ def test_cli_all_input_files(tmp_path, capsys):
     assert code == 0
     plan = json.loads(captured.out)
     assert [action["kind"] for action in plan["actions"]] == ALL_KINDS
+
+
+def test_cli_history_json_adjusts_priority(tmp_path, capsys):
+    claims = _write(tmp_path, "claims.json", {"unsupported": 1})
+    history = _write(tmp_path, "history.json", [
+        {"kind": "unsupported_claims", "decision": "reject"},
+    ])
+    code = main([
+        "--claims-json", str(claims),
+        "--history-json", str(history),
+        "--json",
+    ])
+    captured = capsys.readouterr()
+    assert code == 0
+    plan = json.loads(captured.out)
+    assert plan["actions"][0]["kind"] == "unsupported_claims"
+    assert plan["actions"][0]["priority"] == (
+        SIGNAL_PRIORITIES["unsupported_claims"] - 3)
+    assert captured.err == ""
+
+
+@pytest.mark.parametrize("alias", ["history", "ledger", "decisions"])
+def test_cli_stdin_history_aliases(alias, monkeypatch, capsys):
+    payload = {
+        "claims": {"unsupported": 1},
+        alias: [{"kind": "unsupported_claims", "decision": "approve"}],
+    }
+    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(payload)))
+    code = main(["--json"])
+    captured = capsys.readouterr()
+    assert code == 0
+    plan = json.loads(captured.out)
+    assert plan["actions"][0]["priority"] == (
+        SIGNAL_PRIORITIES["unsupported_claims"] + 2)
 
 
 def test_cli_reads_one_stdin_payload(monkeypatch, capsys):
