@@ -15,9 +15,9 @@
 | Suite | Passed | Failed | Exit | Duration |
 |---|---:|---:|---:|---:|
 | Atom Zero `pytest tests -q` (0.10.0 release) | **794** | **0** | 0 | 69.63s |
-| Atom Zero `pytest tests -q` (post-release main) | **794** | **0** | 0 | 79.64s |
+| Atom Zero `pytest tests -q` (post-release main) | **800** | **0** | 0 | 82.50s |
 | AISC `pytest tests -q` (0.5.1) | **223** (+6 subtests) | **0** | 0 | 17.13s |
-| AISC strict specs | **17 PASS / 2 FAIL (expected)** | 0 critical | 1 | - |
+| AISC strict specs | **18 PASS / 2 FAIL (expected)** | 0 critical | 1 | - |
 | Build (`python -m build`) | **2 artifacts** | **0** | 0 | - |
 | `twine check` | **2 PASSED** | **0** | 0 | - |
 
