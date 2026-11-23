@@ -361,13 +361,18 @@ def load_jsonl(path) -> list[dict]:
 
 
 def write_jsonl(path, ledger: list[dict]) -> None:
-    """Atomically write a UTF-8 JSONL ledger, one object per line."""
+    """Atomically write a UTF-8 JSONL ledger, one object per line.
+
+    The whole ledger is verified before writing, so a tampered entry cannot be
+    laundered into the file by an add/summary rewrite.
+    """
     if not isinstance(ledger, list):
         raise ValueError("ledger must be a list")
+    report = verify(ledger)
+    if not report["ok"]:
+        raise ValueError("invalid ledger: " + "; ".join(report["errors"]))
     lines = []
-    for index, entry in enumerate(ledger):
-        if not isinstance(entry, dict):
-            raise ValueError(f"entry {index}: must be a JSON object")
+    for entry in ledger:
         lines.append(json.dumps(
             entry, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
     text = "\n".join(lines) + ("\n" if lines else "")

@@ -291,6 +291,15 @@ def test_jsonl_round_trip_and_atomic_write(tmp_path):
     assert load_jsonl(tmp_path / "missing.jsonl") == []
 
 
+def test_write_jsonl_rejects_forbidden_content(tmp_path):
+    path = tmp_path / "ledger.jsonl"
+    ledger = [_add([], "notes.txt")]
+    ledger[0]["text"] = "leak"
+    with pytest.raises(ValueError, match="forbidden content key"):
+        write_jsonl(path, ledger)
+    assert not path.exists()
+
+
 def test_load_jsonl_rejects_bad_lines_and_duplicate_keys(tmp_path):
     path = tmp_path / "ledger.jsonl"
     path.write_text('{"a": 1}\nnot-json\n', encoding="utf-8")
