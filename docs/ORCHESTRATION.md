@@ -61,13 +61,16 @@ of truth.
 ## Current cycle
 
 - Planner: main agent.
-- Implementer A: claim/evidence algebra in the
-  `feat/claim-evidence-algebra` worktree.
-- Implementer B: evidence-to-AISC spec generator in the
-  `feat/aisc-spec-generator` worktree.
-- Reviewer: full tests, AISC audit and diff review.
-- Release agent: 0.6.0 is published; the next release agent gate is `0.6.1`
-  after both implementer branches are reviewed and merged.
+- Released: `0.6.1` with claim/evidence algebra and the evidence-to-AISC spec
+  generator. `0.6.0` remains the previous tag.
+- Post-release implementer: cross-source consensus algebra
+  (`atomzero-consensus`, `POST /v1/consensus`), merged on `main` with the
+  claims HTTP route.
+- AISC side: version `0.5.0` adds native `batch` and `diff`; 208 tests pass.
+- Reviewer: full tests, strict AISC batch and diff review. Current gate:
+  526 Atom Zero tests, 8 passing AISC specs, 2 expected answerability failures.
+- Release agent: hold the accumulated `0.6.2` work until the batch boundary;
+  then one push for `main`, the tag and every public surface.
 
 ## Rules
 
