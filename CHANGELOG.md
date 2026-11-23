@@ -1,6 +1,9 @@
 # Changelog
 
-## atomzero 0.13.0 - unreleased
+## atomzero 0.13.0 - agent bridge and calibrated profiles (2026-11-24)
+
+This release follows the 0.3 cadence after 0.10.0 and adds the bounded
+agent-handoff bridge plus nested calibration-profile support.
 
 - Added **agent handoff bridge** (`atomzero-agent-bridge`): a human-gated
   improvement action becomes a bounded task packet (allowed files, allowlisted

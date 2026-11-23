@@ -16,15 +16,15 @@
   with the measured Brier 0.244 / ECE 0.130 and refusal-policy misses. This is
   reported, not hidden.
 - Build/twine: **PASSED** (`atomzero-0.6.1` wheel + sdist)
-- Release status: `0.10.0` is published on PyPI, GitHub, Hugging Face,
-  ModelScope, dev.to and Medium. `scripts/verify_release.py --version 0.10.0`
-  reports **0 failures**; release commit `ceb26a0`, annotated tag `v0.10.0`.
-  LinkedIn accepted the publish action but the profile feed still showed an
-  older post; treat LinkedIn as **blocked/unverified**, not green. The
-  `publish.yml` trusted-publisher run remains a historical failed attempt;
-  uploads use a project token from the owner's local token file. Post-release
-  work continues; the next release boundary is **0.13.0** (0.3 minor steps),
-  not 0.11 or 0.12. Do not push intermediate commits.
+- Release status: `0.10.0` is the last published version. `0.13.0` is prepared
+  locally with the agent handoff bridge, nested calibration-profile support and
+  the third measured cycle. Publish at this boundary: one push for `main` and
+  the tag, GitHub release/assets, PyPI, Hugging Face, ModelScope, dev.to,
+  Medium and LinkedIn, then `scripts/verify_release.py --version 0.13.0` and
+  the Release agent. The `publish.yml` trusted-publisher run remains a
+  historical failed attempt; uploads use a project token from the owner's local
+  token file. LinkedIn was blocked/unverified for 0.10.0. The next boundary
+  after this is **0.16.0**.
 
 ## Completed in this session
 
