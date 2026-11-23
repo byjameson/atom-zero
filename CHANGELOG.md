@@ -1,6 +1,11 @@
 # Changelog
 
-## atomzero 0.6.2 - unreleased
+## atomzero 0.7.0 - evidence and temporal loop (2026-11-23)
+
+This is the ten-increment batch accumulated after `0.6.1`: claim and consensus
+audits over HTTP, freshness, reliability, temporal validity, claim-aware
+proactive check-ins, document version diff, aggregate audit summary and AISC
+coverage. No model weights changed; the weights remain `0.8.0`.
 
 - Added **Cross-source consensus** (`atomzero-consensus`,
   `POST /v1/consensus`): deterministic claim clustering across retrieval hits,

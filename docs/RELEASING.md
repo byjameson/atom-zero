@@ -3,14 +3,16 @@
 Canonical surfaces: GitHub, Hugging Face, PyPI, dev.to, Medium, LinkedIn and
 ModelScope.
 
-Current batch: **0.6.1 published.** It adds the memory lifecycle ledger,
-claim/evidence algebra and the evidence-to-AISC spec generator. PyPI, GitHub
-source/tag/release, Hugging Face, ModelScope, dev.to, Medium and LinkedIn are
-updated; `scripts/verify_release.py --version 0.6.1` reports **0 failures**.
+Current batch: **0.7.0 prepared locally.** The ten-increment evidence/temporal
+batch is merged: claim and consensus HTTP, audit summary, freshness,
+reliability, AISC batch baseline, document diff, temporal validity,
+claim-aware proactive check-ins and AISC coverage. `646` Atom Zero tests pass;
+AISC 0.5.1 has `223` tests.
 
-Post-release `main` has one local, unpushed commit: `POST /v1/claims/audit` and
-the AISC 0.5 batch/diff documentation. Keep accumulating for `0.6.2`; push
-`main`, the tag and all public surfaces once at that release boundary.
+Publish at this boundary: push `main` and the tag once, create the GitHub
+release with both assets, upload to PyPI with the owner token, update the
+Hugging Face/ModelScope cards, dev.to, Medium and LinkedIn, then run
+`scripts/verify_release.py --version 0.7.0` and the read-only Release agent.
 
 ## Release cadence
 
