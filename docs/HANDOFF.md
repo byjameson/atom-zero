@@ -11,11 +11,11 @@
   cac82f022c879258`, `855/0 -> 857/0`; `gate_id 7f0d5be2bce36219`,
   `1033/0 -> 1035/0`). Accumulating for the **1.0.0** boundary; not pushed yet.
 - Working tree after the release-doc commits: clean
-- Atom Zero tests: **1035 passed**
+- Atom Zero tests: **1052 passed**
 - AISC strict audit: **25 specs, 23 PASS, 0 errors**; `AtomZeroAnswerability`
   and `AtomZeroAnswerabilityGenerated` remain **FAIL** with the measured
-  Brier 0.244 / ECE 0.130 and refusal-policy misses. This is reported, not
-  hidden.
+  Brier 0.233 / ECE 0.064 and refusal-policy misses. The ECE target is met;
+  the Brier target is not. This is reported, not hidden.
 - Build/twine: **PASSED** (`atomzero-0.19.0` wheel + sdist)
 - No model weights changed; weights remain `0.8.0`.
 - Release status: `0.19.0` is published on PyPI, GitHub, Hugging Face,

@@ -15,7 +15,7 @@
 | Suite | Passed | Failed | Exit | Duration |
 |---|---:|---:|---:|---:|
 | Atom Zero `pytest tests -q` (0.19.0 release) | **846** | **0** | 0 | 79.99s |
-| Atom Zero `pytest tests -q` (post-release main) | **1035** | **0** | 0 | 93.78s |
+| Atom Zero `pytest tests -q` (post-release main) | **1052** | **0** | 0 | 101.51s |
 | AISC `pytest tests -q` (0.5.1) | **223** (+6 subtests) | **0** | 0 | 17.13s |
 | AISC strict specs (25 specs) | **23 PASS / 2 FAIL (expected)** | 0 critical | 1 | - |
 | Build (`python -m build`) | **2 artifacts** | **0** | 0 | - |
@@ -23,7 +23,7 @@
 
 The full-suite run is subject to a known Windows socket flake in one long HTTP
 test (`WinError 10053`); the same test and the full suite pass on rerun. The
-current post-release evidence is the clean `1035 passed` run.
+current post-release evidence is the clean `1052 passed` run.
 
 **Failed tests: none.** Release verification
 (`scripts/verify_release.py --version 0.19.0`) reports **0 failures**.
@@ -34,7 +34,7 @@ current post-release evidence is the clean `1035 passed` run.
   and document-diff routes are covered. Full release suite **646 passed**.
 - Post-release self-improvement loop: improvement planner and decisions,
   evaluation gate, weekly-review ledger summary and proactive reminders.
-  Full main suite **1035 passed**; `benchmarks/self_improvement_regression.py`
+  Full main suite **1052 passed**; `benchmarks/self_improvement_regression.py`
   reports **19/19 checks passed**. Seven measured cycles are recorded:
   `docs/LOOP_CYCLE.md` (HTTP flake, `gate_id ab5fe9b0fa0f48bc`, 792/1 ->
   793/0), `docs/LOOP_CYCLE_2.md` (live claim conflict, `gate_id

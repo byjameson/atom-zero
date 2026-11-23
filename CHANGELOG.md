@@ -47,6 +47,10 @@ the self-code branch and its planner/runner integration.
 - Added **`atomzero-verify-teacher`**: content-free claim/evidence/conflict
   verification for teacher answers. A verified result is a promotable event,
   not an automatic memory write, adapter or weight change.
+- Added **prevalence-corrected isotonic calibration** for the answerability
+  signal: hybrid Brier `0.2443 -> 0.2326`, ECE `0.1299 -> 0.0642`; feature-only
+  Brier `0.2703 -> 0.2535`, ECE `0.1407 -> 0.0519`; AUC unchanged. The Brier
+  target remains unmet and is not claimed.
 
 ## atomzero 0.19.0 - autonomous opt-in runner loop (2026-11-24)
 
