@@ -97,9 +97,10 @@ spec generator; the LinkedIn activity feed contains the `0.6.1` post.
   reliability Implementer in `feat/source-reliability`, and an AISC
   `batch --baseline` Implementer. The `0.6.1` Release agent gate is PASS
   (Medium and LinkedIn verified by the Planner browser).
-- Release agent: hold the accumulated work until the ten-increment `0.7.0`
-  boundary; then one push for `main`, the tag and every public surface.
-  See `docs/BATCH_0.7.0.md`.
+- Release agent: releases now follow **0.3 minor steps**. `0.10.0` is the
+  current published version; the next boundary is `0.13.0`, then `0.16.0`.
+  Hold accumulated work until `0.13.0`; then one push for `main`, the tag and
+  every public surface. See `docs/BATCH_0.7.0.md` for the historical batch.
 
 ## Rules
 

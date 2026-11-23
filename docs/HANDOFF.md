@@ -23,7 +23,8 @@
   older post; treat LinkedIn as **blocked/unverified**, not green. The
   `publish.yml` trusted-publisher run remains a historical failed attempt;
   uploads use a project token from the owner's local token file. Post-release
-  work starts the next batch; do not push intermediate commits.
+  work continues; the next release boundary is **0.13.0** (0.3 minor steps),
+  not 0.11 or 0.12. Do not push intermediate commits.
 
 ## Completed in this session
 

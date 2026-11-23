@@ -10,8 +10,15 @@ two measured closed cycles (HTTP flake and structured-token conflict noise).
 `scripts/verify_release.py --version 0.10.0` reports **0 failures**. LinkedIn
 remains blocked/unverified.
 
-Post-release work starts the next batch. Do not push intermediate commits; the
-next boundary is the next ten-increment batch.
+## Release cadence
+
+Releases follow **0.3 minor steps**, not every 0.1. The current published
+version is `0.10.0`; the next release boundary is **`0.13.0`**, then `0.16.0`.
+Do not publish `0.11.x` or `0.12.x`.
+
+Intermediate commits stay local. A release batch can contain roughly ten
+development increments, but it is only published when the minor version has
+advanced by 0.3. A hotfix is the only exception and still gets one push.
 
 ## Release cadence
 
