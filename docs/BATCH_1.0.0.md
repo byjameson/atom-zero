@@ -10,7 +10,7 @@ boundary.
 - Post-release main: self-code audit, bounded proposals, planner signals,
   proposal-derived runner scope, sixth measured cycle
   (`gate_id cac82f022c879258`, `855/0 -> 857/0`).
-- Main gate: 985 Atom Zero tests, 223 AISC tests, 25 strict specs
+- Main gate: 1032 Atom Zero tests, 223 AISC tests, 25 strict specs
   (23 PASS, 2 expected answerability FAIL), benchmark 19/19.
 - Weights remain `0.8.0`; answerability gate remains closed.
 - Merged post-release branches: self-code audit, self-code diff, history-aware

@@ -10,7 +10,7 @@
   `cac82f022c879258`, `855/0 -> 857/0`). Accumulating for the **1.0.0**
   boundary; not pushed yet.
 - Working tree after the release-doc commits: clean
-- Atom Zero tests: **985 passed**
+- Atom Zero tests: **1032 passed**
 - AISC strict audit: **25 specs, 23 PASS, 0 errors**; `AtomZeroAnswerability`
   and `AtomZeroAnswerabilityGenerated` remain **FAIL** with the measured
   Brier 0.244 / ECE 0.130 and refusal-policy misses. This is reported, not
