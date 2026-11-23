@@ -117,6 +117,9 @@ def run_loop(
 ) -> dict:
     """Run one bounded loop, returning every stage and its evidence."""
     normalized = dict(signals) if isinstance(signals, dict) else {}
+    ledger = _load_ledger(ledger_path) if ledger_path else []
+    if ledger and "history" not in normalized:
+        normalized["history"] = list(ledger)
     before_self_code = None
     if self_code_root:
         from atomzero.self_code import audit_report
@@ -234,7 +237,6 @@ def run_loop(
             result["status"] = "self_code_regression"
             return result
     gate = runner["gate"]
-    ledger = _load_ledger(ledger_path) if ledger_path else []
     record = record_gated_decision(
         ledger, action, "approve", gate,
         note=(f"self-improve loop: {action['action_id']} gate "
