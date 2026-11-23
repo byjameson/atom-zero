@@ -14,10 +14,12 @@ on local `main` and is pushed once at the `0.7.0` boundary.
 | 4 | Freshness algebra | implementer in `feat/freshness-algebra` |
 | 5 | Content-free source reliability ledger | implementer in `feat/source-reliability` |
 | 6 | AISC `batch --baseline` regression gate | implementer in AISC |
-| 7 | Claim-aware proactive conversation | planned |
-| 8 | AISC spec coverage report | planned |
-| 9 | Temporal claim consistency audit | planned |
+| 7 | Temporal validity / as-of filtering extension | planned |
+| 8 | Claim-aware proactive conversation | planned |
+| 9 | AISC spec coverage report | planned |
 | 10 | Document version/change diff | planned |
+
+The research scan behind these choices is in `docs/BRANCH_RESEARCH.md`.
 
 ## Release boundary
 
