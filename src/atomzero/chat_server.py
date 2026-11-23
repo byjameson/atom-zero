@@ -4713,7 +4713,8 @@ class Handler(BaseHTTPRequestHandler):
                          "/v1/research/queue/reject",
                          "/v1/research/queue/run",
                          "/v1/agent/chat", "/v1/agent/plan",
-                         "/v1/tools/audit", "/v1/proactive",
+                         "/v1/tools/audit", "/v1/claims/audit",
+                         "/v1/proactive",
                          "/v1/proactive/config", "/v1/proactive/ack"):
             return self._json(404, {"error": "not found"})
         key = _state.get("api_key") or ""
@@ -4809,6 +4810,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._agent_plan(req)
             if route == "/v1/tools/audit":
                 return self._tools_audit(req)
+            if route == "/v1/claims/audit":
+                return self._claims_audit(req)
             if route == "/v1/proactive":
                 return self._proactive_next(req)
             if route == "/v1/proactive/config":
@@ -5875,6 +5878,27 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(400, {"error": "confirm must be a boolean"})
         result = audit_plan(req.get("steps"), confirm=confirm)
         return self._json(200 if result["valid"] else 400, result)
+
+    def _claims_audit(self, req: dict):
+        from atomzero.claims import audit_answer
+        query = req.get("query")
+        hits = req.get("hits")
+        if not isinstance(query, str) or not query.strip():
+            return self._json(400, {"error": "query is required"})
+        if not isinstance(hits, list):
+            return self._json(400, {"error": "hits must be a list"})
+        if len(hits) > 50:
+            return self._json(400, {"error": "at most 50 hits are allowed"})
+        clean = []
+        for hit in hits:
+            if not isinstance(hit, dict):
+                return self._json(400, {"error": "each hit must be an object"})
+            clean.append({
+                key: hit[key] for key in (
+                    "source", "title", "section", "page", "chunk", "snippet")
+                if key in hit
+            })
+        return self._json(200, audit_answer(query, clean))
 
     def _proactive_next(self, req: dict):
         session_id = str(req.get("session_id", "")).strip()

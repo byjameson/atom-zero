@@ -74,6 +74,25 @@ report = audit_answer(query, hits)
 `hits` are normal retrieval hits with `chunk` plus optional `source`,
 `title`, `section` and `page`. The functions do not mutate the inputs.
 
+## HTTP
+
+The local server exposes the same audit without storing the query or the hits:
+
+```powershell
+$body = @{
+  query = "The battery lasts 8 hours."
+  hits = @(@{ source = "notes.txt"; title = "Notes";
+              chunk = "The battery lasts 8 hours in the test." })
+} | ConvertTo-Json -Depth 5
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/v1/claims/audit `
+  -ContentType "application/json" -Body $body
+```
+
+`query` must be a non-empty string and `hits` a list of objects (maximum 50).
+Only `source`, `title`, `section`, `page`, `chunk` and `snippet` are passed to
+the audit; unknown fields are ignored. Invalid input returns `400`. The route
+does not persist the request.
+
 ## CLI
 
 ```powershell

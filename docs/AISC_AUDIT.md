@@ -1,6 +1,6 @@
 # AISC architecture audit
 
-Atom Zero ships four optional AISC architecture specs:
+Atom Zero ships eight optional AISC architecture specs:
 
 - [`docs/aisc/atomzero-read.toml`](aisc/atomzero-read.toml): local retrieval,
   grounded answer, citation gate and renderer.
@@ -20,6 +20,12 @@ Atom Zero ships four optional AISC architecture specs:
 - [`docs/aisc/atomzero-answerability.toml`](aisc/atomzero-answerability.toml):
   the measured answerability/refusal-policy experiment. It is intentionally
   retained with its failing metrics.
+- [`docs/aisc/atomzero-answerability-generated.toml`](aisc/atomzero-answerability-generated.toml):
+  the same evidence generated from the stored profile by
+  `atomzero-aisc-spec`; it mirrors the failure instead of hiding it.
+- [`docs/aisc/atomzero-claims.toml`](aisc/atomzero-claims.toml):
+  claim extraction, evidence linking, contradiction evaluation and answer
+  building. It records the lexical audit signal, not an NLI guarantee.
 
 AISC is a separate local prototype; Atom Zero imports it only when the audit
 command runs. The packaged entry point is `atomzero-audit` (also
@@ -33,6 +39,22 @@ atomzero-audit --strict --require-calibration
 atomzero-audit --json
 atomzero-doctor --aisc --aisc-path "$env:AISC_PATH"
 ```
+
+AISC 0.5 adds native batch and diff commands, which Atom Zero's multi-spec
+checkout can use directly:
+
+```powershell
+cd "$env:AISC_PATH"
+python -m aisc batch "$env:ATOMZERO_PATH\docs\aisc\*.toml" --strict
+python -m aisc batch "$env:ATOMZERO_PATH\docs\aisc" --strict --json
+python -m aisc diff old.toml new.toml --fail-on-breaking
+```
+
+`batch` expands globs and directories itself, so it works from PowerShell
+without native glob expansion. `diff` reports component, metric, threshold and
+issue changes; `--fail-on-breaking` exits non-zero when assurance drops, a
+component is removed, a critical issue increases, or an irreversible component
+is added.
 
 `atomzero-doctor --aisc` folds the optional audit into the normal preflight. A
 missing AISC checkout is a warning, not a hard install failure; a strict
@@ -58,6 +80,7 @@ AtomZeroProactive        assurance 0.95, verification debt 0, no irreversible
                          (ConsentGate precedes UserChannel)
 AtomZeroMemoryLifecycle  assurance 0.98, verification debt 0, 1 irreversible
                          (HumanConfirmation precedes MemoryStore; LedgerWriter follows)
+AtomZeroClaims           assurance 0.93, verification debt 0, no irreversible
 ```
 
 `--strict --require-calibration` is **not green**:

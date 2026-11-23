@@ -8,13 +8,15 @@
   the test run used the same code and test contents as `fdabbe0`
 - AISC path: `C:\Users\biris\Desktop\opencode\yeni dal\ai-systems-algebra`
 - AISC source status: directory is not a Git repository; no commit hash is available
-- AISC package version: `0.4.0`
+- AISC package version: `0.5.0` (batch/diff branch)
 
 ## Summary
 
 | Suite | Passed | Failed | Exit | Duration |
 |---|---:|---:|---:|---:|
-| Atom Zero `pytest tests -q` | **512** | **0** | 0 | 61.70s |
+| Atom Zero `pytest tests -q` (0.6.1 release) | **512** | **0** | 0 | 61.70s |
+| Atom Zero `pytest tests -q` (post-release main) | **513** | **0** | 0 | 64.68s |
+| AISC `pytest tests -q` (0.5.0) | **208** (+6 subtests) | **0** | 0 | 16.94s |
 | AISC strict specs | **7 PASS / 2 FAIL (expected)** | 0 critical | 1 | - |
 | Build (`python -m build`) | **2 artifacts** | **0** | 0 | - |
 | `twine check` | **2 PASSED** | **0** | 0 | - |
@@ -27,6 +29,8 @@ release evidence is the clean `512 passed` run.
 
 ## Current evidence
 
+- Post-release `0.6.2` HTTP integration: **1 passed**
+  (`test_http_claims_audit`), full main suite **513 passed**.
 - `0.6.1` claim/evidence branch: **10 passed** (`tests/test_claims.py`).
 - `0.6.1` AISC spec generator: **33 passed** (`tests/test_aisc_spec.py`); the
   generated spec matches `docs/aisc/atomzero-answerability-generated.toml` in
@@ -35,6 +39,11 @@ release evidence is the clean `512 passed` run.
   `AtomZeroAnswerabilityGenerated` both **FAIL** with 0 critical and 2 warnings
   (`ANSWERABILITY_POOR`, `REFUSAL_POLICY_MISMATCH`). The warnings repeat
   because the generated spec intentionally mirrors the measured profile.
+- AISC 0.5 development: **208 passed** (+6 subtests), up from 191. New
+  `aisc batch` and `aisc diff` cover glob/directory expansion, aggregate
+  pass/fail/error counts, structured spec diffs and `--fail-on-breaking`.
+  `python -m aisc batch docs/aisc/atomzero-*.toml --strict` reports
+  9 specs: 7 PASS, 2 FAIL, 0 errors, exit 1.
 - Adapter runtime tests: **15 passed** (`tests/test_adapter_runtime.py`,
   `tests/test_compare_adapters.py`, `tests/test_answerability.py`).
 - Answerability gate tests: **11 passed** (`tests/test_answerability_gate.py`,

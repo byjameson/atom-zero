@@ -1,5 +1,14 @@
 # Changelog
 
+## atomzero 0.6.2 - unreleased
+
+- Added `POST /v1/claims/audit` for the local claim/evidence audit. `query` is
+  required, `hits` is a bounded list (maximum 50) and only source/title/
+  section/page/chunk/snippet fields are passed through. The route does not
+  persist the request.
+- Documented AISC 0.5 `batch` and `diff` support, including glob/directory
+  expansion and `--fail-on-breaking`, in `docs/AISC_AUDIT.md`.
+
 ## atomzero 0.6.1 - claim evidence and generated AISC specs (2026-11-23)
 
 - Added a content-free **memory lifecycle ledger** (`atomzero-memory-ledger`,
