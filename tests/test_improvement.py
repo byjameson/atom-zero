@@ -645,6 +645,20 @@ def test_self_code_plan_from_inputs():
         "self_code_medium"]
 
 
+def test_adapter_candidate_signal_and_action():
+    signals = collect_signals(adapter={"promotable": 3, "candidates": 0})
+    assert signals[0]["kind"] == "adapter_candidate_ready"
+    assert signals[0]["count"] == 3
+    plan = build_plan(signals)
+    action = plan["actions"][0]
+    assert action["kind"] == "adapter_candidate_ready"
+    assert "held-out adapter" in action["acceptance"]
+    assert action["suggested_checks"] == [
+        "pytest:tests/test_adapter_candidates.py"]
+    assert collect_signals(
+        adapter={"promotable": 3, "candidates": 1}) == []
+
+
 def test_calibration_drift_signal():
     signals = collect_signals(drift={
         "alerts": ["brier_increased", "ece_increased"]})

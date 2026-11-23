@@ -257,6 +257,65 @@ def test_loop_explicit_history_is_not_overwritten(tmp_path):
     assert result["plan"]["actions"][0]["kind"] == "conflicts"
 
 
+def test_loop_runs_adapter_candidate(tmp_path):
+    from atomzero.adapter_candidates import build_candidate
+    examples = [
+        {"user": f"q{index}", "assistant": f"a{index}",
+         "verification": {"verified": True, "promotable": True}}
+        for index in range(4)
+    ]
+    # The deterministic split puts one example in the held-out set.
+    candidate = build_candidate(examples, eval_ratio=0.25)
+    comparison = {
+        "examples": candidate["metadata"]["eval_examples"],
+        "baseline": {"loss": 1.2, "ppl": 3.3},
+        "adapter": {"loss": 1.0, "ppl": 3.0},
+    }
+    ledger = tmp_path / "adapter.jsonl"
+    result = run_loop(
+        signals={"adapter": {"promotable": 4, "candidates": 0}},
+        allowed_files=[], checks=[], opt_in=True, approve=False,
+        autonomous=True, repo_root=tmp_path,
+        adapter_examples=examples,
+        adapter_out_dir=tmp_path / "candidate",
+        adapter_comparison=comparison,
+        adapter_ledger_path=ledger,
+        adapter_eval_ratio=0.25)
+    assert result["status"] == "completed", result
+    assert result["adapter"]["status"] == "pass"
+    assert result["adapter"]["evaluation"]["promotable"] is True
+    assert ledger.is_file()
+
+
+def test_loop_adapter_gate_failure(tmp_path):
+    examples = [
+        {"user": f"q{index}", "assistant": f"a{index}",
+         "verification": {"verified": True, "promotable": True}}
+        for index in range(4)
+    ]
+    result = run_loop(
+        signals={"adapter": {"promotable": 4, "candidates": 0}},
+        allowed_files=[], checks=[], opt_in=True, approve=False,
+        autonomous=True, repo_root=tmp_path,
+        adapter_examples=examples,
+        adapter_out_dir=tmp_path / "candidate",
+        adapter_comparison={
+            "examples": 1,
+            "baseline": {"loss": 1.2, "ppl": 3.3},
+            "adapter": {"loss": 1.3, "ppl": 3.5}},
+        adapter_eval_ratio=0.25)
+    assert result["status"] == "adapter_gate_failed"
+    assert result["adapter"]["evaluation"]["ok"] is False
+
+
+def test_loop_adapter_requires_inputs(tmp_path):
+    result = run_loop(
+        signals={"adapter": {"promotable": 1, "candidates": 0}},
+        allowed_files=[], checks=[], opt_in=True, approve=False,
+        autonomous=True, repo_root=tmp_path)
+    assert result["status"] == "adapter_input_missing"
+
+
 def test_loop_without_self_code_root_has_no_diff(tmp_path):
     result = run_loop(**_args(tmp_path))
     assert result["status"] == "completed"

@@ -18,6 +18,10 @@ from pathlib import Path
 
 from atomzero.claims import audit_answer
 from atomzero.consensus import audit_consensus
+from atomzero.adapter_candidates import (
+    build_candidate as build_adapter_candidate,
+    evaluate_candidate as evaluate_adapter_candidate,
+)
 from atomzero.escalation import decide, record_escalation, summarize_growth
 from atomzero.evaluation import parse_check
 from atomzero.growth_report import build_report
@@ -337,6 +341,31 @@ def check_teacher_verification_is_content_free():
     assert bad["verified"] is False
 
 
+def check_adapter_candidate_gate():
+    examples = [
+        {"user": f"q{index}", "assistant": f"a{index}",
+         "verification": {"verified": True, "promotable": True}}
+        for index in range(4)
+    ]
+    candidate = build_adapter_candidate(examples, eval_ratio=0.25)
+    assert candidate["metadata"]["eval_examples"] == 1
+    passed = evaluate_adapter_candidate(candidate, {
+        "examples": 1,
+        "baseline": {"loss": 1.2, "ppl": 3.3},
+        "adapter": {"loss": 1.0, "ppl": 3.0},
+    })
+    assert passed["status"] == "pass"
+    assert passed["promotable"] is True
+    assert passed["auto_apply"] is False
+    assert passed["weights_changed"] is False
+    failed = evaluate_adapter_candidate(candidate, {
+        "examples": 2,
+        "baseline": {"loss": 1.2, "ppl": 3.3},
+        "adapter": {"loss": 1.0, "ppl": 3.0},
+    })
+    assert failed["status"] == "fail"
+
+
 CHECKS = [
     check_plan_priority_and_human_gate,
     check_plan_does_not_auto_apply,
@@ -357,6 +386,7 @@ CHECKS = [
     check_scoreboard_output_parsers,
     check_growth_report_combines_layers,
     check_teacher_verification_is_content_free,
+    check_adapter_candidate_gate,
 ]
 
 

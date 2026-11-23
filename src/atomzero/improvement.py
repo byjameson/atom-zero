@@ -64,6 +64,7 @@ SIGNAL_PRIORITIES = {
     "conflicts": 75,
     "self_code_medium": 73,
     "aisc_coverage_gaps": 72,
+    "adapter_candidate_ready": 68,
     "knowledge_gaps": 70,
     "single_source": 65,
     "stale_sources": 60,
@@ -93,6 +94,8 @@ ACCEPTANCE_GATES = {
     "aisc_coverage_gaps": (
         "fix missing evidence files or unverified components and rerun AISC "
         "coverage"),
+    "adapter_candidate_ready": (
+        "export a held-out adapter candidate and pass the loss/perplexity gate"),
     "knowledge_gaps": (
         "add a local source for the top pending gap and rerun gap audit"),
     "single_source": (
@@ -140,6 +143,9 @@ NEXT_STEPS = {
     "aisc_coverage_gaps": (
         "run atomzero-coverage, fix the missing evidence or unverified "
         "component, then rerun atomzero-gate"),
+    "adapter_candidate_ready": (
+        "run atomzero-adapter-candidate loop with the verified teacher traces, "
+        "then require the held-out loss/perplexity gate to pass"),
 }
 DEFAULT_NEXT_STEP = (
     "run atomzero-gate with the focused pytest/AISC checks before accepting")
@@ -177,6 +183,9 @@ SUGGESTED_CHECKS = {
         "pytest:tests/test_aisc_coverage.py",
         "aisc:docs/aisc/atomzero-read.toml",
     ],
+    "adapter_candidate_ready": [
+        "pytest:tests/test_adapter_candidates.py",
+    ],
 }
 DEFAULT_CHECKS = ["pytest:tests/test_improvement.py"]
 
@@ -193,7 +202,7 @@ RECORD_KEYS = frozenset({
 _INPUT_KEYS = frozenset({
     "claim_audit", "gaps", "feedback", "freshness", "reliability",
     "aisc_coverage", "scoreboard", "drift", "runner_audit", "self_code",
-    "history",
+    "adapter", "history",
 })
 _STDIN_ALIASES = {
     "claim_audit": "claim_audit",
@@ -211,6 +220,8 @@ _STDIN_ALIASES = {
     "runner_audit": "runner_audit",
     "self_code": "self_code",
     "self_code_audit": "self_code",
+    "adapter": "adapter",
+    "adapter_ledger": "adapter",
     "history": "history",
     "ledger": "history",
     "decisions": "history",
@@ -307,7 +318,8 @@ def collect_signals(*, claim_audit=None, gaps=None, feedback=None,
                     freshness=None, reliability=None,
                     aisc_coverage=None, scoreboard=None,
                     drift=None, runner_audit=None,
-                    self_code=None, history=None) -> list[dict]:
+                    self_code=None, adapter=None,
+                    history=None) -> list[dict]:
     """Collect deterministic weakness signals from local summaries.
 
     ``claim_audit`` is the content-free record written by
@@ -344,6 +356,10 @@ def collect_signals(*, claim_audit=None, gaps=None, feedback=None,
         raise ValueError("runner_audit must be a mapping")
     if self_code is not None and not isinstance(self_code, dict):
         raise ValueError("self_code must be a mapping")
+    if adapter is not None and not isinstance(adapter, dict):
+        raise ValueError("adapter must be a mapping")
+    if adapter is not None and not isinstance(adapter, dict):
+        raise ValueError("adapter must be a mapping")
 
     claim = claim_audit if isinstance(claim_audit, dict) else {}
     fresh = _freshness_summary(freshness)
@@ -578,6 +594,19 @@ def collect_signals(*, claim_audit=None, gaps=None, feedback=None,
                     f"{len(items)} {severity}-severity finding(s) in Atom "
                     "Zero's own code need review.",
                     sorted(set(items))[:5]))
+
+    if adapter is not None:
+        promotable = _non_negative_int(
+            adapter.get("promotable"), "adapter.promotable")
+        candidates = _non_negative_int(
+            adapter.get("candidates"), "adapter.candidates")
+        if promotable and not candidates:
+            signals.append(_signal(
+                "adapter_candidate_ready", promotable,
+                "Verified teacher traces ready for an adapter candidate",
+                f"{promotable} promotable teacher note(s) exist and no adapter "
+                "candidate has been exported yet.",
+                ["adapter"]))
 
     if drift is not None:
         alerts = drift.get("alerts")
@@ -931,6 +960,7 @@ def _payload_from_args(args) -> dict:
             ("drift_json", "drift"),
             ("runner_audit_json", "runner_audit"),
             ("self_code_json", "self_code"),
+            ("adapter_json", "adapter"),
             ("history_json", "history")):
         path = getattr(args, dest)
         if not path:
@@ -1007,6 +1037,8 @@ def main(argv=None) -> int:
                         help="JSON file with a runner scope audit")
     parser.add_argument("--self-code-json", default="",
                         help="JSON file with an atomzero-self-code report")
+    parser.add_argument("--adapter-json", default="",
+                        help="JSON file with adapter candidate/promotable counts")
     parser.add_argument("--history-json", default="",
                         help="JSON file with a content-free decision ledger")
     parser.add_argument("--limit", type=int, default=5,
