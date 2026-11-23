@@ -31,6 +31,7 @@ def test_aisc_architecture_specs_are_safe_and_verified():
     freshness = _load("atomzero-freshness.toml")
     reliability = _load("atomzero-reliability.toml")
     temporal = _load("atomzero-temporal.toml")
+    improvement = _load("atomzero-improvement.toml")
 
     read_components = read["components"]
     task_components = task["components"]
@@ -64,7 +65,15 @@ def test_aisc_architecture_specs_are_safe_and_verified():
     assert memory["components"][-3]["kind"] == "human"
     assert memory["components"][-1]["reversible"] is True
 
-    for spec in (claims, consensus, doc_diff, freshness, reliability, temporal):
+    assert [item["name"] for item in improvement["components"]] == [
+        "SignalCollector", "ImprovementPlanner", "HumanApprovalGate",
+        "PlanReport"]
+    assert improvement["components"][2]["kind"] == "human"
+    assert all(item["verified"] is True
+               for item in improvement["components"])
+
+    for spec in (claims, consensus, doc_diff, freshness, reliability, temporal,
+                 improvement):
         assert spec["min_assurance"] >= 0.90
         assert all(item["verified"] is True for item in spec["components"])
         assert all(item.get("reversible", True) is True

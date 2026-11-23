@@ -4716,6 +4716,7 @@ class Handler(BaseHTTPRequestHandler):
                          "/v1/tools/audit", "/v1/claims/audit",
                          "/v1/consensus", "/v1/freshness",
                          "/v1/temporal/filter",
+                         "/v1/improvement/plan", "/v1/improvement/decision",
                          "/v1/reliability/summary", "/v1/reliability/verify",
                          "/v1/documents/diff", "/v1/proactive",
                          "/v1/proactive/config", "/v1/proactive/ack"):
@@ -4821,6 +4822,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self._freshness_audit(req)
             if route == "/v1/temporal/filter":
                 return self._temporal_filter(req)
+            if route == "/v1/improvement/plan":
+                return self._improvement_plan(req)
+            if route == "/v1/improvement/decision":
+                return self._improvement_decision(req)
             if route == "/v1/reliability/summary":
                 return self._reliability_summary(req)
             if route == "/v1/reliability/verify":
@@ -5988,6 +5993,72 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError as exc:
             return self._json(400, {"error": str(exc)})
         return self._json(200, result)
+
+    def _improvement_ledger(self):
+        path = Path(_state.get(
+            "improvement_ledger_path", "data/improvement_ledger.jsonl"))
+        ledger = []
+        if path.exists():
+            for line in path.read_text(encoding="utf-8-sig").splitlines():
+                if line.strip():
+                    ledger.append(json.loads(line))
+        return path, ledger
+
+    def _improvement_plan(self, req: dict):
+        from atomzero.improvement import plan_from_inputs
+        inputs = {}
+        for key in ("gaps", "feedback", "freshness", "reliability"):
+            if key in req:
+                inputs[key] = req[key]
+        session_id = str(req.get("session_id", "")).strip()
+        if session_id:
+            try:
+                session = self._session(session_id)
+            except Exception as exc:
+                return self._json(400, {"error": str(exc)})
+            data = getattr(getattr(session, "human", None), "data", None)
+            if isinstance(data, dict) and isinstance(
+                    data.get("claim_audit"), dict):
+                inputs["claim_audit"] = data["claim_audit"]
+        try:
+            limit = int(req.get("limit", 5))
+            result = plan_from_inputs(limit=limit, **inputs)
+        except (TypeError, ValueError) as exc:
+            return self._json(400, {"error": str(exc)})
+        return self._json(200, result)
+
+    def _improvement_decision(self, req: dict):
+        from atomzero.improvement import record_decision, verify_ledger
+        action = req.get("action")
+        decision = req.get("decision")
+        note = req.get("note", "")
+        if not isinstance(action, dict):
+            return self._json(400, {"error": "action must be an object"})
+        if not isinstance(note, str):
+            return self._json(400, {"error": "note must be a string"})
+        try:
+            path, ledger = self._improvement_ledger()
+            before = verify_ledger(ledger)
+            if not before["ok"]:
+                return self._json(400, {
+                    "error": "existing ledger is invalid",
+                    "verify": before})
+            record = record_decision(
+                ledger, action, decision, note=note)
+            after = verify_ledger(ledger)
+            if not after["ok"]:
+                return self._json(400, {"error": "ledger verification failed"})
+            path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = path.with_suffix(path.suffix + ".tmp")
+            tmp.write_text(
+                "".join(json.dumps(item, ensure_ascii=False, sort_keys=True,
+                                   separators=(",", ":")) + "\n"
+                        for item in ledger),
+                encoding="utf-8")
+            os.replace(tmp, path)
+        except (OSError, TypeError, ValueError) as exc:
+            return self._json(400, {"error": str(exc)})
+        return self._json(200, {"record": record, "verify": after})
 
     def _temporal_filter(self, req: dict):
         from atomzero.temporal import filter_as_of

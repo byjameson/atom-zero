@@ -2,6 +2,11 @@
 
 ## atomzero 0.8.0 - unreleased
 
+- Added a **human-gated improvement loop** (`atomzero-improve`,
+  `POST /v1/improvement/plan`, `POST /v1/improvement/decision`): local signals
+  become prioritized actions with `requires_human: True` and an acceptance
+  gate; decisions are content-free (action id, kind, decision, note hash).
+  There is no auto-apply and no weight update.
 - Added **Evaluation gate** (`atomzero-gate`): allowlisted pytest, AISC and
   manual checks for proposed improvements. No generic shell, timeouts fail,
   manual checks are not auto-passed, and `auto_apply`/`weights_changed` are

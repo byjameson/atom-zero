@@ -394,6 +394,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Document version diff: <https://github.com/byjameson/atom-zero/blob/main/docs/DOCUMENT_DIFF.md>
 - Evaluation gate: <https://github.com/byjameson/atom-zero/blob/main/docs/EVALUATION_GATE.md>
 - Self-improvement architecture: <https://github.com/byjameson/atom-zero/blob/main/docs/SELF_IMPROVEMENT.md>
+- Improvement loop: <https://github.com/byjameson/atom-zero/blob/main/docs/IMPROVEMENT_LOOP.md>
 - AISC spec generator: <https://github.com/byjameson/atom-zero/blob/main/docs/AISC_SPEC_GENERATOR.md>
 - Multi-agent orchestration: <https://github.com/byjameson/atom-zero/blob/main/docs/ORCHESTRATION.md>
 - Branch research: <https://github.com/byjameson/atom-zero/blob/main/docs/BRANCH_RESEARCH.md>

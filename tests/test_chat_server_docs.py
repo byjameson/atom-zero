@@ -3344,6 +3344,53 @@ def test_http_claim_audit_starts_proactive_checkin(tmp_path):
         chat_server._state.update(old)
 
 
+def test_http_improvement_plan_and_decision(tmp_path):
+    old = dict(chat_server._state)
+    ledger_path = tmp_path / "improvement.jsonl"
+    chat_server._state.update({
+        "api_key": "", "model": None, "tok": None, "docs": None,
+        "session_dir": str(tmp_path / "sessions"), "sessions": {},
+        "improvement_ledger_path": str(ledger_path),
+    })
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), chat_server.Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        audit = _post(base + "/v1/claims/audit", {
+            "session_id": "improve-test",
+            "query": "The battery lasts 8 hours.",
+            "hits": [{"source": "sky.txt", "chunk": "The sky is blue."}],
+        })
+        assert audit["summary"]["status_counts"]["unsupported"] == 1
+        plan = _post(base + "/v1/improvement/plan", {
+            "session_id": "improve-test"})
+        assert plan["auto_apply"] is False
+        assert plan["weights_changed"] is False
+        assert plan["actions"]
+        action = plan["actions"][0]
+        assert action["requires_human"] is True
+        assert action["acceptance"]
+        decision = _post(base + "/v1/improvement/decision", {
+            "action": action, "decision": "approve",
+            "note": "private review note"})
+        assert decision["record"]["decision"] == "approve"
+        assert len(decision["record"]["note_id"]) == 16
+        assert decision["verify"]["ok"] is True
+        text = ledger_path.read_text(encoding="utf-8")
+        assert "private review note" not in text
+        assert "The battery lasts 8 hours" not in text
+        with pytest.raises(urllib.error.HTTPError) as invalid:
+            _post(base + "/v1/improvement/decision", {
+                "action": action, "decision": "maybe"})
+        assert invalid.value.code == 400
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        chat_server._state.clear()
+        chat_server._state.update(old)
+
+
 def test_http_tool_plan_audit(tmp_path):
     old = dict(chat_server._state)
     chat_server._state.update({"api_key": ""})

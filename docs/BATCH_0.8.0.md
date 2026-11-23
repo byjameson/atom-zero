@@ -20,9 +20,9 @@ local signals
 
 | # | Increment | Status |
 |---|---|---|
-| 1 | Human-gated improvement loop (`atomzero-improve`) | implementer in `feat/improvement-loop` |
-| 2 | `POST /v1/improvement/plan` + content-free decision route | planned |
-| 3 | Evaluation gate harness (pytest, AISC strict, focused benchmark) | planned |
+| 1 | Human-gated improvement loop (`atomzero-improve`) | merged on local main |
+| 2 | `POST /v1/improvement/plan` + content-free decision route | merged on local main |
+| 3 | Evaluation gate harness (pytest, AISC strict, focused benchmark) | merged on local main |
 | 4 | Decision ledger integration into weekly review | planned |
 | 5 | Gap-to-research approval link | planned |
 | 6 | Feedback-to-improvement link | planned |

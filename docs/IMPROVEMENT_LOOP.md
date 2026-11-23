@@ -197,6 +197,33 @@ record_decision(ledger, plan["actions"][0], "defer",
                 note="needs a primary source first")
 ```
 
+## HTTP
+
+`POST /v1/improvement/plan` accepts optional `session_id`, `gaps`,
+`feedback`, `freshness`, `reliability` and `limit`. With a `session_id` it reads
+only the content-free `claim_audit` counts stored on that local session.
+
+`POST /v1/improvement/decision` accepts `{action, decision, note}` and appends a
+decision record to the local JSONL ledger at `improvement_ledger_path`
+(default `data/improvement_ledger.jsonl`). The file stores action id, kind,
+decision, timestamp and a 16-hex note hash; the note text is never written.
+The existing ledger is verified before and after the append.
+
+```powershell
+$plan = Invoke-RestMethod -Method Post `
+  -Uri http://127.0.0.1:8000/v1/improvement/plan `
+  -ContentType "application/json" `
+  -Body (@{session_id="web-abc"} | ConvertTo-Json)
+$body = @{
+  action = $plan.actions[0]
+  decision = "approve"
+  note = "reviewed locally"
+} | ConvertTo-Json -Depth 5
+Invoke-RestMethod -Method Post `
+  -Uri http://127.0.0.1:8000/v1/improvement/decision `
+  -ContentType "application/json" -Body $body
+```
+
 ## Guarantees
 
 - No model call, no training and no weight update.
