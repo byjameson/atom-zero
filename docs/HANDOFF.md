@@ -4,13 +4,14 @@
 
 - Last released batch: `0.19.0` on `main` (bounded self-improve loop,
   committed-change scope check, fifth measured cycle)
-- Post-release main: self-code audit branch (`atomzero-self-code`), bounded
-  proposals, `self_code_high`/`self_code_medium` planner signals, proposal-
-  derived runner scope and the sixth measured cycle (gate
-  `cac82f022c879258`, `855/0 -> 857/0`). Accumulating for the **1.0.0**
-  boundary; not pushed yet.
+- Post-release main: self-code audit/diff/targeting with suppressions,
+  planner history, scoreboard output collectors, escalation ladder, teacher
+  answer verification, unified growth report, self-code before/after
+  regression gate and the sixth/seventh measured cycles (`gate_id
+  cac82f022c879258`, `855/0 -> 857/0`; `gate_id 7f0d5be2bce36219`,
+  `1033/0 -> 1035/0`). Accumulating for the **1.0.0** boundary; not pushed yet.
 - Working tree after the release-doc commits: clean
-- Atom Zero tests: **1032 passed**
+- Atom Zero tests: **1035 passed**
 - AISC strict audit: **25 specs, 23 PASS, 0 errors**; `AtomZeroAnswerability`
   and `AtomZeroAnswerabilityGenerated` remain **FAIL** with the measured
   Brier 0.244 / ECE 0.130 and refusal-policy misses. This is reported, not

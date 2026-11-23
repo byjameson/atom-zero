@@ -28,7 +28,9 @@ the self-code branch and its planner/runner integration.
 - `atomzero-self-improve --self-code-root` now audits the repository before and
   the agent worktree after the run. If the diff introduces a new high or
   medium finding, the loop stops with `self_code_regression` and records no
-  decision or scoreboard entry.
+  decision or scoreboard entry. Both audits use a high per-kind cap.
+- Seventh measured cycle: targeted `aisc_coverage.py`, fixed a gate truncation
+  false positive, gate `7f0d5be2bce36219`, scoreboard `1033/0 -> 1035/0`.
 - The loop now feeds its existing decision ledger to the planner as bounded
   history, so repeated approvals/rejections adjust signal priorities.
 - Added **`atomzero-escalate`**: deterministic local/teacher/agent/refuse

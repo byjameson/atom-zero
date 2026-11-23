@@ -407,6 +407,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Fourth loop cycle (opt-in runner): <https://github.com/byjameson/atom-zero/blob/main/docs/LOOP_CYCLE_4.md>
 - Fifth loop cycle (autonomous runner loop): <https://github.com/byjameson/atom-zero/blob/main/docs/LOOP_CYCLE_5.md>
 - Sixth loop cycle (self-code finding): <https://github.com/byjameson/atom-zero/blob/main/docs/LOOP_CYCLE_6.md>
+- Seventh loop cycle (targeted audit + regression gate): <https://github.com/byjameson/atom-zero/blob/main/docs/LOOP_CYCLE_7.md>
 - Improvement loop: <https://github.com/byjameson/atom-zero/blob/main/docs/IMPROVEMENT_LOOP.md>
 - Self-improvement scoreboard: <https://github.com/byjameson/atom-zero/blob/main/docs/SCOREBOARD.md>
 - Improvement trend: <https://github.com/byjameson/atom-zero/blob/main/docs/TREND.md>

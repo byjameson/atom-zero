@@ -15,7 +15,7 @@
 | Suite | Passed | Failed | Exit | Duration |
 |---|---:|---:|---:|---:|
 | Atom Zero `pytest tests -q` (0.19.0 release) | **846** | **0** | 0 | 79.99s |
-| Atom Zero `pytest tests -q` (post-release main) | **1032** | **0** | 0 | 91.44s |
+| Atom Zero `pytest tests -q` (post-release main) | **1035** | **0** | 0 | 93.78s |
 | AISC `pytest tests -q` (0.5.1) | **223** (+6 subtests) | **0** | 0 | 17.13s |
 | AISC strict specs (25 specs) | **23 PASS / 2 FAIL (expected)** | 0 critical | 1 | - |
 | Build (`python -m build`) | **2 artifacts** | **0** | 0 | - |
@@ -23,7 +23,7 @@
 
 The full-suite run is subject to a known Windows socket flake in one long HTTP
 test (`WinError 10053`); the same test and the full suite pass on rerun. The
-current post-release evidence is the clean `1032 passed` run.
+current post-release evidence is the clean `1035 passed` run.
 
 **Failed tests: none.** Release verification
 (`scripts/verify_release.py --version 0.19.0`) reports **0 failures**.
@@ -34,17 +34,19 @@ current post-release evidence is the clean `1032 passed` run.
   and document-diff routes are covered. Full release suite **646 passed**.
 - Post-release self-improvement loop: improvement planner and decisions,
   evaluation gate, weekly-review ledger summary and proactive reminders.
-  Full main suite **1032 passed**; `benchmarks/self_improvement_regression.py`
-  reports **19/19 checks passed**. Six measured cycles are recorded:
+  Full main suite **1035 passed**; `benchmarks/self_improvement_regression.py`
+  reports **19/19 checks passed**. Seven measured cycles are recorded:
   `docs/LOOP_CYCLE.md` (HTTP flake, `gate_id ab5fe9b0fa0f48bc`, 792/1 ->
   793/0), `docs/LOOP_CYCLE_2.md` (live claim conflict, `gate_id
   ac1eb8a7ee8b5271`, 793/0 -> 794/0), `docs/LOOP_CYCLE_3.md` (agent-bridge
   consumed drift fix, `gate_id d38196191f97b81c`, 800/0 -> 813/0),
   `docs/LOOP_CYCLE_4.md` (opt-in runner + policy drift, `gate_id
   5134439e1f4e69df`, 821/0 -> 839/0), `docs/LOOP_CYCLE_5.md` (autonomous
-  opt-in runner, `gate_id 7fb857e6552ae5cc`, 844/0 -> 846/0) and
+  opt-in runner, `gate_id 7fb857e6552ae5cc`, 844/0 -> 846/0),
   `docs/LOOP_CYCLE_6.md` (self-code finding, `gate_id cac82f022c879258`,
-  855/0 -> 857/0). All six approvals have `gate_ok: true` and no trend alerts.
+  855/0 -> 857/0) and `docs/LOOP_CYCLE_7.md` (targeted audit + regression gate,
+  `gate_id 7f0d5be2bce36219`, 1033/0 -> 1035/0). All seven approvals have
+  `gate_ok: true` and no trend alerts.
 - `0.7.0` cross-source consensus branch: **12 passed**
   (`tests/test_consensus.py`); the `AtomZeroConsensus` AISC spec is **PASS**
   (4 verified components, assurance bound 0.93, 0 irreversible).

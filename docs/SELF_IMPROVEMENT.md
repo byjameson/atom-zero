@@ -78,6 +78,13 @@ external Implementer worked in `fix/drift-profile-format`, the gate passed
 report now works, and the scoreboard moved from `800` to `813` passed with no
 trend alerts.
 
+`docs/LOOP_CYCLE_7.md` records a **targeted audit** cycle: the loop was pinned
+to `src/atomzero/aisc_coverage.py`, the external agent narrowed the broad
+handler and added two tests, and the before/after audit gate caught its own
+truncation false positive before the fixed run passed
+(`gate_id 7f0d5be2bce36219`, `1033/0 -> 1035/0`). The gate now audits both
+sides with a high per-kind cap.
+
 `docs/LOOP_CYCLE_6.md` records the first **self-code fed** cycle: the AST
 audit found a broad exception in `agent_runner.verify`, the planner emitted
 `imp-01-self_code_medium`, the opt-in runner executed an external agent in an
