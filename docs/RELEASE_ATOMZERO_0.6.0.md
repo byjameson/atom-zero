@@ -166,6 +166,29 @@ after `0.5.0`.
 - Document benchmark remains 80/80 answerable and 20/20 no-answer.
 - No model weights were changed.
 
+## AISC and the new branches
+
+- Packaged `atomzero-audit` and `python -m atomzero.audit` expose strict AISC
+  warnings, JSON and calibration requirements; `atomzero-doctor --aisc` folds
+  the optional audit into preflight.
+- **Tool plan algebra:** `atomzero-plan` and `POST /v1/tools/audit` report side
+  effects, irreversible steps, confirmation requirements and risk before
+  execution.
+- **Context budget algebra:** `plan_hits`,
+  `grounded_answer(max_context_chars=...)` and
+  `atomzero-docs answer --max-context-chars` bound retrieved evidence and
+  report dropped hits.
+- **Proactive conversation:** opt-in local check-ins from overdue/due tasks,
+  knowledge gaps or recent sources, with cooldowns, quiet hours, a daily cap
+  and a UI toggle. It is not a background daemon.
+- **Memory lifecycle:** direct HTTP document/session deletion now requires an
+  explicit boolean `confirm: true`; the AISC spec puts human confirmation
+  before the irreversible memory store.
+- **Answerability experiment:** an independent optional signal was measured.
+  The best hybrid reached held-out AUC 0.663, Brier 0.244 and ECE 0.130, but
+  missed the refusal/coverage targets, so it remains off by default and
+  CitationGate stays at 0.5. See `docs/ANSWERABILITY.md`.
+
 ## Install
 
 ```powershell

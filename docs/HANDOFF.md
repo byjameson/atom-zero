@@ -2,9 +2,9 @@
 
 ## Current state
 
-- Last feature commit: `276605c` (`feat: measure independent answerability signal`)
+- Last feature commit: `35241de` (`fix: harden proactive state parsing`)
 - Working tree after the handoff commit: clean
-- Atom Zero tests: **432 passed**
+- Atom Zero tests: **465 passed**
 - AISC tests: **191 passed** (+6 subtests)
 - AISC strict audit: **not claimed as passing**; the AISC spec/report update is
   owned by the AISC side. Atom Zero files were not modified in that repo.
@@ -54,13 +54,34 @@
   **FAIL** with `ANSWERABILITY_POOR` and `REFUSAL_POLICY_MISMATCH`; see
   `docs/ANSWERABILITY.md`. The default citation threshold remains **0.5** and
   the answerability gate remains **off**.
+- Packaged AISC integration: `atomzero-audit` and `python -m atomzero.audit`
+  expose strict warnings, `--require-calibration`, JSON and remediation-ready
+  issue codes; `atomzero-doctor --aisc` folds the optional audit into preflight.
+  The earlier `scripts/aisc_audit.py` false-PASS path is removed.
+- New **tool plan algebra**: `atomzero-plan` and `POST /v1/tools/audit` report
+  side effects, irreversible steps, confirmation requirements and risk before
+  execution (`src/atomzero/plan_audit.py`).
+- New **context budget algebra**: `plan_hits`,
+  `grounded_answer(max_context_chars=...)` and
+  `atomzero-docs answer --max-context-chars` bound retrieved evidence and report
+  dropped hits (`src/atomzero/context_budget.py`).
+- New **proactive conversation**: opt-in local scheduler that starts a short
+  chat from overdue/due tasks, knowledge gaps or recent sources, with cooldowns,
+  quiet hours, a daily cap and a UI toggle (`src/atomzero/proactive.py`,
+  `POST /v1/proactive*`).
+- New **memory lifecycle** first slice: document/session deletion requires an
+  explicit server-side `confirm: true` (409 without it, 400 for a non-boolean),
+  and the AISC `AtomZeroMemoryLifecycle` spec places `HumanConfirmation` before
+  the irreversible `MemoryStore`.
 
 ## Next tasks
 
-1. Improve answerability only with a stronger local QA/NLI signal and
+1. Continue the memory lifecycle: cascade deletion to feedback/training queues,
+   add a content-free mutation ledger, and make session-file deletion explicit.
+2. Improve answerability only with a stronger local QA/NLI signal and
    target-distribution calibration data; do not enable the current gate by
    default. The measured targets remain unmet.
-2. Train a targeted adapter on a genuinely novel per-domain queue with
+3. Train a targeted adapter on a genuinely novel per-domain queue with
    `streamft` or `continual-lora`; validate it with
    `research/adapter_check.py` and score a held-out queue with
    `compare_adapters.py`. The 267-row format queue is already known to the base
@@ -68,8 +89,9 @@
    is a negative control, not a training target. Keep the repos separate; Atom
    Zero must not import `streamft`. Model weights are still `0.8.0` and
    unchanged.
-3. Prepare the `0.6.0` batch release once fresh credentials are available.
-4. After the next code commit, re-run full pytest, AISC, build/twine and
+4. Publish the `0.6.0` batch release to PyPI, GitHub, Hugging Face, ModelScope,
+   dev.to and Medium; verify all surfaces with `scripts/verify_release.py`.
+5. After the next code commit, re-run full pytest, AISC, build/twine and
    refresh `TEST_RESULTS.md`.
 
 ## Resume commands

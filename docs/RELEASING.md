@@ -44,7 +44,7 @@ atomzero-audit --aisc-path "<aisc-checkout>" --strict --require-calibration
 atomzero-doctor --aisc --aisc-path "<aisc-checkout>"
 ```
 
-Expected for the next batch: `432 passed` or more.
+Expected for the next batch: `465 passed` or more.
 
 ## 2. PyPI
 
