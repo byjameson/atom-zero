@@ -1,0 +1,42 @@
+name = "AtomZeroTrend"
+version = "0.1.0"
+description = "Content-free trend report over improvement decisions and measured runs."
+min_assurance = 0.90
+max_context_tokens = 8000
+
+[[components]]
+name = "TrendInputs"
+input_type = "LedgerAndRuns"
+output_type = "ValidatedInputs"
+kind = "evaluator"
+assurance = 0.97
+verified = true
+evidence = "tests/test_trend.py empty, valid ledger and scoreboard cases"
+assumptions = ["ledger and scoreboard are content-free local files"]
+guarantees = ["invalid input is rejected", "no text or output is copied"]
+context_tokens = 512
+
+[[components]]
+name = "AlertEvaluator"
+input_type = "ValidatedInputs"
+output_type = "Alerts"
+kind = "evaluator"
+assurance = 0.95
+verified = true
+evidence = "tests/test_trend.py regression and positive-trend cases"
+assumptions = ["deltas are computed from measured counts"]
+guarantees = ["failed tests, lower passed counts and incomplete benchmarks raise alerts", "alerts are sorted and deterministic"]
+context_tokens = 1024
+
+[[components]]
+name = "TrendReport"
+input_type = "Alerts"
+output_type = "TrendReport"
+kind = "tool"
+reversible = true
+assurance = 0.96
+verified = true
+evidence = "tests/test_trend.py decision counts, JSON CLI and invalid-ledger cases"
+assumptions = ["a human or planner reads the report"]
+guarantees = ["weights_changed is always false", "ok is false when alerts exist", "no benchmark is run by this module"]
+context_tokens = 1024

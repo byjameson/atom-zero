@@ -34,7 +34,9 @@ from atomzero.proactive import (
     note_improvement_plan,
     should_initiate,
 )
+from atomzero.scoreboard import record_run
 from atomzero.temporal import filter_as_of
+from atomzero.trend import build_trend
 
 NOW = datetime(2026, 11, 23, 12, 0, 0)
 
@@ -155,6 +157,27 @@ def check_evaluation_allowlist():
         raise AssertionError("shell check should be rejected")
 
 
+def check_end_to_end_loop():
+    plan = _plan()
+    action = plan["actions"][0]
+    gate = {
+        "ok": True,
+        "summary": {"total": 2, "passed": 2, "failed": 0},
+        "method": "allowlisted_evaluation_gate_v1",
+    }
+    ledger = []
+    record_gated_decision(ledger, action, "approve", gate, now=NOW)
+    runs = []
+    record_run(runs, commit="514632e", tests_passed=755, tests_failed=0,
+               benchmark_passed=11, benchmark_total=11,
+               aisc_passed=16, aisc_total=18, now=NOW)
+    report = build_trend(ledger, runs)
+    assert report["ok"] is True
+    assert report["decisions"]["total"] == 1
+    assert report["scoreboard"]["latest"]["commit"] == "514632e"
+    assert report["weights_changed"] is False
+
+
 def check_upstream_audits_are_content_free():
     claims = audit_answer(
         "The battery lasts 8 hours.",
@@ -190,6 +213,7 @@ CHECKS = [
     check_ledger_summary,
     check_aisc_coverage_signal,
     check_proactive_improvement_reminder,
+    check_end_to_end_loop,
     check_evaluation_allowlist,
     check_upstream_audits_are_content_free,
     check_temporal_filter_is_deterministic,

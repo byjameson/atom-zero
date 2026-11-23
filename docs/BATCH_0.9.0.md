@@ -15,9 +15,9 @@ content-free scoreboard tracks whether the numbers actually improve.
 | 5 | Scoreboard HTTP summary/record routes | merged on local main |
 | 6 | Scoreboard in the weekly review | merged on local main |
 | 7 | Gate report archive linked to decisions | merged on local main |
-| 8 | Improvement trend report (plan + decisions + scoreboard) | planned |
-| 9 | Source-review workflow link from weak-source actions | planned |
-| 10 | End-to-end self-improvement benchmark (signal -> gate -> decision -> score) | planned |
+| 8 | Improvement trend report (plan + decisions + scoreboard) | merged on local main |
+| 9 | Source-review workflow link from weak-source actions | merged on local main |
+| 10 | End-to-end self-improvement benchmark (signal -> gate -> decision -> score) | merged; 12/12 checks pass |
 
 ## Rules
 

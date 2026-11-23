@@ -397,6 +397,12 @@ def test_actions_carry_allowlisted_next_steps():
     assert by_kind["knowledge_gaps"]["requires_human"] is True
     assert by_kind["knowledge_gaps"]["suggested_checks"] == [
         "pytest:tests/test_improvement.py"]
+    weak = plan_from_inputs(reliability={
+        "sources": [{"source_id": "abc", "status": "weak",
+                     "observations": 1}]})
+    assert "source reliability" in weak["actions"][0]["next_step"]
+    assert weak["actions"][0]["suggested_checks"] == [
+        "pytest:tests/test_reliability.py"]
 
 
 def test_aisc_coverage_signal_and_action():

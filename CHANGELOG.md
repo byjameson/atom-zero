@@ -2,6 +2,11 @@
 
 ## atomzero 0.9.0 - unreleased
 
+- Weak-source and single-source actions now carry source-review next steps and
+  focused reliability/consensus checks.
+- Added **improvement trend report** (`atomzero-trend`): combines the
+  content-free decision ledger and scoreboard, surfaces test/benchmark/AISC
+  regressions as sorted alerts, and never copies output or text.
 - Added a content-free **gate archive** (`atomzero-gate --archive`): gate id,
   counts, method and per-check status/duration only; output, commands and
   source text are rejected.

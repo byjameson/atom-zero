@@ -94,6 +94,12 @@ NEXT_STEPS = {
     "scoreboard_regression": (
         "run atomzero-scoreboard --summary, identify the regressed metric, "
         "fix it and rerun atomzero-gate"),
+    "weak_sources": (
+        "review the source reliability summary, remove or replace weak "
+        "sources, then rerun atomzero-reliability and atomzero-gate"),
+    "single_source": (
+        "add an independent second source, rerun consensus, then rerun "
+        "atomzero-gate"),
     "knowledge_gaps": (
         "propose the top gap with POST /v1/learning/gaps/propose, approve it "
         "in the research queue, then rerun the plan"),
