@@ -386,6 +386,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Context budget: <https://github.com/byjameson/atom-zero/blob/main/docs/CONTEXT_BUDGET.md>
 - Proactive conversation: <https://github.com/byjameson/atom-zero/blob/main/docs/PROACTIVE.md>
 - Memory lifecycle: <https://github.com/byjameson/atom-zero/blob/main/docs/MEMORY_LIFECYCLE.md>
+- Multi-agent orchestration: <https://github.com/byjameson/atom-zero/blob/main/docs/ORCHESTRATION.md>
 - Benchmarks: <https://github.com/byjameson/atom-zero/blob/main/docs/BENCHMARKS.md>
 - AISC architecture audit: <https://github.com/byjameson/atom-zero/blob/main/docs/AISC_AUDIT.md>
 - Public SQuAD retrieval benchmark: <https://github.com/byjameson/atom-zero/blob/main/benchmarks/README.md>
