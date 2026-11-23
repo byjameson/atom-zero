@@ -45,7 +45,10 @@ No model or runtime weights changed; the weights remain `0.8.0`.
 - Hugging Face and ModelScope show the package and weight versions on separate
   lines: `Package: atomzero 0.9.0`, `Weights: 0.8.0 (unchanged)`.
 - Release commit `b2208b0`, annotated tag `v0.9.0`.
-- LinkedIn is attempted but blocked/unverified.
+- The read-only Release agent returned **release gate: PASS** after the model
+  cards were split into package/weights lines and Medium was corrected. The
+  last stale Medium line (`755` -> `783 tests`) was fixed separately.
+- LinkedIn is attempted but blocked/unverified; it is not claimed green.
 - No model weights changed; the weights remain `0.8.0`.
 
 ## Install
