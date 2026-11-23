@@ -25,7 +25,7 @@
 
 | field | value |
 |---|---|
-| Commit | `b4b68b1` (code commit for the optional gate and benchmark scripts) |
+| Commit | `b4b68b1` (optional gate), `276605c` (benchmarks/artifacts) |
 | Dataset / split | `rajpurkar/squad_v2`; train 1,165 / calibration 289 / held-out 200 |
 | Signal features | 42 retrieval and answer-type features + 5 tiny QA features in the hybrid; CitationGate probabilities are not used |
 | Calibration method | logistic model + isotonic calibration; context-grouped train/calibration split |
