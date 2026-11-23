@@ -403,6 +403,41 @@ def rename_task_tag(session_data: dict | None, old, new) -> dict:
     }
 
 
+def delete_task_tag(session_data: dict | None, tag) -> dict:
+    """Remove one tag from every task that uses it."""
+    tag = normalize_task_tag(tag)
+    data = session_data if isinstance(session_data, dict) else {}
+    tasks = data.get("tasks", [])
+    if not isinstance(tasks, list):
+        raise ValueError("session tasks must be a list")
+    updated = []
+    stamp = time.strftime("%Y-%m-%dT%H:%M:%S")
+    for task in tasks:
+        if not isinstance(task, dict):
+            continue
+        tags = _task_tags(task)
+        if tag not in tags:
+            continue
+        kept = []
+        for item in tags:
+            if item == tag or item in kept:
+                continue
+            kept.append(item)
+        task["tags"] = kept
+        task["tag_removed"] = stamp
+        try:
+            updated.append(int(task.get("id")))
+        except (TypeError, ValueError):
+            continue
+    if not updated:
+        raise ValueError(f"tag '{tag}' is not used")
+    return {
+        "tag": tag,
+        "updated": len(updated),
+        "task_ids": updated,
+    }
+
+
 def set_task_priority(session_data: dict | None, tid, priority) -> dict:
     """Update one task's priority in a session dict."""
     try:
@@ -1547,6 +1582,10 @@ def main(argv=None) -> int:
                         help="preview renaming one task tag everywhere")
     parser.add_argument("--confirm-rename-tag", action="store_true",
                         help="apply the --rename-tag preview")
+    parser.add_argument("--delete-tag", default=None,
+                        help="preview deleting one task tag everywhere")
+    parser.add_argument("--confirm-delete-tag", action="store_true",
+                        help="apply the --delete-tag preview")
     parser.add_argument("--task-status", choices=TASK_SEARCH_STATUSES,
                         default=None, help="task-list status filter")
     parser.add_argument("--task-due", choices=TASK_SEARCH_DUE_FILTERS,
@@ -1660,6 +1699,16 @@ def main(argv=None) -> int:
             or args.set_task_priority is not None
             or args.task_sort != "default"):
         parser.error("--rename-tag cannot be combined with other views")
+    if args.confirm_delete_tag and args.delete_tag is None:
+        parser.error("--confirm-delete-tag requires --delete-tag")
+    if args.delete_tag is not None and (
+            args.task_list or args.list_tags or args.weekly or args.goal
+            or args.reports or args.markdown or args.out or args.overdue
+            or args.due_soon or args.search_tasks is not None
+            or args.set_task_priority is not None
+            or args.rename_tag is not None
+            or args.task_sort != "default"):
+        parser.error("--delete-tag cannot be combined with other views")
     if args.set_task_priority is not None:
         raw_id, raw_priority = args.set_task_priority
         try:
@@ -1914,6 +1963,53 @@ def main(argv=None) -> int:
                   f"{payload['would_update']} task(s) "
                   f"({payload['open']} open, {payload['done']} done); "
                   "rerun with --confirm-rename-tag to apply.")
+        return 0
+    if args.delete_tag is not None:
+        try:
+            tag = normalize_task_tag(args.delete_tag)
+            session = load_session(session_path)
+            if not session:
+                raise ValueError(f"cannot read session: {session_path}")
+            if args.confirm_delete_tag:
+                result = delete_task_tag(session, tag)
+                write_text_atomic(
+                    session_path,
+                    json.dumps(session, indent=2, ensure_ascii=False) + "\n")
+                payload = {
+                    "applied": True, **result,
+                    "session": str(session_path),
+                }
+            else:
+                view = task_tag_view(session)
+                entry = next((item for item in view["tags"]
+                              if item["tag"] == tag), None)
+                if entry is None:
+                    raise ValueError(f"tag '{tag}' is not used")
+                payload = {
+                    "applied": False,
+                    "tag": tag,
+                    "would_update": entry["total"],
+                    "open": entry["open"],
+                    "done": entry["done"],
+                    "session": str(session_path),
+                }
+        except (ValueError, OSError) as exc:
+            if args.json:
+                print(json.dumps({"ok": False, "error": str(exc)},
+                                 indent=2, ensure_ascii=False))
+            else:
+                print(f"briefing error: {exc}")
+            return 1
+        if args.json:
+            print(json.dumps(payload, indent=2, ensure_ascii=False))
+        elif payload["applied"]:
+            print(f"Deleted tag '{tag}' from "
+                  f"{payload['updated']} task(s).")
+        else:
+            print(f"Would delete tag '{tag}' from "
+                  f"{payload['would_update']} task(s) "
+                  f"({payload['open']} open, {payload['done']} done); "
+                  "rerun with --confirm-delete-tag to apply.")
         return 0
     if args.list_tags:
         try:

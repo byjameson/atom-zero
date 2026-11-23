@@ -32,6 +32,7 @@ Endpoints:
   GET  /v1/tasks/list?session_id=default&status=open&due=week&priority=high&sort=priority
   GET  /v1/tasks/tags?session_id=default
   POST /v1/tasks/tags/rename  (add "confirm": true to apply)
+  POST /v1/tasks/tags/delete  (add "confirm": true to apply)
   GET  /v1/tasks/export?session_id=default&status=open&due=week&priority=high&sort=priority&format=csv
   GET  /v1/tasks/overdue?session_id=default&sort=priority&tag=work
   GET  /v1/tasks/due-soon?session_id=default&days=7&sort=priority&tag=work
@@ -356,6 +357,10 @@ and suggested next actions.</p>
 <label class="hint"><input id="renametagconfirm" type="checkbox">
 Confirm tag rename</label>
 <button id="renametagbtn">Rename tag</button>
+<input id="deletetag" placeholder="tag" style="width:7em">
+<label class="hint"><input id="deletetagconfirm" type="checkbox">
+Confirm tag delete</label>
+<button id="deletetagbtn">Delete tag</button>
 <input id="rescheduletaskid" type="number" min="1" placeholder="task ID"
        style="width:5em">
 <input id="rescheduledue" placeholder="new due date" style="width:9em">
@@ -386,6 +391,7 @@ Confirm delete</label>
 <p id="tasktagsmsg" class="hint"></p>
 <div id="tasktagsres"></div>
 <p id="renametagmsg" class="hint"></p>
+<p id="deletetagmsg" class="hint"></p>
 <p id="reschedulemsg" class="hint"></p>
 <p id="taskprioritymsg" class="hint"></p>
 <p id="deletetaskmsg" class="hint"></p>
@@ -1013,6 +1019,51 @@ async function renameTag() {
     }
   } catch (e) {
     msg.textContent = 'tag rename error: ' + e;
+  }
+}
+async function deleteTag() {
+  const msg = document.getElementById('deletetagmsg');
+  const tag = document.getElementById('deletetag').value.trim();
+  const confirmed = document.getElementById('deletetagconfirm').checked;
+  if (!tag) {
+    msg.textContent = 'enter a tag to delete';
+    return;
+  }
+  if (!confirmed) {
+    msg.textContent = 'check Confirm tag delete first';
+    return;
+  }
+  msg.textContent = 'deleting tag...';
+  try {
+    const r = await fetch('/v1/tasks/tags/delete', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({session_id: sessionId, tag: tag,
+                            confirm: true})});
+    const j = await r.json();
+    if (!r.ok) {
+      msg.textContent = 'tag delete error: ' + (j.error || r.status);
+      return;
+    }
+    msg.textContent = "deleted tag '" + j.tag + "' from " +
+      j.updated + ' task(s)';
+    document.getElementById('deletetag').value = '';
+    document.getElementById('deletetagconfirm').checked = false;
+    const listFilter = document.getElementById('tasklisttag');
+    let refreshList = false;
+    if (listFilter.value.trim().replace(/^#/, '').toLowerCase() === j.tag) {
+      listFilter.value = '';
+      refreshList = true;
+    }
+    const searchFilter = document.getElementById('tasksearchtag');
+    if (searchFilter.value.trim().replace(/^#/, '').toLowerCase() === j.tag) {
+      searchFilter.value = '';
+    }
+    getTaskTags();
+    if (refreshList) {
+      getTaskList();
+    }
+  } catch (e) {
+    msg.textContent = 'tag delete error: ' + e;
   }
 }
 async function downloadTaskList(format) {
@@ -1648,6 +1699,7 @@ document.getElementById('tasksearchbtn').onclick = () => searchTasks();
 document.getElementById('tasklistbtn').onclick = () => getTaskList();
 document.getElementById('tasktagsbtn').onclick = () => getTaskTags();
 document.getElementById('renametagbtn').onclick = () => renameTag();
+document.getElementById('deletetagbtn').onclick = () => deleteTag();
 document.getElementById('tasklistcsv').onclick = () => downloadTaskList('csv');
 document.getElementById('tasklistmd').onclick = () => downloadTaskList('markdown');
 document.getElementById('rescheduletaskbtn').onclick = () => rescheduleTask();
@@ -3955,6 +4007,7 @@ class Handler(BaseHTTPRequestHandler):
                          "/v1/briefing", "/v1/weekly-review",
                          "/v1/tasks/reschedule", "/v1/tasks/priority",
                          "/v1/tasks/delete", "/v1/tasks/tags/rename",
+                         "/v1/tasks/tags/delete",
                          "/v1/weekly-review/reports/prune",
                          "/v1/weekly-review/reports/keep",
                          "/v1/weekly-review/reports/delete",
@@ -4042,6 +4095,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._tasks_delete(req)
             if route == "/v1/tasks/tags/rename":
                 return self._tasks_tags_rename(req)
+            if route == "/v1/tasks/tags/delete":
+                return self._tasks_tags_delete(req)
             if route == "/v1/goals/plan":
                 return self._goal_plan(req)
             if route == "/v1/research/queue":
@@ -4565,6 +4620,42 @@ class Handler(BaseHTTPRequestHandler):
             })
         try:
             result = session.human.rename_task_tag(old, new)
+        except (TypeError, ValueError) as exc:
+            return self._json(400, {"error": str(exc)})
+        except Exception as exc:
+            return self._json(400, {"error": str(exc)})
+        return self._json(200, {
+            "session_id": session_id,
+            "applied": True,
+            **result,
+        })
+
+    def _tasks_tags_delete(self, req: dict):
+        session_id = str(req.get("session_id", "default")).strip() or "default"
+        from atomzero.briefing import normalize_task_tag, task_tag_view
+
+        try:
+            tag = normalize_task_tag(req.get("tag"))
+            session = self._session(session_id)
+            view = task_tag_view(session.human.data)
+            entry = next((item for item in view["tags"]
+                          if item["tag"] == tag), None)
+        except (TypeError, ValueError) as exc:
+            return self._json(400, {"error": str(exc)})
+        except Exception as exc:
+            return self._json(400, {"error": str(exc)})
+        if entry is None:
+            return self._json(404, {"error": f"tag '{tag}' is not used"})
+        if req.get("confirm") is not True:
+            return self._json(400, {
+                "error": "confirmation required",
+                "tag": tag,
+                "would_update": entry["total"],
+                "open": entry["open"],
+                "done": entry["done"],
+            })
+        try:
+            result = session.human.delete_task_tag(tag)
         except (TypeError, ValueError) as exc:
             return self._json(400, {"error": str(exc)})
         except Exception as exc:

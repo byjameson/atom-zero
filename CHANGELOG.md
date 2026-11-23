@@ -151,6 +151,9 @@
   `confirm tag rename`, CLI `--rename-tag OLD NEW --confirm-rename-tag`,
   HTTP `/v1/tasks/tags/rename` and UI old/new fields with a confirmation
   checkbox.
+- Added confirmed global tag delete: chat `delete tag TAG` then
+  `confirm tag delete`, CLI `--delete-tag TAG --confirm-delete-tag`, HTTP
+  `/v1/tasks/tags/delete` and UI tag field with a confirmation checkbox.
 - Ported task tags to the legacy `research/chat_human.py` runtime:
   `add task ... tags ...`, `tag task`, tag-filtered `list tasks`, `list tags`
   and confirmed `rename tag` with persistence.

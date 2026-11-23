@@ -115,6 +115,26 @@ rename. The UI has old/new tag fields and a **Confirm tag rename** checkbox.
 Renaming preserves other tags, removes duplicates and leaves untagged tasks
 untouched. An unused old tag is reported instead of creating a no-op.
 
+Tags can also be deleted globally with the same preview/confirm gate:
+
+```text
+delete tag work
+# Delete tag 'work' from 3 task(s) (2 open, 1 done)?
+# Reply "confirm tag delete" to remove it, or "cancel tag delete".
+confirm tag delete
+# Deleted tag 'work' from 3 task(s).
+```
+
+```powershell
+atomzero-brief --session data/sessions/default.json --delete-tag work
+atomzero-brief --session data/sessions/default.json --delete-tag work --confirm-delete-tag
+```
+
+HTTP uses `POST /v1/tasks/tags/delete` with `{"tag": "work", "confirm": true}`;
+the UI has a tag field, **Confirm tag delete** checkbox and **Delete tag**
+button. Other tags on each task are preserved; a task can become untagged. An
+unused tag is reported instead of creating a no-op.
+
 Priority can also be updated outside chat:
 
 ```powershell

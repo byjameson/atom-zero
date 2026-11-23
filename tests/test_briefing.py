@@ -758,6 +758,70 @@ def test_cli_rename_tag(tmp_path, capsys):
     assert deduped["tasks"][0]["tags"] == ["job"]
 
 
+def test_cli_delete_tag(tmp_path, capsys):
+    session_path = tmp_path / "session.json"
+    session_path.write_text(json.dumps({"tasks": [
+        {"id": 1, "text": "write report", "status": "open",
+         "tags": ["work", "home"]},
+        {"id": 2, "text": "pay invoice", "status": "done",
+         "tags": ["work", "finance"]},
+        {"id": 3, "text": "read book", "status": "open",
+         "tags": ["home"]},
+    ]}), encoding="utf-8")
+    common = [
+        "--session", str(session_path),
+        "--docs", str(tmp_path / "missing.db"),
+        "--gaps", str(tmp_path / "missing-gaps.json")]
+
+    assert main(common + ["--delete-tag", "work"]) == 0
+    preview = capsys.readouterr().out
+    assert ("Would delete tag 'work' from 2 task(s) "
+            "(1 open, 1 done)") in preview
+    assert "rerun with --confirm-delete-tag" in preview
+    assert json.loads(session_path.read_text(encoding="utf-8"))[
+        "tasks"][0]["tags"] == ["work", "home"]
+
+    assert main(common + ["--delete-tag", "work", "--json"]) == 0
+    preview_json = json.loads(capsys.readouterr().out)
+    assert preview_json["applied"] is False
+    assert preview_json["tag"] == "work"
+    assert preview_json["would_update"] == 2
+    assert preview_json["open"] == 1
+    assert preview_json["done"] == 1
+
+    assert main(common + [
+        "--delete-tag", "work", "--confirm-delete-tag", "--json"]) == 0
+    applied = json.loads(capsys.readouterr().out)
+    assert applied["applied"] is True
+    assert applied["tag"] == "work"
+    assert applied["updated"] == 2
+    assert applied["task_ids"] == [1, 2]
+    saved = json.loads(session_path.read_text(encoding="utf-8"))
+    assert saved["tasks"][0]["tags"] == ["home"]
+    assert saved["tasks"][1]["tags"] == ["finance"]
+    assert saved["tasks"][2]["tags"] == ["home"]
+    assert saved["tasks"][0]["tag_removed"]
+
+    assert main(common + ["--list-tags", "--json"]) == 0
+    tags = json.loads(capsys.readouterr().out)
+    assert tags["tag_count"] == 2
+    assert [item["tag"] for item in tags["tags"]] == ["home", "finance"]
+
+    assert main(common + ["--delete-tag", "missing"]) == 1
+    assert "tag 'missing' is not used" in capsys.readouterr().out
+    assert main(common + ["--delete-tag", "bad tag!"]) == 1
+    assert "letters, numbers" in capsys.readouterr().out
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--confirm-delete-tag"])
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--delete-tag", "home", "--weekly"])
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
+        main(common + ["--delete-tag", "home", "--rename-tag", "a", "b"])
+    assert exc.value.code == 2
+
+
 def test_cli_priority_sort_views(tmp_path, capsys):
     session_path = tmp_path / "session.json"
     today = date.today()

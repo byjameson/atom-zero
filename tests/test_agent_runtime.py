@@ -414,6 +414,60 @@ def test_agent_renames_tag_with_confirmation(tmp_path):
         "Tag rename cancelled.")
 
 
+def test_agent_deletes_tag_with_confirmation(tmp_path):
+    agent = AgentSession("s-delete-tag", tmp_path / "memory.json")
+    agent.chat("add task write report tags work,home")
+    agent.chat("add task pay invoice tags work")
+    agent.chat("add task read book")
+
+    preview = agent.chat("delete tag work")
+    assert preview["tool_calls"] == [
+        {"name": "preview_tag_delete", "tag": "work", "tasks": 2}]
+    assert preview["tag_delete"] == {
+        "tag": "work", "tasks": 2, "open": 2, "done": 0}
+    assert "Delete tag 'work' from 2 task(s)" in preview["reply"]
+    assert "confirm tag delete" in preview["reply"]
+    assert [task["tags"] for task in agent.human.data["tasks"]] == [
+        ["work", "home"], ["work"], []]
+    assert agent.pending_task_action["action"] == "delete_tag"
+    unrelated = agent.chat("cancel tag rename")
+    assert unrelated["reply"] == "There is no pending tag rename."
+    assert agent.pending_task_action["action"] == "delete_tag"
+
+    applied = agent.chat("confirm tag delete")
+    assert applied["tool_calls"] == [
+        {"name": "delete_task_tag", "tag": "work", "updated": 2}]
+    assert applied["reply"] == "Deleted tag 'work' from 2 task(s)."
+    assert [task["tags"] for task in agent.human.data["tasks"]] == [
+        ["home"], [], []]
+    assert agent.human.data["tasks"][0]["tag_removed"]
+    assert agent.chat("confirm tag delete")["reply"] == (
+        "There is no pending tag delete.")
+
+    tags = agent.chat("tags")
+    assert tags["task_tags"]["tag_count"] == 1
+    assert tags["task_tags"]["tagged_task_count"] == 1
+    assert tags["task_tags"]["untagged_task_count"] == 2
+    assert tags["task_tags"]["tags"][0]["tag"] == "home"
+
+    missing = agent.chat("delete tag missing")
+    assert missing["reply"] == "Tag 'missing' is not used."
+    assert agent.pending_task_action is None
+    invalid = agent.chat("delete tag bad!")
+    assert "letters, numbers" in invalid["reply"]
+    bare = agent.chat("delete tag")
+    assert "Tell me the tag to delete" in bare["reply"]
+
+    second = agent.chat("remove tag home")
+    assert second["tag_delete"]["tasks"] == 1
+    assert agent.pending_task_action["action"] == "delete_tag"
+    assert agent.chat("cancel tag delete")["reply"] == (
+        "Tag delete cancelled.")
+    assert agent.pending_task_action is None
+    assert [task["tags"] for task in agent.human.data["tasks"]] == [
+        ["home"], [], []]
+
+
 def test_agent_priority_sort_task_views(tmp_path):
     today = date.today()
     agent = AgentSession("s-priority-task-views", tmp_path / "memory.json")

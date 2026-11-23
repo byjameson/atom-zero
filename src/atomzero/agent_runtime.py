@@ -1099,6 +1099,69 @@ class AgentSession:
             "tool_calls": [], "sources": [], "evidence": [],
         }
 
+    def _preview_tag_delete(self, tag) -> dict:
+        try:
+            tag = normalize_task_tag(tag)
+        except ValueError as exc:
+            return {"reply": str(exc), "tool_calls": [],
+                    "sources": [], "evidence": []}
+        view = task_tag_view(self.human.data)
+        entry = next((item for item in view["tags"]
+                      if item["tag"] == tag), None)
+        if entry is None:
+            return {"reply": f"Tag '{tag}' is not used.",
+                    "tool_calls": [], "sources": [], "evidence": []}
+        self.pending_task_action = {
+            "action": "delete_tag", "tag": tag}
+        return {
+            "reply": (
+                f"Delete tag '{tag}' from {entry['total']} task(s) "
+                f"({entry['open']} open, {entry['done']} done)? "
+                'Reply "confirm tag delete" to remove it, or '
+                '"cancel tag delete".'),
+            "tool_calls": [{"name": "preview_tag_delete",
+                            "tag": tag, "tasks": entry["total"]}],
+            "sources": [],
+            "evidence": [],
+            "tag_delete": {"tag": tag,
+                           "tasks": entry["total"],
+                           "open": entry["open"],
+                           "done": entry["done"]},
+        }
+
+    def _apply_tag_delete(self) -> dict:
+        pending = self.pending_task_action
+        if pending is None or pending.get("action") != "delete_tag":
+            return {"reply": "There is no pending tag delete.",
+                    "tool_calls": [], "sources": [], "evidence": []}
+        self.pending_task_action = None
+        try:
+            result = self.human.delete_task_tag(pending["tag"])
+        except ValueError as exc:
+            return {"reply": str(exc), "tool_calls": [],
+                    "sources": [], "evidence": []}
+        return {
+            "reply": (f"Deleted tag '{result['tag']}' from "
+                      f"{result['updated']} task(s)."),
+            "tool_calls": [{"name": "delete_task_tag",
+                            "tag": result["tag"],
+                            "updated": result["updated"]}],
+            "sources": [],
+            "evidence": [],
+            "tag_delete": {**result, "applied": True},
+        }
+
+    def _cancel_tag_delete(self) -> dict:
+        pending = self.pending_task_action
+        if pending is None or pending.get("action") != "delete_tag":
+            return {"reply": "There is no pending tag delete.",
+                    "tool_calls": [], "sources": [], "evidence": []}
+        self.pending_task_action = None
+        return {
+            "reply": "Tag delete cancelled.",
+            "tool_calls": [], "sources": [], "evidence": [],
+        }
+
     def _list_tasks(self, text: str) -> dict:
         view = self.human.build_task_list(text)
         return {
@@ -1367,6 +1430,22 @@ class AgentSession:
             return self._apply_task_delete()
         if low in ("cancel task delete", "cancel delete task"):
             return self._cancel_task_delete()
+        if low in ("confirm tag delete", "confirm delete tag",
+                   "yes delete tag"):
+            return self._apply_tag_delete()
+        if low in ("cancel tag delete", "cancel delete tag"):
+            return self._cancel_tag_delete()
+        delete_tag = re.match(
+            r"^(?:delete|remove)\s+tag\s+(\S+?)\??$",
+            text, re.IGNORECASE)
+        if delete_tag:
+            return self._preview_tag_delete(delete_tag.group(1))
+        if low in ("delete tag", "remove tag"):
+            return {
+                "reply": ("Tell me the tag to delete, for example "
+                          "'delete tag work'."),
+                "tool_calls": [], "sources": [], "evidence": [],
+            }
         if low in ("confirm tag rename", "confirm rename tag",
                    "yes rename tag"):
             return self._apply_tag_rename()

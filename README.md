@@ -72,7 +72,8 @@ More fixes are in [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
   search/overdue/due-soon, daily-brief, weekly-review and chat commands
   (`brief me priority`, `weekly review priority`, `list tasks priority`,
   filtered `list tasks` status/due/priority/tag views with structured tool
-  calls, task tags, `list tags` counts and confirmed `rename tag`, matching
+  calls, task tags, `list tags` counts and confirmed `rename tag` /
+  `delete tag`, matching
   `/v1/tasks/list` + UI panels and CSV/Markdown export via `/v1/tasks/export`,
   tag-aware `search tasks report sort priority`, `overdue tasks tag work`,
   `due soon tag work`), notes, arithmetic, time, optional AISC architecture
@@ -146,7 +147,7 @@ LoRA adapters.
 | document benchmark, 100 authored questions | **80/80 answerable, 20/20 no-answer** |
 | public SQuAD v2 retrieval (20 contexts) | **0.98 top-1 context (FTS), 1.00 top-5** |
 | public SQuAD v2 retrieval (50 contexts) | **hybrid 0.975 top-1; 0.816 answer in visible snippet** |
-| test suite | **375 passed** |
+| test suite | **378 passed** |
 
 The raw-model probe asks ten simple general questions with no documents, no
 calculator and no agent. The 49.2M model gets **2/10**. The product gets

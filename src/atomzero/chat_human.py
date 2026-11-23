@@ -366,6 +366,13 @@ class ChatHuman:
         self.save()
         return result
 
+    def delete_task_tag(self, tag) -> dict:
+        from atomzero.briefing import delete_task_tag
+
+        result = delete_task_tag(self.data, tag)
+        self.save()
+        return result
+
     def reschedule_task(self, tid: int, due: str) -> dict | None:
         normalized = _parse_due(due)
         if not normalized:
