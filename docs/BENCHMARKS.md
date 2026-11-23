@@ -669,6 +669,13 @@ works; they do not make the model general. See [`ADAPTERS.md`](ADAPTERS.md) for
 the external-trainer adapter format, local validation commands and the
 `adapter_holdout.json` result.
 
+Negative control: a 213-train/54-holdout format-skill queue was already known
+to the base (holdout loss 0.224). A 100-step adapter regressed to 0.302
+(+34.7%) and a 20-step adapter to 0.228 (+1.6%); both were rejected by the
+local holdout comparison. Low training loss alone is not evidence; use a novel
+per-domain queue and keep the holdout. Raw result:
+[`results/adapter_targeted_holdout.json`](results/adapter_targeted_holdout.json).
+
 Answerability was tested as a separate lexical/type classifier on the SQuAD v2
 stress sample. Context-grouped 5-fold CV AUC was **0.562** (logistic) and
 **0.497** (boosted trees), so it is not shipped as a gate. See

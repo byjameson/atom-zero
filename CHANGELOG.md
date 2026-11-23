@@ -42,7 +42,9 @@
   `research/compare_adapters.py` load an adapter produced by the external
   `streamft` / `continual-lora` trainer, check the base/LoRA shapes and score an
   assistant-turn holdout without importing the trainer. The accepted adapter
-  moved the two-row holdout loss from 3.853 to 3.139 (-18.5%).
+  moved the two-row holdout loss from 3.853 to 3.139 (-18.5%). A format queue
+  already known to the base was a negative control: both tested adapters
+  regressed the holdout and were rejected.
 - Added `benchmarks/answerability_eval.py` and recorded the negative result:
   context-grouped 5-fold CV AUC was 0.562 (logistic) / 0.497 (boost), so a
   separate lexical answerability gate is not shipped.

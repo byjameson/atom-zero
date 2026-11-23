@@ -48,9 +48,12 @@
 
 ## Next tasks
 
-1. Train a targeted adapter on a real per-domain queue with `streamft` or
-   `continual-lora`; validate it with `research/adapter_check.py` and score a
-   held-out queue with `compare_adapters.py`. Keep the repos separate; Atom
+1. Train a targeted adapter on a genuinely novel per-domain queue with
+   `streamft` or `continual-lora`; validate it with
+   `research/adapter_check.py` and score a held-out queue with
+   `compare_adapters.py`. The 267-row format queue is already known to the base
+   (holdout 0.224) and both tested adapters regressed (+34.7% and +1.6%), so it
+   is a negative control, not a training target. Keep the repos separate; Atom
    Zero must not import `streamft`. Model weights are still `0.8.0` and
    unchanged.
 2. Prepare the `0.6.0` batch release once fresh credentials are available.

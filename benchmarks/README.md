@@ -386,3 +386,8 @@ moved assistant loss from **3.853** to **3.139** (-18.5%). This is small-sample
 evidence and a compatibility check, not a general benchmark. See
 [`../docs/ADAPTERS.md`](../docs/ADAPTERS.md) and
 [`results/adapter_holdout.json`](results/adapter_holdout.json).
+
+A 267-row format-skill queue was already known to the base (holdout loss
+0.224). Both tested adapters regressed (0.302, +34.7%; 0.228, +1.6%) and were
+rejected by the holdout. Raw result:
+[`results/adapter_targeted_holdout.json`](results/adapter_targeted_holdout.json).

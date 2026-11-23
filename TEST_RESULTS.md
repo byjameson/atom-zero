@@ -29,6 +29,9 @@
 - A 20-step external behavior-mix adapter loaded and passed the compatibility
   check (368,640 LoRA parameters), confirming the external-trainer -> Atom Zero
   path.
+- Targeted format queue negative control: base holdout loss **0.224**; a
+  100-step adapter regressed to **0.302** (+34.7%) and a 20-step adapter to
+  **0.228** (+1.6%). Both rejected by the local holdout.
 - Build/twine: **PASSED** (`atomzero-0.6.0.tar.gz`,
   `atomzero-0.6.0-py3-none-any.whl`).
 

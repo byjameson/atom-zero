@@ -1,0 +1,30 @@
+{
+  "benchmark": "atomzero-adapter-targeted-holdout",
+  "base": "transformer_behavior_50m_long",
+  "queue": "267 format-skill rows; 213 train / 54 holdout",
+  "examples": 54,
+  "tokens": 1469,
+  "base_loss": 0.224175,
+  "base_ppl": 1.2513,
+  "candidates": [
+    {
+      "adapter": "targeted 100 steps, lr 5e-4",
+      "loss": 0.302038,
+      "ppl": 1.3526,
+      "loss_relative": 0.347329,
+      "decision": "reject"
+    },
+    {
+      "adapter": "targeted 20 steps, lr 1e-4",
+      "loss": 0.227835,
+      "ppl": 1.2559,
+      "loss_relative": 0.016326,
+      "decision": "reject"
+    }
+  ],
+  "notes": [
+    "The base already scores 0.224 on this format-skill holdout, so the queue is not a novel learning task.",
+    "Both adapters regress the holdout and should not be promoted.",
+    "This is a negative-result check of the holdout gate, not a general adapter benchmark."
+  ]
+}

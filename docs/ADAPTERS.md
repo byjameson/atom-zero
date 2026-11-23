@@ -60,6 +60,22 @@ loads and behaves as expected in the Atom Zero runtime; it does not make the
 model general. A different adapter (`adapters_50m/v0001`) scored 3.796
 (-1.5%) on the same rows, so adapter identity and a holdout evaluation matter.
 
+### Negative control: a queue the base already knows
+
+A 267-row format-skill queue (213 train / 54 holdout) was already learned by
+the base: its holdout assistant loss is **0.224** (ppl 1.25). Training a LoRA
+adapter on that queue did not improve it:
+
+| candidate | holdout loss | vs base | decision |
+|---|---:|---:|---|
+| 100 steps, LR 5e-4 | 0.302 | +34.7% | reject |
+| 20 steps, LR 1e-4 | 0.228 | +1.6% | reject |
+
+The local comparison caught both regressions. The lesson is to train on a
+genuinely novel per-domain queue and always keep a held-out queue; low training
+loss alone is not evidence. Raw result:
+[`benchmarks/results/adapter_targeted_holdout.json`](../benchmarks/results/adapter_targeted_holdout.json).
+
 ## No trainer import
 
 The validation and comparison helpers live in
