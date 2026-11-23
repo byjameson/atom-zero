@@ -44,7 +44,8 @@ def test_archive_records_dedupes_and_reads_bom_index(tmp_path):
     second_report = tmp_path / "second.md"
     second_report.write_text("# Second report\n", encoding="utf-8")
     second = archive.record(
-        second_report, _review(period_days=14, open_tasks=3))
+        second_report, _review(period_days=14, open_tasks=3),
+        exported_at="2026-11-22T10:00:00")
     assert second["id"] == "w0002"
     assert [item["id"] for item in archive.list()] == ["w0002", "w0001"]
 
