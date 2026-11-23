@@ -41,7 +41,9 @@ def test_build_briefing_with_tasks_gaps_and_docs(tmp_path):
 
 
 def test_brief_tag_filter_scopes_tasks_and_tags(tmp_path, capsys):
-    today = date.today()
+    # The brief is evaluated as-of 2026-11-23; derive the fixtures from the
+    # same fixed date so the test does not change with the wall clock.
+    today = date(2026, 11, 23)
     soon = (today + timedelta(days=2)).isoformat()
     overdue = (today - timedelta(days=1)).isoformat()
     session = {"tasks": [
