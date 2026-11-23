@@ -308,7 +308,8 @@ The self-improvement ladder is deliberately split:
   count; only the offline, human-approved training steps do. See
   [`docs/GROWTH_LADDER.md`](docs/GROWTH_LADDER.md).
 - **Self-code audit:** deterministic AST scan of Atom Zero's own source; it
-  proposes bounded, human-gated patches and changes no file.
+  proposes bounded patches, and the autonomous loop gates and merges them
+  locally; per-change human approval is optional.
 - **RAG memory:** a teacher note or your document enters the index; no weight
   change.
 - **Reviewed adapter:** a LoRA adapter for style/skills; human review + gates;
@@ -401,6 +402,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Document version diff: <https://github.com/byjameson/atom-zero/blob/main/docs/DOCUMENT_DIFF.md>
 - Evaluation gate: <https://github.com/byjameson/atom-zero/blob/main/docs/EVALUATION_GATE.md>
 - Self-improvement architecture: <https://github.com/byjameson/atom-zero/blob/main/docs/SELF_IMPROVEMENT.md>
+- Autonomous loop and sandbox: <https://github.com/byjameson/atom-zero/blob/main/docs/AUTONOMOUS.md>
 - First measured loop cycle: <https://github.com/byjameson/atom-zero/blob/main/docs/LOOP_CYCLE.md>
 - Second measured loop cycle: <https://github.com/byjameson/atom-zero/blob/main/docs/LOOP_CYCLE_2.md>
 - Third loop cycle (agent-bridge consumed): <https://github.com/byjameson/atom-zero/blob/main/docs/LOOP_CYCLE_3.md>

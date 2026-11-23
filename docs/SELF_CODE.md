@@ -95,18 +95,21 @@ do not create planner actions.
 
 ## Feeding the bounded loop
 
-The opt-in loop can run its own audit and derive packet scope from the top
+The autonomous loop can run its own audit and derive packet scope from the top
 proposal:
 
 ```powershell
-atomzero-self-improve --self-code-root . --opt-in --approve `
+atomzero-self-improve --self-code-root . --opt-in `
   --runner "opencode run --dir {worktree} --auto <prompt>" `
   --repo . --base main --ledger data/improvement_ledger.jsonl
 ```
 
-The loop still requires both `--opt-in` and `--approve`; `--veto` stops before
-a worktree is created. It records a gated decision only after the gate passes.
-It never merges, pushes, tags or publishes.
+The loop is autonomous by default: `--opt-in` enables execution, then the
+focused gate, self-code diff, full suite and post-merge suite replace the
+per-change human approval. `--require-approval` restores the old gate;
+`--veto` stops before a worktree is created. It merges locally after the gates
+pass and rolls back if the post-merge suite fails. It never pushes, tags or
+publishes. See `docs/AUTONOMOUS.md`.
 
 ### Targeting one file
 
@@ -116,7 +119,7 @@ report) to work on one exact repo-relative path:
 ```powershell
 atomzero-self-improve --self-code-root . `
   --target-path src/atomzero/agent_runner.py `
-  --opt-in --approve `
+  --opt-in `
   --runner "opencode run --dir {worktree} --auto <prompt>" `
   --repo . --base main --ledger data/improvement_ledger.jsonl
 ```

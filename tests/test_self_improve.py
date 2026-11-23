@@ -83,7 +83,7 @@ def test_loop_completes_and_records(tmp_path):
     action_id = result["packet"]["action_id"]
     gate_id = result["runner"]["gate"].get("gate_id", "no-gate")
     note = (f"self-improve loop: {action_id} gate {gate_id} "
-            "passed and human approved")
+            "passed; human")
     expected = hashlib.sha256(note.encode("utf-8")).hexdigest()[:16]
     assert result["decision"]["note_id"] == expected
 
@@ -263,6 +263,56 @@ def test_loop_without_self_code_root_has_no_diff(tmp_path):
     assert "self_code_diff" not in result
 
 
+def _autonomous_runner():
+    return [sys.executable, "-c",
+            "import subprocess; open('a.txt','w').write('auto'); "
+            "subprocess.run(['git','add','a.txt'], check=True); "
+            "subprocess.run(['git','commit','-qm','autonomous change'], "
+            "check=True)"]
+
+
+def test_autonomous_loop_verifies_and_merges(tmp_path):
+    args = _args(tmp_path)
+    args.update(
+        approve=False, autonomous=True, auto_merge=True,
+        runner_command=_autonomous_runner(),
+        test_command=[sys.executable, "-c",
+                      "print('1 passed in 0.01s')"])
+    result = run_loop(**args)
+    assert result["status"] == "completed", result
+    assert result["autonomous"] is True
+    assert result["verification"]["ok"] is True
+    assert result["verification"]["tests_passed"] == 1
+    assert result["merge"]["ok"] is True
+    assert result["merge"]["after"]
+    assert result["decision"]["decision"] == "approve"
+    assert result["sandbox"]["os_vm"] is False
+    assert (args["repo_root"] / "a.txt").read_text(encoding="utf-8") == "auto"
+
+
+def test_autonomous_failed_verification_does_not_merge(tmp_path):
+    args = _args(tmp_path)
+    args.update(
+        approve=False, autonomous=True, auto_merge=True,
+        runner_command=_autonomous_runner(),
+        test_command=[sys.executable, "-c",
+                      "import sys; print('1 failed, 0 passed in 0.01s'); "
+                      "sys.exit(1)"])
+    result = run_loop(**args)
+    assert result["status"] == "verification_failed"
+    assert "merge" not in result
+    assert (args["repo_root"] / "a.txt").read_text(encoding="utf-8") == "base\n"
+    assert not (tmp_path / "ledger.jsonl").exists()
+
+
+def test_autonomous_without_opt_in_does_nothing(tmp_path):
+    args = _args(tmp_path)
+    args.update(opt_in=False, approve=False, autonomous=True)
+    result = run_loop(**args)
+    assert result["status"] == "awaiting_opt_in"
+    assert not (tmp_path / "ledger.jsonl").exists()
+
+
 def test_loop_target_path_selects_matching_proposal(tmp_path):
     repo = _self_code_repo(tmp_path)
     result = run_loop(
@@ -329,11 +379,19 @@ def test_loop_target_path_high_finding_builds_packet(tmp_path):
         "pytest:tests/test_improvement.py"]
 
 
+def test_main_sandbox_info(capsys):
+    code = main(["--sandbox-info"])
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["backend"] == "worktree"
+    assert payload["os_vm"] is False
+
+
 def test_main_passes_target_path(tmp_path, capsys):
     repo = _self_code_repo(tmp_path)
     code = main([
         "--self-code-root", str(repo), "--target-path", "src/beta.py",
-        "--opt-in", "--json"])
+        "--opt-in", "--require-approval", "--json"])
     assert code == 1
     payload = json.loads(capsys.readouterr().out)
     assert payload["status"] == "awaiting_human"
