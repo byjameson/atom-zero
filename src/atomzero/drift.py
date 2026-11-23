@@ -32,11 +32,56 @@ def load_profile(path) -> dict:
     return data
 
 
+def _is_number(value) -> bool:
+    return not isinstance(value, bool) and isinstance(value, (int, float))
+
+
 def _number(profile: dict, key: str) -> float:
+    """Read a metric from the top level, falling back to ``metrics``."""
     value = profile.get(key)
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
+    if not _is_number(value):
+        metrics = profile.get("metrics")
+        if isinstance(metrics, dict):
+            value = metrics.get(key)
+    if not _is_number(value):
         raise ValueError(f"profile.{key} must be a number")
     return float(value)
+
+
+def _count(value):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return int(value) if float(value).is_integer() else value
+
+
+def _sample_size(profile: dict):
+    """Resolve ``n`` from a scalar, a split mapping, or ``metrics.n``."""
+    value = profile.get("n")
+    if isinstance(value, dict):
+        for key in ("heldout", "calibration", "n"):
+            resolved = _count(value.get(key))
+            if resolved is not None:
+                return resolved
+        return None
+    resolved = _count(value)
+    if resolved is not None:
+        return resolved
+    metrics = profile.get("metrics")
+    if isinstance(metrics, dict):
+        return _count(metrics.get("n"))
+    return None
+
+
+def _threshold(profile: dict):
+    """Resolve the decision threshold from the supported locations."""
+    value = profile.get("threshold")
+    if _is_number(value):
+        return value
+    for section in ("selection", "metrics"):
+        nested = profile.get(section)
+        if isinstance(nested, dict) and _is_number(nested.get("threshold")):
+            return nested.get("threshold")
+    return None
 
 
 def compare_profiles(
@@ -63,8 +108,10 @@ def compare_profiles(
     new_brier = _number(current, "brier")
     old_ece = _number(baseline, "ece")
     new_ece = _number(current, "ece")
-    old_n = baseline.get("n")
-    new_n = current.get("n")
+    old_n = _sample_size(baseline)
+    new_n = _sample_size(current)
+    old_threshold = _threshold(baseline)
+    new_threshold = _threshold(current)
     alerts = []
     if new_brier > old_brier + max_brier_increase:
         alerts.append("brier_increased")
@@ -74,6 +121,9 @@ def compare_profiles(
             and isinstance(new_n, int) and not isinstance(new_n, bool)
             and old_n > 0 and (old_n - new_n) / old_n > max_n_drop):
         alerts.append("sample_size_dropped")
+    if (old_threshold is not None and new_threshold is not None
+            and abs(old_threshold - new_threshold) > 1e-9):
+        alerts.append("threshold_changed")
     delta_brier = new_brier - old_brier
     delta_ece = new_ece - old_ece
     if alerts:
@@ -88,12 +138,12 @@ def compare_profiles(
         "alerts": alerts,
         "baseline": {
             "brier": old_brier, "ece": old_ece, "n": old_n,
-            "threshold": baseline.get("threshold"),
+            "threshold": old_threshold,
             "commit": baseline.get("commit"),
         },
         "current": {
             "brier": new_brier, "ece": new_ece, "n": new_n,
-            "threshold": current.get("threshold"),
+            "threshold": new_threshold,
             "commit": current.get("commit"),
         },
         "delta": {
