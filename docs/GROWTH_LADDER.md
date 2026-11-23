@@ -91,8 +91,8 @@ citation quality.
 
 ## Roadmap
 
-1. `atomzero-escalate` deterministic router (in progress).
-2. Content-free growth ledger and summary.
+1. `atomzero-escalate` deterministic router (implemented).
+2. Content-free growth ledger and summary (implemented).
 3. Adapter-candidate export from verified teacher traces.
 4. Adapter training/eval gate with a before/after benchmark.
 5. Checkpoint upcycling path, offline and human-approved.

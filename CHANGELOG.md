@@ -29,6 +29,15 @@ the self-code branch and its planner/runner integration.
   the agent worktree after the run. If the diff introduces a new high or
   medium finding, the loop stops with `self_code_regression` and records no
   decision or scoreboard entry.
+- The loop now feeds its existing decision ledger to the planner as bounded
+  history, so repeated approvals/rejections adjust signal priorities.
+- Added **`atomzero-escalate`**: deterministic local/teacher/agent/refuse
+  routing with privacy, freshness and budget rules; a content-free growth
+  ledger and summary. It never calls a network or starts an agent, and
+  parameter growth remains explicitly zero/unchanged.
+- Added `docs/GROWTH_LADDER.md` and `docs/ESCALATION.md` describing the honest
+  snowball path: retrieval memory -> skills -> distilled adapters -> offline
+  checkpoint upcycling -> agentic code improvement.
 
 ## atomzero 0.19.0 - autonomous opt-in runner loop (2026-11-24)
 

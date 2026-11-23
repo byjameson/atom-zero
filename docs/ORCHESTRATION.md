@@ -89,8 +89,12 @@ spec generator; the LinkedIn activity feed contains the `0.6.1` post.
   fifth measured cycle). Work after it is accumulating for **`1.0.0`**.
 - Self-code branch: `atomzero-self-code` AST audit, bounded proposals,
   `self_code_high`/`self_code_medium` planner signals, proposal-derived runner
-  scope and the sixth measured cycle (`gate_id cac82f022c879258`,
-  `855/0 -> 857/0`). AISC spec `AtomZeroSelfImprove` is added.
+  scope, self-code before/after regression gate and the sixth measured cycle
+  (`gate_id cac82f022c879258`, `855/0 -> 857/0`). AISC spec
+  `AtomZeroSelfImprove` is added.
+- Escalation branch: `atomzero-escalate` deterministic local/teacher/agent/
+  refuse router, privacy and budget rules, content-free growth ledger, and the
+  honest parameter-growth boundary (no automatic weight change).
 - Parallel 1.0.0 Implementers (isolated worktrees, no push):
   - `feat/self-code-policy` in `%TEMP%\opencode\atom-zero-policy`:
     inline suppression markers and `--target-path` selection.
@@ -98,9 +102,9 @@ spec generator; the LinkedIn activity feed contains the `0.6.1` post.
     bounded history-aware signal priorities from the decision ledger.
   - `feat/scoreboard-collect` in `%TEMP%\opencode\atom-zero-score`:
     content-free count extraction from pytest/benchmark/AISC output.
-- Reviewer gate on `main`: **857 Atom Zero tests**, **223 AISC tests**,
+- Reviewer gate on `main`: **985 Atom Zero tests**, **223 AISC tests**,
   **23 strict AISC specs (21 PASS, 2 expected answerability FAIL)** and
-  **13/13** self-improvement benchmark checks.
+  **17/17** self-improvement benchmark checks.
 - Release agent: releases follow **one major version per release** now.
   `0.19.0` is the current published version; the next boundary is `1.0.0`,
   then `2.0.0`. Hold accumulated work until the major boundary; then one push

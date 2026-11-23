@@ -10,12 +10,12 @@ boundary.
 - Post-release main: self-code audit, bounded proposals, planner signals,
   proposal-derived runner scope, sixth measured cycle
   (`gate_id cac82f022c879258`, `855/0 -> 857/0`).
-- Main gate: 920 Atom Zero tests, 223 AISC tests, 23 strict specs
-  (21 PASS, 2 expected answerability FAIL), benchmark 13/13.
+- Main gate: 985 Atom Zero tests, 223 AISC tests, 23 strict specs
+  (21 PASS, 2 expected answerability FAIL), benchmark 17/17.
 - Weights remain `0.8.0`; answerability gate remains closed.
 - Merged post-release branches: self-code audit, self-code diff, history-aware
   planner priorities, self-code targeting/suppressions, scoreboard output
-  collectors.
+  collectors, escalation ladder, self-code regression gate and loop history.
 
 ## Parallel Implementers
 

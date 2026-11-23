@@ -18,6 +18,7 @@ from pathlib import Path
 
 from atomzero.claims import audit_answer
 from atomzero.consensus import audit_consensus
+from atomzero.escalation import decide, record_escalation, summarize_growth
 from atomzero.evaluation import parse_check
 from atomzero.improvement import (
     build_plan,
@@ -34,8 +35,14 @@ from atomzero.proactive import (
     note_improvement_plan,
     should_initiate,
 )
-from atomzero.scoreboard import record_run
+from atomzero.scoreboard import (
+    parse_aisc_summary,
+    parse_benchmark_summary,
+    parse_pytest_summary,
+    record_run,
+)
 from atomzero.self_code import audit_report
+from atomzero.self_code_diff import compare_reports
 from atomzero.temporal import filter_as_of
 from atomzero.trend import build_trend
 
@@ -221,6 +228,75 @@ def check_self_code_audit_and_plan():
         assert plan["actions"][0]["kind"] == "self_code_medium"
 
 
+def check_self_code_diff_is_a_gate():
+    finding = {
+        "finding_id": "sc-1", "kind": "broad_exception", "severity": "medium",
+        "path": "src/mod.py", "line": 4, "message": "broad",
+    }
+    before = {"findings": [finding]}
+    fixed = compare_reports(before, {"findings": []})
+    assert fixed["ok"] is True
+    assert fixed["summary"]["resolved"] == 1
+    regressed = compare_reports({"findings": []}, before)
+    assert regressed["ok"] is False
+    assert regressed["summary"]["new_medium"] == 1
+
+
+def check_history_adjusted_priorities():
+    finding = {"finding_id": "sc-1", "severity": "medium"}
+    approved = collect_signals(
+        self_code={"findings": [finding]},
+        history=[{"kind": "self_code_medium", "decision": "approve"}] * 2)
+    rejected = collect_signals(
+        self_code={"findings": [finding]},
+        history=[{"kind": "self_code_medium", "decision": "reject"}] * 2)
+    assert approved[0]["kind"] == "self_code_medium"
+    assert approved[0]["priority"] == 77
+    assert rejected[0]["priority"] == 67
+
+
+def check_escalation_router_and_growth():
+    local = decide(
+        {"kind": "answer", "confidence": 0.9, "privacy": "public"},
+        policy={})
+    assert local["route"] == "local"
+    assert local["external_call"] is False
+    teacher = decide(
+        {"kind": "answer", "confidence": 0.2, "privacy": "public"},
+        policy={"teacher_enabled": True, "allow_external": True,
+                "max_external_calls": 1})
+    assert teacher["route"] == "teacher"
+    secret = decide(
+        {"kind": "answer", "confidence": 0.2, "privacy": "secret"},
+        policy={})
+    assert secret["route"] == "refuse"
+    assert secret["reason_code"] == "privacy_secret"
+    agent = decide(
+        {"kind": "code", "confidence": 0.1, "privacy": "public"},
+        policy={"agent_enabled": True, "max_agent_calls": 1})
+    assert agent["route"] == "agent"
+    assert agent["requires_human"] is True
+    ledger = []
+    record_escalation(ledger, teacher, outcome="success", verified=True)
+    summary = summarize_growth(ledger)
+    assert summary["verified_teacher_answers"] == 1
+    assert summary["adapter_candidates"] == 1
+    assert summary["parameter_growth"] == 0
+    assert summary["weights_changed"] is False
+
+
+def check_scoreboard_output_parsers():
+    assert parse_pytest_summary(
+        "2 failed, 855 passed, 1 warning in 12.3s") == {
+            "tests_passed": 855, "tests_failed": 2}
+    assert parse_benchmark_summary(
+        "summary: 13/13 checks passed") == {
+            "benchmark_passed": 13, "benchmark_total": 13}
+    assert parse_aisc_summary(
+        "summary: 22 specs, 20 pass, 2 fail, 0 error") == {
+            "aisc_passed": 20, "aisc_total": 22}
+
+
 CHECKS = [
     check_plan_priority_and_human_gate,
     check_plan_does_not_auto_apply,
@@ -235,6 +311,10 @@ CHECKS = [
     check_upstream_audits_are_content_free,
     check_temporal_filter_is_deterministic,
     check_self_code_audit_and_plan,
+    check_self_code_diff_is_a_gate,
+    check_history_adjusted_priorities,
+    check_escalation_router_and_growth,
+    check_scoreboard_output_parsers,
 ]
 
 
