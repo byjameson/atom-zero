@@ -36,6 +36,8 @@ after `0.5.0`.
   with open/done counts plus clickable UI chips.
 - Confirmed global tag rename in chat, CLI, HTTP and UI; renaming preserves
   other tags and deduplicates.
+- Tag parity in the legacy `research/chat_human.py` runtime: add/tag/list
+  filters, inventory and confirmed rename with persistence.
 - Rescheduling and confirmed deletion.
 - Task text search plus status/due/priority filters.
 - Priority-first sorting in search, overdue, due-soon, list, brief and review
@@ -62,7 +64,7 @@ after `0.5.0`.
 
 ## Verified regressions
 
-- `369 passed` in the assistant test suite.
+- `371 passed` in the assistant test suite.
 - Weekly chat regression: 7/7.
 - Weekly export/archive regression: 29/29.
 - Weekly review regression: 6/6.

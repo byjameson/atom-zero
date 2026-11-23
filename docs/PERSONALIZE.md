@@ -109,6 +109,20 @@ python research/chat_human.py \
   --docs data/docs.db
 ```
 
+Task tags work in this runtime too:
+
+```text
+add task write report tags work,home
+tag task 1 work,urgent
+list tasks tag work
+list tags
+rename tag work job
+confirm tag rename
+```
+
+Renaming always previews first; `confirm tag rename` applies and
+`cancel tag rename` discards the pending change.
+
 Or over HTTP:
 
 ```bash

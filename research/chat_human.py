@@ -17,6 +17,9 @@ from pathlib import Path
 import torch
 
 from atomzero.doc_memory import best_snippet
+from atomzero.briefing import (
+    normalize_tag_rename, normalize_task_tag,
+    rename_task_tag as rename_tag_on_tasks, task_tag_view)
 from atomzero.transformer import TransformerLM, generate as transformer_generate
 
 try:
@@ -62,6 +65,43 @@ def looks_like_question(text: str) -> bool:
     return low.endswith("?") or low.startswith(_QUESTION_STARTS)
 
 
+TASK_TAG_LIMIT = 5
+
+
+def _normalize_tags(values) -> list[str]:
+    if values is None:
+        return []
+    if isinstance(values, str):
+        values = values.split(",")
+    tags = []
+    for raw in values:
+        value = str(raw or "").strip()
+        if not value:
+            continue
+        tag = normalize_task_tag(value)
+        if tag not in tags:
+            tags.append(tag)
+    if len(tags) > TASK_TAG_LIMIT:
+        raise ValueError(f"at most {TASK_TAG_LIMIT} tags are allowed")
+    return tags
+
+
+def _task_tags(task: dict) -> list[str]:
+    values = task.get("tags", [])
+    if isinstance(values, str):
+        values = values.split(",")
+    if not isinstance(values, (list, tuple)):
+        return []
+    return [str(value).strip().lower().lstrip("#")
+            for value in values if str(value).strip()]
+
+
+def _task_label(task: dict) -> str:
+    tags = _task_tags(task)
+    suffix = f" [tags: {', '.join(tags)}]" if tags else ""
+    return f"{task['id']} {task['text']}{suffix}"
+
+
 class ChatHuman:
     def __init__(self, memory_path: str | Path = DEFAULT_MEMORY,
                  model=None, tokenizer=None, device=None, arch="spiking",
@@ -76,6 +116,7 @@ class ChatHuman:
         self.on_gap = on_gap
         self.generator = generator
         self.allow_general_chat = bool(allow_general_chat)
+        self.pending_tag_rename = None
         self.data = self._load()
 
     def _load(self) -> dict:
@@ -189,12 +230,49 @@ class ChatHuman:
         self.data["episodes"] = self.data["episodes"][-200:]
         self.save()
 
-    def add_task(self, text: str) -> int:
+    def add_task(self, text: str, tags=None) -> int:
+        tags = _normalize_tags(tags)
         tid = int(self.data.get("next_task", 1))
         self.data["next_task"] = tid + 1
-        self.data["tasks"].append({"id": tid, "text": text, "status": "open"})
+        self.data["tasks"].append({
+            "id": tid, "text": text, "status": "open", "tags": tags})
         self.save()
         return tid
+
+    def set_task_tags(self, tid: int, tags) -> dict | None:
+        normalized = _normalize_tags(tags)
+        for task in self.data["tasks"]:
+            if int(task["id"]) == int(tid):
+                task["tags"] = normalized
+                task["tagged"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+                self.save()
+                return task
+        return None
+
+    def rename_task_tag(self, old, new) -> dict:
+        result = rename_tag_on_tasks(self.data, old, new)
+        self.save()
+        return result
+
+    def build_task_list(self, text: str) -> str:
+        filter_tag = None
+        tag_match = re.search(r"\s+tag\s+(\S+)\s*$", text, re.IGNORECASE)
+        if not tag_match:
+            tag_match = re.search(r"\s+#(\S+)\s*$", text, re.IGNORECASE)
+        if tag_match:
+            filter_tag = normalize_task_tag(tag_match.group(1))
+        open_tasks = [task for task in self.data["tasks"]
+                      if task["status"] == "open"]
+        if filter_tag:
+            open_tasks = [task for task in open_tasks
+                          if filter_tag in _task_tags(task)]
+        if not open_tasks:
+            return ("There are no open tasks." if not filter_tag
+                    else f"There are no open tasks tagged '{filter_tag}'.")
+        heading = ("Open tasks" if not filter_tag
+                   else f"Open tasks tagged '{filter_tag}'")
+        return heading + ": " + "; ".join(
+            _task_label(task) for task in open_tasks)
 
     def complete_task(self, tid: int) -> bool:
         for task in self.data["tasks"]:
@@ -241,7 +319,7 @@ class ChatHuman:
                       if task["status"] == "open"]
         if open_tasks:
             lines.append("Open tasks: " + "; ".join(
-                f"{task['id']} {task['text']}" for task in open_tasks))
+                _task_label(task) for task in open_tasks))
         return "\n".join(lines)
 
     def format_skill(self, text: str) -> str | None:
@@ -332,19 +410,106 @@ class ChatHuman:
                      if f["key"] == "likes"]
             reply = ("You like " + ", ".join(likes) + "." if likes
                      else "I do not know what you like yet.")
+        elif low in ("confirm tag rename", "confirm rename tag",
+                     "yes rename tag"):
+            pending = self.pending_tag_rename
+            self.pending_tag_rename = None
+            if pending is None:
+                reply = "There is no pending tag rename."
+            else:
+                try:
+                    result = self.rename_task_tag(
+                        pending["old"], pending["new"])
+                except ValueError as exc:
+                    reply = str(exc)
+                else:
+                    reply = (f"Renamed tag '{result['old']}' to "
+                             f"'{result['new']}' on "
+                             f"{result['updated']} task(s).")
+        elif low in ("cancel tag rename", "cancel rename tag"):
+            had_rename = self.pending_tag_rename is not None
+            self.pending_tag_rename = None
+            reply = ("Tag rename cancelled." if had_rename
+                     else "There is no pending tag rename.")
+        elif low.startswith("rename tag "):
+            match = re.match(
+                r"rename\s+tag\s+(\S+)\s+"
+                r"(?:to\s+|as\s+|->\s*)?(\S+?)\??$",
+                text, re.IGNORECASE)
+            if not match:
+                reply = ("Use 'rename tag OLD NEW' and confirm the "
+                         "preview with 'confirm tag rename'.")
+            else:
+                try:
+                    old, new = normalize_tag_rename(
+                        match.group(1), match.group(2))
+                except ValueError as exc:
+                    reply = str(exc)
+                else:
+                    view = task_tag_view(self.data)
+                    entry = next((item for item in view["tags"]
+                                  if item["tag"] == old), None)
+                    if entry is None:
+                        reply = f"Tag '{old}' is not used."
+                    else:
+                        self.pending_tag_rename = {
+                            "old": old, "new": new}
+                        reply = (
+                            f"Rename tag '{old}' to '{new}' on "
+                            f"{entry['total']} task(s) "
+                            f"({entry['open']} open, {entry['done']} done)? "
+                            'Reply "confirm tag rename" to apply, or '
+                            '"cancel tag rename".')
         elif low.startswith("add task"):
             task = text.split("add task", 1)[1].strip(" :")
-            if task:
-                tid = self.add_task(task)
-                reply = f"Added task {tid}: {task}"
+            tags = []
+            tags_error = ""
+            tags_match = re.search(
+                r"\s+tags?\s+(.+)$", task, re.IGNORECASE)
+            if tags_match:
+                try:
+                    tags = _normalize_tags(tags_match.group(1))
+                except ValueError as exc:
+                    tags_error = str(exc)
+                else:
+                    task = task[:tags_match.start()].strip(" :")
+            if tags_error:
+                reply = tags_error
+            elif task:
+                tid = self.add_task(task, tags=tags)
+                suffix = f" (tags {', '.join(tags)})" if tags else ""
+                reply = f"Added task {tid}: {task}{suffix}"
             else:
                 reply = "Tell me the task after 'add task'."
         elif "list tasks" in low:
-            open_tasks = [task for task in self.data["tasks"]
-                          if task["status"] == "open"]
-            reply = ("Open tasks: " + "; ".join(
-                f"{task['id']} {task['text']}" for task in open_tasks)
-                if open_tasks else "There are no open tasks.")
+            try:
+                reply = self.build_task_list(text)
+            except ValueError as exc:
+                reply = str(exc)
+        elif ("list tags" in low or "show tags" in low
+              or low.rstrip("?") in ("tags", "task tags")):
+            reply = task_tag_view(self.data)["text"]
+        elif low.startswith("tag task"):
+            match = re.match(
+                r"tag\s+task\s*(\d+)\s+(.+)$", text, re.IGNORECASE)
+            if not match:
+                reply = "Use 'tag task ID tag1,tag2' to set task tags."
+            else:
+                value = match.group(2).strip()
+                tags = ([] if value.lower() in ("clear", "none", "-")
+                        else value)
+                try:
+                    task = self.set_task_tags(int(match.group(1)), tags)
+                except ValueError as exc:
+                    reply = str(exc)
+                else:
+                    if task is None:
+                        reply = "I could not find that task."
+                    elif not task["tags"]:
+                        reply = f"Cleared tags on task {task['id']}."
+                    else:
+                        reply = (f"Set tags on task {task['id']}: "
+                                 f"{', '.join(task['tags'])}.")
         elif "complete task" in low:
             match = re.search(r"complete task\s*(\d+)", low)
             if match and self.complete_task(int(match.group(1))):

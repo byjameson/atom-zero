@@ -135,6 +135,9 @@
   `confirm tag rename`, CLI `--rename-tag OLD NEW --confirm-rename-tag`,
   HTTP `/v1/tasks/tags/rename` and UI old/new fields with a confirmation
   checkbox.
+- Ported task tags to the legacy `research/chat_human.py` runtime:
+  `add task ... tags ...`, `tag task`, tag-filtered `list tasks`, `list tags`
+  and confirmed `rename tag` with persistence.
 - Added optional AISC architecture specs for the critical read and
   task-action paths, plus `scripts/aisc_audit.py` for external AISC checks.
 - Fixed `add task` priority parsing so task text ending in "priority task" is
