@@ -17,7 +17,7 @@
 | Atom Zero `pytest tests -q` (0.19.0 release) | **846** | **0** | 0 | 79.99s |
 | Atom Zero `pytest tests -q` (post-release main) | **985** | **0** | 0 | 105.68s |
 | AISC `pytest tests -q` (0.5.1) | **223** (+6 subtests) | **0** | 0 | 17.13s |
-| AISC strict specs (24 specs) | **22 PASS / 2 FAIL (expected)** | 0 critical | 1 | - |
+| AISC strict specs (25 specs) | **23 PASS / 2 FAIL (expected)** | 0 critical | 1 | - |
 | Build (`python -m build`) | **2 artifacts** | **0** | 0 | - |
 | `twine check` | **2 PASSED** | **0** | 0 | - |
 
@@ -35,7 +35,7 @@ current post-release evidence is the clean `985 passed` run.
 - Post-release self-improvement loop: improvement planner and decisions,
   evaluation gate, weekly-review ledger summary and proactive reminders.
   Full main suite **985 passed**; `benchmarks/self_improvement_regression.py`
-  reports **17/17 checks passed**. Six measured cycles are recorded:
+  reports **19/19 checks passed**. Six measured cycles are recorded:
   `docs/LOOP_CYCLE.md` (HTTP flake, `gate_id ab5fe9b0fa0f48bc`, 792/1 ->
   793/0), `docs/LOOP_CYCLE_2.md` (live claim conflict, `gate_id
   ac1eb8a7ee8b5271`, 793/0 -> 794/0), `docs/LOOP_CYCLE_3.md` (agent-bridge

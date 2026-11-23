@@ -1,0 +1,66 @@
+name = "AtomZeroTeacherVerification"
+version = "0.1.0"
+description = "Deterministic claim/evidence/conflict verification for teacher answers, with content-free promotion events."
+min_assurance = 0.90
+max_context_tokens = 8000
+
+[[components]]
+name = "InputValidator"
+input_type = "TeacherAnswerAndHits"
+output_type = "ValidatedAnswer"
+kind = "evaluator"
+assurance = 0.97
+verified = true
+evidence = "tests/test_teacher_verification.py malformed answer, hits and threshold cases"
+assumptions = ["the caller supplies a teacher answer and local retrieval hits"]
+guarantees = ["empty answers and malformed hits are rejected", "min_support is bounded to 0..1"]
+context_tokens = 512
+
+[[components]]
+name = "ClaimLinker"
+input_type = "ValidatedAnswer"
+output_type = "LinkedClaims"
+kind = "evaluator"
+assurance = 0.94
+verified = true
+evidence = "tests/test_teacher_verification.py supported, weak and unsupported cases"
+assumptions = ["local hits contain evidence chunks"]
+guarantees = ["each claim is linked to at most one best hit", "evidence below min_support is weak or unsupported"]
+context_tokens = 1024
+
+[[components]]
+name = "ConflictDetector"
+input_type = "LinkedClaims"
+output_type = "LinkedClaims"
+kind = "evaluator"
+assurance = 0.95
+verified = true
+evidence = "tests/test_teacher_verification.py numeric, date and negation conflict cases"
+assumptions = ["claims are deterministic"]
+guarantees = ["numeric, date, identifier and negation conflicts are counted", "a conflict blocks verification"]
+context_tokens = 1024
+
+[[components]]
+name = "VerificationGate"
+input_type = "LinkedClaims"
+output_type = "VerificationResult"
+kind = "evaluator"
+assurance = 0.97
+verified = true
+evidence = "tests/test_teacher_verification.py status and reason ordering cases"
+assumptions = ["the first matching status rule is authoritative"]
+guarantees = ["empty, conflicted, unverified and verified statuses are explicit", "verified requires all claims supported and at least one source"]
+context_tokens = 512
+
+[[components]]
+name = "PromotionEvent"
+input_type = "VerificationResult"
+output_type = "ContentFreeEvent"
+kind = "tool"
+reversible = true
+assurance = 0.98
+verified = true
+evidence = "tests/test_teacher_verification.py content-free event and promotable cases"
+assumptions = ["a human still decides whether to promote the note"]
+guarantees = ["no answer, snippet or source text is stored", "promotable is true only for a successful verified result", "auto_apply and weights_changed are false"]
+context_tokens = 512

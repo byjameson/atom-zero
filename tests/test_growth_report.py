@@ -70,11 +70,29 @@ def test_self_code_regression_blocks():
     assert report["self_code"]["new_medium"] == 1
 
 
+def test_verification_ledger_is_counted():
+    report = build_report(
+        scoreboard=[_run()],
+        verification_ledger=[
+            {"verified": True, "promotable": True},
+            {"verified": False, "promotable": False},
+            {"verified": True, "promotable": False},
+        ])
+    assert report["verification"] == {
+        "total": 3, "verified": 2, "promotable": 1}
+    assert report["capability"]["verified_teacher_notes"] == 2
+    assert report["capability"]["promotable_teacher_notes"] == 1
+
+
 def test_invalid_inputs_raise():
     with pytest.raises(ValueError):
         build_report(escalation_ledger={})
     with pytest.raises(ValueError):
         build_report(scoreboard={})
+    with pytest.raises(ValueError):
+        build_report(verification_ledger={})
+    with pytest.raises(ValueError):
+        build_report(verification_ledger=["bad"])
     with pytest.raises(ValueError):
         build_report(self_code_diff=[])
 

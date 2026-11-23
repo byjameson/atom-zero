@@ -20,6 +20,7 @@ from atomzero.claims import audit_answer
 from atomzero.consensus import audit_consensus
 from atomzero.escalation import decide, record_escalation, summarize_growth
 from atomzero.evaluation import parse_check
+from atomzero.growth_report import build_report
 from atomzero.improvement import (
     build_plan,
     collect_signals,
@@ -43,6 +44,7 @@ from atomzero.scoreboard import (
 )
 from atomzero.self_code import audit_report
 from atomzero.self_code_diff import compare_reports
+from atomzero.teacher_verification import verification_event, verify_answer
 from atomzero.temporal import filter_as_of
 from atomzero.trend import build_trend
 
@@ -297,6 +299,44 @@ def check_scoreboard_output_parsers():
             "aisc_passed": 20, "aisc_total": 22}
 
 
+def check_growth_report_combines_layers():
+    runs = []
+    record_run(
+        runs, commit="aaaaaaa", tests_passed=985, tests_failed=0,
+        benchmark_passed=18, benchmark_total=18,
+        aisc_passed=22, aisc_total=24, now="2026-11-24T12:00:00Z")
+    report = build_report(
+        scoreboard=runs,
+        verification_ledger=[{"verified": True, "promotable": True}],
+        self_code_diff={"ok": True, "summary": {
+            "resolved": 1, "introduced": 0, "persisting": 0,
+            "new_high": 0, "new_medium": 0}})
+    assert report["ok"] is True
+    assert report["verification"]["promotable"] == 1
+    assert report["capability"]["code_findings_resolved"] == 1
+    assert report["parameter_growth"] == 0
+    assert report["weights_changed"] is False
+    blocked = build_report(scoreboard=[])
+    assert blocked["ok"] is False
+    assert "no_scoreboard" in blocked["reasons"]
+
+
+def check_teacher_verification_is_content_free():
+    hits = [{"chunk": "The launch code is ORBIT-42.",
+             "source": "doc://policy"}]
+    result = verify_answer("The launch code is ORBIT-42.", hits)
+    assert result["status"] == "verified"
+    assert result["verified"] is True
+    event = verification_event(result)
+    assert event["promotable"] is True
+    assert event["auto_apply"] is False
+    assert event["weights_changed"] is False
+    assert not ({"answer", "text", "query", "source", "content"} & set(event))
+    bad = verify_answer("The launch code is ZEBRA-99.", hits)
+    assert bad["status"] == "unverified"
+    assert bad["verified"] is False
+
+
 CHECKS = [
     check_plan_priority_and_human_gate,
     check_plan_does_not_auto_apply,
@@ -315,6 +355,8 @@ CHECKS = [
     check_history_adjusted_priorities,
     check_escalation_router_and_growth,
     check_scoreboard_output_parsers,
+    check_growth_report_combines_layers,
+    check_teacher_verification_is_content_free,
 ]
 
 

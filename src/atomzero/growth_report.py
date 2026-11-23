@@ -60,21 +60,33 @@ def _load_json(path: str) -> dict:
 
 
 def build_report(*, escalation_ledger=None, scoreboard=None,
-                 self_code_diff=None) -> dict:
+                 self_code_diff=None, verification_ledger=None) -> dict:
     """Build one deterministic, content-free growth report."""
     if escalation_ledger is None:
         escalation_ledger = []
     if scoreboard is None:
         scoreboard = []
+    if verification_ledger is None:
+        verification_ledger = []
     if not isinstance(escalation_ledger, list):
         raise ValueError("escalation_ledger must be a list")
     if not isinstance(scoreboard, list):
         raise ValueError("scoreboard must be a list")
+    if not isinstance(verification_ledger, list):
+        raise ValueError("verification_ledger must be a list")
+    for index, event in enumerate(verification_ledger):
+        if not isinstance(event, dict):
+            raise ValueError(
+                f"verification_ledger[{index}] must be an object")
     if self_code_diff is not None and not isinstance(self_code_diff, dict):
         raise ValueError("self_code_diff must be an object")
 
     growth = summarize_growth(escalation_ledger)
     measured = summarize_runs(scoreboard)
+    verified_notes = sum(
+        1 for event in verification_ledger if event.get("verified") is True)
+    promotable_notes = sum(
+        1 for event in verification_ledger if event.get("promotable") is True)
     reasons = []
     if not measured["runs"]:
         reasons.append("no_scoreboard")
@@ -102,6 +114,11 @@ def build_report(*, escalation_ledger=None, scoreboard=None,
         "ok": not reasons,
         "reasons": reasons,
         "escalation": growth,
+        "verification": {
+            "total": len(verification_ledger),
+            "verified": verified_notes,
+            "promotable": promotable_notes,
+        },
         "scoreboard": {
             "runs": measured["runs"],
             "green": measured["green"],
@@ -116,6 +133,8 @@ def build_report(*, escalation_ledger=None, scoreboard=None,
         "self_code": code,
         "capability": {
             "verified_teacher_answers": growth["verified_teacher_answers"],
+            "verified_teacher_notes": verified_notes,
+            "promotable_teacher_notes": promotable_notes,
             "adapter_candidates": growth["adapter_candidates"],
             "agent_handoffs": growth["agent_handoffs"],
             "tests_passed": latest.get("tests_passed", 0),
@@ -136,11 +155,12 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--escalation-jsonl", default="")
     parser.add_argument("--scoreboard-jsonl", default="")
+    parser.add_argument("--verification-jsonl", default="")
     parser.add_argument("--self-code-diff-json", default="")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
     paths = [args.escalation_jsonl, args.scoreboard_jsonl,
-             args.self_code_diff_json]
+             args.verification_jsonl, args.self_code_diff_json]
     if not any(paths):
         print("input error: at least one source is required", file=sys.stderr)
         return 2
@@ -153,6 +173,8 @@ def main(argv=None) -> int:
                                if args.escalation_jsonl else []),
             scoreboard=(_load_jsonl(args.scoreboard_jsonl)
                         if args.scoreboard_jsonl else []),
+            verification_ledger=(_load_jsonl(args.verification_jsonl)
+                                 if args.verification_jsonl else []),
             self_code_diff=(_load_json(args.self_code_diff_json)
                             if args.self_code_diff_json else None))
     except (OSError, ValueError) as exc:
@@ -166,6 +188,8 @@ def main(argv=None) -> int:
         if report["reasons"]:
             print("reasons: " + ", ".join(report["reasons"]))
         print(f"- verified teacher answers: {cap['verified_teacher_answers']}")
+        print(f"- verified teacher notes: {cap['verified_teacher_notes']}")
+        print(f"- promotable teacher notes: {cap['promotable_teacher_notes']}")
         print(f"- adapter candidates: {cap['adapter_candidates']}")
         print(f"- tests passed: {cap['tests_passed']}")
         print(f"- code findings resolved: {cap['code_findings_resolved']}")

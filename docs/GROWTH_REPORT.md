@@ -17,6 +17,8 @@ atomzero-growth `
 - `--escalation-jsonl`: content-free events written by
   `atomzero-escalate` (`record_escalation`).
 - `--scoreboard-jsonl`: measured runs from `atomzero-scoreboard`.
+- `--verification-jsonl`: content-free events from
+  `atomzero-verify-teacher`; counts verified and promotable teacher notes.
 - `--self-code-diff-json`: a `atomzero-self-code-diff` report.
 
 At least one source is required. Only one source may use `-` for stdin.
@@ -27,6 +29,7 @@ The report contains:
 
 - route counts: local, teacher, agent, refuse;
 - verified teacher answers and adapter candidates;
+- verified and promotable teacher notes from the verification ledger;
 - latest test, benchmark and AISC counts plus the scoreboard delta;
 - self-code resolved/introduced/persisting counts;
 - `parameter_growth: 0` and `parameter_growth_state: unchanged`;

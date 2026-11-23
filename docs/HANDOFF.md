@@ -11,7 +11,7 @@
   boundary; not pushed yet.
 - Working tree after the release-doc commits: clean
 - Atom Zero tests: **985 passed**
-- AISC strict audit: **24 specs, 22 PASS, 0 errors**; `AtomZeroAnswerability`
+- AISC strict audit: **25 specs, 23 PASS, 0 errors**; `AtomZeroAnswerability`
   and `AtomZeroAnswerabilityGenerated` remain **FAIL** with the measured
   Brier 0.244 / ECE 0.130 and refusal-policy misses. This is reported, not
   hidden.

@@ -418,6 +418,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Growth ladder: <https://github.com/byjameson/atom-zero/blob/main/docs/GROWTH_LADDER.md>
 - Growth report: <https://github.com/byjameson/atom-zero/blob/main/docs/GROWTH_REPORT.md>
 - Escalation router: <https://github.com/byjameson/atom-zero/blob/main/docs/ESCALATION.md>
+- Teacher verification: <https://github.com/byjameson/atom-zero/blob/main/docs/TEACHER_VERIFICATION.md>
 - AISC spec generator: <https://github.com/byjameson/atom-zero/blob/main/docs/AISC_SPEC_GENERATOR.md>
 - Multi-agent orchestration: <https://github.com/byjameson/atom-zero/blob/main/docs/ORCHESTRATION.md>
 - Branch research: <https://github.com/byjameson/atom-zero/blob/main/docs/BRANCH_RESEARCH.md>
