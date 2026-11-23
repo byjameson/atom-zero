@@ -1,8 +1,8 @@
 # Atom Zero and AISC Test Results
 
-- Date: 2026-11-23 19:59:17
+- Date: 2026-11-23 20:04:31
 - Atom Zero repository: `C:\Users\biris\AppData\Local\Temp\opencode\atom-zero-clean`
-- Tested Atom Zero commit: `35241de8f7366d549727d4c6db2d583ffc384dba`
+- Tested Atom Zero commit: `4628feddf0272a201f9d409997ffa4306dcdc011`
 - Atom Zero working tree at test start: clean
 - AISC path: `C:\Users\biris\Desktop\opencode\yeni dal\ai-systems-algebra`
 - AISC source status: directory is not a Git repository; no commit hash is available
@@ -12,7 +12,7 @@
 
 | Suite | Passed | Failed | Exit | Duration |
 |---|---:|---:|---:|---:|
-| Atom Zero `pytest tests -q` | **465** | **0** | 0 | 59.46s |
+| Atom Zero `pytest tests -q` | **465** | **0** | 0 | 63.38s |
 | AISC `pytest tests -q` | **191** (+6 subtests) | **0** | 0 | 16.65s |
 
 **Failed tests: none.**
