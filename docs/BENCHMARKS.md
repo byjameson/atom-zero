@@ -74,6 +74,21 @@ python benchmarks/squad_retrieval.py `
   --max-contexts 20 --max-questions 100 --per-context 5 --seed 0
 ```
 
+## Turkish morphology retrieval
+
+`benchmarks/turkish_retrieval.py` is an authored Turkish check: queries use the
+base form while target documents use inflected forms (`kitap` / `kitabın`,
+`ağaç` / `ağacın`, `ev` / `evler`), and distractors share the attribute words.
+
+| mode | before | after |
+|---|---:|---:|
+| FTS | 0.583 | **0.833** |
+| hybrid | 0.833 | **1.000** |
+
+12 queries / 18 documents. The before column was measured with the
+pre-morphology code. Raw result:
+[`results/turkish_retrieval.json`](results/turkish_retrieval.json).
+
 ## Source-comparison regression
 
 `benchmarks/contradiction_regression.py` checks the served compare controls,

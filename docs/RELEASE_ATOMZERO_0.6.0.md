@@ -15,6 +15,10 @@ after `0.5.0`.
   characters). On the public SQuAD v2 retrieval check (50 contexts / 200
   questions), top-1 answer-in-snippet improved from 0.816 to 0.884 for hybrid
   and 0.777 to 0.845 for FTS.
+- Added Turkish morphology-aware retrieval: light suffix/consonant-mutation
+  skeletons and FTS prefix variants (`kitap` / `kitabın`, `ağaç` / `ağacın`,
+  `ev` / `evler`). An authored 12-query check improved hybrid top-1 from 0.833
+  to 1.000 and FTS from 0.583 to 0.833; English SQuAD results are unchanged.
 
 ## Weekly review and report archive
 
@@ -104,7 +108,7 @@ after `0.5.0`.
 
 ## Verified regressions
 
-- `383 passed` in the assistant test suite.
+- `386 passed` in the assistant test suite.
 - Weekly chat regression: 7/7.
 - Weekly export/archive regression: 29/29.
 - Weekly review regression: 6/6.

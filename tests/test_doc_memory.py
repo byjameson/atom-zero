@@ -42,6 +42,19 @@ def test_best_snippet_selects_query_sentence_and_keeps_teacher_value():
     assert "T-9000" in best_snippet("what is the teacher code?", teacher)
 
 
+def test_turkish_morphology_retrieves_inflected_forms(tmp_path):
+    mem = DocMemory(tmp_path / "docs.db")
+    mem.add_text("ev.txt", "Evler çok eski. Evlerin çatısı onarıldı.")
+    mem.add_text("bina.txt", "Eski bina. Binaların çatısı onarıldı.")
+    mem.add_text("sehir.txt", "Şehirde yeni yollar açıldı.")
+    mem.add_text("tren.txt", "Tren açıldı mı? Tren istasyonu açıldı.")
+    hits = mem.search("Ev eski mi?", k=1)
+    assert hits and hits[0]["source"] == "ev.txt"
+    hits = mem.search("Yol açıldı mı?", k=1)
+    assert hits and hits[0]["source"] == "sehir.txt"
+    mem.close()
+
+
 def test_search_diverse_suppresses_near_duplicate_chunks(tmp_path):
     mem = DocMemory(tmp_path / "docs.db")
     texts = [

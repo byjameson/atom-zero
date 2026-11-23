@@ -148,7 +148,8 @@ LoRA adapters.
 | document benchmark, 100 authored questions | **80/80 answerable, 20/20 no-answer** |
 | public SQuAD v2 retrieval (20 contexts) | **0.98 top-1 context (FTS), 1.00 top-5** |
 | public SQuAD v2 retrieval (50 contexts) | **hybrid 0.975 top-1; 0.884 answer in visible snippet** |
-| test suite | **383 passed** |
+| Turkish morphology retrieval (12 authored queries) | **hybrid 1.000 top-1; FTS 0.833** (baseline 0.833 / 0.583) |
+| test suite | **386 passed** |
 
 The raw-model probe asks ten simple general questions with no documents, no
 calculator and no agent. The 49.2M model gets **2/10**. The product gets
@@ -175,6 +176,9 @@ short generation. It is **not MMLU, GSM8K or HumanEval**.
   source, a source prefix or teacher notes.
 - **Exact code/ID retrieval:** `L-7781` and `W-7781` are treated as distinct
   identifiers in FTS candidates, reranking and snippets.
+- **Turkish morphology:** suffix and final-consonant matching (`kitap` /
+  `kitabın`, `ağaç` / `ağacın`, `ev` / `evler`) plus FTS prefix variants for
+  Turkish queries; English matching is unchanged.
 - **Collection scope in the UI:** choose an exact source or type a prefix such
   as `notes/`; search, Answer and Summarize collection share the same scope.
 - **Second brain graph:** local co-occurrence graph over names, codes and years

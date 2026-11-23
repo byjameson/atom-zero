@@ -21,6 +21,9 @@ import zlib
 from collections import Counter
 from pathlib import Path
 
+from atomzero.morphology import (
+    TURKISH_STOPWORDS, looks_turkish, skeleton, variants)
+
 try:
     import numpy as np
 except ImportError:  # pragma: no cover - numpy is a declared dependency
@@ -115,8 +118,12 @@ def _identifier_terms(text: str) -> set[str]:
 def _query_terms(text: str) -> set[str]:
     value = str(text or "")
     words = re.findall(r"[^\W_]+", value.lower(), re.UNICODE)
-    terms = {word for word in words
-             if len(word) > 2 and word not in STOPWORDS}
+    if looks_turkish(value):
+        terms = {word for word in words
+                 if len(word) > 1 and word not in TURKISH_STOPWORDS}
+    else:
+        terms = {word for word in words
+                 if len(word) > 2 and word not in STOPWORDS}
     terms.update(_identifier_terms(value))
     return terms
 
@@ -124,22 +131,35 @@ def _query_terms(text: str) -> set[str]:
 def _term_coverage(terms: set[str], text: str) -> float:
     """Fraction of query terms present, with a small morphology allowance.
 
-    Exact token overlap misses ``claim``/``claims`` and
-    ``submit``/``submitted``. Requiring both tokens to be at least four
-    characters keeps this from turning into an aggressive fuzzy match.
+    English terms use exact token overlap plus a conservative four-character
+    prefix allowance. Turkish text is additionally reduced with a light
+    suffix/consonant-mutation skeleton so ``kitap`` matches ``kitabı`` and
+    ``ev`` matches ``evler``. This is deterministic and local; it does not
+    change indexed text.
     """
     if not terms:
         return 0.0
+    turkish = looks_turkish(text) or any(looks_turkish(term)
+                                         for term in terms)
+    if turkish:
+        terms = {term for term in terms if term not in TURKISH_STOPWORDS}
+        if not terms:
+            return 0.0
     words = _query_terms(text)
+    if turkish:
+        words = {skeleton(word) for word in words
+                 if word not in TURKISH_STOPWORDS}
     matched = 0
     for term in terms:
-        if term in words:
+        probe = skeleton(term) if turkish else term
+        if probe in words:
             matched += 1
             continue
-        if len(term) < 4:
+        minimum = 2 if turkish else 4
+        if len(probe) < minimum:
             continue
-        if any(len(word) >= 4 and
-               (word.startswith(term) or term.startswith(word))
+        if any(len(word) >= minimum and
+               (word.startswith(probe) or probe.startswith(word))
                for word in words):
             matched += 1
     return matched / len(terms)
@@ -1461,15 +1481,35 @@ class DocMemory:
                 raise ValueError(f"{label} contains control characters")
         words = re.findall(r"[\wçğıöşüÇĞİÖŞÜ]+", query)
         words = [w for w in words if len(w) > 1]
-        meaningful = [w for w in words if w.lower() not in STOPWORDS]
-        if meaningful:
-            words = meaningful
+        turkish = looks_turkish(query)
+        if turkish:
+            filtered = [w for w in words
+                        if w.lower() not in TURKISH_STOPWORDS]
+            if filtered:
+                words = filtered
+        else:
+            meaningful = [w for w in words if w.lower() not in STOPWORDS]
+            if meaningful:
+                words = meaningful
         for code in _identifier_terms(query):
             if code not in words:
                 words.append(code)
         if not words:
             return []
-        match = " OR ".join(f'"{w}"' for w in words[:12])
+        clauses = []
+        seen = set()
+        for word in words[:12]:
+            exact = f'"{word}"'
+            if exact not in seen:
+                clauses.append(exact)
+                seen.add(exact)
+            if turkish:
+                for variant in variants(word):
+                    for clause in (f'"{variant}"', f'"{variant}"*'):
+                        if clause not in seen:
+                            clauses.append(clause)
+                            seen.add(clause)
+        match = " OR ".join(clauses[:30])
         candidates = max(k * 4, 12) if rerank else k
         if diverse:
             candidates = max(candidates, k * 6, 24)

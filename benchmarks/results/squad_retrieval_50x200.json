@@ -28,12 +28,12 @@
       "top1_context": 0.975,
       "top5_context": 1.0,
       "top1_answer": 0.9611650485436893,
-      "top5_answer": 1.0,
+      "top5_answer": 0.9902912621359223,
       "top1_answer_snippet": 0.883495145631068,
-      "top5_answer_snippet": 0.912621359223301,
+      "top5_answer_snippet": 0.9029126213592233,
       "mrr": 0.9841666666666667,
-      "mean_confidence_answerable": 0.5853495145631067,
-      "mean_confidence_no_answer": 0.5833917525773197,
+      "mean_confidence_answerable": 0.585252427184466,
+      "mean_confidence_no_answer": 0.5834020618556701,
       "low_confidence_rate_answerable": 0.0,
       "low_confidence_rate_no_answer": 0.010309278350515464
     }

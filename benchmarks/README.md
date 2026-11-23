@@ -277,3 +277,23 @@ The product uses it only to flag a weak match.
 
 This benchmark measures **retrieval**. It does not measure whether the 49.2M
 model generates the answer; that is a separate product benchmark.
+
+## Turkish morphology retrieval
+
+This is an **authored** Turkish retrieval check, not a public benchmark. Queries
+use the base form (`kitap`, `ağaç`, `ev`) while target documents use an
+inflected form (`kitabın`, `ağacın`, `evler`); distractor documents share the
+attribute words so the entity term decides the ranking.
+
+```powershell
+python benchmarks/turkish_retrieval.py
+```
+
+| mode | before morphology | after morphology |
+|---|---:|---:|
+| FTS | 0.583 | **0.833** |
+| hybrid | 0.833 | **1.000** |
+
+12 queries over 18 documents. The "before" column was measured with the
+pre-morphology code on the same queries. Raw result:
+[`results/turkish_retrieval.json`](results/turkish_retrieval.json).

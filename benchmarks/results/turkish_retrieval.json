@@ -1,0 +1,185 @@
+{
+  "benchmark": "atomzero-turkish-retrieval",
+  "generated": "2026-11-23T05:43:56",
+  "documents": 18,
+  "results": {
+    "fts": {
+      "queries": 12,
+      "top1": 0.8333333333333334
+    },
+    "hybrid": {
+      "queries": 12,
+      "top1": 1.0
+    }
+  },
+  "details": [
+    {
+      "mode": "fts",
+      "query": "Kitap kapa\u011f\u0131 ne renk?",
+      "gold": "kitap.txt",
+      "top1": "kitap.txt",
+      "ok": true
+    },
+    {
+      "mode": "fts",
+      "query": "A\u011fa\u00e7 g\u00f6vdesi nas\u0131l?",
+      "gold": "agac.txt",
+      "top1": "agac.txt",
+      "ok": true
+    },
+    {
+      "mode": "fts",
+      "query": "Sokak sonunda park var m\u0131?",
+      "gold": "sokak.txt",
+      "top1": "sokak.txt",
+      "ok": true
+    },
+    {
+      "mode": "fts",
+      "query": "Kanat k\u0131r\u0131k m\u0131?",
+      "gold": "kanat.txt",
+      "top1": "kanat.txt",
+      "ok": true
+    },
+    {
+      "mode": "fts",
+      "query": "Ev eski mi?",
+      "gold": "ev.txt",
+      "top1": "ev.txt",
+      "ok": true
+    },
+    {
+      "mode": "fts",
+      "query": "Su y\u00fckseldi mi?",
+      "gold": "su.txt",
+      "top1": "su.txt",
+      "ok": true
+    },
+    {
+      "mode": "fts",
+      "query": "Yol kapal\u0131 m\u0131?",
+      "gold": "yol.txt",
+      "top1": "yol.txt",
+      "ok": true
+    },
+    {
+      "mode": "fts",
+      "query": "Yol a\u00e7\u0131ld\u0131 m\u0131?",
+      "gold": "sehir.txt",
+      "top1": "tren.txt",
+      "ok": false
+    },
+    {
+      "mode": "fts",
+      "query": "Kitap raflarda m\u0131?",
+      "gold": "kitap2.txt",
+      "top1": "kitap.txt",
+      "ok": false
+    },
+    {
+      "mode": "fts",
+      "query": "A\u011fa\u00e7 g\u00f6vdesi kal\u0131n m\u0131?",
+      "gold": "agac.txt",
+      "top1": "agac.txt",
+      "ok": true
+    },
+    {
+      "mode": "fts",
+      "query": "Sokak trafi\u011fe kapal\u0131 m\u0131?",
+      "gold": "sokak.txt",
+      "top1": "sokak.txt",
+      "ok": true
+    },
+    {
+      "mode": "fts",
+      "query": "Su seviyesi tehlike s\u0131n\u0131r\u0131nda m\u0131?",
+      "gold": "su.txt",
+      "top1": "su.txt",
+      "ok": true
+    },
+    {
+      "mode": "hybrid",
+      "query": "Kitap kapa\u011f\u0131 ne renk?",
+      "gold": "kitap.txt",
+      "top1": "kitap.txt",
+      "ok": true
+    },
+    {
+      "mode": "hybrid",
+      "query": "A\u011fa\u00e7 g\u00f6vdesi nas\u0131l?",
+      "gold": "agac.txt",
+      "top1": "agac.txt",
+      "ok": true
+    },
+    {
+      "mode": "hybrid",
+      "query": "Sokak sonunda park var m\u0131?",
+      "gold": "sokak.txt",
+      "top1": "sokak.txt",
+      "ok": true
+    },
+    {
+      "mode": "hybrid",
+      "query": "Kanat k\u0131r\u0131k m\u0131?",
+      "gold": "kanat.txt",
+      "top1": "kanat.txt",
+      "ok": true
+    },
+    {
+      "mode": "hybrid",
+      "query": "Ev eski mi?",
+      "gold": "ev.txt",
+      "top1": "ev.txt",
+      "ok": true
+    },
+    {
+      "mode": "hybrid",
+      "query": "Su y\u00fckseldi mi?",
+      "gold": "su.txt",
+      "top1": "su.txt",
+      "ok": true
+    },
+    {
+      "mode": "hybrid",
+      "query": "Yol kapal\u0131 m\u0131?",
+      "gold": "yol.txt",
+      "top1": "yol.txt",
+      "ok": true
+    },
+    {
+      "mode": "hybrid",
+      "query": "Yol a\u00e7\u0131ld\u0131 m\u0131?",
+      "gold": "sehir.txt",
+      "top1": "sehir.txt",
+      "ok": true
+    },
+    {
+      "mode": "hybrid",
+      "query": "Kitap raflarda m\u0131?",
+      "gold": "kitap2.txt",
+      "top1": "kitap2.txt",
+      "ok": true
+    },
+    {
+      "mode": "hybrid",
+      "query": "A\u011fa\u00e7 g\u00f6vdesi kal\u0131n m\u0131?",
+      "gold": "agac.txt",
+      "top1": "agac.txt",
+      "ok": true
+    },
+    {
+      "mode": "hybrid",
+      "query": "Sokak trafi\u011fe kapal\u0131 m\u0131?",
+      "gold": "sokak.txt",
+      "top1": "sokak.txt",
+      "ok": true
+    },
+    {
+      "mode": "hybrid",
+      "query": "Su seviyesi tehlike s\u0131n\u0131r\u0131nda m\u0131?",
+      "gold": "su.txt",
+      "top1": "su.txt",
+      "ok": true
+    }
+  ]
+}

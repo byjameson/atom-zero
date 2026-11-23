@@ -11,6 +11,10 @@
   `1.5 million`, `1,5` = `1.5`, `5 January 2020` = `January 5, 2020`,
   `24 months` = `2 years`, `72 hours` = `3 days`), reducing false alarms.
   Contradiction regression is now 11/11.
+- Added Turkish morphology-aware retrieval: light suffix/consonant-mutation
+  skeletons and FTS prefix variants for mutated forms. An authored 12-query
+  check improved hybrid top-1 from 0.833 to 1.000 and FTS from 0.583 to 0.833;
+  English SQuAD results are unchanged.
 - Added multi-hop **graph paths**: `atomzero-docs path`, `GET /v1/graph/path`,
   chat “how is X connected to Y?” and UI Find path.
 - Added `benchmarks/graph_path_regression.py` (6/6 checks).
