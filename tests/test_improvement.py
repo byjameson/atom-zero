@@ -385,6 +385,17 @@ def test_record_decision_rejects_invalid_arguments(ledger, action, note):
         record_decision(ledger, action, "approve", note=note, now=NOW)
 
 
+def test_actions_carry_allowlisted_next_steps():
+    plan = plan_from_inputs(
+        gaps=[{"id": "g1", "query": "local policy", "status": "open"}],
+        feedback=[{"id": "f1", "status": "pending"}],
+    )
+    by_kind = {action["kind"]: action for action in plan["actions"]}
+    assert "/v1/learning/gaps/propose" in by_kind["knowledge_gaps"]["next_step"]
+    assert "feedback queue" in by_kind["pending_feedback"]["next_step"]
+    assert by_kind["knowledge_gaps"]["requires_human"] is True
+
+
 def test_aisc_coverage_signal_and_action():
     signals = collect_signals(aisc_coverage={
         "summary": {

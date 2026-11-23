@@ -24,7 +24,7 @@ local signals
 | 2 | `POST /v1/improvement/plan` + content-free decision route | merged on local main |
 | 3 | Evaluation gate harness (pytest, AISC strict, focused benchmark) | merged on local main |
 | 4 | Decision ledger integration into weekly review | merged on local main |
-| 5 | Gap-to-research approval link | gap signal + action merged; direct research approval link pending |
+| 5 | Gap-to-research approval link | merged: gap action points at `/v1/learning/gaps/propose` and queue approval |
 | 6 | Feedback-to-improvement link | merged as the `pending_feedback` signal |
 | 7 | Reliability-to-source-review link | merged as the `weak_sources` signal |
 | 8 | Proactive improvement reminders | merged on local main |

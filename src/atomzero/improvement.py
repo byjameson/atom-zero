@@ -86,6 +86,18 @@ ACCEPTANCE_GATES = {
 }
 REGRESSION_GATE = (
     "run the relevant pytest/AISC regression before accepting")
+NEXT_STEPS = {
+    "knowledge_gaps": (
+        "propose the top gap with POST /v1/learning/gaps/propose, approve it "
+        "in the research queue, then rerun the plan"),
+    "pending_feedback": (
+        "review the feedback queue and approve or reject each item"),
+    "aisc_coverage_gaps": (
+        "run atomzero-coverage, fix the missing evidence or unverified "
+        "component, then rerun atomzero-gate"),
+}
+DEFAULT_NEXT_STEP = (
+    "run atomzero-gate with the focused pytest/AISC checks before accepting")
 
 FORBIDDEN_KEYS = frozenset({
     "text", "query", "answer", "chunk", "content", "note", "session",
@@ -416,6 +428,8 @@ def build_plan(signals, limit=5) -> dict:
             "priority": signal["priority"],
             "requires_human": True,
             "acceptance": _acceptance(signal["kind"]),
+            "next_step": NEXT_STEPS.get(
+                signal["kind"], DEFAULT_NEXT_STEP),
         })
 
     summary: dict[str, int] = {}

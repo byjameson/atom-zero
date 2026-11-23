@@ -231,6 +231,9 @@ Invoke-RestMethod -Method Post `
   that the caller may persist deliberately.
 - `auto_apply` and `weights_changed` are always `false`.
 - Every action requires human approval and has an explicit acceptance gate.
+- Every action also carries an allowlisted `next_step`; the gap action points
+  at `POST /v1/learning/gaps/propose` and the research queue, and the coverage
+  action points at `atomzero-coverage` plus `atomzero-gate`.
 - Signal and plan output is deterministic for identical inputs.
 - Decision records are content-free and verifiable.
 
