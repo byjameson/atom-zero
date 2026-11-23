@@ -362,6 +362,8 @@ and suggested next actions.</p>
 <option value="delete_tag">Delete</option>
 <option value="undo_tag_delete">Undo</option>
 </select>
+<button id="tagauditcsv">Download CSV</button>
+<button id="tagauditmd">Download .md</button>
 <input id="renameoldtag" placeholder="old tag" style="width:7em">
 <input id="renamenewtag" placeholder="new tag" style="width:7em">
 <label class="hint"><input id="renametagconfirm" type="checkbox">
@@ -1044,6 +1046,48 @@ async function getTagAudit() {
     });
   } catch (e) {
     msg.textContent = 'tag audit error: ' + e;
+  }
+}
+async function downloadTagAudit(format) {
+  const msg = document.getElementById('tagauditmsg');
+  const tag = document.getElementById('tagaudittag').value.trim();
+  const action = document.getElementById('tagauditaction').value;
+  msg.textContent = 'exporting tag audit...';
+  try {
+    const params = new URLSearchParams({
+      session_id: sessionId, limit: '10', format});
+    if (tag) params.set('tag', tag);
+    if (action !== 'all') params.set('action', action);
+    const r = await fetch('/v1/tasks/tags/audit/export?' + params.toString());
+    if (!r.ok) {
+      let detail = r.status;
+      try {
+        const j = await r.json();
+        detail = j.error || detail;
+      } catch (e) {}
+      msg.textContent = 'tag audit export error: ' + detail;
+      return;
+    }
+    const text = await r.text();
+    const disposition = r.headers.get('Content-Disposition') || '';
+    const match = disposition.match(/filename="([^"]+)"/);
+    const fallback = 'atomzero-tag-audit.' +
+      (format === 'markdown' ? 'md' : 'csv');
+    const filename = match ? match[1] : fallback;
+    const mime = format === 'markdown'
+      ? 'text/markdown;charset=utf-8' : 'text/csv;charset=utf-8';
+    const blob = new Blob([text], {type: mime});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    msg.textContent = 'tag audit exported | ' + filename;
+  } catch (e) {
+    msg.textContent = 'tag audit export error: ' + e;
   }
 }
 async function renameTag() {
@@ -1793,6 +1837,8 @@ document.getElementById('tasksearchbtn').onclick = () => searchTasks();
 document.getElementById('tasklistbtn').onclick = () => getTaskList();
 document.getElementById('tasktagsbtn').onclick = () => getTaskTags();
 document.getElementById('tagauditbtn').onclick = () => getTagAudit();
+document.getElementById('tagauditcsv').onclick = () => downloadTagAudit('csv');
+document.getElementById('tagauditmd').onclick = () => downloadTagAudit('markdown');
 document.getElementById('renametagbtn').onclick = () => renameTag();
 document.getElementById('deletetagbtn').onclick = () => deleteTag();
 document.getElementById('undotagdeletebtn').onclick = () => undoTagDelete();

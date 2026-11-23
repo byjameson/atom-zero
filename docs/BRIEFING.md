@@ -173,7 +173,8 @@ CLI uses `--tag-audit [--tag-audit-limit N] [--tag-audit-tag TAG]
 a **Tag audit** button with tag and action fields. Filtered exports use
 `GET /v1/tasks/tags/audit/export?format=csv&tag=work&action=delete_tag` (or
 `format=markdown`); CSV columns include `ts,action,tag,task_ids,updated,open,
-done,restored,already,skipped,deleted_at`. The weekly review JSON
+done,restored,already,skipped,deleted_at`. The UI **Download CSV** and
+**Download .md** buttons use the current audit filters. The weekly review JSON
 includes `tag_audit`/`tag_audit_total`, and its Markdown
 export adds a `## Tag audit` section, so archived reports keep the trail.
 

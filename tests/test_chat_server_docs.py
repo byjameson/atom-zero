@@ -901,6 +901,10 @@ def test_ui_collection_scope_contract():
     assert 'id="tagauditbtn"' in page
     assert 'id="tagaudittag"' in page
     assert 'id="tagauditaction"' in page
+    assert 'id="tagauditcsv"' in page
+    assert 'id="tagauditmd"' in page
+    assert "downloadTagAudit" in page
+    assert "/v1/tasks/tags/audit/export" in page
     assert 'id="tagauditmsg"' in page
     assert 'id="tagauditres"' in page
     assert "deleteTag" in page
