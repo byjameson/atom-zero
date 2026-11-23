@@ -7,11 +7,14 @@
 - Post-release main: self-code audit/diff/targeting with suppressions,
   planner history, scoreboard output collectors, escalation ladder, teacher
   answer verification, unified growth report, self-code before/after
-  regression gate and the sixth/seventh measured cycles (`gate_id
-  cac82f022c879258`, `855/0 -> 857/0`; `gate_id 7f0d5be2bce36219`,
-  `1033/0 -> 1035/0`). Accumulating for the **1.0.0** boundary; not pushed yet.
+  regression gate, autonomous sandboxed loop and the sixth/seventh/eighth
+  measured cycles (`gate_id cac82f022c879258`, `855/0 -> 857/0`;
+  `gate_id 7f0d5be2bce36219`, `1033/0 -> 1035/0`;
+  `gate_id da83c0302933d484`, `1064/0 -> 1066/0`). Per-change human approval is
+  now optional (`--require-approval`); the default loop merges locally after
+  its gates. Accumulating for the **1.0.0** boundary; not pushed yet.
 - Working tree after the release-doc commits: clean
-- Atom Zero tests: **1052 passed**
+- Atom Zero tests: **1066 passed**
 - AISC strict audit: **25 specs, 23 PASS, 0 errors**; `AtomZeroAnswerability`
   and `AtomZeroAnswerabilityGenerated` remain **FAIL** with the measured
   Brier 0.233 / ECE 0.064 and refusal-policy misses. The ECE target is met;

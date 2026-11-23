@@ -54,6 +54,9 @@ the self-code branch and its planner/runner integration.
 - Added **`atomzero.sandbox`** and `--sandbox-info`: disposable worktree,
   sanitized environment, hard timeout and explicit `os_vm: false` on this
   machine (no Docker/VM backend is installed).
+- Eighth measured cycle: fully autonomous, no per-change human approval;
+  sandbox full suite 1066 passed, local merge, post-merge 1066 passed,
+  cleanup; gate `da83c0302933d484`, scoreboard `1064/0 -> 1066/0`.
 - Added **prevalence-corrected isotonic calibration** for the answerability
   signal: hybrid Brier `0.2443 -> 0.2326`, ECE `0.1299 -> 0.0642`; feature-only
   Brier `0.2703 -> 0.2535`, ECE `0.1407 -> 0.0519`; AUC unchanged. The Brier

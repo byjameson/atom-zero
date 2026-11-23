@@ -87,6 +87,13 @@ external Implementer worked in `fix/drift-profile-format`, the gate passed
 report now works, and the scoreboard moved from `800` to `813` passed with no
 trend alerts.
 
+`docs/LOOP_CYCLE_8.md` records the first **fully autonomous** cycle: no
+per-change human approval, a disposable sandbox worktree, focused gate,
+self-code diff, 1066-test full suite, local auto-merge, 1066-test post-merge
+suite, cleanup and decision (`gate_id da83c0302933d484`,
+`1064/0 -> 1066/0`). The same cycle added the sandbox backend report and
+`--require-approval` as an optional high-risk gate.
+
 `docs/LOOP_CYCLE_7.md` records a **targeted audit** cycle: the loop was pinned
 to `src/atomzero/aisc_coverage.py`, the external agent narrowed the broad
 handler and added two tests, and the before/after audit gate caught its own

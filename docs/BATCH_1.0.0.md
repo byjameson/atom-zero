@@ -7,15 +7,20 @@ boundary.
 ## Base state
 
 - `0.19.0` published with the bounded self-improve loop.
-- Post-release main: self-code audit, bounded proposals, planner signals,
-  proposal-derived runner scope, sixth measured cycle
-  (`gate_id cac82f022c879258`, `855/0 -> 857/0`).
-- Main gate: 1052 Atom Zero tests, 223 AISC tests, 25 strict specs
+- Post-release main: self-code audit, bounded proposals, planner history,
+  proposal-derived runner scope, escalation ladder, teacher verification,
+  growth report, autonomous sandboxed loop and the sixth/seventh/eighth
+  measured cycles (`gate_id cac82f022c879258`, 855/0 -> 857/0;
+  `gate_id 7f0d5be2bce36219`, 1033/0 -> 1035/0;
+  `gate_id da83c0302933d484`, 1064/0 -> 1066/0). Per-change human approval is
+  optional with `--require-approval`.
+- Main gate: 1066 Atom Zero tests, 223 AISC tests, 25 strict specs
   (23 PASS, 2 expected answerability FAIL), benchmark 19/19.
 - Weights remain `0.8.0`; answerability gate remains closed.
-- Merged post-release branches: self-code audit, self-code diff, history-aware
-  planner priorities, self-code targeting/suppressions, scoreboard output
-  collectors, escalation ladder, self-code regression gate and loop history.
+- Merged post-release branches: self-code audit/diff, history-aware planner,
+  self-code targeting/suppressions, scoreboard collectors, escalation ladder,
+  teacher verification, growth report, self-code regression gate, loop history
+  and autonomous sandbox.
 
 ## Parallel Implementers
 
@@ -29,6 +34,7 @@ boundary.
 | `feat/teacher-verification` | `%TEMP%\opencode\atom-zero-teacher` | teacher answer -> claim/evidence/conflict verification, content-free event | `tests/test_teacher_verification.py` |
 | `feat/loop-self-code-diff` | `%TEMP%\opencode\atom-zero-loopdiff` | before/after audit gate; blocks a decision on a new high/medium finding | `tests/test_self_improve.py` |
 | `feat/loop-history` | `%TEMP%\opencode\atom-zero-loop-history` | passes the decision ledger to the planner as bounded history | `tests/test_self_improve.py` |
+| `feat/autonomous-sandbox` | `%TEMP%\opencode\atom-zero-autonomy` | autonomous default, sandboxed full suite, auto-merge and rollback | `tests/test_sandbox.py`, `tests/test_self_improve.py` |
 
 Each Implementer:
 

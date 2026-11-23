@@ -92,6 +92,8 @@ Docker, WSL or a VM can be added as a stronger backend when installed. This
 machine currently has no Docker/VM backend usable by the loop. WSL is present
 but the project test environment is not installed inside it.
 
+The first fully autonomous run is documented in `docs/LOOP_CYCLE_8.md`.
+
 ## Why this is still bounded
 
 - The packet's `allowed_files` is checked after the agent.
