@@ -1,8 +1,10 @@
 # atomzero 0.7.0 - evidence and temporal loop
 
-Status: **prepared locally; publication pending.** This is the ten-increment
-batch accumulated after `0.6.1`. No model or runtime weights changed; the
-weights remain `0.8.0`.
+Status: **published.** PyPI `0.7.0`, GitHub source/tag/release `v0.7.0`,
+Hugging Face, ModelScope, dev.to, Medium and LinkedIn are updated.
+`scripts/verify_release.py --version 0.7.0` reports **0 failures**. This is the
+ten-increment batch accumulated after `0.6.1`. No model or runtime weights
+changed; the weights remain `0.8.0`.
 
 ## What is in this batch
 
@@ -43,7 +45,9 @@ weights remain `0.8.0`.
   with Brier 0.244 / ECE 0.130 and refusal-policy misses.
 - AISC coverage: **14 specs clean**, 0 missing evidence files, 0 unverified
   components; uncalibrated components remain visible.
-- `scripts/verify_release.py --version 0.7.0` is run after publication.
+- `scripts/verify_release.py --version 0.7.0`: **0 failures** (PyPI, HF,
+  ModelScope, GitHub release/assets, GitHub README, dev.to).
+- Release commit `72c9b5b`, annotated tag `v0.7.0`.
 
 ## Install
 

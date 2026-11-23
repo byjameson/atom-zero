@@ -1,11 +1,11 @@
 # Atom Zero and AISC Test Results
 
-- Date: 2026-11-23 21:30
+- Date: 2026-11-23 23:30
 - Atom Zero repository: `C:\Users\biris\AppData\Local\Temp\opencode\atom-zero-clean`
-- Tested Atom Zero batch: `0.6.1` (memory ledger + claim/evidence + AISC spec
-  generator), code+release commit `fdabbe0`
-- Atom Zero working tree at test start: version-bump and release-doc edits;
-  the test run used the same code and test contents as `fdabbe0`
+- Tested Atom Zero batch: `0.7.0` (ten-increment evidence/temporal batch),
+  release commit `72c9b5b`
+- Atom Zero working tree at test start: clean; the test run used the release
+  commit contents
 - AISC path: `C:\Users\biris\Desktop\opencode\yeni dal\ai-systems-algebra`
 - AISC source status: directory is not a Git repository; no commit hash is available
 - AISC package version: `0.5.1` (batch/diff/baseline branch)
@@ -14,25 +14,24 @@
 
 | Suite | Passed | Failed | Exit | Duration |
 |---|---:|---:|---:|---:|
-| Atom Zero `pytest tests -q` (0.6.1 release) | **512** | **0** | 0 | 61.70s |
-| Atom Zero `pytest tests -q` (post-release main) | **646** | **0** | 0 | 60.90s |
-| AISC `pytest tests -q` (0.5.0) | **223** (+6 subtests) | **0** | 0 | 16.94s |
-| AISC strict specs | **11 PASS / 2 FAIL (expected)** | 0 critical | 1 | - |
+| Atom Zero `pytest tests -q` (0.7.0 release) | **646** | **0** | 0 | 66.54s |
+| AISC `pytest tests -q` (0.5.1) | **223** (+6 subtests) | **0** | 0 | 17.13s |
+| AISC strict specs | **12 PASS / 2 FAIL (expected)** | 0 critical | 1 | - |
 | Build (`python -m build`) | **2 artifacts** | **0** | 0 | - |
 | `twine check` | **2 PASSED** | **0** | 0 | - |
 
 The full-suite run is subject to a known Windows socket flake in one long HTTP
 test (`WinError 10053`); the same test and the full suite pass on rerun. The
-release evidence is the clean `512 passed` run.
+release evidence is the clean `646 passed` run.
 
-**Failed tests: none.**
+**Failed tests: none.** Release verification
+(`scripts/verify_release.py --version 0.7.0`) reports **0 failures**.
 
 ## Current evidence
 
-- Post-release `0.6.2` HTTP integration: **2 passed**
-  (`test_http_claims_audit`, `test_http_consensus_audit`), full main suite
-  **646 passed**.
-- `0.6.2` cross-source consensus branch: **12 passed**
+- `0.7.0` HTTP integration: claim, consensus, freshness, temporal, reliability
+  and document-diff routes are covered. Full release suite **646 passed**.
+- `0.7.0` cross-source consensus branch: **12 passed**
   (`tests/test_consensus.py`); the `AtomZeroConsensus` AISC spec is **PASS**
   (4 verified components, assurance bound 0.93, 0 irreversible).
 - `0.6.1` claim/evidence branch: **10 passed** (`tests/test_claims.py`).

@@ -3,16 +3,14 @@
 Canonical surfaces: GitHub, Hugging Face, PyPI, dev.to, Medium, LinkedIn and
 ModelScope.
 
-Current batch: **0.7.0 prepared locally.** The ten-increment evidence/temporal
-batch is merged: claim and consensus HTTP, audit summary, freshness,
-reliability, AISC batch baseline, document diff, temporal validity,
-claim-aware proactive check-ins and AISC coverage. `646` Atom Zero tests pass;
-AISC 0.5.1 has `223` tests.
+Current batch: **0.7.0 published.** The ten-increment evidence/temporal batch
+is live: claim and consensus HTTP, audit summary, freshness, reliability, AISC
+batch baseline, document diff, temporal validity, claim-aware proactive
+check-ins and AISC coverage. `646` Atom Zero tests pass; AISC 0.5.1 has `223`
+tests. `scripts/verify_release.py --version 0.7.0` reports **0 failures**.
 
-Publish at this boundary: push `main` and the tag once, create the GitHub
-release with both assets, upload to PyPI with the owner token, update the
-Hugging Face/ModelScope cards, dev.to, Medium and LinkedIn, then run
-`scripts/verify_release.py --version 0.7.0` and the read-only Release agent.
+Post-release work starts a new batch toward the self-improvement loop. Do not
+push intermediate commits; the next boundary is the next ten-increment batch.
 
 ## Release cadence
 

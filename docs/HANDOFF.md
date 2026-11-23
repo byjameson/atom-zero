@@ -16,13 +16,13 @@
   with the measured Brier 0.244 / ECE 0.130 and refusal-policy misses. This is
   reported, not hidden.
 - Build/twine: **PASSED** (`atomzero-0.6.1` wheel + sdist)
-- Release status: `0.6.1` is the last published version. `0.7.0` is prepared
-  locally with the ten-increment evidence/temporal batch. Publish at this
-  boundary: one push for `main` and the tag, GitHub release/assets, PyPI,
-  Hugging Face, ModelScope, dev.to, Medium and LinkedIn, then
-  `scripts/verify_release.py --version 0.7.0` and the Release agent.
-  The `publish.yml` trusted-publisher run remains a historical failed attempt;
-  uploads use a project token from the owner's local token file.
+- Release status: `0.7.0` is published on PyPI, GitHub, Hugging Face,
+  ModelScope, dev.to, Medium and LinkedIn. `scripts/verify_release.py
+  --version 0.7.0` reports **0 failures**; release commit `72c9b5b`, annotated
+  tag `v0.7.0`. The `publish.yml` trusted-publisher run remains a historical
+  failed attempt; uploads use a project token from the owner's local token
+  file. Post-release work starts the next batch toward the self-improvement
+  loop; do not push intermediate commits.
 
 ## Completed in this session
 
