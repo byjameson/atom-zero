@@ -32,6 +32,12 @@ no silent assurance claims. This note records the scan and the branch map.
    relevance, completeness, consistency and source reliability to decide whether
    to retrieve more. Atom Zero should expose this as an audit/plan first, not as
    an automatic retriever or an enabled gate.
+6. **Self-improvement as a gated loop.** Feedback stores, knowledge gaps and
+   claim/reliability audits already produce local weakness signals. The next
+   layer turns them into a prioritized plan, requires human approval and an
+   evaluation gate, and records a content-free decision. This is a safer
+   interpretation of "self-improving" than autonomous weight updates: the
+   system can propose its own next work, but cannot silently accept it.
 
 ## Branch map
 
@@ -52,7 +58,10 @@ no silent assurance claims. This note records the scan and the branch map.
 | Evidence Sufficiency | relevance/completeness/consistency/reliability audit | candidate | audit only at first, no auto gate |
 | Document Version Diff | detect superseded document versions | candidate | local metadata, not web freshness |
 | Claim-aware Proactive | start a check-in from unsupported/single-source claims | candidate | opt-in, rate-limited, local only |
-| AISC Coverage Report | which critical modules have specs | candidate | coverage is not assurance |
+| AISC Coverage Report | which critical modules have specs | shipped `0.7.0` | coverage is not assurance |
+| Improvement Loop | signals -> priorities -> human-approved plan | in progress | planning only, no auto-apply |
+| Evaluation Gate | tests/AISC/benchmark gate for an accepted plan | candidate | a passing gate is not proof of value |
+| Decision Ledger | content-free record of approve/reject/defer | candidate | shape checks, not authorship |
 
 ## What we deliberately do not do
 
