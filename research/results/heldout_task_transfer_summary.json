@@ -1,0 +1,27 @@
+{
+  "date": "2026-11-25",
+  "adapter": "multi_recover",
+  "eval_examples_per_task": 30,
+  "tasks": {
+    "arithmetic": {
+      "base_exact": 0.0,
+      "adapter_exact": 0.0,
+      "base_content_loss": 4.391,
+      "adapter_content_loss": 5.142
+    },
+    "city_yaml": {
+      "base_exact": 0.0,
+      "adapter_exact": 0.0,
+      "base_content_loss": 3.484,
+      "adapter_content_loss": 3.632
+    },
+    "city_river": {
+      "base_exact": 0.0,
+      "adapter_exact": 0.0,
+      "base_content_loss": 4.794,
+      "adapter_content_loss": 3.243
+    }
+  },
+  "interpretation": "no exact-match transfer to held-out task families; copy adapter is narrow",
+  "copy_tool_note": "runtime copy tool is 1.0 on explicit transcription but is tool use, not model transfer"
+}
