@@ -1,0 +1,58 @@
+{
+  "teacher": "Qwen2.5-1.5B-Instruct",
+  "device": "cpu",
+  "candidate_ind": "ad-e89159cd2541cff9",
+  "candidate_cross": "ad-7b880c88d492cf32",
+  "train_examples": 94,
+  "eval_examples": 23,
+  "ind_gate": {
+    "status": "pass",
+    "ok": true,
+    "promotable": true,
+    "candidate_id": "ad-e89159cd2541cff9",
+    "adapter_label": "adapters_teacher/v0001",
+    "eval_examples": 23,
+    "baseline_loss": 6.539256952513454,
+    "adapter_loss": 1.2733419534044956,
+    "loss_delta": -5.265915,
+    "baseline_ppl": 691.7723672998685,
+    "adapter_ppl": 3.57277267283179,
+    "ppl_ratio": 0.005165,
+    "min_loss_delta": 0.01,
+    "max_ppl_ratio": 1.0,
+    "reasons": [
+      "loss_improved",
+      "ppl_not_worse"
+    ],
+    "auto_apply": false,
+    "requires_training": true,
+    "weights_changed": false,
+    "method": "held_out_adapter_gate_v1"
+  },
+  "cross_gate": {
+    "status": "fail",
+    "ok": false,
+    "promotable": false,
+    "candidate_id": "ad-7b880c88d492cf32",
+    "adapter_label": "adapter",
+    "eval_examples": 34,
+    "baseline_loss": 3.362106030530269,
+    "adapter_loss": 9.992092472491878,
+    "loss_delta": 6.629986,
+    "baseline_ppl": 28.849885684298705,
+    "adapter_ppl": 21852.977745390905,
+    "ppl_ratio": 757.471901,
+    "min_loss_delta": 0.01,
+    "max_ppl_ratio": 1.0,
+    "reasons": [
+      "loss_not_improved",
+      "ppl_regression"
+    ],
+    "auto_apply": false,
+    "requires_training": true,
+    "weights_changed": false,
+    "method": "held_out_adapter_gate_v1"
+  },
+  "weights_changed": false,
+  "auto_apply": false
+}

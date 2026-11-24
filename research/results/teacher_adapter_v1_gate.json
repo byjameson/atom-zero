@@ -1,0 +1,24 @@
+{
+  "status": "pass",
+  "ok": true,
+  "promotable": true,
+  "candidate_id": "ad-e89159cd2541cff9",
+  "adapter_label": "adapters_teacher/v0001",
+  "eval_examples": 23,
+  "baseline_loss": 6.539256952513454,
+  "adapter_loss": 1.2733419534044956,
+  "loss_delta": -5.265915,
+  "baseline_ppl": 691.7723672998685,
+  "adapter_ppl": 3.57277267283179,
+  "ppl_ratio": 0.005165,
+  "min_loss_delta": 0.01,
+  "max_ppl_ratio": 1.0,
+  "reasons": [
+    "loss_improved",
+    "ppl_not_worse"
+  ],
+  "auto_apply": false,
+  "requires_training": true,
+  "weights_changed": false,
+  "method": "held_out_adapter_gate_v1"
+}

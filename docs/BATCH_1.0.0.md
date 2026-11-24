@@ -21,7 +21,8 @@ boundary.
   self-code targeting/suppressions, scoreboard collectors, escalation ladder,
   teacher verification, growth report, self-code regression gate, loop history,
   autonomous sandbox, verified-teacher adapter candidates, a real LoRA training
-  harness and a real teacher queue with cross-distribution fixture.
+  harness, a real teacher queue with cross-distribution fixture and a VM-run
+  cross-distribution gate result.
 
 ## Parallel Implementers
 

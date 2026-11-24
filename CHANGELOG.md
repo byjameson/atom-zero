@@ -73,6 +73,10 @@ the self-code branch and its planner/runner integration.
   key-value verified answers; the fixture separates 94/23 in-distribution and
   117/34 cross-distribution splits. CSV was disabled because the 1.5B teacher
   did not reliably copy the requested row.
+- Added the first **real teacher cross-distribution gate run** in the Ubuntu
+  VM: in-distribution loss `6.5393 -> 1.2733` (pass); cross key-value loss
+  `3.3621 -> 9.9921` (fail, ppl ratio `757.47`). The gate correctly blocked
+  promotion. See `docs/ADAPTER_CROSS_CYCLE.md`.
 - Added **external adapter training harness** (`research/train_adapter_candidate.py`)
   and `--adapter-trainer-command`/`--base` wiring. A real LoRA run on the local
   0.8.0 base moved held-out loss from 5.9941 to 0.7949 and perplexity from

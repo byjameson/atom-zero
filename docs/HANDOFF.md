@@ -16,7 +16,9 @@
   gate are added for the capability-growth step; a real LoRA run on the local
   `0.8.0` base passed the gate (`docs/ADAPTER_TRAINING.md`). A real
   Qwen2.5-1.5B teacher queue and explicit cross-distribution fixture are
-  prepared (`docs/TEACHER_QUEUE.md`). Accumulating for the **1.0.0** boundary;
+  prepared (`docs/TEACHER_QUEUE.md`). The first VM-run cross test passed
+  in-distribution and failed cross-distribution, correctly blocking promotion
+  (`docs/ADAPTER_CROSS_CYCLE.md`). Accumulating for the **1.0.0** boundary;
   not pushed yet.
 - Working tree after the release-doc commits: clean
 - Atom Zero tests: **1084 passed**

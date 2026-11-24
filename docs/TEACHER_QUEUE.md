@@ -78,6 +78,18 @@ python -m atomzero.adapter_candidates export-cross `
   --out-dir data/teacher_cross_candidate --seed 13
 ```
 
+## Measured result
+
+The first VM-run experiment trained on the JSON split:
+
+```text
+in-distribution gate:  pass   (loss 6.5393 -> 1.2733, ppl 691.77 -> 3.57)
+cross key-value gate:  fail   (loss 3.3621 -> 9.9921, ppl ratio 757.47)
+```
+
+The adapter overfit JSON formatting and did not transfer to key-value. The
+cross gate blocked promotion. Full evidence: `docs/ADAPTER_CROSS_CYCLE.md`.
+
 ## Honest boundary
 
 - The teacher is Qwen2.5-1.5B, not a frontier model.
