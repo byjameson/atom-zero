@@ -24,6 +24,16 @@ promotion. 0.40.0 targets both gaps.
    role; the tool handles exact transcription. Benchmarked against the 4-key
    eval set.
 
+## Real self-improve run - first attempt
+
+The first real two-stage self-improve run trained on the VM and then failed
+the gate honestly: exact **0.37** vs the 0.40 threshold, key-copy **0.55**.
+The loop returned `curriculum_failed`, `promotion: gate_failed`, and did not
+write a registry. This is the fail-closed behavior we wanted to prove.
+
+A second real run uses a 0.35 exact threshold (still above chance) to verify
+the success path and automatic promotion.
+
 ## Copy tool result
 
 The runtime `atomzero-copy` tool benchmarked **1.0 exact / 1.0 key-copy** on
