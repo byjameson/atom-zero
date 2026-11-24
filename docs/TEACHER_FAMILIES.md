@@ -51,6 +51,54 @@ entity pool and number range.
 pair contains a held-out key becomes eval-only and is never emitted into
 `train.jsonl`. The city pair is always eval-only.
 
+## Randomized-key copy family
+
+`research/build_random_copy_queue.py` builds a second copy curriculum in which
+the keys themselves are random. The fixed `KEY_PAIRS` curriculum repeats twelve
+key pairs; a small model can memorize those key names and, when asked about a
+held-out entity family, copy the right values while still emitting the training
+keys. A randomized-key corpus removes that shortcut: the only way to answer is
+to read the keys from the prompt.
+
+Every row contains 2-4 pairs with the default settings. Keys are drawn from
+three generators (`k_<8 hex>`, `field_<6 base36>`, short consonant-vowel
+strings), checked against the fixed key vocabulary and an unused-key registry,
+and unique within a row. Values come from five synthetic pools: short tokens,
+names, cities, integers in `1..999999`, and a multi-word string. One multi-word
+value appears in every row. The generator uses only the standard library and
+does not load a model.
+
+The prompt lists the exact `key=value` pairs and asks for one of three answer
+formats (JSON, KV, YAML). The canonical answer is parsed and compared key by key
+before it is kept; a failing row is regenerated. `train.jsonl` and `eval.jsonl`
+are built against one shared key/value registry, so the default build reports
+`key_overlap: 0` and `value_overlap: 0`.
+
+```powershell
+python research/build_random_copy_queue.py `
+  --out-dir data/random_copy_v1 `
+  --rows 2000 --eval-rows 200 `
+  --formats json,kv --keys-per-row 2 --seed 23 --shuffle
+```
+
+`--rows` is the number of training rows and `--eval-rows` the number of held-out
+rows. `--holdout PATH` moves the eval file (default `<out-dir>/eval.jsonl`).
+`--keys-per-row` is the minimum pair count; rows sample from that up to four
+pairs. The CLI writes `manifest.json` with the same summary it prints, including
+row counts, per-format counts, overlap counts and key/value style
+distributions.
+
+This family differs from the fixed key-pair curriculum in three ways: keys are
+fresh per row instead of one of twelve memorizable pairs, the train/eval split
+is enforced on keys as well as entities, and the generator emits verified
+oracle answers without a teacher model. It is still a transcription task; the
+validator checks format and copying, not world knowledge.
+
+```powershell
+$env:PYTHONPATH="$PWD;$PWD\src"
+python -m pytest tests/test_random_copy_queue.py -q
+```
+
 ## Formats and validators
 
 All validators are deterministic, standard-library only, and used through
