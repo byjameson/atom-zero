@@ -2,7 +2,7 @@
 
 ## Current state
 
-- Release candidate: `0.21.0` on `main`; last published batch `0.20.0` (bounded self-improve loop,
+- Last released batch: `0.21.0` on `main`; all canonical surfaces published (bounded self-improve loop,
   committed-change scope check, fifth measured cycle)
 - Post-release main: self-code audit/diff/targeting with suppressions,
   planner history, scoreboard output collectors, escalation ladder, teacher
@@ -42,7 +42,8 @@
 - Release status: `0.20.0` is published on PyPI, GitHub, Hugging Face,
   ModelScope, dev.to, Medium, LinkedIn and X. `scripts/verify_release.py
   --version 0.20.0` reported **0 failures**; release commit `378fd0e`, annotated
-  tag `v0.20.0`. `0.21.0` is the next release candidate.
+  tag `v0.20.0`. `0.21.0` is published on PyPI, GitHub, Hugging Face,
+  ModelScope, dev.to, Medium, LinkedIn and X; the next boundary is `0.22.0`.
 
 ## Completed in this session
 

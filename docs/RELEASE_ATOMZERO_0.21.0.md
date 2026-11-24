@@ -1,6 +1,6 @@
 # atomzero 0.21.0 - curriculum gate loop and first behavior-passing adapter
 
-Status: **release candidate**. Base weights remain `0.8.0`; the product default
+Status: **published on 2026-11-24**. Base weights remain `0.8.0`; the product default
 has no active adapter.
 
 ## Highlights
@@ -48,8 +48,8 @@ pip install atomzero==0.21.0
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-49m>
 - X: <https://x.com/aigokhan>
 - Instagram: <https://instagram.com/quantsinner>
-- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-0200-gated-self-improvement-and-the-copy-curriculum-evidence-13pj>
-- Medium: <https://medium.com/@myredditacc9393/atom-zero-0-20-0-gated-self-improvement-and-the-copy-curriculum-evidence-63edc5daa21c>
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-0210-first-behavior-passing-adapter-and-the-multi-key-wall-2op5>
+- Medium: <https://medium.com/@myredditacc9393/atom-zero-0-21-0-first-behavior-passing-adapter-and-the-multi-key-wall-f6074c54dd0a>
 
 ## Honest limits
 

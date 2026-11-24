@@ -1,6 +1,6 @@
 # Changelog
 
-## atomzero 0.21.0 - unreleased
+## atomzero 0.21.0 - 2026-11-24
 
 - Added a **curriculum gate/promotion loop**: the staged runner can train, evaluate a final mixed set, run the content/exact/key-copy gate and optionally promote to a separate curriculum registry.
 - Added **adapter soup** (weighted LoRA A/B merging) with strict geometry validation and per-split evaluation.

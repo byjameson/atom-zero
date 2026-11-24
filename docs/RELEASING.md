@@ -3,7 +3,7 @@
 Canonical surfaces: GitHub, Hugging Face, PyPI, dev.to, Medium, LinkedIn and
 ModelScope.
 
-Current batch: **0.20.0 published.** It adds the bounded self-improve loop,
+Current batch: **0.21.0 published.** It adds the bounded self-improve loop,
 committed-change scope verification and the fifth measured cycle with an actual
 nested `opencode run` process. Post-release work adds the self-code audit, its
 planner/runner integration and the sixth measured cycle.
