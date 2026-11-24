@@ -222,3 +222,464 @@ def apply_adapter(model: nn.Module, path: str | Path) -> dict:
     _load_lora_tensors(model, ck.get("lora", {}))
     model.eval()
     return config
+
+
+# --- Adapter soup -----------------------------------------------------------
+#
+# A soup combines the A/B tensors of several adapters that were trained from
+# the same base with the same LoRA geometry. Two merge modes are supported:
+#
+# ``ab``
+#     ``A = sum_i w_i A_i`` and ``B = sum_i w_i B_i``. This is cheap and keeps
+#     the original rank, but the averaged product is not the average of the
+#     individual deltas: cross terms can cancel or amplify skills.
+#
+# ``delta-svd``
+#     Form ``D = sum_i w_i B_i A_i`` and factor ``D`` back into a (possibly
+#     larger) low-rank pair with SVD. This preserves the weighted sum of the
+#     deltas up to the requested rank cap.
+#
+# Both modes only merge adapters; they never touch a base checkpoint or the
+# active registry.
+
+GEOMETRY_KEYS = ("r_attn", "alpha_attn", "r_mlp", "alpha_mlp")
+MERGE_MODES = ("ab", "delta-svd")
+
+
+class AdapterMergeError(ValueError):
+    """Raised when adapters cannot be merged without guessing."""
+
+
+def _adapter_config_value(config: dict, *keys, default=0):
+    for key in keys:
+        if key in config and config[key] is not None:
+            return config[key]
+    return default
+
+
+def _adapter_int(value, label: str) -> int:
+    if isinstance(value, bool):
+        raise AdapterMergeError(f"{label} must be an integer, got {value!r}")
+    try:
+        number = int(value)
+    except (TypeError, ValueError) as exc:
+        raise AdapterMergeError(
+            f"{label} must be an integer, got {value!r}") from exc
+    if number != value:
+        raise AdapterMergeError(f"{label} must be an integer, got {value!r}")
+    return number
+
+
+def _normalize_geometry(config: dict, path: str | Path) -> dict:
+    """Return the four canonical geometry values recorded by an adapter."""
+    # Match apply_adapter's fallbacks: attention alpha only comes from
+    # alpha_attn, while MLP alpha may use the legacy top-level ``alpha``.
+    r_attn = _adapter_int(_adapter_config_value(config, "r_attn"), "r_attn")
+    r_mlp = _adapter_int(
+        _adapter_config_value(config, "r_mlp", "rank", default=8), "r_mlp")
+    alpha_attn = _adapter_int(
+        _adapter_config_value(config, "alpha_attn", default=r_attn),
+        "alpha_attn")
+    alpha_mlp = _adapter_int(
+        _adapter_config_value(config, "alpha_mlp", "alpha", default=r_mlp),
+        "alpha_mlp")
+    for label, rank, alpha in (("attn", r_attn, alpha_attn),
+                               ("mlp", r_mlp, alpha_mlp)):
+        if rank < 0:
+            raise AdapterMergeError(
+                f"adapter config is invalid in {path}: r_{label}={rank} < 0")
+        if alpha < 0:
+            raise AdapterMergeError(
+                f"adapter config is invalid in {path}: "
+                f"alpha_{label}={alpha} < 0")
+        if rank > 0 and alpha <= 0:
+            raise AdapterMergeError(
+                f"adapter config is invalid in {path}: "
+                f"alpha_{label} must be > 0 when r_{label}={rank}")
+    # An alpha without a rank does not affect the forward pass. Canonicalize it
+    # so two otherwise identical adapters compare equal.
+    return {
+        "r_attn": r_attn,
+        "alpha_attn": alpha_attn if r_attn else 0,
+        "r_mlp": r_mlp,
+        "alpha_mlp": alpha_mlp if r_mlp else 0,
+    }
+
+
+def _tensor_group(prefix: str) -> str | None:
+    if prefix.endswith(ATTN_SUFFIXES):
+        return "attn"
+    if prefix.endswith(MLP_SUFFIXES):
+        return "mlp"
+    return None
+
+
+def _pair_tensors(lora: dict, path: str | Path) -> dict[str, dict]:
+    """Group A/B tensor pairs by module prefix and validate their shapes."""
+    if not lora:
+        raise AdapterMergeError(f"adapter has no LoRA A/B tensors: {path}")
+    unsupported = sorted(
+        key for key in lora
+        if not (key.endswith(".A") or key.endswith(".B")))
+    if unsupported:
+        raise AdapterMergeError(
+            f"unsupported LoRA tensor names in {path}: {unsupported}; "
+            "expected names ending in '.A' or '.B'")
+    a_names = {key[:-2] for key in lora if key.endswith(".A")}
+    b_names = {key[:-2] for key in lora if key.endswith(".B")}
+    if a_names != b_names:
+        missing = sorted(a_names - b_names)
+        unexpected = sorted(b_names - a_names)
+        parts = []
+        if missing:
+            parts.append(f"missing B for {missing}")
+        if unexpected:
+            parts.append(f"missing A for {unexpected}")
+        raise AdapterMergeError(
+            "adapter has incomplete A/B pairs in "
+            f"{path}: " + "; ".join(parts))
+    pairs = {}
+    for prefix in sorted(a_names):
+        a = lora[prefix + ".A"]
+        b = lora[prefix + ".B"]
+        if not torch.is_tensor(a) or not torch.is_tensor(b):
+            raise AdapterMergeError(
+                f"adapter tensor {prefix} is not a torch tensor: {path}")
+        if a.dim() != 2 or b.dim() != 2:
+            raise AdapterMergeError(
+                f"adapter tensor {prefix} must be 2-D: "
+                f"A={tuple(a.shape)} B={tuple(b.shape)} ({path})")
+        if a.shape[0] != b.shape[1]:
+            raise AdapterMergeError(
+                f"adapter tensor {prefix} has mismatched ranks: "
+                f"A={tuple(a.shape)} B={tuple(b.shape)} ({path})")
+        if not torch.is_floating_point(a) or not torch.is_floating_point(b):
+            raise AdapterMergeError(
+                f"adapter tensor {prefix} must be floating point: {path}")
+        if not torch.isfinite(a).all() or not torch.isfinite(b).all():
+            raise AdapterMergeError(
+                f"adapter tensor {prefix} contains non-finite values: {path}")
+        group = _tensor_group(prefix)
+        if group is None:
+            raise AdapterMergeError(
+                f"cannot classify adapter tensor {prefix!r} in {path}; "
+                "expected an attention or MLP module name")
+        pairs[prefix] = {"A": a, "B": b, "group": group, "rank": a.shape[0]}
+    return pairs
+
+
+def _tensor_ranks(pairs: dict[str, dict], path: str | Path) -> dict:
+    ranks = {}
+    for prefix, pair in pairs.items():
+        group = pair["group"]
+        rank = pair["rank"]
+        previous = ranks.get(group)
+        if previous is not None and previous != rank:
+            raise AdapterMergeError(
+                f"adapter {path} mixes {group} ranks: "
+                f"{previous} and {rank} ({prefix})")
+        ranks[group] = rank
+    return ranks
+
+
+def load_adapter(path: str | Path) -> dict:
+    """Read an adapter directory without applying it to a model.
+
+    Returns ``{"path", "lora", "config", "geometry", "pairs"}``. The geometry
+    is canonicalized to ``r_attn``/``alpha_attn``/``r_mlp``/``alpha_mlp`` and
+    is checked against the tensor ranks so a merge cannot silently change the
+    effective scaling.
+    """
+    adapter_dir = Path(path)
+    checkpoint_path = adapter_dir / "adapter.pt"
+    if not checkpoint_path.is_file():
+        raise AdapterMergeError(f"adapter.pt missing: {checkpoint_path}")
+    checkpoint = torch.load(checkpoint_path, map_location="cpu",
+                            weights_only=False)
+    if not isinstance(checkpoint, dict):
+        raise AdapterMergeError(
+            f"adapter checkpoint is not a dict: {checkpoint_path}")
+    config = checkpoint.get("config", {}) or {}
+    if not isinstance(config, dict):
+        raise AdapterMergeError(
+            f"adapter config is not a dict: {checkpoint_path}")
+    config_path = adapter_dir / "config.json"
+    if config_path.is_file():
+        try:
+            file_config = json.loads(
+                config_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise AdapterMergeError(
+                f"cannot read adapter config {config_path}: {exc}") from exc
+        if not isinstance(file_config, dict):
+            raise AdapterMergeError(
+                f"adapter config is not a dict: {config_path}")
+        if file_config:
+            config = {**config, **file_config}
+    lora = checkpoint.get("lora", {}) or {}
+    if not isinstance(lora, dict):
+        raise AdapterMergeError(
+            f"adapter lora state is not a dict: {checkpoint_path}")
+    geometry = _normalize_geometry(config, adapter_dir)
+    pairs = _pair_tensors(lora, adapter_dir)
+    ranks = _tensor_ranks(pairs, adapter_dir)
+    for group, key in (("attn", "r_attn"), ("mlp", "r_mlp")):
+        expected = geometry[key]
+        actual = ranks.get(group, 0)
+        if expected != actual:
+            raise AdapterMergeError(
+                f"adapter config and tensors disagree for {key} in "
+                f"{adapter_dir}: config={expected}, tensors={actual}")
+    return {
+        "path": adapter_dir,
+        "lora": lora,
+        "config": config,
+        "geometry": geometry,
+        "pairs": pairs,
+    }
+
+
+def normalize_adapter_weights(weights, count: int) -> list[float]:
+    """Return non-negative, finite weights that sum to one.
+
+    ``weights=None`` gives equal weights. Zero weights skip an adapter; the
+    remaining weights are renormalized.
+    """
+    if count <= 0:
+        raise AdapterMergeError("at least one adapter is required")
+    if weights is None:
+        return [1.0 / count] * count
+    if isinstance(weights, (str, bytes)):
+        raise AdapterMergeError("weights must be a sequence of numbers")
+    try:
+        values = list(weights)
+    except TypeError as exc:
+        raise AdapterMergeError(
+            "weights must be a sequence of numbers") from exc
+    if len(values) != count:
+        raise AdapterMergeError(
+            f"weights must have one value per adapter "
+            f"({count} adapters, got {len(values)})")
+    cleaned = []
+    for value in values:
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise AdapterMergeError(
+                f"weights must be numbers, got {value!r}")
+        number = float(value)
+        if not math.isfinite(number) or number < 0:
+            raise AdapterMergeError(
+                "weights must be finite and >= 0, got "
+                f"{number!r}")
+        cleaned.append(number)
+    total = sum(cleaned)
+    if total <= 0:
+        raise AdapterMergeError("weights must sum to > 0")
+    return [value / total for value in cleaned]
+
+
+def _check_merge_compatibility(loaded: list[dict]) -> None:
+    reference = loaded[0]
+    ref_geometry = reference["geometry"]
+    ref_pairs = reference["pairs"]
+    for item in loaded[1:]:
+        differences = [
+            f"{key}={item['geometry'][key]} (expected {ref_geometry[key]})"
+            for key in GEOMETRY_KEYS
+            if item["geometry"][key] != ref_geometry[key]
+        ]
+        if differences:
+            raise AdapterMergeError(
+                "adapter geometry mismatch: "
+                + ", ".join(differences)
+                + f"; reference is {reference['path']}, "
+                f"mismatch is {item['path']}. Adapters must share "
+                "r_attn/alpha_attn/r_mlp/alpha_mlp.")
+        missing = sorted(ref_pairs.keys() - item["pairs"].keys())
+        unexpected = sorted(item["pairs"].keys() - ref_pairs.keys())
+        if missing or unexpected:
+            parts = []
+            if missing:
+                parts.append(f"missing={missing}")
+            if unexpected:
+                parts.append(f"unexpected={unexpected}")
+            raise AdapterMergeError(
+                "adapter tensor names do not match: "
+                + ", ".join(parts)
+                + f"; reference is {reference['path']}, "
+                f"mismatch is {item['path']}")
+        for prefix in ref_pairs:
+            expected_shape = {
+                "A": tuple(ref_pairs[prefix]["A"].shape),
+                "B": tuple(ref_pairs[prefix]["B"].shape),
+            }
+            actual_shape = {
+                "A": tuple(item["pairs"][prefix]["A"].shape),
+                "B": tuple(item["pairs"][prefix]["B"].shape),
+            }
+            if actual_shape != expected_shape:
+                raise AdapterMergeError(
+                    f"adapter tensor shape mismatch for {prefix!r}: "
+                    f"{actual_shape} != {expected_shape}; "
+                    f"reference is {reference['path']}, "
+                    f"mismatch is {item['path']}")
+
+
+def _merge_ab(loaded: list[dict], weights: list[float]) -> dict:
+    merged = {}
+    for key in sorted(loaded[0]["lora"]):
+        reference = loaded[0]["lora"][key]
+        accumulator = torch.zeros(reference.shape, dtype=torch.float64)
+        for item, weight in zip(loaded, weights):
+            tensor = item["lora"][key]
+            accumulator.add_(tensor.to(torch.float64), alpha=weight)
+        merged[key] = accumulator.to(reference.dtype).clone()
+    return merged
+
+
+def _merge_delta_svd(loaded: list[dict], weights: list[float],
+                     rank: int | None) -> tuple[dict, dict]:
+    geometry = dict(loaded[0]["geometry"])
+    groups = {}
+    for group, geom_key in (("attn", "r_attn"), ("mlp", "r_mlp")):
+        old_rank = geometry[geom_key]
+        if old_rank == 0:
+            continue
+        max_rank = min(
+            min(pair["A"].shape[1], pair["B"].shape[0])
+            for pair in loaded[0]["pairs"].values()
+            if pair["group"] == group)
+        if rank is None:
+            new_rank = min(old_rank, max_rank)
+        else:
+            new_rank = min(int(rank), max_rank)
+        if new_rank < 1:
+            raise AdapterMergeError(
+                f"delta-svd rank for {group} must be >= 1, got {new_rank}")
+        old_alpha = geometry["alpha_" + group]
+        new_alpha = max(1, int(round(old_alpha * new_rank / old_rank)))
+        factor = 1.0
+        if old_alpha > 0:
+            factor = ((old_alpha / old_rank)
+                      / (new_alpha / new_rank))
+        groups[group] = {
+            "new_rank": new_rank,
+            "factor": factor,
+        }
+        geometry["r_" + group] = new_rank
+        geometry["alpha_" + group] = new_alpha
+
+    merged = {}
+    for prefix, pair in loaded[0]["pairs"].items():
+        group = pair["group"]
+        delta = torch.zeros(
+            (pair["B"].shape[0], pair["A"].shape[1]), dtype=torch.float64)
+        for item, weight in zip(loaded, weights):
+            pair_i = item["pairs"][prefix]
+            delta.add_(
+                pair_i["B"].to(torch.float64)
+                @ pair_i["A"].to(torch.float64), alpha=weight)
+        u, s, vh = torch.linalg.svd(delta, full_matrices=False)
+        new_rank = groups[group]["new_rank"]
+        k = min(new_rank, s.numel())
+        if k != new_rank:
+            raise AdapterMergeError(
+                f"cannot factor {prefix!r} to rank {new_rank}; "
+                f"SVD has only {s.numel()} values")
+        root = s[:k].sqrt()
+        b = (u[:, :k] * root.unsqueeze(0)) * groups[group]["factor"]
+        a = root.unsqueeze(1) * vh[:k, :]
+        reference = pair["A"]
+        merged[prefix + ".A"] = a.to(reference.dtype).clone()
+        merged[prefix + ".B"] = b.to(pair["B"].dtype).clone()
+    return merged, geometry
+
+
+def merge_adapter_state_dicts(adapters: list[str | Path], weights=None,
+                              mode: str = "ab",
+                              rank: int | None = None) -> dict:
+    """Merge saved adapters into a new ``{"lora", "config"}`` state.
+
+    ``mode="ab"`` averages A and B separately. ``mode="delta-svd"`` averages
+    the low-rank deltas and re-factors them with SVD; ``rank`` caps the new
+    rank and defaults to the original rank. Weights are normalized to sum to
+    one. Raises :class:`AdapterMergeError` on geometry, name or shape
+    mismatches.
+    """
+    if mode not in MERGE_MODES:
+        raise AdapterMergeError(
+            f"unknown merge mode {mode!r}; expected one of {MERGE_MODES}")
+    if not adapters:
+        raise AdapterMergeError("at least one adapter is required")
+    if rank is not None:
+        if isinstance(rank, bool):
+            raise AdapterMergeError(f"rank must be an integer, got {rank!r}")
+        try:
+            rank = int(rank)
+        except (TypeError, ValueError) as exc:
+            raise AdapterMergeError(
+                f"rank must be an integer, got {rank!r}") from exc
+        if rank < 1:
+            raise AdapterMergeError(f"rank must be >= 1, got {rank}")
+    loaded = [load_adapter(path) for path in adapters]
+    _check_merge_compatibility(loaded)
+    normalized = normalize_adapter_weights(weights, len(loaded))
+    if mode == "ab":
+        merged = _merge_ab(loaded, normalized)
+        geometry = dict(loaded[0]["geometry"])
+    else:
+        merged, geometry = _merge_delta_svd(
+            loaded, normalized, rank)
+    config = {
+        **geometry,
+        "rank": geometry["r_mlp"],
+        "alpha": geometry["alpha_mlp"],
+        "method": "adapter_soup_v1",
+        "merge": {
+            "mode": mode,
+            "weights": normalized,
+            "adapters": [str(item["path"]) for item in loaded],
+            "rank": rank,
+        },
+    }
+    return {
+        "lora": merged,
+        "config": config,
+        "geometry": geometry,
+        "weights": normalized,
+        "tensors": len(merged),
+        "parameters": sum(int(tensor.numel()) for tensor in merged.values()),
+    }
+
+
+def _write_adapter_dir(out: str | Path, lora: dict, config: dict) -> Path:
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    torch.save({"lora": lora, "config": config}, out / "adapter.pt")
+    (out / "config.json").write_text(
+        json.dumps(config, indent=2) + "\n", encoding="utf-8")
+    return out
+
+
+def merge_adapters(adapters: list[str | Path], out: str | Path | None = None,
+                   weights=None, mode: str = "ab",
+                   rank: int | None = None) -> dict:
+    """Merge saved adapters and optionally write a loadable adapter directory.
+
+    The returned summary is JSON-serializable and contains no training rows.
+    Use :func:`merge_adapter_state_dicts` when the tensors are needed in
+    memory.
+    """
+    state = merge_adapter_state_dicts(
+        adapters, weights=weights, mode=mode, rank=rank)
+    if out is not None:
+        _write_adapter_dir(out, state["lora"], state["config"])
+    return {
+        "out": str(out) if out is not None else None,
+        "mode": mode,
+        "rank": state["config"]["merge"]["rank"],
+        "adapters": state["config"]["merge"]["adapters"],
+        "weights": state["weights"],
+        "config": state["config"],
+        "tensors": state["tensors"],
+        "parameters": state["parameters"],
+    }
