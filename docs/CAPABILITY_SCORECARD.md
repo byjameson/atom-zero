@@ -21,7 +21,7 @@ Generated from the checked-in result files listed under
 | 5 | Improves its own learning algorithm | not_met | 0.30 | Weak-stage rehearsal and key-weighted loss were negative; QKV LoRA's first result is negative/uncontrolled. Process evidence is not counted as improvement. | One learning-algorithm change that beats its own mixed-exact baseline by >=0.05, retains >=4/5 stages and reproduces across >=2 seeds. |
 | 6 | Does this at low hardware cost | met | 1.00 | 8 vCPU / 16 GB RAM / 40 GB disk; 49.2M base; 405,504 adapter parameters; 149.0 s recorded adapter training; 1,399 tests. | Keep the full loop inside the envelope while adding a held-out transfer eval; report peak RAM and wall-clock per cycle. |
 
-Status counts: **met 1 · partial 3 · not_met 2 · unknown 0**. No aggregate
+Status counts: **met 1 Â· partial 3 Â· not_met 2 Â· unknown 0**. No aggregate
 score is reported because the six criteria are not interchangeable.
 
 ## Held-out tasks
@@ -33,10 +33,10 @@ The current held-out evidence is in
 | Task | n | Base exact | Adapter exact | Model transfer? | Status |
 |---|---:|---:|---:|---|---|
 | city/river | 30 | 0.000 | 0.000 | yes | not_met |
-| 3-4 arbitrary keys | — | — | 0.060 | yes | not_met |
+| 3-4 arbitrary keys | â€” | â€” | 0.060 | yes | not_met |
 | arithmetic | 30 | 0.000 | 0.000 | yes | not_met |
 | city YAML | 30 | 0.000 | 0.000 | yes | not_met |
-| runtime copy tool | 200 | — | 1.000 | **no, tool use** | met |
+| runtime copy tool | 200 | â€” | 1.000 | **no, tool use** | met |
 
 The runtime copy tool is a deterministic transcription tool. Its 1.0 accuracy
 is a harness result, not evidence that the model learned to transfer copying.
@@ -202,3 +202,66 @@ and the machine-readable record is
 $env:PYTHONPATH="$PWD;$PWD\src"
 python -m pytest tests/test_capability_scorecard.py -q
 ```
+
+## Controlled QKV vs MLP ablation
+
+## QKV vs MLP LoRA on multi-key copy
+
+Status: runner added; no multi-seed result has been committed yet.
+
+The 49M base plus MLP and `out_proj` LoRA reaches 48% exact / 60.4% key copy
+on the named `multi_recover` mixed split, while three and four arbitrary keys
+stay at 0-6%. A first from-base QKV run scored 6% exact / 18% key copy. That
+is one run, not a comparison. The controlled A/B holds seed, data order,
+steps, batch size, learning rate, loss weights, MLP geometry and `out_proj`
+geometry fixed:
+
+| arm | MLP | `out_proj` | fused QKV |
+|---|---|---|---|
+| `qkv4` | r8/a8 | r4/a8 | r4/a8 |
+| `mlp` | r8/a8 | r4/a8 | off |
+
+`mlp` keeps the MLP and `out_proj` adapters; "MLP-only" means the fused QKV
+projection is frozen, not that attention is untouched.
+
+```powershell
+$env:PYTHONPATH="$PWD;$PWD\src"
+$env:PYTHONIOENCODING="utf-8"
+
+python research/run_qkv_capacity_ablation.py `
+  --base "$env:USERPROFILE\.cache\atomzero\atom-zero-49m" `
+  --train data/multi_short_v1/stage_3short/train.jsonl `
+  --eval data/multi_short_v1/stage_3short/eval.jsonl `
+  --arms qkv4,mlp --seeds 23,29,37 `
+  --steps 4000 --batch-size 4 --lr 3e-4 `
+  --content-weight 2 --key-weight 3 --value-weight 2 `
+  --out checkpoints/qkv_capacity_ablation `
+  --result research/results/qkv_capacity_ablation.json
+```
+
+The JSON report has this shape:
+
+```text
+schema, created, content_free, status
+base, train, eval, eval_rows, eval_rows_used
+eval_subset.{applied,selection,seed,rows,total_rows,sha256}
+settings.{arms,seeds,steps,batch_size,lr,content_weight,key_weight,
+          value_weight,rank,alpha,rank_attn,alpha_attn,qkv_rank,qkv_alpha}
+arms.<arm>.{geometry,status,completed,failed,runs,aggregate}
+arms.<arm>.aggregate.<metric>.{count,mean,std,min,max,ci95}
+arms.<arm>.runs[] = {arm,seed,status,returncode,elapsed_seconds,
+                     exact,key_copy,key_recall,loss,content_loss}
+verdict.{claim,qkv_improves,metrics,note}
+fair_comparison.{same_*,only_planned_difference,qkv_adds_trainable_parameters}
+```
+
+A sibling `.md` report renders the same numbers. `verdict.claim` is one of
+`qkv_improves`, `mlp_better`, `mixed`, `inconclusive` or `not_applicable`.
+Only the first two imply a directional claim, and only when both exact match
+and key copy have non-overlapping intervals.
+
+QKV rank 4 adds 73,728 trainable parameters. A QKV win can therefore be a
+capacity effect, not an attention-locus effect. The matched follow-up is an
+MLP widening with the same added parameter budget, run through the same
+seeds and data. See [`docs/QKV_LORA.md`](QKV_LORA.md) for the adapter
+details and limitations.
