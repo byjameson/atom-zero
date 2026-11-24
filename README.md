@@ -436,6 +436,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Exact-match content audit: <https://github.com/byjameson/atom-zero/blob/main/docs/CONTENT_AUDIT.md>
 - Copy-curriculum value-vs-key cycle: <https://github.com/byjameson/atom-zero/blob/main/docs/COPY_CURRICULUM_CYCLE.md>
 - Multi-key rehearsal and adapter soup: <https://github.com/byjameson/atom-zero/blob/main/docs/MULTI_KEY_REHEARSAL.md>
+- Curriculum loop evidence: <https://github.com/byjameson/atom-zero/blob/main/docs/CURRICULUM_LOOP_EVIDENCE.md>
 - Randomized-key copy cycle: <https://github.com/byjameson/atom-zero/blob/main/docs/RANDOM_KEY_COPY_CYCLE.md>
 - Full fine-tune copy control: <https://github.com/byjameson/atom-zero/blob/main/docs/FULL_FINETUNE_CONTROL.md>
 - Gradient accumulation: <https://github.com/byjameson/atom-zero/blob/main/docs/GRADIENT_ACCUMULATION.md>
