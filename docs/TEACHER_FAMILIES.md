@@ -138,6 +138,61 @@ $env:PYTHONPATH="$PWD;$PWD\src"
 python -m pytest tests/test_staged_copy_queue.py -q
 ```
 
+## Multi-key short-value ladder
+
+`research/build_multi_short_queue.py` is a second staged copy family aimed at
+the `multi` bottleneck. The earlier `multi` stage varies pair count, value
+length and syntax at the same time, so its exact-match score cannot show which
+factor is limiting. This generator holds values short and walks pair count up:
+
+| # | stage dir | pairs | values | formats |
+|---|---|---|---|---|
+| 1 | `stage_2short` | 2 | single token only | JSON/KV |
+| 2 | `stage_2mixed` | 2 | one single token + one multiword | JSON/KV |
+| 3 | `stage_3short` | 3 | single token only | JSON/KV |
+| 4 | `stage_4short` | 4 | single token only | JSON/KV |
+
+`2short` vs `2mixed` isolates the multiword-value penalty; `2short`, `3short`
+and `4short` isolate the cost of an additional key. Keys are 3-5 characters:
+`short` is lowercase alphanumeric, `cv` is a five-letter consonant-vowel
+alternation, and `word` is 3-5 lowercase letters. The default key style is
+`short`.
+
+The prompt lists the exact pairs with an explicit instruction:
+
+```text
+Copy these pairs exactly into one-line KV: [hhxbz=glowing meadow; fiz=brindtras].
+Return only one line of semicolon-separated key=value pairs and keep exactly
+these keys and values. ...
+```
+
+A single key registry and a single value registry span the whole build, so
+train and eval share no key names or values per stage or across stages. Every
+answer is rendered canonically, parsed back, compared key by key, and hashed
+before the row is kept. Invalid answers are regenerated.
+
+```powershell
+python research/build_multi_short_queue.py `
+  --out-dir data/multi_short_v1 `
+  --rows 2000 --eval-rows 200 `
+  --difficulty all --key-style short --seed 23 --shuffle
+```
+
+`--difficulty` selects `2short`, `2mixed`, `3short`, `4short`, a comma list, or
+`all`. Each stage writes `stage_<name>/train.jsonl`, `eval.jsonl` and
+`manifest.json`; the root `manifest.json` records the ladder order, row counts,
+format counts and zero-overlap evidence. `data/multi_short_v1/` is gitignored.
+
+```powershell
+$env:PYTHONPATH="$PWD;$PWD\src"
+python -m pytest tests/test_multi_short_queue.py -q
+```
+
+This family does not reuse or modify the staged-copy generator, and it does not
+change the trainer. It is a data-isolation tool: stage-level model results are
+required before drawing conclusions about which factor limits multi-key
+copying.
+
 ## Formats and validators
 
 All validators are deterministic, standard-library only, and used through

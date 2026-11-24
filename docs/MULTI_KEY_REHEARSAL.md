@@ -58,6 +58,70 @@ It was promoted to the separate curriculum registry
 `data/curriculum_active_adapter.json`, not the product registry. Base `0.8.0`
 remains the default.
 
+## Short-value multi-key ladder
+
+The mixed `multi` stage confounds three difficulties: how many keys must be
+copied (2-4), how long the values are (single token vs multiword), and which
+syntax is requested (JSON or KV). An 8-12% exact-match score does not show
+which one is blocking the model. `research/build_multi_short_queue.py` isolates
+key count from value length with four short-value stages:
+
+| # | stage dir | pairs | values |
+|---|---|---|---|
+| 1 | `stage_2short` | 2 | single-token values only |
+| 2 | `stage_2mixed` | 2 | one single token + one multiword value |
+| 3 | `stage_3short` | 3 | single-token values only |
+| 4 | `stage_4short` | 4 | single-token values only |
+
+Every stage alternates compact JSON and one-line KV. The prompt states the
+exact instruction and lists the pairs, for example:
+
+```text
+Copy these pairs exactly into compact JSON: [niaq=spuckhap; dlkh2=clouded window].
+Return only the JSON object and keep exactly these keys and values. ...
+```
+
+Keys are 3-5 characters in one of three styles (`short`: lowercase
+alphanumeric, `cv`: five-letter consonant-vowel alternation, `word`: 3-5
+lowercase letters). Keys and values are drawn from global registries, so
+`train.jsonl` and `eval.jsonl` share no key names and no values, per stage and
+across stages. Every canonical answer is parsed back and compared key by key
+before the row is kept; a failing row is regenerated.
+
+The ladder answers three separate questions:
+
+- `2short` vs `2mixed` isolates the cost of one multiword value;
+- `2short` vs `3short` vs `4short` isolates the cost of copying one more pair;
+- `2short` vs the earlier `multi` stage isolates short values from the full
+  mixed distribution.
+
+Generate the queue (default `data/multi_short_v1`, gitignored):
+
+```powershell
+$env:PYTHONPATH="$PWD;$PWD\src"
+$env:PYTHONIOENCODING="utf-8"
+python research/build_multi_short_queue.py `
+  --out-dir data/multi_short_v1 `
+  --rows 2000 --eval-rows 200 `
+  --difficulty all --key-style short --seed 23 --shuffle
+```
+
+The default build produces 2,000 train and 200 eval rows per stage (8,800 rows
+total), 24,200 unique keys and 24,200 unique values, with zero train/eval key
+or value overlap. Each stage directory has its own `train.jsonl`,
+`eval.jsonl` and `manifest.json`, and the root manifest records the ladder
+order and aggregate overlap. Use `--difficulty 2short` (or a comma list) for a
+single rung. The generator uses only the standard library and does not load a
+model or change the trainer.
+
+```powershell
+python -m pytest tests/test_multi_short_queue.py -q
+```
+
+This ladder is a data-isolation tool, not a training result. It says nothing
+about model quality until each stage is trained and measured on its own
+held-out split.
+
 ## Conclusion
 
 Multi-key copying is still the bottleneck. The next experiments should target
