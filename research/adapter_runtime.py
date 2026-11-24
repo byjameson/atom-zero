@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from pathlib import Path
 
 import torch
@@ -140,8 +141,175 @@ def mask_user_labels(y: torch.Tensor, user_id: int,
     return out
 
 
+KEY_PATTERN = r"[A-Za-z_][\w.\-]*"
+_KV_SEGMENT = re.compile(
+    rf"^\s*(?P<key>{KEY_PATTERN})\s*=\s*(?P<value>.*?)\s*$")
+_YAML_LINE = re.compile(
+    rf"^\s*(?:[-*]\s+)?(?P<key>{KEY_PATTERN})\s*:\s*(?P<value>.*?)\s*$")
+
+
+def _span(text: str, start: int, end: int, kind: str) -> dict:
+    return {"kind": kind, "text": text[start:end], "start": start, "end": end}
+
+
+def _trim_quotes(text: str, start: int, end: int) -> tuple[int, int]:
+    if (end - start >= 2 and text[start] == text[end - 1]
+            and text[start] in "\"'"):
+        return start + 1, end - 1
+    return start, end
+
+
+def _json_value_literal(value) -> str | None:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if value is None:
+        return "null"
+    if isinstance(value, (int, float)):
+        return json.dumps(value)
+    if isinstance(value, str):
+        return json.dumps(value, ensure_ascii=False)
+    return None
+
+
+def _json_spans(text: str, base: int) -> tuple[list[dict], list[dict]] | None:
+    stripped = text.strip()
+    if not (stripped.startswith("{") and stripped.endswith("}")):
+        return None
+    try:
+        parsed = json.loads(stripped)
+    except (TypeError, json.JSONDecodeError):
+        return None
+    if not isinstance(parsed, dict):
+        return None
+    offset = text.find(stripped)
+    keys: list[dict] = []
+    values: list[dict] = []
+    cursor = offset
+    for key, value in parsed.items():
+        key_literal = json.dumps(str(key), ensure_ascii=False)
+        key_start = text.find(key_literal, cursor)
+        if key_start < 0:
+            key_start = text.find(key_literal, offset)
+        if key_start < 0:
+            continue
+        cursor = key_start + len(key_literal)
+        key_begin, key_end = _trim_quotes(
+            text, key_start, key_start + len(key_literal))
+        keys.append(_span(text, key_begin + base, key_end + base, "key"))
+        literal = _json_value_literal(value)
+        if literal is None:
+            continue
+        value_start = text.find(literal, cursor)
+        if value_start < 0:
+            continue
+        value_begin, value_end = _trim_quotes(
+            text, value_start, value_start + len(literal))
+        values.append(_span(text, value_begin + base, value_end + base,
+                            "value"))
+        cursor = value_start + len(literal)
+    return keys, values
+
+
+def _structured_spans(text: str) -> tuple[str, list[dict], list[dict]]:
+    keys: list[dict] = []
+    values: list[dict] = []
+    saw_kv = False
+    saw_yaml = False
+    line_start = 0
+    for line in text.splitlines(keepends=True):
+        body = line.rstrip("\r\n")
+        leading = len(body) - len(body.lstrip())
+        stripped = body.strip()
+        if not stripped:
+            line_start += len(line)
+            continue
+        bullet = 0
+        if stripped.startswith(("- ", "* ")):
+            rest = stripped[2:]
+            bullet = 2 + (len(rest) - len(rest.lstrip()))
+        content = stripped[bullet:]
+        body_offset = line_start + leading + bullet
+        yaml_match = _YAML_LINE.match(content)
+        if yaml_match is not None:
+            key = yaml_match.group("key")
+            key_begin = body_offset + yaml_match.start("key")
+            keys.append(_span(text, key_begin, key_begin + len(key), "key"))
+            value_begin = body_offset + yaml_match.start("value")
+            value_end = body_offset + yaml_match.end("value")
+            value_begin, value_end = _trim_quotes(
+                text, value_begin, value_end)
+            if value_end > value_begin:
+                values.append(_span(text, value_begin, value_end, "value"))
+            saw_yaml = True
+            line_start += len(line)
+            continue
+        segments = content.split(";")
+        pairs = [_KV_SEGMENT.match(segment) for segment in segments]
+        if all(match is not None for match in pairs):
+            cursor = body_offset
+            for segment, match in zip(segments, pairs):
+                segment_start = text.find(segment, cursor)
+                if segment_start < 0:
+                    segment_start = cursor
+                key_begin = segment_start + match.start("key")
+                keys.append(_span(text, key_begin,
+                                  segment_start + match.end("key"), "key"))
+                value_begin = segment_start + match.start("value")
+                value_end = segment_start + match.end("value")
+                value_begin, value_end = _trim_quotes(
+                    text, value_begin, value_end)
+                if value_end > value_begin:
+                    values.append(_span(text, value_begin, value_end,
+                                        "value"))
+                cursor = segment_start + len(segment)
+            saw_kv = True
+        line_start += len(line)
+    if saw_kv and saw_yaml:
+        return "mixed", keys, values
+    if saw_kv:
+        return "kv", keys, values
+    if saw_yaml:
+        return "yaml", keys, values
+    return "text", [], []
+
+
+def answer_spans(row: dict | str) -> dict:
+    """Key-name and value spans inside an assistant answer.
+
+    JSON objects use the parsed dict keys/values, ``k=v;k=v`` lines are KV and
+    ``k: v`` lines are YAML. Plain text has no key/value spans. Offsets are
+    relative to the answer string so callers can shift them into the formatted
+    row.
+    """
+    text = row.get("assistant", "") if isinstance(row, dict) else row
+    text = str(text or "")
+    parsed = _json_spans(text, 0)
+    if parsed is not None:
+        keys, values = parsed
+        return {"text": text, "format": "json", "keys": keys,
+                "values": values}
+    fmt_name, keys, values = _structured_spans(text)
+    return {"text": text, "format": fmt_name, "keys": keys, "values": values}
+
+
+def _overlaps(span: tuple[int, int], candidates: list[tuple]) -> bool:
+    start, end = span
+    if end <= start:
+        return False
+    for candidate_start, candidate_end in candidates:
+        if start < candidate_end and candidate_start < end:
+            return True
+    return False
+
+
 def score_rows(model, tok, rows: list[dict]) -> dict:
-    """Assistant-only loss for each row, plus an aggregate."""
+    """Assistant-only loss for each row, plus an aggregate.
+
+    Scored assistant tokens are split into ``key`` (overlaps an answer key
+    name), ``value`` (overlaps an answer value) and ``syntax`` (everything
+    else) when the tokenizer exposes offsets. ``content_loss`` keeps its
+    alphanumeric-token meaning for backward compatibility.
+    """
     assistant_id = tok.token_to_id("<|assistant|>")
     end_id = tok.token_to_id("<|end|>")
     if assistant_id is None or end_id is None:
@@ -152,15 +320,27 @@ def score_rows(model, tok, rows: list[dict]) -> dict:
     total_tokens = 0
     content_nll = 0.0
     content_tokens = 0
+    key_nll = 0.0
+    key_tokens = 0
+    value_nll = 0.0
+    value_tokens = 0
     syntax_nll = 0.0
     syntax_tokens = 0
+    categories = False
     per_row = []
     with torch.no_grad():
         for index, row in enumerate(rows):
-            ids = tok.encode(fmt(row)).ids
+            text = fmt(row)
+            encoding = tok.encode(text)
+            ids = list(encoding.ids)
+            offsets = getattr(encoding, "offsets", None)
             limit = int(getattr(model, "max_seq", 512)) + 1
             truncated = len(ids) > limit
             ids = ids[:limit]
+            if offsets is not None:
+                offsets = list(offsets)[:limit]
+                if len(offsets) != len(ids):
+                    offsets = None
             if len(ids) < 3:
                 continue
             x = torch.tensor([ids[:-1]], dtype=torch.long, device=device)
@@ -176,8 +356,27 @@ def score_rows(model, tok, rows: list[dict]) -> dict:
             nll = float((token_loss * mask.reshape(-1)).sum())
             total_nll += nll
             total_tokens += count
+            answer_start = len(f"<|user|> {row['user']} <|assistant|> ")
+            spans = answer_spans(row) if offsets is not None else None
+            key_spans, value_spans = [], []
+            if spans is not None and text.startswith(
+                    f"<|user|> {row['user']} <|assistant|> "):
+                key_spans = [
+                    (item["start"] + answer_start,
+                     item["end"] + answer_start) for item in spans["keys"]]
+                value_spans = [
+                    (item["start"] + answer_start,
+                     item["end"] + answer_start) for item in spans["values"]]
+            if offsets is not None:
+                categories = True
             row_content_nll = 0.0
             row_content_tokens = 0
+            row_key_nll = 0.0
+            row_key_tokens = 0
+            row_value_nll = 0.0
+            row_value_tokens = 0
+            row_syntax_nll = 0.0
+            row_syntax_tokens = 0
             for position in range(y.size(1)):
                 if not bool(mask[0, position]):
                     continue
@@ -188,9 +387,27 @@ def score_rows(model, tok, rows: list[dict]) -> dict:
                     content_tokens += 1
                     row_content_nll += loss_value
                     row_content_tokens += 1
+                token_span = None
+                if offsets is not None:
+                    token_index = position + 1
+                    if token_index < len(offsets):
+                        token_span = tuple(offsets[token_index])
+                if token_span is not None and _overlaps(token_span, key_spans):
+                    key_nll += loss_value
+                    key_tokens += 1
+                    row_key_nll += loss_value
+                    row_key_tokens += 1
+                elif token_span is not None and _overlaps(
+                        token_span, value_spans):
+                    value_nll += loss_value
+                    value_tokens += 1
+                    row_value_nll += loss_value
+                    row_value_tokens += 1
                 else:
                     syntax_nll += loss_value
                     syntax_tokens += 1
+                    row_syntax_nll += loss_value
+                    row_syntax_tokens += 1
             scored_row = {
                 "index": index,
                 "user": row["user"][:120],
@@ -200,6 +417,15 @@ def score_rows(model, tok, rows: list[dict]) -> dict:
                 "content_loss": (row_content_nll / row_content_tokens
                                  if row_content_tokens else None),
                 "content_tokens": row_content_tokens,
+                "key_loss": (row_key_nll / row_key_tokens
+                             if row_key_tokens else None),
+                "key_tokens": row_key_tokens,
+                "value_loss": (row_value_nll / row_value_tokens
+                               if row_value_tokens else None),
+                "value_tokens": row_value_tokens,
+                "syntax_loss": (row_syntax_nll / row_syntax_tokens
+                                if row_syntax_tokens else None),
+                "syntax_tokens": row_syntax_tokens,
                 "truncated": truncated,
             }
             for key in ("family", "key_family"):
@@ -210,7 +436,6 @@ def score_rows(model, tok, rows: list[dict]) -> dict:
         raise SystemExit("no assistant tokens scored")
     loss = total_nll / total_tokens
     content_loss = (content_nll / content_tokens if content_tokens else None)
-    syntax_loss = (syntax_nll / syntax_tokens if syntax_tokens else None)
     return {
         "examples": len(per_row),
         "tokens": total_tokens,
@@ -220,8 +445,13 @@ def score_rows(model, tok, rows: list[dict]) -> dict:
         "content_ppl": (math.exp(min(content_loss, 20.0))
                         if content_loss is not None else None),
         "content_tokens": content_tokens,
-        "syntax_loss": syntax_loss,
+        "key_loss": key_nll / key_tokens if key_tokens else None,
+        "key_tokens": key_tokens,
+        "value_loss": value_nll / value_tokens if value_tokens else None,
+        "value_tokens": value_tokens,
+        "syntax_loss": syntax_nll / syntax_tokens if syntax_tokens else None,
         "syntax_tokens": syntax_tokens,
+        "categories": categories,
         "rows": per_row,
     }
 
