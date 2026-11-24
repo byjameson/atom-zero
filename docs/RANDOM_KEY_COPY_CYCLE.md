@@ -79,7 +79,10 @@ training patterns.
 1. Run the full fine-tune control on the same randomized-key data, short run
    first (100-300 optimizer steps), then a longer run if loss is still falling.
 2. Add a staged curriculum: single-key KV echo -> single-key JSON -> two keys ->
-   reordered keys. Measure key recall after each stage.
+   reordered keys. Measure key recall after each stage. The trainer now accepts
+   `--init-adapter PATH`, so each stage can start from the previous stage's
+   adapter instead of a fresh LoRA initialization (see
+   `docs/GRADIENT_ACCUMULATION.md`).
 3. Consider a lower-entropy key pool (common single tokens) to separate
    tokenization difficulty from copy-circuit difficulty.
 4. Keep the behavior gate: a candidate is not promotable until held-out exact
