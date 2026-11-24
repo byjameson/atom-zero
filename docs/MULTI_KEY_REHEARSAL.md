@@ -148,6 +148,132 @@ This adapter passed the behavior gate and replaced `rehearsal_focus` in the
 curriculum registry. Multi-key copying is still the weakest stage, but the
 specialize-then-rehearse recipe is clearly better than soup or pure multi.
 
+## Automatic weak-stage rehearsal
+
+The manual `multi_recover` run used a fixed balanced rehearsal mix. Stage
+strengths move with every adapter, so the next step is automatic weak-stage
+selection: measure all five stages, put most of the rehearsal budget on the
+two weakest, and keep the rest as retention.
+
+`research/run_weak_stage_rehearsal.py` implements that loop:
+
+1. read a content-free stage-metrics JSON, or evaluate the adapter on every
+   `stage_<name>/eval.jsonl` with the comparator's `compare()` function;
+2. rank stages by `exact + key_copy` (weakest first);
+3. build the rehearsal mix and sample it deterministically with `--seed`;
+4. continue training with `research/train_adapter_candidate.py
+   --init-adapter ...`, passing `--steps`, `--batch-size`, `--lr`,
+   `--content-weight` and `--seed` through unchanged;
+5. re-evaluate the new adapter on the same stage eval files and write a
+   content-free before/after ledger.
+
+The mix weights are fixed by rank, not by stage name:
+
+| group | stages | share |
+|---|---|---:|
+| weakest | ranks 1-2 | 50% (25% each) |
+| middle | rank 3 | 30% |
+| strongest | ranks 4-5 | 20% (10% each) |
+
+For smaller curricula the missing groups' shares are redistributed over the
+remaining groups, so the weights always sum to one. Integer counts use largest
+remainder rounding; `--rows 1000` on the five-stage curriculum gives
+`250 / 250 / 300 / 100 / 100`. Each stage is sampled with
+`random.Random(seed)`, then the combined mix is shuffled with the same seed, so
+the exact same rows and order are produced on every run.
+
+The metrics input accepts a direct stage mapping, `{"stages": ...}`,
+`{"per_stage": ...}` (stage -> `[exact, key_copy]`) or a previous rehearsal
+ledger. Rates must be fractions in `[0, 1]`; a percent value is rejected rather
+than silently ranking a stage wrongly. With `--metrics-json` the before metrics
+are reused; without it the adapter is evaluated first.
+
+Exact command:
+
+```powershell
+$env:PYTHONPATH="$PWD;$PWD\src"
+$env:PYTHONIOENCODING="utf-8"
+python research/run_weak_stage_rehearsal.py `
+  --base checkpoints/transformer_behavior_50m_long `
+  --adapter checkpoints/staged_curriculum/multi_recover `
+  --data-dir data/staged_copy_v1 `
+  --rows 1000 --seed 23 `
+  --steps 300 --batch-size 1 --lr 5e-4 --content-weight 2 `
+  --out research/results/weak_stage_rehearsal.json `
+  --out-adapter checkpoints/weak_stage_rehearsal
+```
+
+Reuse a content-free summary instead of re-evaluating the old adapter:
+
+```powershell
+python research/run_weak_stage_rehearsal.py `
+  --base checkpoints/transformer_behavior_50m_long `
+  --adapter checkpoints/staged_curriculum/multi_recover `
+  --metrics-json research/results/multi_recover_summary.json `
+  --data-dir data/staged_copy_v1 --rows 1000 --seed 23 `
+  --out research/results/weak_stage_rehearsal.json
+```
+
+The trainer's own `--eval` defaults to the weakest stage's held-out file;
+`--eval-path` overrides it. `--train-out` overrides the sampled JSONL path,
+which defaults to a sibling of `--out-adapter` (under gitignored
+`checkpoints/`).
+
+The ledger contains only aggregate numbers and counts. It never stores a
+prompt, an answer or a sampled row. An abridged successful ledger looks like
+this (the `after` values are illustrative, not a measured result):
+
+```json
+{
+  "schema": "atomzero.weak_stage_rehearsal.v1",
+  "content_free": true,
+  "status": "completed",
+  "seed": 23,
+  "rows": 1000,
+  "ranking": [
+    {"stage": "multi", "exact": 0.12, "key_copy": 0.22,
+     "score": 0.34, "rank": 1},
+    {"stage": "two_kv", "exact": 0.44, "key_copy": 0.54,
+     "score": 0.98, "rank": 2}
+  ],
+  "mix": {
+    "weights": {"multi": 0.25, "two_kv": 0.25, "two_json": 0.3,
+                "echo_kv": 0.1, "echo_json": 0.1},
+    "counts": {"multi": 250, "two_kv": 250, "two_json": 300,
+               "echo_kv": 100, "echo_json": 100},
+    "total": 1000,
+    "groups": {
+      "weakest": ["multi", "two_kv"],
+      "middle": ["two_json"],
+      "strongest": ["echo_kv", "echo_json"]
+    }
+  },
+  "stages": [
+    {"stage": "multi", "rank": 1, "group": "weakest", "score": 0.34,
+     "before": {"exact": 0.12, "key_copy": 0.22},
+     "after": {"exact": 0.28, "key_copy": 0.38},
+     "delta": {"exact": 0.16, "key_copy": 0.16},
+     "mix_weight": 0.25, "mix_rows": 250}
+  ],
+  "trainer": {"status": "completed", "returncode": 0,
+              "adapter_exists": true}
+}
+```
+
+A trainer failure writes `"status": "trainer_failed"` with the before metrics,
+mix counts and trainer status, and skips evaluation. An evaluation failure
+writes `"status": "eval_failed"` and keeps the trainer result. The command
+exits non-zero for both. It does not promote, merge or change the product
+registry; a passing ledger is still a separate promotion decision.
+
+```powershell
+python -m pytest tests/test_weak_stage_rehearsal.py -q
+```
+
+This branch adds the loop and its tests only. No real adapter was trained here,
+so there is no new quality result to compare with `multi_recover`.
+
+
 ## Key weighting and short-value curriculum (negative for 3-4 keys)
 
 Two follow-up experiments tried to break the 3-4 key wall:
