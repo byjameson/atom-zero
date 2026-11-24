@@ -201,6 +201,24 @@ def test_trainer_command_can_feed_the_gate(tmp_path):
     assert Path(result["paths"]["adapter_dir"]).is_dir()
 
 
+def test_run_adapter_loop_with_explicit_splits(tmp_path):
+    train = [_example(index) for index in range(4)]
+    eval_rows = [{"user": f"cross {index}", "assistant": f"answer {index}",
+                  "verification": {"verified": True, "promotable": True}}
+                 for index in range(2)]
+    result = run_adapter_loop(
+        [], tmp_path / "candidate", train_examples=train,
+        eval_examples=eval_rows,
+        comparison={"examples": 2,
+                    "baseline": {"loss": 1.2, "ppl": 3.3},
+                    "adapter": {"loss": 1.0, "ppl": 3.0}})
+    assert result["status"] == "pass"
+    assert result["candidate"]["split_method"] == (
+        "explicit_cross_distribution")
+    assert result["candidate"]["train_examples"] == 4
+    assert result["candidate"]["eval_examples"] == 2
+
+
 def test_cli_export(tmp_path, capsys):
     examples = tmp_path / "examples.jsonl"
     examples.write_text(

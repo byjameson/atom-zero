@@ -342,6 +342,33 @@ def test_loop_runs_adapter_trainer_command(tmp_path):
     assert (tmp_path / "candidate" / "adapter" / "adapter.pt").is_file()
 
 
+def test_loop_runs_adapter_explicit_splits(tmp_path):
+    train = [
+        {"user": f"train {index}", "assistant": f"a{index}",
+         "verification": {"verified": True, "promotable": True}}
+        for index in range(4)
+    ]
+    eval_rows = [
+        {"user": f"cross {index}", "assistant": f"b{index}",
+         "verification": {"verified": True, "promotable": True}}
+        for index in range(2)
+    ]
+    result = run_loop(
+        signals={"adapter": {"promotable": 2, "candidates": 0}},
+        allowed_files=[], checks=[], opt_in=True, approve=False,
+        autonomous=True, repo_root=tmp_path,
+        adapter_train_examples=train, adapter_eval_examples=eval_rows,
+        adapter_out_dir=tmp_path / "candidate",
+        adapter_comparison={
+            "examples": 2,
+            "baseline": {"loss": 1.2, "ppl": 3.3},
+            "adapter": {"loss": 1.0, "ppl": 3.0}})
+    assert result["status"] == "completed", result
+    assert result["adapter"]["candidate"]["split_method"] == (
+        "explicit_cross_distribution")
+    assert result["adapter"]["candidate"]["eval_examples"] == 2
+
+
 def test_loop_adapter_requires_inputs(tmp_path):
     result = run_loop(
         signals={"adapter": {"promotable": 1, "candidates": 0}},

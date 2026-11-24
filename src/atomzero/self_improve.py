@@ -184,6 +184,8 @@ def run_loop(
     test_command=None,
     test_timeout: int = 900,
     adapter_examples=None,
+    adapter_train_examples=None,
+    adapter_eval_examples=None,
     adapter_out_dir=None,
     adapter_base=None,
     adapter_trainer_command=None,
@@ -278,11 +280,13 @@ def run_loop(
             return result
         if not autonomous and not approve:
             return result
-        if not adapter_examples or not adapter_out_dir:
+        if not adapter_out_dir or not (
+                adapter_examples
+                or (adapter_train_examples and adapter_eval_examples)):
             result["status"] = "adapter_input_missing"
             result["error"] = (
-                "adapter_examples and adapter_out_dir are required for "
-                "adapter_candidate_ready")
+                "adapter examples or an explicit train/eval pair, plus "
+                "adapter_out_dir, are required for adapter_candidate_ready")
             return result
         from atomzero.adapter_candidates import run_adapter_loop
         adapter = run_adapter_loop(
@@ -294,6 +298,8 @@ def run_loop(
             comparison=adapter_comparison,
             evaluator_command=adapter_evaluator_command,
             repo_root=repo_root,
+            train_examples=adapter_train_examples,
+            eval_examples=adapter_eval_examples,
             eval_ratio=adapter_eval_ratio, seed=adapter_seed,
             min_loss_delta=adapter_min_loss_delta,
             max_ppl_ratio=adapter_max_ppl_ratio,
@@ -473,6 +479,8 @@ def main(argv=None) -> int:
         help="full verification command (default: python -m pytest tests -q)")
     parser.add_argument("--test-timeout", type=int, default=900)
     parser.add_argument("--adapter-examples-jsonl", default="")
+    parser.add_argument("--adapter-train-jsonl", default="")
+    parser.add_argument("--adapter-eval-jsonl", default="")
     parser.add_argument("--adapter-out", default="")
     parser.add_argument("--adapter-base", default="")
     parser.add_argument("--adapter-trainer-command", default="")
@@ -520,14 +528,25 @@ def main(argv=None) -> int:
                 "candidates": args.adapter_candidates,
             }
         if (not signals and not args.self_code_root
-                and not args.adapter_examples_jsonl):
+                and not args.adapter_examples_jsonl
+                and not (args.adapter_train_jsonl and args.adapter_eval_jsonl)):
             raise RunnerError(
-                "--signal, --self-code-root or --adapter-examples-jsonl is "
-                "required")
+                "--signal, --self-code-root, --adapter-examples-jsonl or "
+                "an adapter train/eval pair is required")
         adapter_examples = None
         if args.adapter_examples_jsonl:
             from atomzero.adapter_candidates import load_examples
             adapter_examples = load_examples(args.adapter_examples_jsonl)
+        adapter_train_examples = None
+        adapter_eval_examples = None
+        if args.adapter_train_jsonl or args.adapter_eval_jsonl:
+            if not (args.adapter_train_jsonl and args.adapter_eval_jsonl):
+                raise RunnerError(
+                    "--adapter-train-jsonl and --adapter-eval-jsonl must be "
+                    "used together")
+            from atomzero.adapter_candidates import load_examples
+            adapter_train_examples = load_examples(args.adapter_train_jsonl)
+            adapter_eval_examples = load_examples(args.adapter_eval_jsonl)
         adapter_comparison = None
         if args.adapter_comparison_json:
             adapter_comparison = _load_signals(
@@ -561,6 +580,8 @@ def main(argv=None) -> int:
             test_command=args.test_command or None,
             test_timeout=args.test_timeout,
             adapter_examples=adapter_examples,
+            adapter_train_examples=adapter_train_examples,
+            adapter_eval_examples=adapter_eval_examples,
             adapter_out_dir=args.adapter_out or None,
             adapter_base=args.adapter_base or None,
             adapter_trainer_command=args.adapter_trainer_command or None,

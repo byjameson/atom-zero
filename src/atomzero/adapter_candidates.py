@@ -150,7 +150,8 @@ def build_candidate(examples, *, eval_ratio=DEFAULT_EVAL_RATIO,
 
 
 def build_cross_candidate(train_examples, eval_examples, *,
-                           seed=DEFAULT_SEED, candidate_id=None) -> dict:
+                           seed=DEFAULT_SEED, candidate_id=None,
+                           split_method="explicit_cross_distribution") -> dict:
     """Build an explicit train/eval candidate without random mixing.
 
     This is for cross-distribution checks: train and eval come from different
@@ -201,7 +202,7 @@ def build_cross_candidate(train_examples, eval_examples, *,
             round(len(eval_rows) / (len(train_rows) + len(eval_rows)), 6)
             if train_rows or eval_rows else 0.0),
         "seed": int(seed),
-        "split_method": "explicit_cross_distribution",
+        "split_method": split_method,
         "min_loss_delta": DEFAULT_MIN_LOSS_DELTA,
         "max_ppl_ratio": DEFAULT_MAX_PPL_RATIO,
         "auto_apply": False,
@@ -451,14 +452,21 @@ def _format_command(command, values: dict) -> list[str]:
 def run_adapter_loop(examples, out_dir, *, base=None, trainer_command=None,
                      comparison=None, evaluator_command=None,
                      adapter_dir=None, comparison_path=None,
-                     repo_root=".", eval_ratio=DEFAULT_EVAL_RATIO,
-                     seed=DEFAULT_SEED,
+                     repo_root=".", train_examples=None, eval_examples=None,
+                     eval_ratio=DEFAULT_EVAL_RATIO, seed=DEFAULT_SEED,
                      min_loss_delta=None, max_ppl_ratio=None,
                      ledger_path=None, timeout: int = 900,
                      trainer_timeout: int = 900) -> dict:
     """Export a candidate, optionally train/evaluate, and record a gate event."""
-    candidate = build_candidate(
-        examples, eval_ratio=eval_ratio, seed=seed)
+    if train_examples is not None or eval_examples is not None:
+        if train_examples is None or eval_examples is None:
+            raise ValueError(
+                "train_examples and eval_examples must be provided together")
+        candidate = build_cross_candidate(
+            train_examples, eval_examples, seed=seed)
+    else:
+        candidate = build_candidate(
+            examples, eval_ratio=eval_ratio, seed=seed)
     paths = write_candidate(candidate, out_dir)
     target_dir = Path(out_dir).resolve()
     adapter_path = Path(
@@ -692,7 +700,9 @@ def main(argv=None) -> int:
     evaluate.add_argument("--json", action="store_true")
 
     loop = sub.add_parser("loop")
-    loop.add_argument("--examples-jsonl", required=True)
+    loop.add_argument("--examples-jsonl", default="")
+    loop.add_argument("--train-jsonl", default="")
+    loop.add_argument("--eval-jsonl", default="")
     loop.add_argument("--out-dir", required=True)
     loop.add_argument("--base", default="")
     loop.add_argument("--repo-root", default=".")
@@ -746,8 +756,23 @@ def main(argv=None) -> int:
         else:
             comparison = (_load_json(args.comparison_json)
                           if args.comparison_json else None)
+            if args.train_jsonl or args.eval_jsonl:
+                if not (args.train_jsonl and args.eval_jsonl):
+                    raise ValueError(
+                        "--train-jsonl and --eval-jsonl must be used together")
+                examples = []
+                train_examples = _load_examples(args.train_jsonl)
+                eval_examples = _load_examples(args.eval_jsonl)
+            else:
+                if not args.examples_jsonl:
+                    raise ValueError(
+                        "--examples-jsonl or --train-jsonl/--eval-jsonl "
+                        "is required")
+                examples = _load_examples(args.examples_jsonl)
+                train_examples = None
+                eval_examples = None
             payload = run_adapter_loop(
-                _load_examples(args.examples_jsonl), args.out_dir,
+                examples, args.out_dir,
                 base=args.base or None,
                 trainer_command=args.trainer_command or None,
                 adapter_dir=args.adapter_dir or None,
@@ -755,6 +780,8 @@ def main(argv=None) -> int:
                 comparison=comparison,
                 evaluator_command=args.evaluator_command or None,
                 repo_root=args.repo_root,
+                train_examples=train_examples,
+                eval_examples=eval_examples,
                 eval_ratio=args.eval_ratio, seed=args.seed,
                 min_loss_delta=args.min_loss_delta,
                 max_ppl_ratio=args.max_ppl_ratio,
