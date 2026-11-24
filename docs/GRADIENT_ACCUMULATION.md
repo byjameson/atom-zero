@@ -45,3 +45,35 @@ python research/train_adapter_candidate.py `
 
 Add `--lr-scale linear` only when you deliberately want `lr * batch_size`
 (here `0.004`). The default `none` keeps `0.001`.
+
+## Resuming from a previous adapter
+
+`--init-adapter PATH` starts training from a saved adapter directory instead
+of a fresh LoRA initialization. Staged curricula (echo -> single-key ->
+multi-key) can now chain stages: each stage continues from the previous stage's
+A/B tensors.
+
+```powershell
+python research/train_adapter_candidate.py `
+  --base "$env:USERPROFILE\.cache\atomzero\atom-zero-49m" `
+  --train data/adapter_candidates/stage2_train.jsonl `
+  --eval data/adapter_candidates/stage2_eval.jsonl `
+  --out checkpoints/adapters_candidate/stage2 `
+  --init-adapter checkpoints/adapters_candidate/stage1 `
+  --steps 2000 --batch-size 4 --lr 0.001 `
+  --result research/results/adapter_candidate_stage2.json `
+  --comparison research/results/adapter_candidate_stage2_comparison.json
+```
+
+- LoRA geometry (`r_attn`, `alpha_attn`, `r_mlp`, `alpha_mlp`) is read from
+  `PATH/config.json`, falling back to the `adapter.pt` config, and rebuilt
+  exactly.
+- Omit `--rank`, `--alpha`, `--rank-attn` and `--alpha-attn` to inherit all
+  four values. If supplied, they must match the checkpoint exactly; a mismatch
+  exits with an error naming the conflicting flag, the supplied value and the
+  adapter value.
+- A/B tensors are loaded strictly: missing, unexpected or wrongly shaped
+  tensors raise instead of being silently dropped.
+- The result JSON and the new adapter's `config.json` record `init_adapter`.
+- Without `--init-adapter`, training is unchanged: fresh LoRA initialization
+  with the same defaults and the same result/adapter config fields.

@@ -34,6 +34,12 @@ default 0.25) of older rows into the training sequence with
 :mod:`research.replay_sampler`. Without it the trainer cycles primary rows
 exactly as before.
 
+``--init-adapter PATH`` resumes from a saved adapter directory: the LoRA
+geometry (``r_attn``/``alpha_attn``/``r_mlp``/``alpha_mlp``) is taken from the
+checkpoint and its A/B tensors are loaded strictly before training continues.
+Explicit rank/alpha flags must match that geometry. Without the flag the
+trainer starts from a fresh LoRA initialization exactly as before.
+
 It does not apply the adapter to the product and does not change `0.8.0`
 weights. Promotion is a separate decision.
 """
@@ -54,6 +60,7 @@ from atomzero.lora import (
     count_lora_params,
     lora_parameters,
     save_adapter,
+    set_lora_state_dict,
 )
 
 try:
@@ -75,6 +82,13 @@ ROOT = Path(__file__).resolve().parents[1]
 def _resolve(path: str) -> Path:
     value = Path(path).expanduser()
     return value if value.is_absolute() else ROOT / value
+
+
+def _display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        return str(path)
 
 
 def _encode(tok, row, max_seq: int, device):
@@ -131,13 +145,163 @@ def _batch_size_error(batch_size) -> str | None:
     return None
 
 
+_GEOMETRY_FLAGS = {
+    "r_attn": "--rank-attn",
+    "alpha_attn": "--alpha-attn",
+    "r_mlp": "--rank",
+    "alpha_mlp": "--alpha",
+}
+
+
+def _read_adapter_config(path: Path) -> dict:
+    """Read an adapter config from config.json, falling back to adapter.pt."""
+    config_path = path / "config.json"
+    checkpoint_path = path / "adapter.pt"
+    if config_path.is_file():
+        try:
+            config = json.loads(config_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise ValueError(
+                f"cannot read adapter config {config_path}: {exc}") from exc
+        if not isinstance(config, dict):
+            raise ValueError(
+                f"adapter config must be a JSON object: {config_path}")
+        return config
+    if checkpoint_path.is_file():
+        checkpoint = torch.load(checkpoint_path, map_location="cpu",
+                                weights_only=False)
+        config = (checkpoint.get("config")
+                  if isinstance(checkpoint, dict) else None)
+        if not isinstance(config, dict) or not config:
+            raise ValueError(
+                f"adapter checkpoint has no config: {checkpoint_path}")
+        return config
+    raise FileNotFoundError(
+        f"init adapter not found: {path} "
+        "(expected config.json or adapter.pt)")
+
+
+def _config_int(config: dict, key: str, default) -> int:
+    value = config.get(key)
+    if value is None:
+        value = default
+    try:
+        return int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            f"adapter config {key} must be an integer, got {value!r}"
+        ) from exc
+
+
+def _geometry_from_config(config: dict) -> dict:
+    """Normalize an adapter config to its four LoRA geometry values."""
+    r_mlp = _config_int(config, "r_mlp", config.get("rank", 0))
+    r_attn = _config_int(config, "r_attn", 0)
+    alpha_mlp = _config_int(
+        config, "alpha_mlp", config.get("alpha", r_mlp))
+    alpha_attn = _config_int(config, "alpha_attn", r_attn)
+    geometry = {
+        "r_attn": r_attn,
+        "alpha_attn": alpha_attn,
+        "r_mlp": r_mlp,
+        "alpha_mlp": alpha_mlp,
+    }
+    error = _lora_arg_error(r_mlp, alpha_mlp, r_attn, alpha_attn)
+    if error:
+        raise ValueError(f"adapter config is invalid: {error}")
+    return geometry
+
+
+def init_adapter_geometry(path: str | Path) -> dict:
+    """Read the LoRA geometry recorded by an adapter directory."""
+    return _geometry_from_config(_read_adapter_config(_resolve(str(path))))
+
+
+def _check_geometry_override(geometry: dict, path: Path, *, rank=None,
+                             alpha=None, rank_attn=None,
+                             alpha_attn=None) -> None:
+    """Reject explicit rank/alpha values that differ from the checkpoint."""
+    supplied = {
+        "r_attn": rank_attn,
+        "alpha_attn": alpha_attn,
+        "r_mlp": rank,
+        "alpha_mlp": alpha,
+    }
+    mismatches = [
+        f"{_GEOMETRY_FLAGS[key]}={value} (adapter {key}={geometry[key]})"
+        for key, value in supplied.items()
+        if value is not None and int(value) != geometry[key]
+    ]
+    if mismatches:
+        raise ValueError(
+            "init adapter LoRA geometry mismatch: "
+            + ", ".join(mismatches)
+            + f"; {path} records r_attn={geometry['r_attn']}, "
+            f"alpha_attn={geometry['alpha_attn']}, "
+            f"r_mlp={geometry['r_mlp']}, "
+            f"alpha_mlp={geometry['alpha_mlp']}. "
+            "Omit the rank/alpha flags to reuse the checkpoint geometry.")
+
+
+def load_init_adapter(model: torch.nn.Module, path: str | Path, *,
+                      rank=None, alpha=None, rank_attn=None,
+                      alpha_attn=None) -> dict:
+    """Rebuild a saved adapter on ``model`` and load its A/B tensors.
+
+    The LoRA geometry comes from the adapter's ``config.json`` (or the
+    ``adapter.pt`` config when that file is absent). Explicit ``rank`` /
+    ``alpha`` / ``rank_attn`` / ``alpha_attn`` values must match the
+    checkpoint exactly; a mismatch raises ``ValueError``. Missing, unexpected
+    or differently shaped A/B tensors also raise ``ValueError`` instead of
+    being silently dropped. Returns the adapter config with normalized
+    geometry.
+    """
+    adapter_dir = _resolve(str(path))
+    config = _read_adapter_config(adapter_dir)
+    geometry = _geometry_from_config(config)
+    _check_geometry_override(
+        geometry, adapter_dir, rank=rank, alpha=alpha,
+        rank_attn=rank_attn, alpha_attn=alpha_attn)
+    checkpoint_path = adapter_dir / "adapter.pt"
+    if not checkpoint_path.is_file():
+        raise FileNotFoundError(
+            f"init adapter checkpoint not found: {checkpoint_path}")
+    checkpoint = torch.load(checkpoint_path, map_location="cpu",
+                            weights_only=False)
+    lora = checkpoint.get("lora", {}) if isinstance(checkpoint, dict) else {}
+    if not lora:
+        raise ValueError(f"init adapter has no LoRA tensors: {checkpoint_path}")
+    apply_lora(
+        model, r_attn=geometry["r_attn"], r_mlp=geometry["r_mlp"],
+        alpha_attn=geometry["alpha_attn"],
+        alpha_mlp=geometry["alpha_mlp"])
+    set_lora_state_dict(model, lora)
+    return {**config, **geometry}
+
+
 def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
-          lr: float, rank: int, alpha: int, max_seq: int,
-          device, seed: int = 13, content_weight: float = 1.0,
+          lr: float, rank: int | None = None, alpha: int | None = None,
+          max_seq: int, device, seed: int = 13, content_weight: float = 1.0,
           replay_rows: list[dict] | None = None,
           replay_weight: float = DEFAULT_REPLAY_WEIGHT,
-          rank_attn: int = 0, alpha_attn: int = 0,
-          batch_size: int = 1, lr_scale: str = "none") -> dict:
+          rank_attn: int | None = None, alpha_attn: int | None = None,
+          batch_size: int = 1, lr_scale: str = "none",
+          init_adapter: str | Path | None = None) -> dict:
+    init_dir = _resolve(str(init_adapter)) if init_adapter else None
+    if init_dir is None:
+        rank = 8 if rank is None else rank
+        alpha = 16 if alpha is None else alpha
+        rank_attn = 0 if rank_attn is None else rank_attn
+        alpha_attn = 0 if alpha_attn is None else alpha_attn
+    else:
+        geometry = init_adapter_geometry(init_dir)
+        _check_geometry_override(
+            geometry, init_dir, rank=rank, alpha=alpha,
+            rank_attn=rank_attn, alpha_attn=alpha_attn)
+        rank = geometry["r_mlp"]
+        alpha = geometry["alpha_mlp"]
+        rank_attn = geometry["r_attn"]
+        alpha_attn = geometry["alpha_attn"]
     error = _lora_arg_error(rank, alpha, rank_attn, alpha_attn)
     if error:
         raise ValueError(error)
@@ -154,9 +318,14 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
     mix = summarize_mix(sequence, train_rows, replay_rows)
     torch.manual_seed(seed)
     model, tok = load_model(base, device=device)
-    model = apply_lora(
-        model, r_attn=rank_attn, r_mlp=rank,
-        alpha_attn=alpha_attn, alpha_mlp=alpha)
+    if init_dir is not None:
+        load_init_adapter(
+            model, init_dir, rank=rank, alpha=alpha,
+            rank_attn=rank_attn, alpha_attn=alpha_attn)
+    else:
+        model = apply_lora(
+            model, r_attn=rank_attn, r_mlp=rank,
+            alpha_attn=alpha_attn, alpha_mlp=alpha)
     model.to(device)
     params = lora_parameters(model)
     if not params:
@@ -211,6 +380,9 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
                 "elapsed_seconds": round(time.time() - started, 2),
             }), flush=True)
     out.mkdir(parents=True, exist_ok=True)
+    extra_config = {}
+    if init_dir is not None:
+        extra_config["init_adapter"] = _display_path(init_dir)
     save_adapter(
         model, out, r_attn=rank_attn, r_mlp=rank,
         alpha_attn=alpha_attn, alpha_mlp=alpha,
@@ -220,13 +392,10 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
         content_weight=content_weight, batch_size=batch_size,
         optimizer_steps=optimizer_steps, rows_seen=rows_seen,
         lr_scale=lr_scale, effective_lr=effective_lr,
-        method="external_train_adapter_candidate_v1")
+        method="external_train_adapter_candidate_v1", **extra_config)
     tail = losses[-20:] if losses else [0.0]
-    try:
-        adapter_path = str(out.relative_to(ROOT))
-    except ValueError:
-        adapter_path = str(out)
-    return {
+    adapter_path = _display_path(out)
+    summary = {
         "train_loss": sum(tail) / len(tail),
         "train_steps": steps,
         "train_examples": len(train_rows),
@@ -246,6 +415,9 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
         "lora_parameters": count_lora_params(model),
         "adapter": adapter_path,
     }
+    if init_dir is not None:
+        summary["init_adapter"] = _display_path(init_dir)
+    return summary
 
 
 def _bounded_weight(value: str) -> float:
@@ -292,14 +464,23 @@ def main(argv=None) -> int:
     parser.add_argument("--out", required=True)
     parser.add_argument("--steps", type=int, default=300)
     parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--rank", type=int, default=8)
-    parser.add_argument("--alpha", type=int, default=16)
     parser.add_argument(
-        "--rank-attn", type=int, default=0,
-        help="LoRA rank for attention out_proj (0 disables)")
+        "--rank", type=int, default=None,
+        help="LoRA rank for MLP (default 8, or the --init-adapter value)")
     parser.add_argument(
-        "--alpha-attn", type=int, default=0,
-        help="LoRA alpha for attention out_proj (>0 when rank-attn >0)")
+        "--alpha", type=int, default=None,
+        help="LoRA alpha for MLP (default 16, or the --init-adapter value)")
+    parser.add_argument(
+        "--rank-attn", type=int, default=None,
+        help="LoRA rank for attention out_proj "
+             "(default 0, or the --init-adapter value)")
+    parser.add_argument(
+        "--alpha-attn", type=int, default=None,
+        help="LoRA alpha for attention out_proj "
+             "(default 0, or the --init-adapter value)")
+    parser.add_argument(
+        "--init-adapter", default="",
+        help="adapter directory to resume from (config.json or adapter.pt)")
     parser.add_argument("--max-seq", type=int, default=256)
     parser.add_argument("--seed", type=int, default=13)
     parser.add_argument(
@@ -323,8 +504,26 @@ def main(argv=None) -> int:
         "--comparison",
         default="research/results/adapter_candidate_comparison.json")
     args = parser.parse_args(argv)
-    lora_error = _lora_arg_error(
-        args.rank, args.alpha, args.rank_attn, args.alpha_attn)
+    init_adapter = args.init_adapter.strip()
+    if init_adapter:
+        init_dir = _resolve(init_adapter)
+        try:
+            geometry = init_adapter_geometry(init_dir)
+            _check_geometry_override(
+                geometry, init_dir, rank=args.rank, alpha=args.alpha,
+                rank_attn=args.rank_attn, alpha_attn=args.alpha_attn)
+        except (OSError, ValueError) as exc:
+            parser.error(str(exc))
+        rank = geometry["r_mlp"]
+        alpha = geometry["alpha_mlp"]
+        rank_attn = geometry["r_attn"]
+        alpha_attn = geometry["alpha_attn"]
+    else:
+        rank = 8 if args.rank is None else args.rank
+        alpha = 16 if args.alpha is None else args.alpha
+        rank_attn = 0 if args.rank_attn is None else args.rank_attn
+        alpha_attn = 0 if args.alpha_attn is None else args.alpha_attn
+    lora_error = _lora_arg_error(rank, alpha, rank_attn, alpha_attn)
     if lora_error:
         parser.error(lora_error)
     if not math.isfinite(args.content_weight) or args.content_weight < 1.0:
@@ -339,11 +538,12 @@ def main(argv=None) -> int:
     out = _resolve(args.out)
     summary = train(
         args.base, train_rows, out, steps=args.steps, lr=args.lr,
-        rank=args.rank, alpha=args.alpha, max_seq=args.max_seq,
+        rank=rank, alpha=alpha, max_seq=args.max_seq,
         device=device, seed=args.seed, content_weight=args.content_weight,
         replay_rows=replay_rows, replay_weight=args.replay_weight,
-        rank_attn=args.rank_attn, alpha_attn=args.alpha_attn,
-        batch_size=args.batch_size, lr_scale=args.lr_scale)
+        rank_attn=rank_attn, alpha_attn=alpha_attn,
+        batch_size=args.batch_size, lr_scale=args.lr_scale,
+        init_adapter=init_adapter or None)
     comparison = compare(
         args.base, str(_resolve(args.eval)), [str(out)])
     models = comparison.get("models", [])
