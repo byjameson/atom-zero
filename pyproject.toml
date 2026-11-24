@@ -67,6 +67,8 @@ Source = "https://github.com/byjameson/atom-zero"
 Documentation = "https://github.com/byjameson/atom-zero#readme"
 ModelScope = "https://modelscope.cn/models/byjameson/atom-zero-49m"
 LinkedIn = "https://www.linkedin.com/in/g%C3%B6khan-cava-874a32157/"
+X = "https://x.com/aigokhan"
+Instagram = "https://instagram.com/quantsinner"
 Issues = "https://github.com/byjameson/atom-zero/issues"
 
 [tool.setuptools.packages.find]

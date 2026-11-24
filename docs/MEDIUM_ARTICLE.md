@@ -198,6 +198,8 @@ If you want to inspect the claims:
 - Model card: https://github.com/byjameson/atom-zero/blob/main/docs/MODEL_CARD.md
 - Benchmarks: https://github.com/byjameson/atom-zero/blob/main/docs/BENCHMARKS.md
 - Original dev.to post: https://dev.to/mycute_97b39c4e34027570f9/atom-zero-a-49m-local-assistant-that-says-i-dont-know-1p7m
+- X: https://x.com/aigokhan
+- Instagram: https://instagram.com/quantsinner
 
 ## Support
 

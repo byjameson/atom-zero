@@ -208,6 +208,8 @@ Evidence lives in `research/results/` and
 - launch article: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-a-49m-local-assistant-that-says-i-dont-know-1p7m>
 - Medium: <https://medium.com/@myredditacc9393/atom-zero-a-49m-local-assistant-that-says-i-dont-know-df1ebc0e2e78>
 - LinkedIn: <https://www.linkedin.com/in/g%C3%B6khan-cava-874a32157/>
+- X: <https://x.com/aigokhan>
+- Instagram: <https://instagram.com/quantsinner>
 - document formats: <https://github.com/byjameson/atom-zero/blob/main/docs/DOCUMENTS.md>
 
 ## Support
@@ -229,3 +231,5 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Email: **gokhancava@gmail.com**
 - GitHub issues: <https://github.com/byjameson/atom-zero/issues>
 - LinkedIn: <https://www.linkedin.com/in/g%C3%B6khan-cava-874a32157/>
+- X: <https://x.com/aigokhan>
+- Instagram: <https://instagram.com/quantsinner>

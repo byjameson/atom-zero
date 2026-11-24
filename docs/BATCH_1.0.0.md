@@ -1,3 +1,6 @@
+> Superseded: the release cadence is now one 0.1 version per release.
+> See `docs/RELEASING.md`; this file remains as the 1.0.0 planning record.
+
 # 1.0.0 batch plan - parallel self-development
 
 Release cadence: **one major version per release**. `0.19.0` is published;

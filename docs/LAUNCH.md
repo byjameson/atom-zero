@@ -66,6 +66,8 @@ harness: source-cited RAG, honest gaps, curiosity approval, local provider.
 - [x] PyPI publish `streamft==0.8.3` (full project map)
 - [x] Hugging Face weights: <https://huggingface.co/byjameson/atom-zero-49m>
 - [x] ModelScope weights: <https://modelscope.cn/models/byjameson/atom-zero-49m>
+- [x] X: <https://x.com/aigokhan>
+- [x] Instagram: <https://instagram.com/quantsinner>
 - [x] dev.to launch article: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-a-49m-local-assistant-that-says-i-dont-know-1p7m>
 - [ ] Release binary assets attached in GitHub UI
 - [ ] Hugging Face model card/weights (owner decision)

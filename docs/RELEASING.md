@@ -3,7 +3,7 @@
 Canonical surfaces: GitHub, Hugging Face, PyPI, dev.to, Medium, LinkedIn and
 ModelScope.
 
-Current batch: **0.19.0 published.** It adds the bounded self-improve loop,
+Current batch: **0.19.0 published; 0.20.0 in preparation.** It adds the bounded self-improve loop,
 committed-change scope verification and the fifth measured cycle with an actual
 nested `opencode run` process. Post-release work adds the self-code audit, its
 planner/runner integration and the sixth measured cycle.
@@ -12,17 +12,16 @@ planner/runner integration and the sixth measured cycle.
 
 ## Release cadence
 
-Releases follow **one major version per release** now, not every 0.1 or 0.3.
-`0.19.0` is the current published version; the next release boundary is
-**`1.0.0`**, then `2.0.0`. Do not publish `0.20.x`–`0.99.x`.
+Releases follow **one 0.1 version per release**. `0.19.0` is the current
+published version; the next boundary is **`0.20.0`**, then `0.21.0`, and so on.
+Every 0.1 release is published on all canonical surfaces.
 
 Intermediate commits stay local. A release batch can contain many development
-increments, but it is only published at a major boundary. A hotfix is the only
-exception and still gets one push.
+increments, but it is published at the next 0.1 boundary.
 
-At the batch boundary: bump the version, update release notes/model cards/docs,
+At every 0.1 boundary: bump the version, update release notes/model cards/docs,
 run preflight and `scripts/verify_release.py`, and publish every canonical
-surface once. Do not push each increment.
+surface once. Push the release commit and tag, but do not push each increment.
 
 ## 1. Preflight
 
@@ -75,9 +74,16 @@ Update <https://modelscope.cn/models/byjameson/atom-zero-49m>.
 
 ## 6. Articles and posts
 
-- dev.to: update the install version and any new command.
-- Medium: update the source and paste-ready HTML.
-- LinkedIn: update the post only for meaningful releases.
+Publish a **new post** for every 0.1 release; do not silently edit the old one.
+
+- dev.to: create a new post with the current install version and new commands.
+- Medium: create a new post from the paste-ready source/HTML.
+- LinkedIn: create a new post for every 0.1 release.
+- X: post a short release note with the main links.
+- Instagram: post a short release note or carousel with the main links.
+- Include the author profiles in every post:
+  - X: <https://x.com/aigokhan>
+  - Instagram: <https://instagram.com/quantsinner>
 
 ## 7. Verify all surfaces
 
