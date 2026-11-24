@@ -18,7 +18,10 @@
   Qwen2.5-1.5B teacher queue and explicit cross-distribution fixture are
   prepared (`docs/TEACHER_QUEUE.md`). The first VM-run cross test passed
   in-distribution and failed cross-distribution, correctly blocking promotion
-  (`docs/ADAPTER_CROSS_CYCLE.md`). Accumulating for the **1.0.0** boundary;
+  (`docs/ADAPTER_CROSS_CYCLE.md`). A multi-family teacher + replay cycle
+  improved the in-distribution gate and reduced the cross-family regression
+  from 757x to 6.07x, but still failed the held-out city family
+  (`docs/DIVERSE_REPLAY_CYCLE.md`). Accumulating for the **1.0.0** boundary;
   not pushed yet.
 - Working tree after the release-doc commits: clean
 - Atom Zero tests: **1084 passed**

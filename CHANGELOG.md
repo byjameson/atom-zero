@@ -77,6 +77,11 @@ the self-code branch and its planner/runner integration.
   VM: in-distribution loss `6.5393 -> 1.2733` (pass); cross key-value loss
   `3.3621 -> 9.9921` (fail, ppl ratio `757.47`). The gate correctly blocked
   promotion. See `docs/ADAPTER_CROSS_CYCLE.md`.
+- Added a **diverse teacher + replay** cycle: 194 verified multi-family teacher
+  rows, 264-row training mix with JSON/key-value replay, in-distribution gate
+  pass (`5.3949 -> 4.9404`) and cross-city gate fail (`5.2549 -> 7.0586`,
+  ppl ratio `6.07`). Replay reduced the cross regression from 757x to 6.07x,
+  but did not achieve cross-family transfer. See `docs/DIVERSE_REPLAY_CYCLE.md`.
 - Added **external adapter training harness** (`research/train_adapter_candidate.py`)
   and `--adapter-trainer-command`/`--base` wiring. A real LoRA run on the local
   0.8.0 base moved held-out loss from 5.9941 to 0.7949 and perplexity from

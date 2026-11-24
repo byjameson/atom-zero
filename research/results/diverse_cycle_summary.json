@@ -1,0 +1,82 @@
+{
+  "teacher": "Qwen2.5-1.5B-Instruct",
+  "queue": {
+    "requested": 210,
+    "accepted": 194,
+    "families": {
+      "person_json": 40,
+      "product_json": 40,
+      "person_kv": 34,
+      "product_kv": 32,
+      "city_json": 25,
+      "city_kv": 23
+    }
+  },
+  "train_examples": 264,
+  "indist_eval": 28,
+  "cross_eval": 48,
+  "indist_gate": {
+    "status": "pass",
+    "ok": true,
+    "promotable": true,
+    "candidate_id": "ad-19def914c7dbdce5",
+    "adapter_label": "adapters_diverse/v0001",
+    "eval_examples": 28,
+    "baseline_loss": 5.394875630736351,
+    "adapter_loss": 4.940427961904788,
+    "loss_delta": -0.454448,
+    "baseline_ppl": 220.27474998439502,
+    "adapter_ppl": 139.83007870362138,
+    "ppl_ratio": 0.634798,
+    "min_loss_delta": 0.01,
+    "max_ppl_ratio": 1.0,
+    "reasons": [
+      "loss_improved",
+      "ppl_not_worse"
+    ],
+    "auto_apply": false,
+    "requires_training": true,
+    "weights_changed": false,
+    "method": "held_out_adapter_gate_v1"
+  },
+  "cross_gate": {
+    "status": "fail",
+    "ok": false,
+    "promotable": false,
+    "candidate_id": "ad-28eed8a2a3024bdc",
+    "adapter_label": "adapters_diverse/v0001",
+    "eval_examples": 48,
+    "baseline_loss": 5.254859422798236,
+    "adapter_loss": 7.058620061933624,
+    "loss_delta": 1.803761,
+    "baseline_ppl": 191.49456419214835,
+    "adapter_ppl": 1162.8394117377165,
+    "ppl_ratio": 6.072441,
+    "min_loss_delta": 0.01,
+    "max_ppl_ratio": 1.0,
+    "reasons": [
+      "loss_not_improved",
+      "ppl_regression"
+    ],
+    "auto_apply": false,
+    "requires_training": true,
+    "weights_changed": false,
+    "method": "held_out_adapter_gate_v1"
+  },
+  "autonomous": {
+    "status": "adapter_gate_failed",
+    "candidate": "ad-e18b7a03ddd172b3",
+    "trainer": {
+      "ok": true,
+      "returncode": 0,
+      "timed_out": false,
+      "elapsed_seconds": 54.992
+    },
+    "gate": "fail",
+    "loss_delta": 1.803761,
+    "ppl_ratio": 6.072441,
+    "weights_changed": false
+  },
+  "weights_changed": false,
+  "auto_apply": false
+}

@@ -54,6 +54,11 @@ current post-release evidence is the clean `1084 passed` run.
   loss moved **5.9941 -> 0.7949** and perplexity **401.04 -> 2.214**; the
   held-out gate passed (`loss_improved`, `ppl_not_worse`). The adapter is a
   local candidate; no product weights changed. See `docs/ADAPTER_TRAINING.md`.
+- Diverse teacher + replay cycle: 194 verified multi-family teacher rows; 264
+  training rows with JSON/key-value replay, 28 in-distribution and 48 city
+  held-out examples. In-distribution gate passed (`5.3949 -> 4.9404`);
+  cross-city gate failed (`5.2549 -> 7.0586`, ppl ratio `6.07`). The gate
+  blocked promotion. See `docs/DIVERSE_REPLAY_CYCLE.md`.
 - `0.7.0` cross-source consensus branch: **12 passed**
   (`tests/test_consensus.py`); the `AtomZeroConsensus` AISC spec is **PASS**
   (4 verified components, assurance bound 0.93, 0 irreversible).

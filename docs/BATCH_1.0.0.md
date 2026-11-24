@@ -22,7 +22,7 @@ boundary.
   teacher verification, growth report, self-code regression gate, loop history,
   autonomous sandbox, verified-teacher adapter candidates, a real LoRA training
   harness, a real teacher queue with cross-distribution fixture and a VM-run
-  cross-distribution gate result.
+  cross-distribution gate result, plus a multi-family replay cycle.
 
 ## Parallel Implementers
 
