@@ -80,8 +80,20 @@ def fmt(row: dict) -> str:
             "<|end|>")
 
 
+def _optional_label(value) -> str | None:
+    if not isinstance(value, str):
+        return None
+    label = value.strip()
+    return label or None
+
+
 def read_rows(path: str | Path) -> list[dict]:
-    """Read user/assistant rows from JSONL, skipping malformed examples."""
+    """Read user/assistant rows from JSONL, skipping malformed examples.
+
+    Optional ``family`` / ``key_family`` labels are preserved when present so
+    callers can audit content per family. Rows without labels keep the
+    original two-key shape.
+    """
     rows = []
     for line in resolve_path(path).read_text(encoding="utf-8").splitlines():
         if not line.strip():
@@ -92,7 +104,12 @@ def read_rows(path: str | Path) -> list[dict]:
         assistant = str(row.get("assistant", "")).strip()
         if not assistant:
             continue
-        rows.append({"user": str(row["user"]), "assistant": assistant})
+        cleaned = {"user": str(row["user"]), "assistant": assistant}
+        for key in ("family", "key_family"):
+            label = _optional_label(row.get(key))
+            if label is not None:
+                cleaned[key] = label
+        rows.append(cleaned)
     if not rows:
         raise SystemExit("no user/assistant rows found")
     return rows
@@ -174,7 +191,7 @@ def score_rows(model, tok, rows: list[dict]) -> dict:
                 else:
                     syntax_nll += loss_value
                     syntax_tokens += 1
-            per_row.append({
+            scored_row = {
                 "index": index,
                 "user": row["user"][:120],
                 "assistant": row["assistant"][:120],
@@ -184,7 +201,11 @@ def score_rows(model, tok, rows: list[dict]) -> dict:
                                  if row_content_tokens else None),
                 "content_tokens": row_content_tokens,
                 "truncated": truncated,
-            })
+            }
+            for key in ("family", "key_family"):
+                if row.get(key):
+                    scored_row[key] = row[key]
+            per_row.append(scored_row)
     if total_tokens == 0:
         raise SystemExit("no assistant tokens scored")
     loss = total_nll / total_tokens

@@ -145,3 +145,20 @@ def test_read_rows_skips_incomplete_examples(tmp_path):
         {"user": "hello", "assistant": "hi"},
         {"user": "bye", "assistant": "hello"},
     ]
+
+
+def test_read_rows_preserves_optional_family_fields(tmp_path):
+    path = tmp_path / "rows.jsonl"
+    path.write_text(
+        '{"user": "hello", "assistant": "hi", '
+        '"family": " person_kv ", "key_family": "kv"}\n'
+        '{"user": "bye", "assistant": "hello"}\n'
+        '{"user": "hey", "assistant": "hi", "family": ""}\n',
+        encoding="utf-8")
+    rows = read_rows(path)
+    assert rows[0] == {
+        "user": "hello", "assistant": "hi",
+        "family": "person_kv", "key_family": "kv",
+    }
+    assert rows[1] == {"user": "bye", "assistant": "hello"}
+    assert rows[2] == {"user": "hey", "assistant": "hi"}
