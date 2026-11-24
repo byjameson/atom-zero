@@ -42,6 +42,29 @@ The export:
 - writes `candidate.json` with no prompt/answer text;
 - reports `auto_apply: false` and `weights_changed: false`.
 
+## Cross-distribution split
+
+For a distribution-shift check, use an explicit train/eval split instead of a
+random tail split:
+
+```powershell
+atomzero-adapter-candidate export-cross `
+  --train-jsonl data/teacher_json.jsonl `
+  --eval-jsonl data/teacher_keyvalue.jsonl `
+  --out-dir data/teacher_cross_candidate --json
+```
+
+`export-cross`:
+
+- keeps the two distributions separate;
+- rejects an identical row that appears in both sides;
+- marks the candidate metadata with `split_method:
+  explicit_cross_distribution`;
+- still requires every row to be verified.
+
+A pass on this candidate means the adapter improved on a held-out distribution,
+not just on a random tail of the training distribution.
+
 ## Held-out gate
 
 ```powershell

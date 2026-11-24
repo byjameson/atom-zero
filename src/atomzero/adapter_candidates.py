@@ -38,6 +38,7 @@ __all__ = [
     "EVAL_METHOD",
     "EVENT_METHOD",
     "build_candidate",
+    "build_cross_candidate",
     "evaluate_candidate",
     "load_examples",
     "main",
@@ -142,6 +143,73 @@ def build_candidate(examples, *, eval_ratio=DEFAULT_EVAL_RATIO,
     }
     return {
         "candidate_id": candidate_id,
+        "metadata": metadata,
+        "train": train_rows,
+        "eval": eval_rows,
+    }
+
+
+def build_cross_candidate(train_examples, eval_examples, *,
+                           seed=DEFAULT_SEED, candidate_id=None) -> dict:
+    """Build an explicit train/eval candidate without random mixing.
+
+    This is for cross-distribution checks: train and eval come from different
+    distributions, and an overlapping row is rejected rather than silently
+    leaked into both sides.
+    """
+    if not isinstance(train_examples, list) or not isinstance(
+            eval_examples, list):
+        raise ValueError("train_examples and eval_examples must be lists")
+    def clean(rows, label):
+        cleaned = []
+        seen = set()
+        duplicates = 0
+        for index, raw in enumerate(rows):
+            row = _clean_example(raw, index)
+            digest = _row_digest(row)
+            if digest in seen:
+                duplicates += 1
+                continue
+            seen.add(digest)
+            cleaned.append(row)
+        if not cleaned:
+            raise ValueError(f"{label} has no unique verified examples")
+        return cleaned, seen, duplicates
+
+    train_rows, train_seen, train_dupes = clean(
+        train_examples, "train_examples")
+    eval_rows, eval_seen, eval_dupes = clean(
+        eval_examples, "eval_examples")
+    overlap = train_seen & eval_seen
+    if overlap:
+        raise ValueError(
+            f"train/eval overlap: {len(overlap)} identical example(s)")
+    payload = (
+        "".join(_row_digest(row) for row in train_rows)
+        + "|CROSS|"
+        + "".join(_row_digest(row) for row in eval_rows)
+        + f"|{seed}")
+    identifier = candidate_id or ("ad-" + _hash(payload)[:16])
+    metadata = {
+        "candidate_id": identifier,
+        "version": 1,
+        "train_examples": len(train_rows),
+        "eval_examples": len(eval_rows),
+        "total_examples": len(train_rows) + len(eval_rows),
+        "duplicates_skipped": train_dupes + eval_dupes,
+        "eval_ratio": (
+            round(len(eval_rows) / (len(train_rows) + len(eval_rows)), 6)
+            if train_rows or eval_rows else 0.0),
+        "seed": int(seed),
+        "split_method": "explicit_cross_distribution",
+        "min_loss_delta": DEFAULT_MIN_LOSS_DELTA,
+        "max_ppl_ratio": DEFAULT_MAX_PPL_RATIO,
+        "auto_apply": False,
+        "weights_changed": False,
+        "method": EVENT_METHOD,
+    }
+    return {
+        "candidate_id": identifier,
         "metadata": metadata,
         "train": train_rows,
         "eval": eval_rows,
@@ -609,6 +677,13 @@ def main(argv=None) -> int:
     export.add_argument("--seed", type=int, default=DEFAULT_SEED)
     export.add_argument("--json", action="store_true")
 
+    cross = sub.add_parser("export-cross")
+    cross.add_argument("--train-jsonl", required=True)
+    cross.add_argument("--eval-jsonl", required=True)
+    cross.add_argument("--out-dir", required=True)
+    cross.add_argument("--seed", type=int, default=DEFAULT_SEED)
+    cross.add_argument("--json", action="store_true")
+
     evaluate = sub.add_parser("evaluate")
     evaluate.add_argument("--candidate-json", required=True)
     evaluate.add_argument("--comparison-json", required=True)
@@ -641,6 +716,18 @@ def main(argv=None) -> int:
             candidate = build_candidate(
                 _load_examples(args.examples_jsonl),
                 eval_ratio=args.eval_ratio, seed=args.seed)
+            paths = write_candidate(candidate, args.out_dir)
+            payload = {
+                "candidate": candidate["metadata"],
+                "paths": paths,
+                "auto_apply": False,
+                "weights_changed": False,
+            }
+            code = 0
+        elif args.command == "export-cross":
+            candidate = build_cross_candidate(
+                _load_examples(args.train_jsonl),
+                _load_examples(args.eval_jsonl), seed=args.seed)
             paths = write_candidate(candidate, args.out_dir)
             payload = {
                 "candidate": candidate["metadata"],

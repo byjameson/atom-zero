@@ -6,6 +6,7 @@ import pytest
 
 from atomzero.adapter_candidates import (
     build_candidate,
+    build_cross_candidate,
     evaluate_candidate,
     main,
     run_adapter_loop,
@@ -64,6 +65,21 @@ def test_build_candidate_rejects_unverified():
         build_candidate([_example(0, verified=False)])
     with pytest.raises(ValueError):
         build_candidate([{"user": "q", "assistant": "a"}])
+
+
+def test_cross_candidate_keeps_distributions_separate(tmp_path):
+    train = [_example(index) for index in range(4)]
+    eval_rows = [{"user": f"cross {index}", "assistant": f"answer {index}",
+                  "verification": {"verified": True, "promotable": True}}
+                 for index in range(2)]
+    candidate = build_cross_candidate(train, eval_rows, seed=13)
+    assert candidate["metadata"]["split_method"] == (
+        "explicit_cross_distribution")
+    assert candidate["metadata"]["train_examples"] == 4
+    assert candidate["metadata"]["eval_examples"] == 2
+    assert candidate["metadata"]["candidate_id"].startswith("ad-")
+    with pytest.raises(ValueError):
+        build_cross_candidate(train, [train[0]])
 
 
 def test_write_candidate_keeps_text_out_of_metadata(tmp_path):
