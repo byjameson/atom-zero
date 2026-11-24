@@ -1,5 +1,12 @@
 # Changelog
 
+## atomzero 0.22.0 - unreleased
+
+- Integrated the staged curriculum runner into `atomzero-self-improve`: `--adapter-curriculum-command` runs a bounded curriculum job, records the gate/promotion block, and fails closed on gate/threshold errors.
+- The curriculum ledger now carries exact-match, key-copy, promotion and active-file evidence; raw prompt/answer text is never stored.
+- Added `--adapter-curriculum-data-dir`, `--adapter-curriculum-final-eval`, `--adapter-curriculum-min-exact-match` and `--adapter-curriculum-min-key-copy-rate`.
+- 1271 tests passed on the VM in 46.34s; benchmark 20/20.
+
 ## atomzero 0.21.0 - 2026-11-24
 
 - Added a **curriculum gate/promotion loop**: the staged runner can train, evaluate a final mixed set, run the content/exact/key-copy gate and optionally promote to a separate curriculum registry.

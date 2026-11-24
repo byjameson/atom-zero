@@ -102,7 +102,7 @@ spec generator; the LinkedIn activity feed contains the `0.6.1` post.
     bounded history-aware signal priorities from the decision ledger.
   - `feat/scoreboard-collect` in `%TEMP%\opencode\atom-zero-score`:
     content-free count extraction from pytest/benchmark/AISC output.
-- Reviewer gate on `main`: **1264 Atom Zero tests**, **223 AISC tests**,
+- Reviewer gate on `main`: **1271 Atom Zero tests**, **223 AISC tests**,
   **26 strict AISC specs (24 PASS, 2 expected answerability FAIL)** and
   **20/20** self-improvement benchmark checks.
 - Release agent: releases follow **one major version per release** now.
