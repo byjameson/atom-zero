@@ -184,7 +184,163 @@ The build has 19,824 unique keys and 19,824 unique values, 11,000 verified
 rows and 0 rejected attempts. The `multi` stage has 2-4 pairs (mean 3.011) and
 contains all four value pools.
 
-## How to use the stages
+## Curriculum runner
+
+`research/run_staged_curriculum.py` chains the five stages instead of relying
+on manual trainer commands. It uses only the standard library plus
+subprocesses; the runner never imports `torch` or loads a model. Training and
+evaluation run through the existing
+`research/train_adapter_candidate.py` and `research/compare_adapters.py`.
+
+### Exact command
+
+```powershell
+$env:PYTHONPATH="$PWD;$PWD\src"
+$env:PYTHONIOENCODING="utf-8"
+python research/run_staged_curriculum.py `
+  --data-dir data/staged_copy_v1 `
+  --out-dir checkpoints/staged_curriculum `
+  --base checkpoints/transformer_behavior_50m_long `
+  --stages echo_kv,echo_json,two_kv,two_json,multi `
+  --steps 2000 --batch-size 4 --lr 3e-4 --content-weight 2 `
+  --replay-weight 0 --rank 8 --alpha 8 --rank-attn 4 --alpha-attn 8 `
+  --seed 23 `
+  --result research/results/staged_curriculum_run.json
+```
+
+Add `--replay-jsonl data/...` together with a non-zero
+`--replay-weight` to mix older rows into every stage. The runner passes the
+same replay settings to all stages.
+
+### Stage order
+
+The canonical order is fixed and enforced even if `--stages` lists the names
+in another order:
+
+1. `echo_kv` - one KV pair;
+2. `echo_json` - one JSON pair;
+3. `two_kv` - two KV pairs;
+4. `two_json` - two JSON pairs;
+5. `multi` - two to four mixed KV/JSON pairs.
+
+Every stage trains into `out_dir/<stage>/`. The first stage starts a fresh
+adapter. Every later stage adds `--init-adapter` pointing at the previous
+stage's output directory, so the LoRA weights continue across the curriculum.
+Explicit rank/alpha flags must match the saved adapter geometry; the defaults
+above do.
+
+### Evaluation
+
+After training a stage, the runner evaluates the adapter twice:
+
+- on that stage's own `stage_<stage>/eval.jsonl`;
+- on the final `stage_multi/eval.jsonl`, unless the current stage is `multi`
+  or the file does not exist.
+
+Each comparison runs `compare_adapters.py` with `--per-family`,
+`--exact-match` and `--key-copy`. The runner extracts only aggregate numbers:
+full/content/key/value/syntax loss, exact-match rate, key-copy rate, key
+recall and per-family aggregates. The comparator's raw output contains
+`user`/`assistant` rows; the runner reads that temporary file, strips it and
+deletes it. No prompt or answer text is written to the ledger.
+
+### Expected output
+
+```text
+checkpoints/staged_curriculum/
+  echo_kv/
+    adapter.pt
+    config.json
+    trainer_result.json
+  echo_json/
+  two_kv/
+  two_json/
+  multi/
+  ledger.json
+research/results/staged_curriculum_run.json
+```
+
+Both JSON files contain the same content-free ledger. A stage record looks
+like this (abridged):
+
+```json
+{
+  "stage": "echo_kv",
+  "index": 1,
+  "adapter": "checkpoints/staged_curriculum/echo_kv",
+  "init_adapter": null,
+  "trainer": {
+    "returncode": 0,
+    "elapsed_seconds": 41.27,
+    "adapter_config": {"r_mlp": 8, "alpha_mlp": 8,
+                       "r_attn": 4, "alpha_attn": 8},
+    "result": {"train_loss": 0.041, "train_steps": 2000,
+               "optimizer_steps": 500, "lora_parameters": 405504}
+  },
+  "evals": {
+    "stage": {
+      "returncode": 0,
+      "elapsed_seconds": 3.4,
+      "metrics": {
+        "adapter": {
+          "loss": 0.182, "content_loss": 0.201, "key_loss": 0.154,
+          "value_loss": 0.166, "syntax_loss": 0.097,
+          "exact_match_rate": 0.94, "key_copy_rate": 0.98,
+          "key_recall": 0.99
+        },
+        "base": {"loss": 3.71},
+        "per_family": {"staged_copy_echo_kv": {"adapter": {"loss": 0.182}}}
+      }
+    },
+    "multi": {"returncode": 0, "metrics": {"adapter": {"loss": 1.83}}}
+  },
+  "key_copy_rate": 0.98,
+  "key_recall": 0.99,
+  "exact_match_rate": 0.94,
+  "key_copy_gate": null
+}
+```
+
+The exact numbers depend on the base checkpoint and step budget; the shape and
+the field names are stable. `stages` is ordered, `stage_order` lists the stages
+that actually ran, and `stopped_early`/`stop_stage` report a gate stop.
+
+### Key-copy gate
+
+Add a threshold in `[0, 1]` to stop the curriculum as soon as a stage shows
+the copy behavior:
+
+```powershell
+python research/run_staged_curriculum.py `
+  --base checkpoints/transformer_behavior_50m_long `
+  --stop-on-key-copy 0.8
+```
+
+The gate uses the adapter's key-copy rate on the current stage's own held-out
+eval split, not on the final `multi` split. A stage is recorded with
+`"key_copy_gate": {"threshold": 0.8, "passed": true}`, the runner sets
+`stopped_early` and `stop_stage`, and no later stage is trained. Reaching the
+gate is a schedule stop, not an adapter promotion: it does not change the
+trainer, the comparator or the product weights.
+
+### Dry run and tests
+
+`--dry-run` skips all subprocesses, writes fake aggregate metrics and needs no
+data files or checkpoint. It is useful to check option validation and produce
+a sample result:
+
+```powershell
+python research/run_staged_curriculum.py `
+  --dry-run --stages echo_kv,echo_json,multi `
+  --out-dir checkpoints/staged_curriculum_dry_run `
+  --result research/results/staged_curriculum_dry_run.json
+```
+
+```powershell
+python -m pytest tests/test_curriculum_runner.py -q
+```
+
+### How to use the stages
 
 Suggested training sequence:
 
@@ -194,9 +350,10 @@ Suggested training sequence:
 4. Keep each stage's `eval.jsonl` untouched. A stage counts as learned only
    when exact match is high on its own held-out keys.
 
-The files use the teacher-queue `user`/`assistant`/`family` schema, so existing
-research trainers can consume them without changes to the trainer. This branch
-does not add a trainer or change the random-copy generator.
+The runner automates exactly this sequence and records the evidence. The files
+use the teacher-queue `user`/`assistant`/`family` schema, so existing research
+trainers can consume them without changes to the trainer. This branch does not
+change the trainer, the comparator or the random-copy generator.
 
 ## Honest boundary
 
