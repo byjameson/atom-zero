@@ -1088,6 +1088,7 @@ def run_curriculum(
     base: str,
     data_dir: str | Path,
     out_dir: str | Path,
+    init_adapter: str | Path | None = None,
     stages: Sequence[str] | str = STAGE_ORDER,
     steps: int = 2000,
     batch_size: int = 4,
@@ -1126,7 +1127,8 @@ def run_curriculum(
     records: list[dict[str, Any]] = []
     stopped_early = False
     stop_stage: str | None = None
-    previous_adapter: Path | None = None
+    previous_adapter: Path | None = (
+        _resolve(init_adapter) if init_adapter else None)
     multi_eval = data_root / "stage_multi" / "eval.jsonl"
     if final_eval is not None:
         final_eval_path = _resolve(final_eval)
@@ -1384,6 +1386,7 @@ def run_curriculum(
         "active_file": _display_path(active_target),
         "elapsed_seconds": round(time.monotonic() - started, 3),
         "options": {
+            "init_adapter": _display_path(init_adapter) if init_adapter else None,
             "steps": steps,
             "batch_size": batch_size,
             "lr": lr,
@@ -1517,6 +1520,9 @@ def main(argv: Sequence[str] | None = None, *,
         "--out-dir", default=DEFAULT_OUT_DIR,
         help=f"adapter output root (default: {DEFAULT_OUT_DIR})")
     parser.add_argument(
+        "--init-adapter", default=None,
+        help="optional first-stage adapter to continue from")
+    parser.add_argument(
         "--base", default="",
         help="base checkpoint directory (required unless --dry-run)")
     parser.add_argument(
@@ -1611,6 +1617,7 @@ def main(argv: Sequence[str] | None = None, *,
             base=args.base,
             data_dir=args.data_dir,
             out_dir=args.out_dir,
+            init_adapter=args.init_adapter,
             stages=args.stages,
             steps=args.steps,
             batch_size=args.batch_size,

@@ -402,6 +402,33 @@ def test_stage_order_and_init_adapter_chaining(tmp_path):
     assert first["steps"] == "10"
 
 
+def test_first_stage_init_adapter(tmp_path):
+    trainer, comparator, log = _fake_backend(tmp_path)
+    data_dir = tmp_path / "data"
+    out_dir = tmp_path / "adapters"
+    _write_stage_files(data_dir, ("echo_kv",))
+    seed = tmp_path / "seed_adapter"
+    seed.mkdir()
+
+    result = runner.run_curriculum(
+        base="checkpoints/base",
+        data_dir=data_dir,
+        out_dir=out_dir,
+        init_adapter=seed,
+        stages="echo_kv",
+        steps=10,
+        trainer_command=trainer,
+        comparator_command=comparator,
+    )
+
+    assert Path(result["stages"][0]["init_adapter"]) == seed
+    assert result["options"]["init_adapter"] == str(seed)
+    calls = _calls(log)
+    trainer_calls = [call for call in calls if call["role"] == "trainer"]
+    first = _flags(trainer_calls[0]["argv"])
+    assert Path(first["init-adapter"]) == seed
+
+
 def test_early_stop_when_key_copy_gate_reached(tmp_path):
     trainer, comparator, log = _fake_backend(tmp_path)
     data_dir = tmp_path / "data"
