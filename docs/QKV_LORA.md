@@ -119,6 +119,65 @@ Repeat for `stage_two_json/eval.jsonl`, `stage_echo_json/eval.jsonl` and the
 mixed final eval. Report per-family exact match and key-copy rate; aggregate
 loss alone can hide a broken or unchanged copy circuit.
 
+## Controlled multi-seed capacity ablation
+
+One from-base QKV run scored 6% exact / 18% key copy on the multi-short split.
+That is a single anecdote, not a locus result. The runner
+`research/run_qkv_capacity_ablation.py` performs the controlled A/B: the same
+seeds, data order, steps, batch size, learning rate, loss weights, MLP
+geometry and `out_proj` geometry for both arms. The only planned difference
+is the fused QKV LoRA rank/alpha:
+
+| arm | MLP | `out_proj` | fused QKV |
+|---|---|---|---|
+| `qkv4` | rank 8 / alpha 8 | rank 4 / alpha 8 | rank 4 / alpha 8 |
+| `mlp` | rank 8 / alpha 8 | rank 4 / alpha 8 | off (rank 0) |
+
+`mlp` is the no-QKV control: it keeps the MLP and `out_proj` adapters. The
+name means the fused QKV projection is frozen, not that attention is
+untouched. The command uses the 3-key split because 4-key exact match is at a
+0% ceiling for both arms; run `stage_4short/eval.jsonl` as the harder check
+and `mix_eval50.jsonl` for transfer. Train on the matching stage file for a
+locus test, or on `mix_train.jsonl` for transfer across 2-4 keys; both arms
+must always use the same train file.
+
+```powershell
+$env:PYTHONPATH="$PWD;$PWD\src"
+$env:PYTHONIOENCODING="utf-8"
+
+python research/run_qkv_capacity_ablation.py `
+  --base "$env:USERPROFILE\.cache\atomzero\atom-zero-49m" `
+  --train data/multi_short_v1/stage_3short/train.jsonl `
+  --eval data/multi_short_v1/stage_3short/eval.jsonl `
+  --arms qkv4,mlp `
+  --seeds 23,29,37 `
+  --steps 4000 --batch-size 4 --lr 3e-4 `
+  --content-weight 2 --key-weight 3 --value-weight 2 `
+  --out checkpoints/qkv_capacity_ablation `
+  --result research/results/qkv_capacity_ablation.json
+```
+
+Use `--dry-run` to print all six trainer/evaluator commands without touching
+data or checkpoints. Use `--max-eval-rows N` to score a deterministic
+hash-selected subset; the subset is materialized once in a temporary
+directory, shared by every arm and seed, then deleted. Per-row comparison
+payloads also go to that temporary directory, so the result never stores
+prompt or answer text.
+
+For every arm x seed the runner records exact match, key-copy rate, key
+recall, eval loss, content loss, train loss, LoRA parameter count, return
+codes and elapsed seconds. The JSON (`--result`) and sibling Markdown report
+contain per-seed rows, per-arm mean/sample-std/min/max, and a 95% t-interval
+over seeds. A claim is reported only when the intervals for both exact match
+and key copy do not overlap and point in the same direction. Overlap is
+reported as `inconclusive`, which is not evidence of no effect; with three
+seeds the design detects only large effects.
+
+QKV rank 4 adds 73,728 trainable parameters, so a QKV win can be a capacity
+effect rather than an attention-locus effect. The follow-up control is an MLP
+widening matched to the QKV parameter count, run through the same seeds and
+data.
+
 ## What to measure
 
 1. **Control vs QKV on the same rows and seed.** Use the same MLP/out_proj
