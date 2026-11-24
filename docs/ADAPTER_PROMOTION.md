@@ -75,3 +75,22 @@ The active registry points at `checkpoints/adapters_content/v0001` on the host
 and `data/diverse_autonomous_content/adapter` in the VM. The base checkpoint
 remains `0.8.0`. The earlier unweighted adapter failed the content audit and was
 removed.
+
+## Behavior gate - required for 1.0.0 promotion
+
+Content-token loss is still a token-average metric. The exact-match audit in
+`docs/CONTENT_AUDIT.md` shows the current registry entry at **0/48** on the
+held-out city family and 5/28 on the in-distribution entities. It copies
+values and formats, not unseen key names. The gate therefore fails when run as:
+
+```powershell
+atomzero-adapter-candidate evaluate `
+  --candidate-json data/diverse_autonomous_content/candidate.json `
+  --comparison-json research/results/content_adapter_cross_audit.json `
+  --require-content --min-exact-match 0.25 --json
+```
+
+Any new promotion must pass both `--require-content` and `--min-exact-match`.
+The existing registry entry predates that requirement and must not be treated
+as a task-copy proof or used as the default chat model.
+

@@ -431,6 +431,8 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Adapter cross-distribution cycle: <https://github.com/byjameson/atom-zero/blob/main/docs/ADAPTER_CROSS_CYCLE.md>
 - Adapter promotion: <https://github.com/byjameson/atom-zero/blob/main/docs/ADAPTER_PROMOTION.md>
 - Diverse teacher + replay cycle: <https://github.com/byjameson/atom-zero/blob/main/docs/DIVERSE_REPLAY_CYCLE.md>
+- Exact-match content audit: <https://github.com/byjameson/atom-zero/blob/main/docs/CONTENT_AUDIT.md>
+- Copy-curriculum value-vs-key cycle: <https://github.com/byjameson/atom-zero/blob/main/docs/COPY_CURRICULUM_CYCLE.md>
 - Replay-aware adapter training: <https://github.com/byjameson/atom-zero/blob/main/docs/REPLAY_TRAINING.md>
 - Adapter growth cycle 1: <https://github.com/byjameson/atom-zero/blob/main/docs/ADAPTER_CYCLE_1.md>
 - AISC spec generator: <https://github.com/byjameson/atom-zero/blob/main/docs/AISC_SPEC_GENERATOR.md>
