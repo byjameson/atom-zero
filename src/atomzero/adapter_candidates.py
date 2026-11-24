@@ -32,14 +32,17 @@ from atomzero.sandbox import run_command, sanitized_env
 
 __all__ = [
     "DEFAULT_EVAL_RATIO",
+    "DEFAULT_FAMILY",
     "DEFAULT_MAX_PPL_RATIO",
     "DEFAULT_MIN_LOSS_DELTA",
     "DEFAULT_SEED",
     "EVAL_METHOD",
     "EVENT_METHOD",
+    "MAX_FAMILY_LENGTH",
     "build_candidate",
     "build_cross_candidate",
     "evaluate_candidate",
+    "family_summary",
     "load_examples",
     "main",
     "run_adapter_loop",
@@ -48,6 +51,8 @@ __all__ = [
 ]
 
 DEFAULT_EVAL_RATIO = 0.2
+DEFAULT_FAMILY = "unspecified"
+MAX_FAMILY_LENGTH = 64
 DEFAULT_SEED = 13
 DEFAULT_MIN_LOSS_DELTA = 0.01
 DEFAULT_MAX_PPL_RATIO = 1.0
@@ -65,6 +70,37 @@ def _hash(value: str) -> str:
 
 def _row_digest(row: dict) -> str:
     return _hash(str(row["user"]) + "\0" + str(row["assistant"]))
+
+
+def _family_label(value, index: int, where: str = "examples") -> str:
+    """Validate a content-free task-family label."""
+    if value is None:
+        return DEFAULT_FAMILY
+    if not isinstance(value, str):
+        raise ValueError(f"{where}[{index}].family must be a string")
+    family = value.strip()
+    if not family:
+        raise ValueError(f"{where}[{index}].family must not be blank")
+    if any(ord(ch) < 32 or ord(ch) == 127 for ch in family):
+        raise ValueError(
+            f"{where}[{index}].family contains control characters")
+    if len(family) > MAX_FAMILY_LENGTH:
+        raise ValueError(
+            f"{where}[{index}].family exceeds {MAX_FAMILY_LENGTH} characters")
+    return family
+
+
+def family_summary(rows) -> dict:
+    """Count rows by validated task family without exposing content."""
+    if not isinstance(rows, list):
+        raise ValueError("rows must be a list")
+    counts = {}
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            raise ValueError(f"rows[{index}] must be an object")
+        family = _family_label(row.get("family"), index, where="rows")
+        counts[family] = counts.get(family, 0) + 1
+    return {name: counts[name] for name in sorted(counts)}
 
 
 def _clean_example(row, index: int) -> dict:
@@ -87,7 +123,11 @@ def _clean_example(row, index: int) -> dict:
         raise ValueError(f"examples[{index}] is not verified")
     if verification.get("promotable") is False:
         raise ValueError(f"examples[{index}] is verified but not promotable")
-    return {"user": user.strip(), "assistant": assistant.strip()}
+    return {
+        "user": user.strip(),
+        "assistant": assistant.strip(),
+        "family": _family_label(row.get("family"), index),
+    }
 
 
 def build_candidate(examples, *, eval_ratio=DEFAULT_EVAL_RATIO,
@@ -123,6 +163,8 @@ def build_candidate(examples, *, eval_ratio=DEFAULT_EVAL_RATIO,
         eval_count = min(eval_count, len(rows) - 1)
     train_rows = rows[:len(rows) - eval_count]
     eval_rows = rows[len(rows) - eval_count:]
+    train_family_counts = family_summary(train_rows)
+    eval_family_counts = family_summary(eval_rows)
     payload = "".join(
         _row_digest(row) for row in rows) + f"|{seed}|{eval_ratio}"
     candidate_id = "ad-" + _hash(payload)[:16]
@@ -135,6 +177,11 @@ def build_candidate(examples, *, eval_ratio=DEFAULT_EVAL_RATIO,
         "duplicates_skipped": duplicates,
         "eval_ratio": eval_ratio,
         "seed": seed,
+        "family_separation": "not_applicable",
+        "train_families": sorted(train_family_counts),
+        "eval_families": sorted(eval_family_counts),
+        "train_family_counts": train_family_counts,
+        "eval_family_counts": eval_family_counts,
         "min_loss_delta": DEFAULT_MIN_LOSS_DELTA,
         "max_ppl_ratio": DEFAULT_MAX_PPL_RATIO,
         "auto_apply": False,
@@ -185,6 +232,20 @@ def build_cross_candidate(train_examples, eval_examples, *,
     if overlap:
         raise ValueError(
             f"train/eval overlap: {len(overlap)} identical example(s)")
+    train_family_counts = family_summary(train_rows)
+    eval_family_counts = family_summary(eval_rows)
+    train_families = sorted(train_family_counts)
+    eval_families = sorted(eval_family_counts)
+    train_specified = set(train_families) - {DEFAULT_FAMILY}
+    eval_specified = set(eval_families) - {DEFAULT_FAMILY}
+    leaked = sorted(train_specified & eval_specified)
+    if leaked:
+        raise ValueError(
+            "task-family leakage: eval families also appear in training: "
+            + ", ".join(leaked))
+    family_separation = (
+        DEFAULT_FAMILY not in train_families
+        and DEFAULT_FAMILY not in eval_families)
     payload = (
         "".join(_row_digest(row) for row in train_rows)
         + "|CROSS|"
@@ -203,6 +264,11 @@ def build_cross_candidate(train_examples, eval_examples, *,
             if train_rows or eval_rows else 0.0),
         "seed": int(seed),
         "split_method": split_method,
+        "family_separation": family_separation,
+        "train_families": train_families,
+        "eval_families": eval_families,
+        "train_family_counts": train_family_counts,
+        "eval_family_counts": eval_family_counts,
         "min_loss_delta": DEFAULT_MIN_LOSS_DELTA,
         "max_ppl_ratio": DEFAULT_MAX_PPL_RATIO,
         "auto_apply": False,
@@ -741,6 +807,10 @@ def main(argv=None) -> int:
             paths = write_candidate(candidate, args.out_dir)
             payload = {
                 "candidate": candidate["metadata"],
+                "family_counts": {
+                    "train": candidate["metadata"]["train_family_counts"],
+                    "eval": candidate["metadata"]["eval_family_counts"],
+                },
                 "paths": paths,
                 "auto_apply": False,
                 "weights_changed": False,

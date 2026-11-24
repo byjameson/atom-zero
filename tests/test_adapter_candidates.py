@@ -8,6 +8,7 @@ from atomzero.adapter_candidates import (
     build_candidate,
     build_cross_candidate,
     evaluate_candidate,
+    family_summary,
     main,
     run_adapter_loop,
     summarize_adapter_ledger,
@@ -15,8 +16,8 @@ from atomzero.adapter_candidates import (
 )
 
 
-def _example(index, verified=True):
-    return {
+def _example(index, verified=True, family=None):
+    row = {
         "user": f"question {index}",
         "assistant": f"answer {index}",
         "verification": {
@@ -25,6 +26,9 @@ def _example(index, verified=True):
             "status": "verified" if verified else "unverified",
         },
     }
+    if family is not None:
+        row["family"] = family
+    return row
 
 
 def _candidate(eval_ratio=0.25, count=4):
@@ -80,6 +84,108 @@ def test_cross_candidate_keeps_distributions_separate(tmp_path):
     assert candidate["metadata"]["candidate_id"].startswith("ad-")
     with pytest.raises(ValueError):
         build_cross_candidate(train, [train[0]])
+
+
+def test_family_summary_counts_labels_and_defaults():
+    rows = [
+        _example(0, family="person_json"),
+        _example(1, family="person_json"),
+        _example(2, family="product_kv"),
+        _example(3),
+    ]
+    assert family_summary(rows) == {
+        "person_json": 2, "product_kv": 1, "unspecified": 1}
+    with pytest.raises(ValueError):
+        family_summary([_example(4, family="bad\nfamily")])
+    with pytest.raises(ValueError):
+        family_summary([_example(5, family=13)])
+    with pytest.raises(ValueError):
+        family_summary([_example(6, family="   ")])
+
+
+def test_cross_candidate_reports_disjoint_families():
+    train = [_example(f"train-{index}", family="person_json")
+             for index in range(3)]
+    eval_rows = [_example(f"eval-{index}", family="product_kv")
+                 for index in range(2)]
+    candidate = build_cross_candidate(train, eval_rows)
+    metadata = candidate["metadata"]
+    assert metadata["train_families"] == ["person_json"]
+    assert metadata["eval_families"] == ["product_kv"]
+    assert metadata["family_separation"] is True
+    assert metadata["train_family_counts"] == {"person_json": 3}
+    assert metadata["eval_family_counts"] == {"product_kv": 2}
+    assert candidate["train"]
+    assert candidate["eval"]
+
+
+def test_cross_candidate_rejects_family_leakage():
+    train = [
+        _example("train-0", family="city_json"),
+        _example("train-1", family="person_json"),
+    ]
+    eval_rows = [
+        _example("eval-0", family="product_kv"),
+        _example("eval-1", family="city_json"),
+    ]
+    with pytest.raises(ValueError, match="task-family leakage"):
+        build_cross_candidate(train, eval_rows)
+
+
+def test_cross_candidate_without_families_still_works():
+    train = [_example(f"train-{index}") for index in range(2)]
+    eval_rows = [_example(f"eval-{index}") for index in range(2)]
+    candidate = build_cross_candidate(train, eval_rows)
+    metadata = candidate["metadata"]
+    assert metadata["train_families"] == ["unspecified"]
+    assert metadata["eval_families"] == ["unspecified"]
+    assert metadata["family_separation"] is False
+    assert metadata["train_family_counts"] == {"unspecified": 2}
+    assert metadata["eval_family_counts"] == {"unspecified": 2}
+
+    mixed = build_cross_candidate(
+        [_example("mixed-train")],
+        [_example("mixed-eval", family="city_json")])
+    assert mixed["metadata"]["eval_families"] == ["city_json"]
+    assert mixed["metadata"]["family_separation"] is False
+
+
+def test_build_candidate_never_claims_family_separation():
+    examples = [
+        _example(index, family="person_json" if index % 2 else "city_json")
+        for index in range(4)
+    ]
+    metadata = build_candidate(examples, eval_ratio=0.5)["metadata"]
+    assert metadata["family_separation"] == "not_applicable"
+    assert set(metadata["train_families"]) <= {"person_json", "city_json"}
+    assert sum(metadata["train_family_counts"].values()) == (
+        metadata["train_examples"])
+    assert sum(metadata["eval_family_counts"].values()) == (
+        metadata["eval_examples"])
+
+
+def test_family_labels_are_validated_and_stripped():
+    candidate = build_candidate(
+        [_example(0, family="  person_json  ")], eval_ratio=0.0)
+    assert candidate["train"][0]["family"] == "person_json"
+    assert candidate["metadata"]["train_families"] == ["person_json"]
+    with pytest.raises(ValueError):
+        build_candidate([_example(1, family="bad\x7ffamily")],
+                        eval_ratio=0.0)
+    with pytest.raises(ValueError):
+        build_candidate([_example(2, family="x" * 65)], eval_ratio=0.0)
+
+
+def test_family_metadata_has_no_prompt_or_answer_text():
+    train = [_example("secret-train", family="person_json")]
+    eval_rows = [_example("secret-eval", family="product_kv")]
+    candidate = build_cross_candidate(train, eval_rows)
+    serialized = json.dumps(candidate["metadata"])
+    assert "secret-train" not in serialized
+    assert "secret-eval" not in serialized
+    assert "question" not in serialized
+    assert "answer" not in serialized
+    assert not ({"user", "assistant"} & set(candidate["metadata"]))
 
 
 def test_write_candidate_keeps_text_out_of_metadata(tmp_path):
@@ -232,6 +338,37 @@ def test_cli_export(tmp_path, capsys):
     payload = json.loads(capsys.readouterr().out)
     assert payload["candidate"]["eval_examples"] == 1
     assert (out / "candidate.json").is_file()
+    assert (out / "train.jsonl").is_file()
+    assert (out / "eval.jsonl").is_file()
+
+
+def test_cli_export_cross_reports_family_counts(tmp_path, capsys):
+    train_path = tmp_path / "train.jsonl"
+    eval_path = tmp_path / "eval.jsonl"
+    train_path.write_text(
+        "".join(json.dumps(_example(f"train-{index}",
+                                    family="person_json")) + "\n"
+                for index in range(2)), encoding="utf-8")
+    eval_path.write_text(
+        "".join(json.dumps(_example(f"eval-{index}",
+                                    family="city_json")) + "\n"
+                for index in range(2)), encoding="utf-8")
+    out = tmp_path / "out"
+    code = main([
+        "export-cross", "--train-jsonl", str(train_path),
+        "--eval-jsonl", str(eval_path), "--out-dir", str(out), "--json"])
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["candidate"]["family_separation"] is True
+    assert payload["candidate"]["train_families"] == ["person_json"]
+    assert payload["candidate"]["eval_families"] == ["city_json"]
+    assert payload["family_counts"] == {
+        "train": {"person_json": 2}, "eval": {"city_json": 2}}
+    assert payload["auto_apply"] is False
+    assert payload["weights_changed"] is False
+    metadata_text = (out / "candidate.json").read_text(encoding="utf-8")
+    assert "question" not in metadata_text
+    assert "answer" not in metadata_text
     assert (out / "train.jsonl").is_file()
     assert (out / "eval.jsonl").is_file()
 

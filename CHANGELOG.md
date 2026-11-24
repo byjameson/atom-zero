@@ -73,6 +73,11 @@ the self-code branch and its planner/runner integration.
   key-value verified answers; the fixture separates 94/23 in-distribution and
   117/34 cross-distribution splits. CSV was disabled because the 1.5B teacher
   did not reliably copy the requested row.
+- Added **adapter task-family leakage protection**: candidate rows may carry a
+  validated `family` label, `export-cross` fails hard when an eval family also
+  appears in training, and candidate metadata reports `family_separation`,
+  `train_families`, `eval_families` and content-free family counts. Random
+  splits report `not_applicable`. See `docs/FAMILY_GATE.md`.
 - Added the first **real teacher cross-distribution gate run** in the Ubuntu
   VM: in-distribution loss `6.5393 -> 1.2733` (pass); cross key-value loss
   `3.3621 -> 9.9921` (fail, ppl ratio `757.47`). The gate correctly blocked

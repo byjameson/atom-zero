@@ -424,6 +424,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Escalation router: <https://github.com/byjameson/atom-zero/blob/main/docs/ESCALATION.md>
 - Teacher verification: <https://github.com/byjameson/atom-zero/blob/main/docs/TEACHER_VERIFICATION.md>
 - Adapter candidates: <https://github.com/byjameson/atom-zero/blob/main/docs/ADAPTER_CANDIDATES.md>
+- Task-family separation gate: <https://github.com/byjameson/atom-zero/blob/main/docs/FAMILY_GATE.md>
 - Real teacher queue and cross-distribution fixture: <https://github.com/byjameson/atom-zero/blob/main/docs/TEACHER_QUEUE.md>
 - Adapter training cycle 2 (real LoRA): <https://github.com/byjameson/atom-zero/blob/main/docs/ADAPTER_TRAINING.md>
 - Adapter cross-distribution cycle: <https://github.com/byjameson/atom-zero/blob/main/docs/ADAPTER_CROSS_CYCLE.md>
