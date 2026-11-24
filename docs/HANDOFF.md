@@ -24,7 +24,7 @@
   (`docs/DIVERSE_REPLAY_CYCLE.md`). Accumulating for the **1.0.0** boundary;
   not pushed yet.
 - Working tree after the release-doc commits: clean
-- Atom Zero tests: **1084 passed**
+- Atom Zero tests: **1094 passed**
 - AISC strict audit: **26 specs, 24 PASS, 0 errors**; `AtomZeroAnswerability`
   and `AtomZeroAnswerabilityGenerated` remain **FAIL** with the measured
   Brier 0.233 / ECE 0.064 and refusal-policy misses. The ECE target is met;
