@@ -1,6 +1,6 @@
 # atomzero 0.30.0 - multi-recover, key weighting and the 3-4 key wall
 
-Status: **release candidate**. Base weights remain `0.8.0`.
+Status: **published on 2026-11-24**. Base weights remain `0.8.0`.
 
 ## Highlights
 
@@ -52,6 +52,8 @@ pip install atomzero==0.30.0
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-49m>
 - X: <https://x.com/aigokhan>
 - Instagram: <https://instagram.com/quantsinner>
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-0300-the-best-copy-adapter-so-far-and-the-3-4-key-wall-96p>
+- Medium: <https://medium.com/@myredditacc9393/atom-zero-0-30-0-the-best-copy-adapter-so-far-and-the-3-4-key-wall-934b23dc6506>
 
 ## Honest limits
 

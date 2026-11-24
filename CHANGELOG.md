@@ -1,6 +1,6 @@
 # Changelog
 
-## atomzero 0.30.0 - unreleased
+## atomzero 0.30.0 - 2026-11-24
 
 - **Best copy adapter so far**: specialize on multi, then rehearse on the balanced mix. `multi_recover` reached **48.0% exact / 60.4% key copy / 70.0% key recall** on the 250-row mixed held-out set, with content loss `4.6015 -> 0.7789`; behavior gate pass; curriculum registry updated.
 - Added **key/value-aware token weighting** (`--key-weight`, `--value-weight`). It did not break the 3-4 key wall: mixed 40.4% / 53.2%, 3short 2/8, 4short 0/0.
