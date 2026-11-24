@@ -274,6 +274,11 @@ See [DOCUMENTS.md](https://github.com/byjameson/atom-zero/blob/main/docs/DOCUMEN
 ## Tools and constrained plans
 
 - time, safe arithmetic, task add/list/complete, name/likes memory.
+- **Deterministic copy tool:**
+  `atomzero-copy --text "a=1;b=hello world" --format json` extracts explicit
+  `key=value` pairs and renders JSON, KV or YAML in ordinary Python. It is a
+  runtime transcription tool, not a model capability or a training result; see
+  [`docs/COPY_TOOL.md`](docs/COPY_TOOL.md).
 - `POST /v1/agent/plan` executes a small JSON plan through an allowlist:
   - at most **3 steps**;
   - no shell, arbitrary URL or code execution;
@@ -391,6 +396,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Full project map: <https://github.com/byjameson/atom-zero/blob/main/docs/PROJECT_OVERVIEW.md>
 - Documents: <https://github.com/byjameson/atom-zero/blob/main/docs/DOCUMENTS.md>
 - Tool plans: <https://github.com/byjameson/atom-zero/blob/main/docs/TOOL_PLANNING.md>
+- Copy tool: <https://github.com/byjameson/atom-zero/blob/main/docs/COPY_TOOL.md>
 - Adapters: <https://github.com/byjameson/atom-zero/blob/main/docs/ADAPTERS.md>
 - Answerability experiment: <https://github.com/byjameson/atom-zero/blob/main/docs/ANSWERABILITY.md>
 - Context budget: <https://github.com/byjameson/atom-zero/blob/main/docs/CONTEXT_BUDGET.md>
