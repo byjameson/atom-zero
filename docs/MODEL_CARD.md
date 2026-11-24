@@ -1,16 +1,23 @@
 # Atom Zero 49.2M model card
 
-Version: model weights `0.8.0`; standalone `atomzero 0.6.0`<br>
-Last updated: 2026-11-23
+Version: model weights `0.8.0`; standalone `atomzero 0.20.0`<br>
+Last updated: 2026-11-24
 License: Apache-2.0 for code and weights; data attribution in `NOTICE`.
 
 ```powershell
-pip install atomzero==0.6.0
+pip install atomzero==0.20.0
 atomzero-quickstart
 ```
 
 The first run downloads the ~197 MB checkpoint/tokenizer from Hugging Face,
 seeds a demo corpus and opens the local UI.
+
+## What's new in 0.20.0
+
+- Behavior-gated adapter promotion: full loss, content loss, exact match and key copy are required.
+- Content/key/value/syntax audits and a staged copy curriculum.
+- Rehearsal recovered one-key JSON to 72% exact / 82% key copy; multi remains hard at 8% / 18%.
+- 1248 tests passed on the 8 vCPU VM; benchmark 20/20. Weights remain 0.8.0.
 
 ![Atom Zero architecture](https://raw.githubusercontent.com/byjameson/atom-zero/main/docs/figures/atomzero_architecture.png)
 
