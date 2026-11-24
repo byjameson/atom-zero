@@ -572,3 +572,184 @@ def test_main_passes_target_path(tmp_path, capsys):
     assert payload["status"] == "awaiting_human"
     assert payload["packet"]["allowed_files"] == [
         "src/beta.py", "tests/test_beta.py"]
+
+
+CURRICULUM_SECRET = "SECRET_CURRICULUM_PROMPT"
+_CURRICULUM_SCRIPT = r'''
+import json
+import pathlib
+import sys
+
+log = pathlib.Path(sys.argv[1])
+result = pathlib.Path(sys.argv[2])
+mode = sys.argv[3]
+log.write_text(json.dumps(sys.argv[4:]), encoding="utf-8")
+if mode == "fail":
+    print("curriculum backend exploded")
+    raise SystemExit(3)
+if mode == "gate_fail":
+    payload = {
+        "gate": {"status": "fail", "ok": False,
+                 "reasons": ["exact_match_low"]},
+        "exact_match_rate": 0.1,
+        "key_copy_rate": 0.2,
+        "promotion": {"requested": True, "promoted": False,
+                      "reason": "gate_failed"},
+        "prompt": "SECRET_CURRICULUM_PROMPT",
+        "rows": [{"user": "SECRET_CURRICULUM_PROMPT"}],
+    }
+elif mode == "low":
+    payload = {
+        "gate": {"status": "pass", "ok": True, "reasons": ["loss_improved"]},
+        "exact_match_rate": 0.1,
+        "key_copy_rate": 0.1,
+        "promotion": {"requested": False, "promoted": False,
+                      "reason": "not_requested"},
+        "prompt": "SECRET_CURRICULUM_PROMPT",
+    }
+else:
+    payload = {
+        "gate": {"status": "pass", "ok": True,
+                 "reasons": ["loss_improved", "key_copy_ok"]},
+        "exact_match_rate": 0.4,
+        "key_copy_rate": 0.548,
+        "promotion": {"requested": True, "promoted": True,
+                      "reason": "promoted",
+                      "record": {"prompt": "SECRET_CURRICULUM_PROMPT"}},
+        "prompt": "SECRET_CURRICULUM_PROMPT",
+        "rows": [{"user": "SECRET_CURRICULUM_PROMPT"}],
+    }
+result.write_text(json.dumps(payload), encoding="utf-8")
+'''
+
+
+def _curriculum_args(tmp_path, mode="pass", **overrides):
+    script = tmp_path / "curriculum_runner.py"
+    script.write_text(_CURRICULUM_SCRIPT, encoding="utf-8")
+    log = tmp_path / "curriculum_calls.json"
+    result = tmp_path / "curriculum_result.json"
+    args = dict(
+        signals={"adapter": {"promotable": 1, "candidates": 0}},
+        allowed_files=[], checks=[], opt_in=True, approve=False,
+        autonomous=True, repo_root=tmp_path,
+        adapter_base="checkpoints/base",
+        adapter_curriculum_command=[
+            sys.executable, str(script), str(log), str(result), mode,
+            "{base}", "{data_dir}", "{out_dir}", "{result}",
+            "{active_file}", "{final_eval}"],
+        adapter_curriculum_result=str(result),
+        adapter_curriculum_out=str(tmp_path / "adapters"),
+        adapter_curriculum_active_file=str(tmp_path / "active.json"),
+        adapter_curriculum_final_eval=str(tmp_path / "mixed_eval.jsonl"),
+        adapter_curriculum_data_dir=str(tmp_path / "data"),
+    )
+    args.update(overrides)
+    return args, log, result
+
+
+def test_curriculum_command_template_substitution(tmp_path):
+    args, log, result = _curriculum_args(tmp_path)
+    out = run_loop(**args)
+    assert out["status"] == "completed", out
+    assert json.loads(log.read_text(encoding="utf-8")) == [
+        "checkpoints/base",
+        str(tmp_path / "data"),
+        str(tmp_path / "adapters"),
+        str(result),
+        str(tmp_path / "active.json"),
+        str(tmp_path / "mixed_eval.jsonl"),
+    ]
+
+
+def test_curriculum_success_is_recorded_content_free(tmp_path):
+    args, _, result = _curriculum_args(tmp_path)
+    out = run_loop(**args)
+    assert out["status"] == "completed", out
+    block = out["curriculum"]
+    assert block["status"] == "pass"
+    assert block["returncode"] == 0
+    assert block["elapsed_seconds"] >= 0
+    assert block["gate_status"] == "pass"
+    assert block["exact_match"] == pytest.approx(0.4)
+    assert block["key_copy"] == pytest.approx(0.548)
+    assert block["promotion"] == {
+        "requested": True, "promoted": True, "reason": "promoted"}
+    assert block["result_path"] == str(result)
+    assert CURRICULUM_SECRET not in json.dumps(out)
+
+
+def test_curriculum_failed_runner_aborts(tmp_path):
+    args, _, _ = _curriculum_args(tmp_path, mode="fail")
+    out = run_loop(**args)
+    assert out["status"] == "curriculum_failed"
+    block = out["curriculum"]
+    assert block["status"] == "error"
+    assert block["returncode"] == 3
+    assert "runner_failed" in block["reasons"]
+    assert "result_missing" in block["reasons"]
+    assert CURRICULUM_SECRET not in json.dumps(out)
+    assert not (tmp_path / "ledger.jsonl").exists()
+
+
+def test_curriculum_gate_fail_aborts(tmp_path):
+    args, _, _ = _curriculum_args(tmp_path, mode="gate_fail")
+    out = run_loop(**args)
+    assert out["status"] == "curriculum_failed"
+    block = out["curriculum"]
+    assert block["status"] == "fail"
+    assert block["gate_status"] == "fail"
+    assert block["promotion"]["promoted"] is False
+    assert "gate_not_pass" in block["reasons"]
+    assert CURRICULUM_SECRET not in json.dumps(out)
+
+
+def test_curriculum_thresholds_are_enforced(tmp_path):
+    args, _, _ = _curriculum_args(tmp_path, mode="low")
+    out = run_loop(**args)
+    assert out["status"] == "curriculum_failed"
+    reasons = out["curriculum"]["reasons"]
+    assert "exact_match_low" in reasons
+    assert "key_copy_low" in reasons
+
+
+def test_curriculum_block_absent_without_flag(tmp_path):
+    out = run_loop(**_args(tmp_path))
+    assert out["status"] == "completed"
+    assert "curriculum" not in out
+
+
+def test_main_passes_curriculum_flags(tmp_path, capsys, monkeypatch):
+    import atomzero.self_improve as self_improve
+
+    captured = {}
+
+    def fake_run_loop(**kwargs):
+        captured.update(kwargs)
+        return {"status": "completed"}
+
+    monkeypatch.setattr(self_improve, "run_loop", fake_run_loop)
+    code = main([
+        "--adapter-promotable", "1",
+        "--adapter-curriculum-command", "runner {out_dir} {result}",
+        "--adapter-curriculum-result", "run.json",
+        "--adapter-curriculum-out", "out",
+        "--adapter-curriculum-active-file", "active.json",
+        "--adapter-curriculum-final-eval", "eval.jsonl",
+        "--adapter-curriculum-data-dir", "data",
+        "--adapter-curriculum-min-exact-match", "0.3",
+        "--adapter-curriculum-min-key-copy-rate", "0.4",
+        "--json",
+    ])
+    assert code == 0
+    assert captured["adapter_curriculum_command"] == (
+        "runner {out_dir} {result}")
+    assert captured["adapter_curriculum_result"] == "run.json"
+    assert captured["adapter_curriculum_out"] == "out"
+    assert captured["adapter_curriculum_active_file"] == "active.json"
+    assert captured["adapter_curriculum_final_eval"] == "eval.jsonl"
+    assert captured["adapter_curriculum_data_dir"] == "data"
+    assert captured["adapter_curriculum_min_exact_match"] == (
+        pytest.approx(0.3))
+    assert captured["adapter_curriculum_min_key_copy_rate"] == (
+        pytest.approx(0.4))
+    capsys.readouterr()
