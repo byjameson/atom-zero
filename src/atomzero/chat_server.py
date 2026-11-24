@@ -88,6 +88,7 @@ from pathlib import Path
 import torch
 
 from atomzero import __version__
+from atomzero.copy_router import route_copy
 from atomzero.doc_memory import SourceNotFound, grounded_answer
 from atomzero.curiosity import (
     CuriosityError, curiosity_items, propose_from_gaps)
@@ -3913,6 +3914,25 @@ def doc_answer(text: str, docs, source: str = "",
     return grounded_answer(query, hits, max_context_chars=max_context_chars)
 
 
+def copy_answer(prompt: str) -> dict | None:
+    """Return a deterministic copy reply, or None to use the normal path.
+
+    Only explicit transcription requests are handled. Everything else keeps
+    the existing RAG/model behaviour. The ``source`` field marks provenance for
+    API callers; this is a runtime tool, not model generation.
+    """
+    routed = route_copy(prompt)
+    if not routed["handled"]:
+        return None
+    return {
+        "text": routed["answer"],
+        "sources": [],
+        "source": "copy_tool",
+        "format": routed["format"],
+        "pairs_count": routed["pairs_count"],
+    }
+
+
 def chat_prompt(messages) -> str:
     """Build the chat format used during training."""
     parts = []
@@ -4965,14 +4985,32 @@ class Handler(BaseHTTPRequestHandler):
                 if not message:
                     return self._json(400, {"error": "empty message"})
                 try:
-                    session = self._session(session_id or "default")
-                    result = session.chat(message)
+                    safety = _state.get("safety")
+                    verdict = safety.check(message) if safety else None
+                    copy_result = (copy_answer(message)
+                                   if verdict is None else None)
+                    if copy_result is not None:
+                        result = {
+                            "reply": copy_result["text"],
+                            "tool_calls": [{
+                                "name": "copy_tool",
+                                "format": copy_result["format"],
+                                "pairs": copy_result["pairs_count"],
+                            }],
+                            "sources": [],
+                            "source": "copy_tool",
+                        }
+                        result_session_id = session_id or "default"
+                    else:
+                        session = self._session(session_id or "default")
+                        result = session.chat(message)
+                        result_session_id = session.id
                 except Exception as exc:
                     return self._json(400, {"error": str(exc)})
                 if is_agent:
-                    return self._json(200, {"session_id": session.id,
+                    return self._json(200, {"session_id": result_session_id,
                                             **result})
-                return self._json(200, {
+                payload = {
                     "id": "tiny-agent-" + str(abs(hash(result["reply"]))
                                               % 10**12),
                     "object": "chat.completion",
@@ -4985,7 +5023,10 @@ class Handler(BaseHTTPRequestHandler):
                     }],
                     "tool_calls": result.get("tool_calls", []),
                     "sources": result.get("sources", []),
-                })
+                }
+                if result.get("source"):
+                    payload["source"] = result["source"]
+                return self._json(200, payload)
             if self.path == "/v1/chat/completions":
                 messages = req.get("messages") or []
                 prompt = chat_prompt(messages)
@@ -5000,6 +5041,33 @@ class Handler(BaseHTTPRequestHandler):
             max_new = max(1, min(max_new, 256))
             safety = _state.get("safety")
             verdict = safety.check(doc_query) if safety else None
+            copy_result = (copy_answer(doc_query)
+                           if verdict is None else None)
+            if copy_result is not None:
+                _state["metrics"]["requests"] += 1
+                if self.path == "/generate":
+                    return self._json(200, {
+                        "text": copy_result["text"],
+                        "sources": [],
+                        "model": _state["name"],
+                        "source": "copy_tool",
+                        "format": copy_result["format"],
+                        "pairs_count": copy_result["pairs_count"],
+                    })
+                return self._json(200, {
+                    "id": "tiny-copy-" + str(abs(hash(copy_result["text"]))
+                                             % 10**12),
+                    "object": "chat.completion",
+                    "model": _state["name"],
+                    "source": "copy_tool",
+                    "sources": [],
+                    "choices": [{
+                        "index": 0,
+                        "message": {"role": "assistant",
+                                    "content": copy_result["text"]},
+                        "finish_reason": "stop",
+                    }],
+                })
             if verdict:
                 grounded = {"text": safety.refusal(verdict["category"]),
                             "sources": []}
