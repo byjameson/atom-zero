@@ -45,6 +45,7 @@ def main():
     meta.add_argument("--role", required=True)
     meta.add_argument("--log", required=True)
     meta.add_argument("--key-copy-rate", type=float, default=0.0)
+    meta.add_argument("--gate-status", default="pass")
     meta.add_argument("--fail-stage", default="")
     meta.add_argument("--fail-code", type=int, default=1)
     options, extra = meta.parse_known_args()
@@ -58,6 +59,7 @@ def main():
             return options.fail_code
         out = Path(flags["out"])
         out.mkdir(parents=True, exist_ok=True)
+        (out / "adapter.pt").write_bytes(b"fake-adapter")
         (out / "config.json").write_text(json.dumps({
             "r_mlp": 8, "alpha_mlp": 8, "r_attn": 4, "alpha_attn": 8,
             "steps": 10, "batch_size": 4, "method": "fake",
@@ -75,6 +77,61 @@ def main():
             json.dumps({"models": []}), encoding="utf-8")
         return 0
 
+    if options.role == "gate":
+        candidate = json.loads(
+            Path(flags["candidate-json"]).read_text(encoding="utf-8"))
+        comparison = json.loads(
+            Path(flags["comparison-json"]).read_text(encoding="utf-8"))
+        passed = options.gate_status == "pass"
+        adapter = comparison.get("adapter") or {}
+        reasons = ["loss_improved", "ppl_not_worse"]
+        if "require-content" in flags:
+            reasons.extend(["content_loss_improved", "content_ppl_not_worse"])
+        if "min-exact-match" in flags:
+            reasons.append("exact_match_ok" if passed else "exact_match_low")
+        if "min-key-copy-rate" in flags:
+            reasons.append("key_copy_ok" if passed else "key_copy_low")
+        payload = {
+            "status": "pass" if passed else "fail",
+            "ok": passed,
+            "promotable": passed,
+            "candidate_id": candidate.get("candidate_id", ""),
+            "eval_examples": comparison.get("examples"),
+            "adapter_exact_match": adapter.get("exact_match_rate"),
+            "min_exact_match": (float(flags["min-exact-match"])
+                                if "min-exact-match" in flags else None),
+            "adapter_key_copy_rate": adapter.get("key_copy_rate"),
+            "min_key_copy_rate": (float(flags["min-key-copy-rate"])
+                                  if "min-key-copy-rate" in flags else None),
+            "min_content_delta": float(flags["min-content-delta"]),
+            "max_content_ppl_ratio": float(flags["max-content-ppl-ratio"]),
+            "require_content": "require-content" in flags,
+            "reasons": reasons,
+        }
+        print(json.dumps(payload))
+        return 0 if passed else 1
+
+    if options.role == "promote":
+        gate = json.loads(
+            Path(flags["gate-json"]).read_text(encoding="utf-8"))
+        target = Path(flags["active-file"])
+        target.parent.mkdir(parents=True, exist_ok=True)
+        record = {
+            "path": flags["adapter-dir"],
+            "candidate_id": gate.get("candidate_id", ""),
+            "gate_status": gate.get("status"),
+            "promotable": True,
+            "family_separation": True,
+            "promoted_at": "2026-11-24T00:00:00Z",
+            "previous": "",
+            "weights_changed": False,
+            "auto_apply": False,
+            "method": "gated_adapter_promotion_v1",
+        }
+        target.write_text(json.dumps(record), encoding="utf-8")
+        print(json.dumps(record))
+        return 0
+
     rows = [{"user": SECRET, "assistant": SECRET}]
     rate = options.key_copy_rate
     payload = {
@@ -82,12 +139,14 @@ def main():
         "models": [
             {"label": "base", "path": flags["base"],
              "metrics": {"loss": 3.0, "ppl": 20.0, "tokens": 40,
-                         "rows": rows}},
+                         "content_loss": 3.2, "content_ppl": 24.5,
+                         "content_tokens": 30, "rows": rows}},
             {"label": Path(flags["adapters"]).name,
              "path": flags["adapters"],
              "metrics": {
                  "loss": 1.5, "ppl": 4.5, "tokens": 40,
-                 "content_loss": 1.4, "content_tokens": 30,
+                 "content_loss": 1.4, "content_ppl": 4.1,
+                 "content_tokens": 30,
                  "key_loss": 1.7, "key_tokens": 5,
                  "value_loss": 1.6, "value_tokens": 4,
                  "syntax_loss": 1.2, "syntax_tokens": 1,
@@ -127,6 +186,31 @@ def _fake_backend(tmp_path):
     comparator = [sys.executable, str(script), "--role", "comparator",
                   "--log", str(log)]
     return trainer, comparator, log
+
+
+def _gate_commands(tmp_path, *, gate_status="pass"):
+    script = tmp_path / "fake_backend.py"
+    log = tmp_path / "calls.jsonl"
+    gate = [sys.executable, str(script), "--role", "gate",
+            "--log", str(log), "--gate-status", gate_status]
+    promote = [sys.executable, str(script), "--role", "promote",
+               "--log", str(log)]
+    return gate, promote
+
+
+def _write_final_eval(path, *, rows=4):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "".join(
+            json.dumps({
+                "user": f"SECRET_FINAL_PROMPT_{index}",
+                "assistant": f"SECRET_FINAL_ANSWER_{index}",
+                "family": "staged_copy_mixed",
+                "keys": [f"key{index}"],
+                "values": [f"value{index}"],
+            }) + "\n"
+            for index in range(rows)),
+        encoding="utf-8")
 
 
 def _write_stage_files(data_dir, stages):
@@ -297,6 +381,10 @@ def test_stage_order_and_init_adapter_chaining(tmp_path):
     assert result["stages"][0]["trainer"]["returncode"] == 0
     assert result["stages"][0]["trainer"]["adapter_config"]["r_mlp"] == 8
     assert result["stages"][0]["trainer"]["elapsed_seconds"] >= 0
+    assert result["gate"]["status"] == "skipped"
+    assert result["gate"]["reasons"] == ["final_eval_empty"]
+    assert result["promotion"]["reason"] == "not_requested"
+    assert result["active_file"] is None
     assert set(result["stages"][0]["evals"]) == {"stage", "multi"}
     assert Path(result["stages"][0]["evals"]["multi"]["data"]) == (
         data_dir / "stage_multi" / "eval.jsonl")
@@ -397,3 +485,250 @@ def test_dry_run_writes_valid_result_json(tmp_path):
         assert record["evals"]["stage"]["metrics"]["adapter"]["loss"] > 0
     assert "multi" in payload["stages"][0]["evals"]
     assert "multi" not in payload["stages"][-1]["evals"]
+
+
+def test_final_gate_thresholds_propagate(tmp_path):
+    trainer, comparator, log = _fake_backend(tmp_path)
+    gate, promote = _gate_commands(tmp_path)
+    data_dir = tmp_path / "data"
+    out_dir = tmp_path / "adapters"
+    final_eval = tmp_path / "mixed_eval.jsonl"
+    candidate_json = tmp_path / "candidate.json"
+    gate_json = tmp_path / "gate.json"
+    _write_stage_files(data_dir, ("echo_kv",))
+    _write_final_eval(final_eval)
+
+    result = runner.run_curriculum(
+        base="checkpoints/base",
+        data_dir=data_dir,
+        out_dir=out_dir,
+        stages="echo_kv",
+        steps=10,
+        final_eval=final_eval,
+        require_content=True,
+        min_exact_match=0.25,
+        min_key_copy_rate=0.3,
+        min_content_delta=0.07,
+        max_content_ppl_ratio=0.9,
+        candidate_json=candidate_json,
+        gate_json=gate_json,
+        trainer_command=trainer,
+        comparator_command=comparator + ["--key-copy-rate", "0.548"],
+        gate_command=gate,
+        promote_command=promote,
+    )
+
+    gate_calls = [call for call in _calls(log) if call["role"] == "gate"]
+    assert len(gate_calls) == 1
+    flags = _flags(gate_calls[0]["argv"])
+    assert flags["require-content"] is True
+    assert flags["min-exact-match"] == "0.25"
+    assert flags["min-key-copy-rate"] == "0.3"
+    assert flags["min-content-delta"] == "0.07"
+    assert flags["max-content-ppl-ratio"] == "0.9"
+    assert Path(flags["candidate-json"]) == candidate_json
+    assert not Path(flags["comparison-json"]).exists()  # temp aggregate
+
+    assert result["gate"]["status"] == "pass"
+    assert result["gate"]["thresholds"] == {
+        "require_content": True,
+        "min_exact_match": 0.25,
+        "min_key_copy_rate": 0.3,
+        "min_content_delta": 0.07,
+        "max_content_ppl_ratio": 0.9,
+    }
+    assert result["exact_match_rate"] == 0.5
+    assert result["key_copy_rate"] == 0.548
+    assert result["final_eval"]["examples"] == 4
+    assert result["final_eval"]["metrics"]["adapter"]["content_loss"] == 1.4
+    assert result["final_eval"]["metrics"]["adapter"]["content_ppl"] == 4.1
+
+    candidate = json.loads(candidate_json.read_text(encoding="utf-8"))
+    assert candidate["eval_examples"] == 4
+    assert candidate["candidate_id"] == result["candidate_id"]
+    assert candidate["family_separation"] is True
+    assert candidate["eval_family_counts"] == {"staged_copy_mixed": 4}
+    assert gate_json.is_file()
+    gate_file = json.loads(gate_json.read_text(encoding="utf-8"))
+    assert gate_file["status"] == "pass"
+    assert "SECRET_FINAL" not in json.dumps(result)
+    assert "SECRET_FINAL" not in candidate_json.read_text(encoding="utf-8")
+    assert "SECRET_FINAL" not in gate_json.read_text(encoding="utf-8")
+
+
+def test_promotion_only_when_gate_passes(tmp_path):
+    trainer, comparator, log = _fake_backend(tmp_path)
+    gate, promote = _gate_commands(tmp_path)
+    data_dir = tmp_path / "data"
+    out_dir = tmp_path / "adapters"
+    final_eval = tmp_path / "mixed_eval.jsonl"
+    active_file = tmp_path / "curriculum_active_adapter.json"
+    _write_stage_files(data_dir, ("echo_kv",))
+    _write_final_eval(final_eval)
+
+    result = runner.run_curriculum(
+        base="checkpoints/base",
+        data_dir=data_dir,
+        out_dir=out_dir,
+        stages="echo_kv",
+        steps=10,
+        final_eval=final_eval,
+        require_content=True,
+        min_exact_match=0.25,
+        min_key_copy_rate=0.3,
+        active_file=active_file,
+        promote=True,
+        trainer_command=trainer,
+        comparator_command=comparator + ["--key-copy-rate", "0.548"],
+        gate_command=gate,
+        promote_command=promote,
+    )
+
+    assert result["promotion"]["requested"] is True
+    assert result["promotion"]["promoted"] is True
+    assert result["promotion"]["reason"] == "promoted"
+    assert Path(result["promotion"]["active_file"]) == active_file
+    assert result["active_file"] == str(active_file)
+    assert result["promotion_error"] is None
+    registry = json.loads(active_file.read_text(encoding="utf-8"))
+    assert registry["candidate_id"] == result["candidate_id"]
+    assert registry["gate_status"] == "pass"
+    assert registry["weights_changed"] is False
+    promote_calls = [call for call in _calls(log)
+                     if call["role"] == "promote"]
+    assert len(promote_calls) == 1
+    flags = _flags(promote_calls[0]["argv"])
+    assert Path(flags["adapter-dir"]) == out_dir / "echo_kv"
+    assert Path(flags["gate-json"]).is_file()
+    assert "SECRET_FINAL" not in active_file.read_text(encoding="utf-8")
+
+
+def test_failed_gate_never_touches_registry(tmp_path):
+    trainer, comparator, log = _fake_backend(tmp_path)
+    gate, promote = _gate_commands(tmp_path, gate_status="fail")
+    data_dir = tmp_path / "data"
+    out_dir = tmp_path / "adapters"
+    final_eval = tmp_path / "mixed_eval.jsonl"
+    active_file = tmp_path / "curriculum_active_adapter.json"
+    active_file.write_text('{"path": "old/adapter"}\n', encoding="utf-8")
+    _write_stage_files(data_dir, ("echo_kv",))
+    _write_final_eval(final_eval)
+
+    result = runner.run_curriculum(
+        base="checkpoints/base",
+        data_dir=data_dir,
+        out_dir=out_dir,
+        stages="echo_kv",
+        steps=10,
+        final_eval=final_eval,
+        require_content=True,
+        min_exact_match=0.25,
+        min_key_copy_rate=0.3,
+        active_file=active_file,
+        promote=True,
+        trainer_command=trainer,
+        comparator_command=comparator + ["--key-copy-rate", "0.548"],
+        gate_command=gate,
+        promote_command=promote,
+    )
+
+    assert result["gate"]["status"] == "fail"
+    assert result["gate"]["ok"] is False
+    assert result["promotion"]["requested"] is True
+    assert result["promotion"]["promoted"] is False
+    assert result["promotion"]["reason"] == "gate_failed"
+    assert active_file.read_text(encoding="utf-8") == '{"path": "old/adapter"}\n'
+    assert not [call for call in _calls(log) if call["role"] == "promote"]
+
+
+def test_dry_run_gate_writes_fake_outputs_and_no_registry(tmp_path):
+    result_path = tmp_path / "result.json"
+    candidate_json = tmp_path / "candidate.json"
+    gate_json = tmp_path / "gate.json"
+    active_file = tmp_path / "curriculum_active_adapter.json"
+    out_dir = tmp_path / "adapters"
+
+    code = runner.main([
+        "--dry-run", "--promote", "--require-content",
+        "--min-exact-match", "0.25", "--min-key-copy-rate", "0.3",
+        "--stages", "echo_kv,echo_json,multi",
+        "--steps", "20", "--batch-size", "4",
+        "--out-dir", str(out_dir),
+        "--result", str(result_path),
+        "--candidate-json", str(candidate_json),
+        "--gate-json", str(gate_json),
+        "--active-file", str(active_file),
+    ])
+
+    assert code == 0
+    payload = json.loads(result_path.read_text(encoding="utf-8"))
+    assert payload["dry_run"] is True
+    assert payload["final_eval"]["examples"] == 250
+    assert payload["exact_match_rate"] == 0.4
+    assert payload["key_copy_rate"] == 0.548
+    assert payload["gate"]["status"] == "pass"
+    assert payload["gate"]["thresholds"]["min_exact_match"] == 0.25
+    assert payload["gate"]["thresholds"]["min_key_copy_rate"] == 0.3
+    assert payload["promotion"]["requested"] is True
+    assert payload["promotion"]["promoted"] is False
+    assert payload["promotion"]["reason"] == "dry_run"
+    assert not active_file.exists()
+    assert not out_dir.exists()
+    assert candidate_json.is_file()
+    assert gate_json.is_file()
+    candidate = json.loads(candidate_json.read_text(encoding="utf-8"))
+    assert candidate["eval_examples"] == 250
+    assert candidate["family_separation"] is True
+
+
+def test_real_gate_and_promote_cli(tmp_path):
+    trainer, comparator, log = _fake_backend(tmp_path)
+    data_dir = tmp_path / "data"
+    out_dir = tmp_path / "adapters"
+    final_eval = tmp_path / "mixed_eval.jsonl"
+    active_file = tmp_path / "curriculum_active_adapter.json"
+    _write_stage_files(data_dir, ("echo_kv",))
+    _write_final_eval(final_eval)
+
+    result = runner.run_curriculum(
+        base="checkpoints/base",
+        data_dir=data_dir,
+        out_dir=out_dir,
+        stages="echo_kv",
+        steps=10,
+        final_eval=final_eval,
+        require_content=True,
+        min_exact_match=0.25,
+        min_key_copy_rate=0.3,
+        active_file=active_file,
+        promote=True,
+        trainer_command=trainer,
+        comparator_command=comparator + ["--key-copy-rate", "0.548"],
+    )
+
+    assert result["gate"]["status"] == "pass"
+    assert "content_loss_improved" in result["gate"]["reasons"]
+    assert "content_ppl_not_worse" in result["gate"]["reasons"]
+    assert "exact_match_ok" in result["gate"]["reasons"]
+    assert "key_copy_ok" in result["gate"]["reasons"]
+    assert result["promotion"]["promoted"] is True
+    registry = json.loads(active_file.read_text(encoding="utf-8"))
+    assert registry["candidate_id"] == result["candidate_id"]
+    assert registry["gate_status"] == "pass"
+    assert registry["family_separation"] is True
+    assert registry["weights_changed"] is False
+
+
+def test_promote_requires_active_file_and_behavior_thresholds(tmp_path):
+    with pytest.raises(SystemExit) as excinfo:
+        runner.main(["--dry-run", "--promote", "--require-content",
+                     "--min-exact-match", "0.25",
+                     "--result", str(tmp_path / "result.json")])
+    assert excinfo.value.code == 2
+
+    with pytest.raises(SystemExit) as excinfo:
+        runner.main(["--dry-run", "--promote", "--require-content",
+                     "--min-key-copy-rate", "0.3",
+                     "--active-file", str(tmp_path / "active.json"),
+                     "--result", str(tmp_path / "result.json")])
+    assert excinfo.value.code == 2
