@@ -1,0 +1,153 @@
+{
+  "candidate_id": "ad-e396366ef725656c",
+  "content_weight": 5.0,
+  "cross": {
+    "examples": 48,
+    "baseline": {
+      "loss": 5.254859422798236,
+      "content_loss": 4.432719733215168,
+      "exact_match": {
+        "examples": 48,
+        "matches": 0,
+        "rate": 0.0,
+        "max_new": 64,
+        "families": {
+          "city_json": {
+            "examples": 25,
+            "matches": 0,
+            "rate": 0.0
+          },
+          "city_kv": {
+            "examples": 23,
+            "matches": 0,
+            "rate": 0.0
+          }
+        }
+      }
+    },
+    "adapter": {
+      "loss": 2.8489259222279424,
+      "content_loss": 3.489204379622079,
+      "exact_match": {
+        "examples": 48,
+        "matches": 0,
+        "rate": 0.0,
+        "max_new": 64,
+        "families": {
+          "city_json": {
+            "examples": 25,
+            "matches": 0,
+            "rate": 0.0
+          },
+          "city_kv": {
+            "examples": 23,
+            "matches": 0,
+            "rate": 0.0
+          }
+        }
+      }
+    },
+    "families": {
+      "city_json": {
+        "baseline_content_loss": 5.350699101567443,
+        "adapter_content_loss": 4.057562937187478
+      },
+      "city_kv": {
+        "baseline_content_loss": 3.424742387573454,
+        "adapter_content_loss": 2.8651243948443867
+      }
+    }
+  },
+  "indist": {
+    "examples": 28,
+    "baseline": {
+      "loss": 5.394875630736351,
+      "content_loss": 4.517781514592814,
+      "exact_match": {
+        "examples": 28,
+        "matches": 0,
+        "rate": 0.0,
+        "max_new": 64,
+        "families": {
+          "person_json": {
+            "examples": 7,
+            "matches": 0,
+            "rate": 0.0
+          },
+          "person_kv": {
+            "examples": 7,
+            "matches": 0,
+            "rate": 0.0
+          },
+          "product_json": {
+            "examples": 8,
+            "matches": 0,
+            "rate": 0.0
+          },
+          "product_kv": {
+            "examples": 6,
+            "matches": 0,
+            "rate": 0.0
+          }
+        }
+      }
+    },
+    "adapter": {
+      "loss": 1.3254581298679113,
+      "content_loss": 0.5708129496247238,
+      "exact_match": {
+        "examples": 28,
+        "matches": 5,
+        "rate": 0.17857142857142858,
+        "max_new": 64,
+        "families": {
+          "person_json": {
+            "examples": 7,
+            "matches": 0,
+            "rate": 0.0
+          },
+          "person_kv": {
+            "examples": 7,
+            "matches": 3,
+            "rate": 0.42857142857142855
+          },
+          "product_json": {
+            "examples": 8,
+            "matches": 0,
+            "rate": 0.0
+          },
+          "product_kv": {
+            "examples": 6,
+            "matches": 2,
+            "rate": 0.3333333333333333
+          }
+        }
+      }
+    },
+    "families": {
+      "person_json": {
+        "baseline_content_loss": 5.360069970769638,
+        "adapter_content_loss": 0.4529306131437558
+      },
+      "person_kv": {
+        "baseline_content_loss": 3.8398215617496696,
+        "adapter_content_loss": 0.44123965717456787
+      },
+      "product_json": {
+        "baseline_content_loss": 4.903348833566102,
+        "adapter_content_loss": 0.6902906084335673
+      },
+      "product_kv": {
+        "baseline_content_loss": 3.735264077717655,
+        "adapter_content_loss": 0.6373909325431965
+      }
+    }
+  },
+  "gate": {
+    "full_loss": "pass",
+    "content": "pass",
+    "exact_match": "fail",
+    "overall": "fail"
+  },
+  "interpretation": "format and content-token learning; no held-out copy"
+}

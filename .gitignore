@@ -7,3 +7,5 @@ dist/
 data/
 checkpoints/
 models/
+research/results/content_adapter_cross_audit.json
+research/results/content_adapter_indist_audit.json
