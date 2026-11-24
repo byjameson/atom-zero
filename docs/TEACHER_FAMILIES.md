@@ -8,24 +8,48 @@ loading a model, so validators, counts and splits can be tested on any machine.
 
 | family | split | entity | keys | format | example answer |
 |---|---|---|---|---|---|
-| `person_json` | train | person | `name`, `score` | JSON | `{"name": "Ada", "score": 7}` |
-| `product_json` | train | product | `product`, `price` | JSON | `{"product": "lamp", "price": 42}` |
+| `person_json` | train | person | `name`, `score` | JSON | `{"name":"Ada","score":7}` |
+| `product_json` | train | product | `product`, `price` | JSON | `{"product":"lamp","price":42}` |
 | `person_kv` | train | person | `name`, `score` | key-value | `name=Ada;score=7` |
 | `product_kv` | train | product | `product`, `price` | key-value | `product=lamp;price=42` |
+| `person_yaml` | train | person | `name`, `score` | YAML-like | `name: Ada` + newline + `score: 7` |
+| `product_yaml` | train | product | `product`, `price` | YAML-like | `product: lamp` + newline + `price: 42` |
 | `arith_plain` | train | operand | `sum` | plain | `The sum of 12 and 30 is 42.` |
-| `arith_json` | train | operand | `sum` | JSON | `{"sum": 42}` |
-| `city_json` | cross | city | `city`, `population` | JSON | `{"city": "Ankara", "population": 500000}` |
+| `arith_json` | train | operand | `sum` | JSON | `{"sum":42}` |
+| `city_json` | cross | city | `city`, `population` | JSON | `{"city":"Ankara","population":500000}` |
 | `city_kv` | cross | city | `city`, `population` | key-value | `city=Ankara;population=500000` |
 | `city_yaml` | cross | city | `city`, `population` | YAML-like | `city: Ankara` + newline + `population: 500000` |
 
 `TRAIN_FAMILIES` and `CROSS_FAMILIES` are explicit tuples. The split enforces
 that no cross family can appear in train; an overlapping configuration raises
-`ValueError`.
+`ValueError`. Person and product YAML families are train families, so YAML is
+seen before `city_yaml` is evaluated.
 
 Arithmetic rows store the left operand as `entity` and the right operand as
 `number`. The prompt asks the teacher to add them; the expected answer is the
 computed sum. Attribute rows, in contrast, ask the teacher to transcribe the
 given values into the requested format.
+
+## Copy-generalization key pairs
+
+`KEY_PAIRS` contains twelve key pairs:
+
+```
+name:score      product:price   label:points    code:rank
+team:wins       author:year     song:length     model:params
+river:km        planet:mass     recipe:minutes  city:population
+```
+
+`--key-pairs` selects which pairs to generate. A bare key (`label`) selects
+its canonical pair, and `key1:key2` selects an explicit pair. `all` selects
+every pair. Hand-written person, product and city families are reused for
+their pairs; the remaining pairs generate `{key1}_json` and `{key1}_kv`
+families (for example `label_json`, `label_kv`). Each family has its own
+entity pool and number range.
+
+`--holdout-keys` names key values, not family names. Every family whose key
+pair contains a held-out key becomes eval-only and is never emitted into
+`train.jsonl`. The city pair is always eval-only.
 
 ## Formats and validators
 
@@ -42,12 +66,18 @@ All validators are deterministic, standard-library only, and used through
 The YAML validator is a strict two-line subset. It is deliberately not a YAML
 parser and does not depend on PyYAML.
 
+`canonical_answer(family, answer, entity, number)` validates first and then
+rewrites JSON with `json.dumps(..., separators=(",", ":"))` and KV with no
+spaces around `=` or `;`. Invalid answers and YAML/plain answers are returned
+unchanged. The CLI applies this to every verified row with `--canonical-json`.
+
 ## Reusable API
 
 ```python
 from research.build_diverse_teacher_queue import (
     CROSS_FAMILIES, FAMILIES, TRAIN_FAMILIES,
-    build_rows, oracle_answer, split_rows, validate_answer,
+    build_rows, oracle_answer, resolve_family_plan, split_rows,
+    split_summary, validate_answer,
 )
 
 def stub_teacher(prompt: str) -> str:
@@ -58,11 +88,31 @@ files = split_rows(rows)
 ```
 
 `build_rows` accepts one callable that maps a prompt to raw text. Pass `None`
-to use the deterministic oracle formatter. Counts can be uniform
-(`count=...`) or per family (`counts={...}`). The function never imports
-`torch` or `transformers`; those imports live inside the CLI model loader.
+to use the deterministic oracle formatter. Counts can be uniform (`count=...`)
+or per family (`counts={...}`). The function never imports `torch` or
+`transformers`; those imports live inside the CLI model loader.
+
+For an entity split, resolve the plan first and pass the same family lists to
+both calls:
+
+```python
+plan = resolve_family_plan("all", "population")
+rows = build_rows(
+    plan["train_families"] + plan["cross_families"], None,
+    count=5, seed=17, split_by="entity",
+    train_families=plan["train_families"],
+    cross_families=plan["cross_families"])
+files = split_rows(
+    rows, train_families=plan["train_families"],
+    cross_families=plan["cross_families"], split_by="entity")
+report = split_summary(files, mode="entity")
+assert report["entity_overlap"] == 0
+```
 
 ## Command line
+
+Legacy (no curriculum flags) behaviour is unchanged apart from the two added
+YAML train families:
 
 ```powershell
 python research/build_diverse_teacher_queue.py `
@@ -72,18 +122,59 @@ python research/build_diverse_teacher_queue.py `
   --seed 17
 ```
 
-- `--per-family` controls the original train families.
-- `--city-per-family` controls `city_json` and `city_kv`.
-- `--city-yaml-count` controls `city_yaml`; it defaults to
-  `--city-per-family`.
-- `--arith-count` controls each arithmetic family.
+Copy-generalization curriculum:
+
+```powershell
+python research/build_diverse_teacher_queue.py `
+  --out-dir data/copy_curriculum `
+  --key-pairs all --holdout-keys points,population `
+  --split-by entity --canonical-json --shuffle `
+  --per-family 20 --seed 17 `
+  --replay-out data/copy_curriculum/replay.jsonl
+```
+
+- `--key-pairs` is a comma list of `key1:key2` (or bare `key1`) pairs, or
+  `all`. The default keeps the original families.
+- `--holdout-keys` makes matching families eval-only.
+- `--canonical-json` compacts verified JSON and KV answers.
+- `--split-by row|entity` selects the per-family row slice (legacy) or the
+  entity-first split.
+- `--shuffle` deterministically shuffles generated rows with `--seed`.
+- `--replay-out PATH` writes legacy-family train rows to PATH, marks them
+  `"replay": true`, and removes them from `train.jsonl` so replay never
+  duplicates a primary train row.
+- `--per-family` controls generated families. Its default is 20 in curriculum
+  mode and 40 in legacy mode. `--city-per-family` and `--arith-count` default
+  to `--per-family` in curriculum mode, and to 25/20 in legacy mode.
 - `--family-count FAMILY=COUNT` overrides one family and can be repeated.
 - `--dry-run` uses the oracle formatter and does not load a model.
 
-The output files are unchanged: `train.jsonl`, `indist.jsonl`, `cross.jsonl`
-and `all.jsonl`. Train contains 80% of each verified train family, `indist`
-contains the remaining 20%, `cross` contains every verified cross-family row,
-and `all` contains every verified row.
+The primary output files are `train.jsonl`, `indist.jsonl`, `cross.jsonl` and
+`all.jsonl`. In row mode train contains 80% of each verified train family,
+indist contains the remaining 20%, cross contains every verified eval-only
+row, and all contains every verified row. In entity mode the 80/20 split is
+applied to entity pools before rows are emitted; every entity is only on one
+side, and the same entity gets the same side for JSON, KV and YAML families
+that share a pool.
+
+The printed build summary includes machine-readable split fields:
+
+```json
+"split": {
+  "mode": "entity",
+  "entities_train": 44,
+  "entities_eval": 16,
+  "entities_primary_train": 44,
+  "entities_replay": 0,
+  "overlap": 0,
+  "entity_overlap": 0,
+  "entity_overlap_examples": []
+}
+```
+
+`entities_train` includes replay rows because replay is a training stream.
+`entity_overlap` must be 0 for an entity split; the CLI rejects a build whose
+entity split overlaps.
 
 ## Tests
 
@@ -101,7 +192,9 @@ The tests use stub teachers and require no GPU, CUDA, model files or network.
 - `city_yaml` changes both the entity family and the output format relative to
   the train families. A cross result therefore does not isolate format
   transfer from entity transfer.
-- Generated city populations are synthetic, not census data. They are in a
-  realistic range but are not facts.
+- Generated cities, populations, years, masses and lengths are synthetic, not
+  factual data. They are in a realistic range but are not facts.
 - The real Qwen teacher is only exercised by the CLI. Dry-run rows show that
   plumbing works; they are not teacher-quality evidence.
+- `--replay-out` moves legacy training rows out of `train.jsonl`; it does not
+  decide the replay weight used by adapter training.
