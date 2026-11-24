@@ -425,6 +425,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Teacher verification: <https://github.com/byjameson/atom-zero/blob/main/docs/TEACHER_VERIFICATION.md>
 - Adapter candidates: <https://github.com/byjameson/atom-zero/blob/main/docs/ADAPTER_CANDIDATES.md>
 - Real teacher queue and cross-distribution fixture: <https://github.com/byjameson/atom-zero/blob/main/docs/TEACHER_QUEUE.md>
+- Teacher task families (JSON, key-value, YAML, arithmetic): <https://github.com/byjameson/atom-zero/blob/main/docs/TEACHER_FAMILIES.md>
 - Adapter training cycle 2 (real LoRA): <https://github.com/byjameson/atom-zero/blob/main/docs/ADAPTER_TRAINING.md>
 - Adapter cross-distribution cycle: <https://github.com/byjameson/atom-zero/blob/main/docs/ADAPTER_CROSS_CYCLE.md>
 - Adapter growth cycle 1: <https://github.com/byjameson/atom-zero/blob/main/docs/ADAPTER_CYCLE_1.md>
