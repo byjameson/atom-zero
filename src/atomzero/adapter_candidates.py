@@ -349,10 +349,24 @@ def _number(value, name: str) -> float:
     return number
 
 
+def _exact_match_rate(metrics: dict):
+    """Read an optional exact-match rate from a metrics object."""
+    value = metrics.get("exact_match") if isinstance(metrics, dict) else None
+    if isinstance(value, dict):
+        value = value.get("rate")
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    number = float(value)
+    if not math.isfinite(number) or not 0.0 <= number <= 1.0:
+        return None
+    return number
+
+
 def evaluate_candidate(candidate, comparison, *, min_loss_delta=None,
                        max_ppl_ratio=None, require_content=False,
                        min_content_delta=DEFAULT_MIN_CONTENT_DELTA,
-                       max_content_ppl_ratio=1.0) -> dict:
+                       max_content_ppl_ratio=1.0,
+                       min_exact_match=None) -> dict:
     """Run the held-out adapter gate against a comparison report."""
     if not isinstance(candidate, dict):
         raise ValueError("candidate must be an object")
@@ -379,6 +393,15 @@ def evaluate_candidate(candidate, comparison, *, min_loss_delta=None,
         raise ValueError("min_content_delta must be finite and non-negative")
     if not math.isfinite(content_max_ratio) or content_max_ratio <= 0:
         raise ValueError("max_content_ppl_ratio must be finite and positive")
+    exact_threshold = None
+    if min_exact_match is not None:
+        try:
+            exact_threshold = float(min_exact_match)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("min_exact_match must be numeric") from exc
+        if (not math.isfinite(exact_threshold)
+                or not 0.0 <= exact_threshold <= 1.0):
+            raise ValueError("min_exact_match must be between 0 and 1")
     try:
         base, adapter, label, examples = _metric_pair(comparison)
         base_loss = _number(base.get("loss"), "baseline.loss")
@@ -446,12 +469,25 @@ def evaluate_candidate(candidate, comparison, *, min_loss_delta=None,
             else:
                 reasons.append("content_ppl_regression")
                 content_ok = False
+    baseline_exact = _exact_match_rate(base)
+    adapter_exact = _exact_match_rate(adapter)
+    exact_ok = True
+    if exact_threshold is not None:
+        if adapter_exact is None:
+            reasons.append("exact_match_missing")
+            exact_ok = False
+        elif adapter_exact >= exact_threshold:
+            reasons.append("exact_match_ok")
+        else:
+            reasons.append("exact_match_low")
+            exact_ok = False
     ok = (
         not any(reason.startswith(("eval_count", "invalid"))
                 for reason in reasons)
         and "loss_improved" in reasons
         and "ppl_not_worse" in reasons
         and content_ok
+        and exact_ok
     )
     return {
         "status": "pass" if ok else "fail",
@@ -472,6 +508,13 @@ def evaluate_candidate(candidate, comparison, *, min_loss_delta=None,
                                if content_loss_delta is not None else None),
         "content_ppl_ratio": (round(content_ppl_ratio, 6)
                               if content_ppl_ratio is not None else None),
+        "baseline_exact_match": baseline_exact,
+        "adapter_exact_match": adapter_exact,
+        "exact_match_delta": (
+            round(adapter_exact - baseline_exact, 6)
+            if adapter_exact is not None and baseline_exact is not None
+            else None),
+        "min_exact_match": exact_threshold,
         "require_content": bool(require_content),
         "min_loss_delta": threshold,
         "max_ppl_ratio": max_ratio,
@@ -577,6 +620,7 @@ def run_adapter_loop(examples, out_dir, *, base=None, trainer_command=None,
                      require_content=False,
                      min_content_delta=DEFAULT_MIN_CONTENT_DELTA,
                      max_content_ppl_ratio=1.0,
+                     min_exact_match=None,
                      ledger_path=None, timeout: int = 900,
                      trainer_timeout: int = 900) -> dict:
     """Export a candidate, optionally train/evaluate, and record a gate event."""
@@ -720,7 +764,8 @@ def run_adapter_loop(examples, out_dir, *, base=None, trainer_command=None,
             candidate, comparison, min_loss_delta=min_loss_delta,
             max_ppl_ratio=max_ppl_ratio, require_content=require_content,
             min_content_delta=min_content_delta,
-            max_content_ppl_ratio=max_content_ppl_ratio)
+            max_content_ppl_ratio=max_content_ppl_ratio,
+            min_exact_match=min_exact_match)
     else:
         evaluation = {
             "status": "awaiting_evaluation",
@@ -892,6 +937,7 @@ def main(argv=None) -> int:
     evaluate.add_argument("--min-content-delta", type=float,
                           default=DEFAULT_MIN_CONTENT_DELTA)
     evaluate.add_argument("--max-content-ppl-ratio", type=float, default=1.0)
+    evaluate.add_argument("--min-exact-match", type=float, default=None)
     evaluate.add_argument("--json", action="store_true")
 
     promote = sub.add_parser("promote")
@@ -923,6 +969,7 @@ def main(argv=None) -> int:
     loop.add_argument("--min-content-delta", type=float,
                       default=DEFAULT_MIN_CONTENT_DELTA)
     loop.add_argument("--max-content-ppl-ratio", type=float, default=1.0)
+    loop.add_argument("--min-exact-match", type=float, default=None)
     loop.add_argument("--timeout", type=int, default=900)
     loop.add_argument("--json", action="store_true")
 
@@ -971,7 +1018,8 @@ def main(argv=None) -> int:
                 max_ppl_ratio=args.max_ppl_ratio,
                 require_content=args.require_content,
                 min_content_delta=args.min_content_delta,
-                max_content_ppl_ratio=args.max_content_ppl_ratio)
+                max_content_ppl_ratio=args.max_content_ppl_ratio,
+                min_exact_match=args.min_exact_match)
             code = 0 if payload["ok"] else 1
         else:
             comparison = (_load_json(args.comparison_json)
@@ -1008,6 +1056,7 @@ def main(argv=None) -> int:
                 require_content=args.require_content,
                 min_content_delta=args.min_content_delta,
                 max_content_ppl_ratio=args.max_content_ppl_ratio,
+                min_exact_match=args.min_exact_match,
                 ledger_path=args.ledger or None, timeout=args.timeout,
                 trainer_timeout=args.trainer_timeout)
             code = 0 if payload["status"] in ("pass", "awaiting_evaluation") else 1

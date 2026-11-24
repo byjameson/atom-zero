@@ -348,6 +348,69 @@ def test_content_gate_requires_content_metrics():
     assert "content_loss_not_improved" in failed["reasons"]
 
 
+def test_exact_match_gate_is_opt_in_and_thresholded():
+    candidate = _candidate()
+    comparison = _comparison()
+    comparison["baseline"]["exact_match"] = {"rate": 0.2}
+    comparison["adapter"]["exact_match"] = {"rate": 0.75}
+    default = evaluate_candidate(candidate, comparison)
+    assert default["status"] == "pass"
+    assert "exact_match_ok" not in default["reasons"]
+    assert default["adapter_exact_match"] == pytest.approx(0.75)
+
+    passed = evaluate_candidate(
+        candidate, comparison, min_exact_match=0.5)
+    assert passed["status"] == "pass"
+    assert "exact_match_ok" in passed["reasons"]
+    assert passed["baseline_exact_match"] == pytest.approx(0.2)
+    assert passed["adapter_exact_match"] == pytest.approx(0.75)
+    assert passed["exact_match_delta"] == pytest.approx(0.55)
+    assert passed["min_exact_match"] == pytest.approx(0.5)
+
+    comparison["adapter"]["exact_match"] = 0.6
+    low = evaluate_candidate(candidate, comparison, min_exact_match=0.9)
+    assert low["status"] == "fail"
+    assert low["ok"] is False
+    assert "exact_match_low" in low["reasons"]
+
+    missing = evaluate_candidate(
+        _candidate(), _comparison(), min_exact_match=0.5)
+    assert missing["status"] == "fail"
+    assert "exact_match_missing" in missing["reasons"]
+
+
+def test_min_exact_match_must_be_a_rate():
+    with pytest.raises(ValueError):
+        evaluate_candidate(_candidate(), _comparison(),
+                           min_exact_match=1.5)
+    with pytest.raises(ValueError):
+        evaluate_candidate(_candidate(), _comparison(),
+                           min_exact_match="high")
+
+
+def test_cli_evaluate_wires_min_exact_match(tmp_path, capsys):
+    comparison = _comparison()
+    comparison["baseline"]["exact_match"] = 0.2
+    comparison["adapter"]["exact_match"] = 0.5
+    candidate_path = tmp_path / "candidate.json"
+    comparison_path = tmp_path / "comparison.json"
+    candidate_path.write_text(
+        json.dumps(_candidate()["metadata"]), encoding="utf-8")
+    comparison_path.write_text(json.dumps(comparison), encoding="utf-8")
+    code = main([
+        "evaluate",
+        "--candidate-json", str(candidate_path),
+        "--comparison-json", str(comparison_path),
+        "--min-exact-match", "0.8",
+        "--json",
+    ])
+    assert code == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["min_exact_match"] == pytest.approx(0.8)
+    assert payload["adapter_exact_match"] == pytest.approx(0.5)
+    assert "exact_match_low" in payload["reasons"]
+
+
 def test_promotion_requires_passing_gate(tmp_path):
     adapter = tmp_path / "adapter"
     adapter.mkdir()
