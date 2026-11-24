@@ -25,9 +25,14 @@ config. No automatic LR scaling happens.
 
 ``--rank-attn`` (default ``0``) additionally adapts the attention output
 projection (``out_proj``). The model uses a fused
-``nn.MultiheadAttention.in_proj_weight`` Parameter for Q/K/V; that projection
-is not a module and remains frozen. Only ``out_proj`` is adapted with
-``--rank-attn``, so the trainable attention parameters are small.
+``nn.MultiheadAttention.in_proj_weight`` Parameter for Q/K/V. That projection
+is frozen unless ``--qkv-rank`` is set: ``--qkv-rank R --qkv-alpha A`` wraps
+each attention block with :class:`atomzero.lora.LoRAMultiheadAttention` and
+adapts the fused Q/K/V projection at rank ``R``. ``--qkv-rank`` defaults to
+``0`` (off) and ``--qkv-alpha`` defaults to ``0`` but must be ``> 0`` when the
+rank is positive. This is a research knob: it moves the adaptation locus into
+attention itself, so measure it on the copy curriculum before drawing any
+conclusion.
 
 An optional ``--replay-jsonl`` mixes a bounded fraction (``--replay-weight``,
 default 0.25) of older rows into the training sequence with
@@ -236,6 +241,8 @@ _GEOMETRY_FLAGS = {
     "alpha_attn": "--alpha-attn",
     "r_mlp": "--rank",
     "alpha_mlp": "--alpha",
+    "r_qkv": "--qkv-rank",
+    "alpha_qkv": "--qkv-alpha",
 }
 
 
@@ -280,19 +287,25 @@ def _config_int(config: dict, key: str, default) -> int:
 
 
 def _geometry_from_config(config: dict) -> dict:
-    """Normalize an adapter config to its four LoRA geometry values."""
+    """Normalize an adapter config to its fused-LoRA geometry values."""
     r_mlp = _config_int(config, "r_mlp", config.get("rank", 0))
     r_attn = _config_int(config, "r_attn", 0)
+    r_qkv = _config_int(config, "r_qkv", 0)
     alpha_mlp = _config_int(
         config, "alpha_mlp", config.get("alpha", r_mlp))
     alpha_attn = _config_int(config, "alpha_attn", r_attn)
+    alpha_qkv = _config_int(config, "alpha_qkv", r_qkv)
     geometry = {
         "r_attn": r_attn,
         "alpha_attn": alpha_attn,
         "r_mlp": r_mlp,
         "alpha_mlp": alpha_mlp,
+        "r_qkv": r_qkv,
+        "alpha_qkv": alpha_qkv,
+        "qkv_bias": bool(config.get("qkv_bias", False)),
     }
-    error = _lora_arg_error(r_mlp, alpha_mlp, r_attn, alpha_attn)
+    error = _lora_arg_error(
+        r_mlp, alpha_mlp, r_attn, alpha_attn, r_qkv, alpha_qkv)
     if error:
         raise ValueError(f"adapter config is invalid: {error}")
     return geometry
@@ -305,13 +318,16 @@ def init_adapter_geometry(path: str | Path) -> dict:
 
 def _check_geometry_override(geometry: dict, path: Path, *, rank=None,
                              alpha=None, rank_attn=None,
-                             alpha_attn=None) -> None:
+                             alpha_attn=None, rank_qkv=None,
+                             alpha_qkv=None) -> None:
     """Reject explicit rank/alpha values that differ from the checkpoint."""
     supplied = {
         "r_attn": rank_attn,
         "alpha_attn": alpha_attn,
         "r_mlp": rank,
         "alpha_mlp": alpha,
+        "r_qkv": rank_qkv,
+        "alpha_qkv": alpha_qkv,
     }
     mismatches = [
         f"{_GEOMETRY_FLAGS[key]}={value} (adapter {key}={geometry[key]})"
@@ -325,29 +341,33 @@ def _check_geometry_override(geometry: dict, path: Path, *, rank=None,
             + f"; {path} records r_attn={geometry['r_attn']}, "
             f"alpha_attn={geometry['alpha_attn']}, "
             f"r_mlp={geometry['r_mlp']}, "
-            f"alpha_mlp={geometry['alpha_mlp']}. "
+            f"alpha_mlp={geometry['alpha_mlp']}, "
+            f"r_qkv={geometry['r_qkv']}, "
+            f"alpha_qkv={geometry['alpha_qkv']}. "
             "Omit the rank/alpha flags to reuse the checkpoint geometry.")
 
 
 def load_init_adapter(model: torch.nn.Module, path: str | Path, *,
                       rank=None, alpha=None, rank_attn=None,
-                      alpha_attn=None) -> dict:
+                      alpha_attn=None, rank_qkv=None,
+                      alpha_qkv=None, qkv_bias=None) -> dict:
     """Rebuild a saved adapter on ``model`` and load its A/B tensors.
 
     The LoRA geometry comes from the adapter's ``config.json`` (or the
     ``adapter.pt`` config when that file is absent). Explicit ``rank`` /
-    ``alpha`` / ``rank_attn`` / ``alpha_attn`` values must match the
-    checkpoint exactly; a mismatch raises ``ValueError``. Missing, unexpected
-    or differently shaped A/B tensors also raise ``ValueError`` instead of
-    being silently dropped. Returns the adapter config with normalized
-    geometry.
+    ``alpha`` / ``rank_attn`` / ``alpha_attn`` / ``rank_qkv`` /
+    ``alpha_qkv`` values must match the checkpoint exactly; a mismatch raises
+    ``ValueError``. Missing, unexpected or differently shaped A/B tensors also
+    raise ``ValueError`` instead of being silently dropped. Returns the
+    adapter config with normalized geometry.
     """
     adapter_dir = _resolve(str(path))
     config = _read_adapter_config(adapter_dir)
     geometry = _geometry_from_config(config)
     _check_geometry_override(
         geometry, adapter_dir, rank=rank, alpha=alpha,
-        rank_attn=rank_attn, alpha_attn=alpha_attn)
+        rank_attn=rank_attn, alpha_attn=alpha_attn,
+        rank_qkv=rank_qkv, alpha_qkv=alpha_qkv)
     checkpoint_path = adapter_dir / "adapter.pt"
     if not checkpoint_path.is_file():
         raise FileNotFoundError(
@@ -357,10 +377,14 @@ def load_init_adapter(model: torch.nn.Module, path: str | Path, *,
     lora = checkpoint.get("lora", {}) if isinstance(checkpoint, dict) else {}
     if not lora:
         raise ValueError(f"init adapter has no LoRA tensors: {checkpoint_path}")
+    if qkv_bias is None:
+        qkv_bias = bool(config.get("qkv_bias", False))
     apply_lora(
         model, r_attn=geometry["r_attn"], r_mlp=geometry["r_mlp"],
         alpha_attn=geometry["alpha_attn"],
-        alpha_mlp=geometry["alpha_mlp"])
+        alpha_mlp=geometry["alpha_mlp"],
+        r_qkv=geometry["r_qkv"], alpha_qkv=geometry["alpha_qkv"],
+        qkv_bias=qkv_bias)
     set_lora_state_dict(model, lora)
     return {**config, **geometry}
 
@@ -374,7 +398,9 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
           batch_size: int = 1, lr_scale: str = "none",
           init_adapter: str | Path | None = None,
           key_weight: float = 1.0,
-          value_weight: float | None = None) -> dict:
+          value_weight: float | None = None,
+          rank_qkv: int | None = 0, alpha_qkv: int | None = 0,
+          qkv_bias: bool = False) -> dict:
     if value_weight is None:
         value_weight = content_weight
     for name, weight in (("key_weight", key_weight),
@@ -387,16 +413,23 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
         alpha = 16 if alpha is None else alpha
         rank_attn = 0 if rank_attn is None else rank_attn
         alpha_attn = 0 if alpha_attn is None else alpha_attn
+        rank_qkv = 0 if rank_qkv is None else rank_qkv
+        alpha_qkv = 0 if alpha_qkv is None else alpha_qkv
     else:
         geometry = init_adapter_geometry(init_dir)
         _check_geometry_override(
             geometry, init_dir, rank=rank, alpha=alpha,
-            rank_attn=rank_attn, alpha_attn=alpha_attn)
+            rank_attn=rank_attn, alpha_attn=alpha_attn,
+            rank_qkv=rank_qkv or None, alpha_qkv=alpha_qkv or None)
         rank = geometry["r_mlp"]
         alpha = geometry["alpha_mlp"]
         rank_attn = geometry["r_attn"]
         alpha_attn = geometry["alpha_attn"]
-    error = _lora_arg_error(rank, alpha, rank_attn, alpha_attn)
+        rank_qkv = geometry["r_qkv"]
+        alpha_qkv = geometry["alpha_qkv"]
+        qkv_bias = bool(qkv_bias or geometry.get("qkv_bias", False))
+    error = _lora_arg_error(
+        rank, alpha, rank_attn, alpha_attn, rank_qkv, alpha_qkv)
     if error:
         raise ValueError(error)
     batch_error = _batch_size_error(batch_size)
@@ -415,11 +448,15 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
     if init_dir is not None:
         load_init_adapter(
             model, init_dir, rank=rank, alpha=alpha,
-            rank_attn=rank_attn, alpha_attn=alpha_attn)
+            rank_attn=rank_attn, alpha_attn=alpha_attn,
+            rank_qkv=rank_qkv, alpha_qkv=alpha_qkv,
+            qkv_bias=qkv_bias)
     else:
         model = apply_lora(
             model, r_attn=rank_attn, r_mlp=rank,
-            alpha_attn=alpha_attn, alpha_mlp=alpha)
+            alpha_attn=alpha_attn, alpha_mlp=alpha,
+            r_qkv=rank_qkv, alpha_qkv=alpha_qkv,
+            qkv_bias=qkv_bias)
     model.to(device)
     params = lora_parameters(model)
     if not params:
@@ -482,6 +519,7 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
     save_adapter(
         model, out, r_attn=rank_attn, r_mlp=rank,
         alpha_attn=alpha_attn, alpha_mlp=alpha,
+        r_qkv=rank_qkv, alpha_qkv=alpha_qkv, qkv_bias=qkv_bias,
         rank=rank, alpha=alpha, steps=steps, lr=lr,
         base=str(base), train_examples=len(train_rows),
         replay_examples=len(replay_rows), replay_weight=replay_weight,
@@ -511,6 +549,8 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
         "alpha_attn": alpha_attn,
         "rank_mlp": rank,
         "alpha_mlp": alpha,
+        "rank_qkv": rank_qkv,
+        "alpha_qkv": alpha_qkv,
         "lora_parameters": count_lora_params(model),
         "adapter": adapter_path,
     }
@@ -543,15 +583,18 @@ def _positive_int(value: str) -> int:
 
 
 def _lora_arg_error(rank: int, alpha: int, rank_attn: int,
-                    alpha_attn: int) -> str | None:
-    if rank < 0 or rank_attn < 0:
+                    alpha_attn: int, rank_qkv: int = 0,
+                    alpha_qkv: int = 0) -> str | None:
+    if rank < 0 or rank_attn < 0 or rank_qkv < 0:
         return "LoRA ranks must be >= 0"
-    if alpha < 0 or alpha_attn < 0:
+    if alpha < 0 or alpha_attn < 0 or alpha_qkv < 0:
         return "LoRA alphas must be >= 0"
     if rank > 0 and alpha <= 0:
         return "--alpha must be > 0 when --rank > 0"
     if rank_attn > 0 and alpha_attn <= 0:
         return "--alpha-attn must be > 0 when --rank-attn > 0"
+    if rank_qkv > 0 and alpha_qkv <= 0:
+        return "--qkv-alpha must be > 0 when --qkv-rank > 0"
     return None
 
 
@@ -577,6 +620,14 @@ def main(argv=None) -> int:
         "--alpha-attn", type=int, default=None,
         help="LoRA alpha for attention out_proj "
              "(default 0, or the --init-adapter value)")
+    parser.add_argument(
+        "--qkv-rank", type=int, default=0,
+        help="LoRA rank for the fused Q/K/V in_proj_weight "
+             "(default 0, off; uses --init-adapter geometry when resuming)")
+    parser.add_argument(
+        "--qkv-alpha", type=int, default=0,
+        help="LoRA alpha for the fused Q/K/V in_proj_weight "
+             "(default 0; must be > 0 when --qkv-rank > 0)")
     parser.add_argument(
         "--init-adapter", default="",
         help="adapter directory to resume from (config.json or adapter.pt)")
@@ -615,21 +666,32 @@ def main(argv=None) -> int:
         init_dir = _resolve(init_adapter)
         try:
             geometry = init_adapter_geometry(init_dir)
+            # ``--qkv-rank``/``--qkv-alpha`` default to 0, so treat zero as
+            # "not supplied" when resuming and let the checkpoint win.
             _check_geometry_override(
                 geometry, init_dir, rank=args.rank, alpha=args.alpha,
-                rank_attn=args.rank_attn, alpha_attn=args.alpha_attn)
+                rank_attn=args.rank_attn, alpha_attn=args.alpha_attn,
+                rank_qkv=args.qkv_rank or None,
+                alpha_qkv=args.qkv_alpha or None)
         except (OSError, ValueError) as exc:
             parser.error(str(exc))
         rank = geometry["r_mlp"]
         alpha = geometry["alpha_mlp"]
         rank_attn = geometry["r_attn"]
         alpha_attn = geometry["alpha_attn"]
+        rank_qkv = geometry["r_qkv"]
+        alpha_qkv = geometry["alpha_qkv"]
+        qkv_bias = bool(geometry.get("qkv_bias", False))
     else:
         rank = 8 if args.rank is None else args.rank
         alpha = 16 if args.alpha is None else args.alpha
         rank_attn = 0 if args.rank_attn is None else args.rank_attn
         alpha_attn = 0 if args.alpha_attn is None else args.alpha_attn
-    lora_error = _lora_arg_error(rank, alpha, rank_attn, alpha_attn)
+        rank_qkv = args.qkv_rank
+        alpha_qkv = args.qkv_alpha
+        qkv_bias = False
+    lora_error = _lora_arg_error(
+        rank, alpha, rank_attn, alpha_attn, rank_qkv, alpha_qkv)
     if lora_error:
         parser.error(lora_error)
     if not math.isfinite(args.content_weight) or args.content_weight < 1.0:
@@ -655,6 +717,7 @@ def main(argv=None) -> int:
         device=device, seed=args.seed, content_weight=args.content_weight,
         replay_rows=replay_rows, replay_weight=args.replay_weight,
         rank_attn=rank_attn, alpha_attn=alpha_attn,
+        rank_qkv=rank_qkv, alpha_qkv=alpha_qkv, qkv_bias=qkv_bias,
         batch_size=args.batch_size, lr_scale=args.lr_scale,
         init_adapter=init_adapter or None, key_weight=args.key_weight,
         value_weight=value_weight)
