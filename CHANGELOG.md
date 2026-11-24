@@ -1,6 +1,6 @@
 # Changelog
 
-## atomzero 0.22.0 - unreleased
+## atomzero 0.22.0 - 2026-11-24 (intermediate patch; next boundary 0.30.0)
 
 - Integrated the staged curriculum runner into `atomzero-self-improve`: `--adapter-curriculum-command` runs a bounded curriculum job, records the gate/promotion block, and fails closed on gate/threshold errors.
 - The curriculum ledger now carries exact-match, key-copy, promotion and active-file evidence; raw prompt/answer text is never stored.

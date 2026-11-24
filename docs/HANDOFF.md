@@ -2,7 +2,7 @@
 
 ## Current state
 
-- Release candidate: `0.22.0` on `main`; last published batch `0.21.0` (bounded self-improve loop,
+- Last released boundary: `0.21.0`; `0.22.0` was an intermediate patch. Next boundary: **`0.30.0`** (bounded self-improve loop,
   committed-change scope check, fifth measured cycle)
 - Post-release main: self-code audit/diff/targeting with suppressions,
   planner history, scoreboard output collectors, escalation ladder, teacher
@@ -43,8 +43,9 @@
   ModelScope, dev.to, Medium, LinkedIn and X. `scripts/verify_release.py
   --version 0.20.0` reported **0 failures**; release commit `378fd0e`, annotated
   tag `v0.20.0`. `0.21.0` is published on PyPI, GitHub, Hugging Face,
-  ModelScope, dev.to, Medium, LinkedIn and X. `0.22.0` is the next release
-  candidate and adds the self-improve curriculum integration.
+  ModelScope, dev.to, Medium, LinkedIn and X. `0.22.0` is an intermediate patch
+  with the self-improve curriculum integration. The next release boundary is
+  **0.30.0**; do not publish 0.23-0.29 as boundaries.
 
 ## Completed in this session
 

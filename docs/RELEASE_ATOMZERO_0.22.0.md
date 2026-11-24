@@ -1,6 +1,6 @@
 # atomzero 0.22.0 - curriculum loop inside self-improve
 
-Status: **release candidate**. Base weights remain `0.8.0`.
+Status: **intermediate patch, published 2026-11-24**. The next 0.1 release boundary is **0.30.0**. Base weights remain `0.8.0`.
 
 ## Highlights
 

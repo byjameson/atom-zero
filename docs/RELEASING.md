@@ -3,7 +3,7 @@
 Canonical surfaces: GitHub, Hugging Face, PyPI, dev.to, Medium, LinkedIn and
 ModelScope.
 
-Current batch: **0.21.0 published.** It adds the bounded self-improve loop,
+Current batch: **0.21.0 published; 0.22.0 was an intermediate patch. Next boundary: 0.30.0.** It adds the bounded self-improve loop,
 committed-change scope verification and the fifth measured cycle with an actual
 nested `opencode run` process. Post-release work adds the self-code audit, its
 planner/runner integration and the sixth measured cycle.
@@ -12,16 +12,17 @@ planner/runner integration and the sixth measured cycle.
 
 ## Release cadence
 
-Releases follow **one 0.1 version per release**. `0.19.0` is the current
-published version; the next boundary is **`0.20.0`**, then `0.21.0`, and so on.
-Every 0.1 release is published on all canonical surfaces.
+Releases follow **one 0.1 boundary per release**: `0.20.0 -> 0.30.0 -> 0.40.0`
+and so on. Do not publish `0.21.x`-`0.29.x` as release boundaries. Intermediate
+patch uploads may exist only as hotfixes and are not the 0.1 milestone.
 
-Intermediate commits stay local. A release batch can contain many development
-increments, but it is published at the next 0.1 boundary.
+`0.20.0` was the last 0.1 boundary; the next boundary is **`0.30.0`**. Every
+0.1 boundary is published on all canonical surfaces.
 
-At every 0.1 boundary: bump the version, update release notes/model cards/docs,
-run preflight and `scripts/verify_release.py`, and publish every canonical
-surface once. Push the release commit and tag, but do not push each increment.
+Intermediate commits stay local. At every 0.1 boundary: bump the version,
+update release notes/model cards/docs, run preflight and
+`scripts/verify_release.py`, and publish every canonical surface once. Push the
+release commit and tag, but do not push each increment.
 
 ## 1. Preflight
 
