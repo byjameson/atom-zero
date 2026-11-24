@@ -1,0 +1,152 @@
+{
+  "mlp": {
+    "examples": 200,
+    "baseline": {
+      "loss": 4.501249020200659,
+      "content_loss": 4.252631369762979,
+      "syntax_loss": 4.843261839328702
+    },
+    "adapter": {
+      "loss": 1.8799013559325057,
+      "content_loss": 2.362852692337802,
+      "syntax_loss": 1.2155255538941625
+    },
+    "exact_match": {
+      "examples": 200,
+      "matches": 0,
+      "rate": 0.0,
+      "max_new": 64,
+      "families": {
+        "city_json": {
+          "examples": 40,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "city_kv": {
+          "examples": 40,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "city_yaml": {
+          "examples": 40,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "river_json": {
+          "examples": 40,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "river_kv": {
+          "examples": 40,
+          "matches": 0,
+          "rate": 0.0
+        }
+      }
+    },
+    "families": {
+      "city_json": {
+        "baseline_content_loss": 5.672040368228887,
+        "adapter_content_loss": 3.1385383771215727
+      },
+      "city_kv": {
+        "baseline_content_loss": 3.581621666195084,
+        "adapter_content_loss": 2.313837517323437
+      },
+      "city_yaml": {
+        "baseline_content_loss": 3.4756579018302443,
+        "adapter_content_loss": 3.0017198150301296
+      },
+      "river_json": {
+        "baseline_content_loss": 5.7268879261100665,
+        "adapter_content_loss": 1.5173355703796283
+      },
+      "river_kv": {
+        "baseline_content_loss": 2.594505914316336,
+        "adapter_content_loss": 1.5373913978370999
+      }
+    }
+  },
+  "attn": {
+    "examples": 200,
+    "baseline": {
+      "loss": 4.501249020200659,
+      "content_loss": 4.252631369762979,
+      "syntax_loss": 4.843261839328702
+    },
+    "adapter": {
+      "loss": 1.7637469081197277,
+      "content_loss": 2.290173319368427,
+      "syntax_loss": 1.0395642577004909
+    },
+    "exact_match": {
+      "examples": 200,
+      "matches": 0,
+      "rate": 0.0,
+      "max_new": 64,
+      "families": {
+        "city_json": {
+          "examples": 40,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "city_kv": {
+          "examples": 40,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "city_yaml": {
+          "examples": 40,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "river_json": {
+          "examples": 40,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "river_kv": {
+          "examples": 40,
+          "matches": 0,
+          "rate": 0.0
+        }
+      }
+    },
+    "families": {
+      "city_json": {
+        "baseline_content_loss": 5.672040368228887,
+        "adapter_content_loss": 2.9984663862289795
+      },
+      "city_kv": {
+        "baseline_content_loss": 3.581621666195084,
+        "adapter_content_loss": 2.1283002735917966
+      },
+      "city_yaml": {
+        "baseline_content_loss": 3.4756579018302443,
+        "adapter_content_loss": 2.7850213406881306
+      },
+      "river_json": {
+        "baseline_content_loss": 5.7268879261100665,
+        "adapter_content_loss": 1.6627046815891826
+      },
+      "river_kv": {
+        "baseline_content_loss": 2.594505914316336,
+        "adapter_content_loss": 1.6378591939801586
+      }
+    }
+  },
+  "dataset": {
+    "train": 576,
+    "indist": 192,
+    "cross": 200,
+    "replay": 192,
+    "steps": 2000,
+    "replay_weight": 0.2,
+    "content_weight": 5.0,
+    "lr": 0.0003,
+    "rank_mlp": 8,
+    "alpha_mlp": 8,
+    "seed": 23
+  },
+  "interpretation": "values and entities copied; key names not copied; exact match 0"
+}
