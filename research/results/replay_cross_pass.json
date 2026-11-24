@@ -1,0 +1,76 @@
+{
+  "status": "completed",
+  "candidate": {
+    "candidate_id": "ad-e396366ef725656c",
+    "version": 1,
+    "train_examples": 116,
+    "eval_examples": 48,
+    "total_examples": 164,
+    "duplicates_skipped": 1,
+    "eval_ratio": 0.292683,
+    "seed": 13,
+    "split_method": "explicit_cross_distribution",
+    "family_separation": true,
+    "train_families": [
+      "person_json",
+      "person_kv",
+      "product_json",
+      "product_kv"
+    ],
+    "eval_families": [
+      "city_json",
+      "city_kv"
+    ],
+    "train_family_counts": {
+      "person_json": 32,
+      "person_kv": 26,
+      "product_json": 32,
+      "product_kv": 26
+    },
+    "eval_family_counts": {
+      "city_json": 25,
+      "city_kv": 23
+    },
+    "min_loss_delta": 0.01,
+    "max_ppl_ratio": 1.0,
+    "auto_apply": false,
+    "weights_changed": false,
+    "method": "content_free_adapter_candidate_event_v1"
+  },
+  "trainer": {
+    "ok": true,
+    "returncode": 0,
+    "timed_out": false,
+    "elapsed_seconds": 64.403
+  },
+  "gate": {
+    "status": "pass",
+    "ok": true,
+    "promotable": true,
+    "candidate_id": "ad-e396366ef725656c",
+    "adapter_label": "adapter",
+    "eval_examples": 48,
+    "baseline_loss": 5.254859422798236,
+    "adapter_loss": 2.802658612190073,
+    "loss_delta": -2.452201,
+    "baseline_ppl": 191.49456419214835,
+    "adapter_ppl": 16.48842487818261,
+    "ppl_ratio": 0.086104,
+    "min_loss_delta": 0.01,
+    "max_ppl_ratio": 1.0,
+    "reasons": [
+      "loss_improved",
+      "ppl_not_worse"
+    ],
+    "auto_apply": false,
+    "requires_training": true,
+    "weights_changed": false,
+    "method": "held_out_adapter_gate_v1"
+  },
+  "base_loss": 5.254859422798236,
+  "adapter_loss": 2.802658612190073,
+  "base_ppl": 191.49456419214835,
+  "adapter_ppl": 16.48842487818261,
+  "weights_changed": false,
+  "auto_apply": false
+}

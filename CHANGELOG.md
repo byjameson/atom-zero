@@ -92,6 +92,11 @@ the self-code branch and its planner/runner integration.
   pass (`5.3949 -> 4.9404`) and cross-city gate fail (`5.2549 -> 7.0586`,
   ppl ratio `6.07`). Replay reduced the cross regression from 757x to 6.07x,
   but did not achieve cross-family transfer. See `docs/DIVERSE_REPLAY_CYCLE.md`.
+- Added the first **replay-weighted cross-family gate pass**: 117 primary
+  multi-family rows + 154 replay rows at weight `0.35`, 600 steps. Cross-city
+  loss `5.2549 -> 2.8027`, ppl ratio `0.086`; the autonomous loop recorded
+  `status: completed`, `promotable: true`, `weights_changed: false`. The
+  held-out family was never in training. See `docs/DIVERSE_REPLAY_CYCLE.md`.
 - Added **external adapter training harness** (`research/train_adapter_candidate.py`)
   and `--adapter-trainer-command`/`--base` wiring. A real LoRA run on the local
   0.8.0 base moved held-out loss from 5.9941 to 0.7949 and perplexity from

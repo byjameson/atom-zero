@@ -86,9 +86,60 @@ ledger:          data/diverse_autonomous/ledger.jsonl
 
 The gate correctly blocked promotion.
 
+## Replay-weighted retry - first cross-family pass
+
+The replay sampler was then used explicitly:
+
+```text
+primary rows:      117 multi-family
+replay rows:       154 old JSON/key-value
+replay weight:     0.35
+steps:             600
+```
+
+Cross-family result:
+
+```text
+candidate:       ad-e396366ef725656c
+family separation: true
+base_loss:       5.254859
+adapter_loss:    2.802659
+loss_delta:     -2.452201
+base_ppl:      191.4946
+adapter_ppl:    16.4884
+ppl_ratio:       0.086104
+gate:            pass / promotable
+```
+
+The autonomous loop executed the same replay-aware trainer:
+
+```text
+status:          completed
+trainer:         returncode 0, 64.4s
+candidate:       ad-e396366ef725656c
+train/eval:      116 / 48
+family separation: true
+gate:            pass
+weights_changed: false
+ledger:          data/diverse_autonomous_replay/ledger.jsonl
+```
+
+On the in-distribution held-out set the same adapter reached:
+
+```text
+base_loss: 5.394876 -> adapter_loss: 0.957432
+base_ppl: 220.2747  -> adapter_ppl:  2.6050
+ppl_ratio: 0.011826
+gate: pass
+```
+
+This is the first cross-family gate pass in the project: the held-out city
+family never appears in training, and the replay mix retains the older formats.
+
 ## Evidence
 
 - `research/results/diverse_cycle_summary.json`
+- `research/results/replay_cross_pass.json`
 - `research/results/diverse_adapter_v1_indist_gate.json`
 - `research/results/diverse_adapter_v1_cross_gate.json`
 - `docs/TEACHER_QUEUE.md`
@@ -97,9 +148,11 @@ The gate correctly blocked promotion.
 ## Honest conclusion
 
 - This is not general model self-improvement.
-- Multi-family + replay is a clear improvement in retention, but not enough for
-  cross-family transfer.
+- The adapter learned format transfer and retained the older JSON/key-value
+  distributions; the held-out city family is new.
+- The replay mix contains the old name/score key-value distribution, so format
+  transfer is not the same as learning an unseen task family from scratch.
 - The adapter was not promoted; `0.8.0` remains the product base.
-- Next experiments should add replay weighting, family-balanced sampling and
-  a genuinely different held-out task family (not another entity/format
-  permutation).
+- Next experiments should test an entirely new task family (YAML/arithmetic),
+  family-balanced replay weights, and a true deployment smoke test before any
+  promotion.
