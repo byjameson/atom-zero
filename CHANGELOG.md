@@ -1,5 +1,13 @@
 # Changelog
 
+## atomzero 0.30.0 - unreleased
+
+- **Best copy adapter so far**: specialize on multi, then rehearse on the balanced mix. `multi_recover` reached **48.0% exact / 60.4% key copy / 70.0% key recall** on the 250-row mixed held-out set, with content loss `4.6015 -> 0.7789`; behavior gate pass; curriculum registry updated.
+- Added **key/value-aware token weighting** (`--key-weight`, `--value-weight`). It did not break the 3-4 key wall: mixed 40.4% / 53.2%, 3short 2/8, 4short 0/0.
+- Added a **multi-key short-value curriculum** (2short, 2mixed, 3short, 4short). It helps 2-key rows (42/54 and 44/58) but 3-4 keys remain 0-6% exact.
+- Added **self-improve curriculum integration** and VM evidence: `status: completed`, gate pass, exact 0.40, key-copy 0.548, fail-closed on broken commands.
+- 1303 tests passed on the host; VM full-suite evidence follows the release prep.
+
 ## atomzero 0.22.0 - 2026-11-24 (intermediate patch; next boundary 0.30.0)
 
 - Integrated the staged curriculum runner into `atomzero-self-improve`: `--adapter-curriculum-command` runs a bounded curriculum job, records the gate/promotion block, and fails closed on gate/threshold errors.
