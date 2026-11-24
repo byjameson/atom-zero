@@ -14,6 +14,15 @@ held-out JSONL with :mod:`research.compare_adapters`.
       --rank-attn 4 --alpha-attn 8 \
       --result research/results/adapter_candidate.json
 
+``--batch-size`` (default ``1``) accumulates ``N`` rows before each
+``optimizer.step()``; the accumulated loss is the token-weighted mean over the
+whole group (sum of weighted cross-entropy divided by the summed token
+weights). ``--steps`` still counts sampled rows, so ``--batch-size 4`` performs
+``ceil(rows_seen / 4)`` optimizer steps. ``--lr-scale {none,linear}`` defaults
+to ``none``; ``linear`` explicitly multiplies the learning rate by
+``batch_size`` and the effective value is recorded in the result and adapter
+config. No automatic LR scaling happens.
+
 ``--rank-attn`` (default ``0``) additionally adapts the attention output
 projection (``out_proj``). The model uses a fused
 ``nn.MultiheadAttention.in_proj_weight`` Parameter for Q/K/V; that projection
@@ -97,15 +106,47 @@ def _token_weights(tok, y, content_weight: float):
     return weights
 
 
+def group_weighted_loss(terms) -> torch.Tensor:
+    """Combine per-row ``(weighted_ce_sum, weight_total)`` terms.
+
+    Returns ``sum(weighted_ce_sum) / sum(weight_total)``: a token-weighted
+    mean over every row in the group, not a mean of per-row means. For a
+    single term this is exactly the legacy row loss
+    ``(token_loss * weights).sum() / weights.sum().clamp_min(1e-8)``.
+    """
+    if not terms:
+        raise ValueError("terms must contain at least one row")
+    numerator, denominator = terms[0]
+    for row_numerator, row_denominator in terms[1:]:
+        numerator = numerator + row_numerator
+        denominator = denominator + row_denominator
+    return numerator / denominator.clamp_min(1e-8)
+
+
+def _batch_size_error(batch_size) -> str | None:
+    if isinstance(batch_size, bool) or not isinstance(batch_size, int):
+        return "batch_size must be an int"
+    if batch_size < 1:
+        return "batch_size must be >= 1"
+    return None
+
+
 def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
           lr: float, rank: int, alpha: int, max_seq: int,
           device, seed: int = 13, content_weight: float = 1.0,
           replay_rows: list[dict] | None = None,
           replay_weight: float = DEFAULT_REPLAY_WEIGHT,
-          rank_attn: int = 0, alpha_attn: int = 0) -> dict:
+          rank_attn: int = 0, alpha_attn: int = 0,
+          batch_size: int = 1, lr_scale: str = "none") -> dict:
     error = _lora_arg_error(rank, alpha, rank_attn, alpha_attn)
     if error:
         raise ValueError(error)
+    batch_error = _batch_size_error(batch_size)
+    if batch_error:
+        raise ValueError(batch_error)
+    if lr_scale not in ("none", "linear"):
+        raise ValueError("lr_scale must be 'none' or 'linear'")
+    effective_lr = lr * batch_size if lr_scale == "linear" else lr
     replay_rows = list(replay_rows or [])
     sequence = sample_steps(
         train_rows, replay_rows, max(1, steps),
@@ -120,11 +161,25 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
     params = lora_parameters(model)
     if not params:
         raise SystemExit("no LoRA parameters were created")
-    optimizer = torch.optim.AdamW(params, lr=lr)
+    optimizer = torch.optim.AdamW(params, lr=effective_lr)
     model.train()
     losses = []
     started = time.time()
-    for step, row in enumerate(sequence):
+    rows_seen = 0
+    optimizer_steps = 0
+    pending = []
+
+    def step_group(group) -> float:
+        # No gradients are produced while a group is collected, so zeroing
+        # here is the start of the group's update.
+        optimizer.zero_grad(set_to_none=True)
+        loss = group_weighted_loss(group)
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(params, 1.0)
+        optimizer.step()
+        return float(loss.detach().cpu())
+
+    for row in sequence:
         encoded = _encode(tok, row, max_seq, device)
         if encoded is None:
             continue
@@ -134,15 +189,25 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
             logits.reshape(-1, model.vocab), y.reshape(-1),
             ignore_index=-100, reduction="none")
         weights = _token_weights(tok, y, content_weight).reshape(-1)
-        loss = (token_loss * weights).sum() / weights.sum().clamp_min(1e-8)
-        optimizer.zero_grad(set_to_none=True)
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(params, 1.0)
-        optimizer.step()
-        losses.append(float(loss.detach().cpu()))
-        if (step + 1) % 50 == 0:
+        pending.append(((token_loss * weights).sum(), weights.sum()))
+        rows_seen += 1
+        if len(pending) < batch_size:
+            continue
+        losses.append(step_group(pending))
+        pending.clear()
+        optimizer_steps += 1
+        if optimizer_steps % 50 == 0:
             print(json.dumps({
-                "step": step + 1, "loss": round(losses[-1], 5),
+                "step": optimizer_steps, "loss": round(losses[-1], 5),
+                "elapsed_seconds": round(time.time() - started, 2),
+            }), flush=True)
+    if pending:
+        losses.append(step_group(pending))
+        pending.clear()
+        optimizer_steps += 1
+        if optimizer_steps % 50 == 0:
+            print(json.dumps({
+                "step": optimizer_steps, "loss": round(losses[-1], 5),
                 "elapsed_seconds": round(time.time() - started, 2),
             }), flush=True)
     out.mkdir(parents=True, exist_ok=True)
@@ -152,7 +217,9 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
         rank=rank, alpha=alpha, steps=steps, lr=lr,
         base=str(base), train_examples=len(train_rows),
         replay_examples=len(replay_rows), replay_weight=replay_weight,
-        content_weight=content_weight,
+        content_weight=content_weight, batch_size=batch_size,
+        optimizer_steps=optimizer_steps, rows_seen=rows_seen,
+        lr_scale=lr_scale, effective_lr=effective_lr,
         method="external_train_adapter_candidate_v1")
     tail = losses[-20:] if losses else [0.0]
     try:
@@ -166,6 +233,11 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
         "replay_examples": len(replay_rows),
         "replay_weight": replay_weight,
         "content_weight": content_weight,
+        "batch_size": batch_size,
+        "optimizer_steps": optimizer_steps,
+        "rows_seen": rows_seen,
+        "lr_scale": lr_scale,
+        "effective_lr": effective_lr,
         "train_mix": mix,
         "rank_attn": rank_attn,
         "alpha_attn": alpha_attn,
@@ -186,6 +258,17 @@ def _bounded_weight(value: str) -> float:
         raise argparse.ArgumentTypeError(
             "replay weight must be between 0.0 and 1.0")
     return weight
+
+
+def _positive_int(value: str) -> int:
+    try:
+        number = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            f"invalid integer: {value!r}") from exc
+    if number < 1:
+        raise argparse.ArgumentTypeError("value must be >= 1")
+    return number
 
 
 def _lora_arg_error(rank: int, alpha: int, rank_attn: int,
@@ -220,6 +303,12 @@ def main(argv=None) -> int:
     parser.add_argument("--max-seq", type=int, default=256)
     parser.add_argument("--seed", type=int, default=13)
     parser.add_argument(
+        "--batch-size", type=_positive_int, default=1,
+        help="rows accumulated per optimizer step (default 1)")
+    parser.add_argument(
+        "--lr-scale", choices=("none", "linear"), default="none",
+        help="none keeps --lr; linear explicitly multiplies it by batch-size")
+    parser.add_argument(
         "--replay-jsonl", default=None,
         help="optional older-distribution JSONL mixed into training")
     parser.add_argument(
@@ -253,7 +342,8 @@ def main(argv=None) -> int:
         rank=args.rank, alpha=args.alpha, max_seq=args.max_seq,
         device=device, seed=args.seed, content_weight=args.content_weight,
         replay_rows=replay_rows, replay_weight=args.replay_weight,
-        rank_attn=args.rank_attn, alpha_attn=args.alpha_attn)
+        rank_attn=args.rank_attn, alpha_attn=args.alpha_attn,
+        batch_size=args.batch_size, lr_scale=args.lr_scale)
     comparison = compare(
         args.base, str(_resolve(args.eval)), [str(out)])
     models = comparison.get("models", [])
