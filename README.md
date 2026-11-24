@@ -13,7 +13,7 @@ ModelScope.
 ## Install
 
 ```powershell
-pip install atomzero==0.20.0
+pip install atomzero==0.21.0
 ```
 
 Optional local MiniLM reranker:
@@ -381,11 +381,11 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 
 ## Links
 
-- PyPI: <https://pypi.org/project/atomzero/0.20.0/>
+- PyPI: <https://pypi.org/project/atomzero/0.21.0/>
 - GitHub source: <https://github.com/byjameson/atom-zero>
 - X: <https://x.com/aigokhan>
 - Instagram: <https://instagram.com/quantsinner>
-- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v0.20.0>
+- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v0.21.0>
 - Quickstart: <https://github.com/byjameson/atom-zero/blob/main/docs/QUICKSTART_ATOMZERO.md>
 - Model card: <https://github.com/byjameson/atom-zero/blob/main/docs/MODEL_CARD.md>
 - Full project map: <https://github.com/byjameson/atom-zero/blob/main/docs/PROJECT_OVERVIEW.md>
@@ -435,6 +435,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Diverse teacher + replay cycle: <https://github.com/byjameson/atom-zero/blob/main/docs/DIVERSE_REPLAY_CYCLE.md>
 - Exact-match content audit: <https://github.com/byjameson/atom-zero/blob/main/docs/CONTENT_AUDIT.md>
 - Copy-curriculum value-vs-key cycle: <https://github.com/byjameson/atom-zero/blob/main/docs/COPY_CURRICULUM_CYCLE.md>
+- Multi-key rehearsal and adapter soup: <https://github.com/byjameson/atom-zero/blob/main/docs/MULTI_KEY_REHEARSAL.md>
 - Randomized-key copy cycle: <https://github.com/byjameson/atom-zero/blob/main/docs/RANDOM_KEY_COPY_CYCLE.md>
 - Full fine-tune copy control: <https://github.com/byjameson/atom-zero/blob/main/docs/FULL_FINETUNE_CONTROL.md>
 - Gradient accumulation: <https://github.com/byjameson/atom-zero/blob/main/docs/GRADIENT_ACCUMULATION.md>

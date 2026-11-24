@@ -2,7 +2,7 @@
 
 ## Current state
 
-- Last released batch: `0.20.0` on `main`; all canonical surfaces published (bounded self-improve loop,
+- Release candidate: `0.21.0` on `main`; last published batch `0.20.0` (bounded self-improve loop,
   committed-change scope check, fifth measured cycle)
 - Post-release main: self-code audit/diff/targeting with suppressions,
   planner history, scoreboard output collectors, escalation ladder, teacher
@@ -32,7 +32,7 @@
   (`docs/COPY_CURRICULUM_CYCLE.md`, `docs/RANDOM_KEY_COPY_CYCLE.md`).
   Accumulating for the **1.0.0** boundary; not pushed yet.
 - Working tree after the release-doc commits: clean
-- Atom Zero tests: **1248 passed** (host) / **1248 passed** (VM, 8 vCPU)
+- Atom Zero tests: **1264 passed** (host) / **1264 passed** (VM, 8 vCPU)
 - AISC strict audit: **26 specs, 24 PASS, 0 errors**; `AtomZeroAnswerability`
   and `AtomZeroAnswerabilityGenerated` remain **FAIL** with the measured
   Brier 0.233 / ECE 0.064 and refusal-policy misses. The ECE target is met;
@@ -41,8 +41,8 @@
 - No model weights changed; weights remain `0.8.0`.
 - Release status: `0.20.0` is published on PyPI, GitHub, Hugging Face,
   ModelScope, dev.to, Medium, LinkedIn and X. `scripts/verify_release.py
-  --version 0.20.0` reports **0 failures**; release commit `378fd0e`, annotated
-  tag `v0.20.0`. The next boundary is **0.21.0**.
+  --version 0.20.0` reported **0 failures**; release commit `378fd0e`, annotated
+  tag `v0.20.0`. `0.21.0` is the next release candidate.
 
 ## Completed in this session
 

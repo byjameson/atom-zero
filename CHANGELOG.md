@@ -1,6 +1,13 @@
 # Changelog
 
-## atomzero 0.20.0 - 2026-11-24
+## atomzero 0.21.0 - unreleased
+
+- Added a **curriculum gate/promotion loop**: the staged runner can train, evaluate a final mixed set, run the content/exact/key-copy gate and optionally promote to a separate curriculum registry.
+- Added **adapter soup** (weighted LoRA A/B merging) with strict geometry validation and per-split evaluation.
+- First behavior-passing curriculum adapter: **40.0% exact / 54.8% key-copy** on a 250-row mixed held-out set; content loss `4.0449 -> 1.0011`; gate pass; promoted to `data/curriculum_active_adapter.json` (product base remains `0.8.0`).
+- Pure multi-key training improved multi exact from 8% to 12%, but echo_json fell from 72% to 10%; adapter soup was worse than rehab on every stage. Multi-key copying remains the bottleneck.
+- 1264 tests passed on the VM in 50.35s; benchmark 20/20.
+
 
 Release cadence is now **one 0.1 version per release**. This batch adds the
 self-code branch and its planner/runner integration, plus the content/behavior

@@ -1,0 +1,100 @@
+{
+  "date": "2026-11-24",
+  "mixed_eval_examples": 250,
+  "rehearsal_focus": {
+    "exact_match": 0.4,
+    "key_copy_rate": 0.548,
+    "key_recall": 0.628333,
+    "loss": 0.973751,
+    "content_loss": 1.001091,
+    "gate": "pass",
+    "promoted_to": "data/curriculum_active_adapter.json"
+  },
+  "adapter_soup": {
+    "weights": [
+      0.5,
+      0.3,
+      0.2
+    ],
+    "exact_match": 0.344,
+    "key_copy_rate": 0.464,
+    "key_recall": 0.547,
+    "loss": 1.0279
+  },
+  "pure_multi": {
+    "multi_exact": 0.12,
+    "multi_key_copy": 0.2,
+    "echo_json_exact": 0.1,
+    "echo_kv_exact": 0.44
+  },
+  "per_stage": {
+    "rehearsal_focus": {
+      "echo_kv": [
+        0.58,
+        0.68
+      ],
+      "echo_json": [
+        0.72,
+        0.82
+      ],
+      "two_kv": [
+        0.34,
+        0.56
+      ],
+      "two_json": [
+        0.28,
+        0.46
+      ],
+      "multi": [
+        0.08,
+        0.22
+      ]
+    },
+    "pure_multi": {
+      "echo_kv": [
+        0.44,
+        0.52
+      ],
+      "echo_json": [
+        0.1,
+        0.1
+      ],
+      "two_kv": [
+        0.3,
+        0.42
+      ],
+      "two_json": [
+        0.2,
+        0.34
+      ],
+      "multi": [
+        0.12,
+        0.2
+      ]
+    },
+    "adapter_soup": {
+      "echo_kv": [
+        0.52,
+        0.62
+      ],
+      "echo_json": [
+        0.68,
+        0.74
+      ],
+      "two_kv": [
+        0.26,
+        0.42
+      ],
+      "two_json": [
+        0.2,
+        0.36
+      ],
+      "multi": [
+        0.06,
+        0.18
+      ]
+    }
+  },
+  "decision": "rehearsal_focus is the best overall; soup and pure multi do not retain earlier skills",
+  "base_weights": "0.8.0"
+}
