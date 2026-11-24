@@ -99,6 +99,45 @@ $env:PYTHONPATH="$PWD;$PWD\src"
 python -m pytest tests/test_random_copy_queue.py -q
 ```
 
+## Staged randomized-key copy family
+
+`research/build_staged_copy_queue.py` splits randomized-key copying into five
+stages, so a model can learn one-pair copying before it has to hold two or four
+pairs and JSON/KV syntax at the same time:
+
+| # | stage dir | pairs | format | values |
+|---|---|---|---|---|
+| 1 | `stage_echo_kv` | 1 | KV | short token or single word |
+| 2 | `stage_echo_json` | 1 | JSON | short token or single word |
+| 3 | `stage_two_kv` | 2 | KV | short token or single word |
+| 4 | `stage_two_json` | 2 | JSON | short token or single word |
+| 5 | `stage_multi` | 2-4 | JSON/KV | mixed single word, multiword, number |
+
+Every stage has its own `train.jsonl`, `eval.jsonl` and `manifest.json`. Keys
+are fresh random strings, checked against `RESERVED_KEYS`, and unique across
+the entire build, so train and eval share no keys or values. Each answer is
+parsed back and compared key by key before a row is kept; invalid rows are
+regenerated. The per-stage manifest reports row counts, format counts, key and
+value overlap, value-pool counts and stage order.
+
+```powershell
+python research/build_staged_copy_queue.py `
+  --out-dir data/staged_copy_v1 `
+  --stages all --rows 2000 --eval-rows 200 `
+  --seed 23 --key-style short --shuffle
+```
+
+`--key-style` chooses `short` (3-6 lowercase alphanumeric), `cv` (3-4
+consonant-vowel syllables) or `word` (4-8 lowercase letters). `--stages` takes
+a comma list of `echo_kv,echo_json,two_kv,two_json,multi`, or `all`.
+`data/staged_copy_v1/` is gitignored. See `docs/STAGED_COPY_CURRICULUM.md` for
+the full curriculum design and verification details.
+
+```powershell
+$env:PYTHONPATH="$PWD;$PWD\src"
+python -m pytest tests/test_staged_copy_queue.py -q
+```
+
 ## Formats and validators
 
 All validators are deterministic, standard-library only, and used through
