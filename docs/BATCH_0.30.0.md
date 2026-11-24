@@ -38,6 +38,14 @@ This batch targets it directly.
    Run `atomzero-self-improve` with `--adapter-curriculum-command` on the VM,
    record the gate/promotion block and verify fail-closed behavior.
 
+## First result - specialize then rehearse
+
+`multi_pure` -> balanced rehearsal at low LR reached **48% exact / 60.4%
+key copy** on the mixed held-out set (previous best 40% / 54.8%), with content
+loss `4.6015 -> 0.7789`. It passed the behavior gate and was promoted to the
+curriculum registry. Per-stage: echo_kv 62/74, echo_json 76/80, two_kv 44/54,
+two_json 46/72, multi 12/22.
+
 ## Release gate
 
 - All tests on the VM (8 vCPU) and benchmark 20/20.

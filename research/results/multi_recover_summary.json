@@ -1,0 +1,48 @@
+{
+  "date": "2026-11-24",
+  "adapter": "multi_recover",
+  "init_adapter": "multi_pure",
+  "train_data": "rehearsal_focus",
+  "mixed_eval_examples": 250,
+  "mixed": {
+    "exact_match": 0.48,
+    "key_copy_rate": 0.604,
+    "key_recall": 0.700333,
+    "loss": 0.776904,
+    "content_loss": 0.778894,
+    "baseline_loss": 4.601534
+  },
+  "per_stage": {
+    "echo_kv": [
+      0.62,
+      0.74
+    ],
+    "echo_json": [
+      0.76,
+      0.8
+    ],
+    "two_kv": [
+      0.44,
+      0.54
+    ],
+    "two_json": [
+      0.46,
+      0.72
+    ],
+    "multi": [
+      0.12,
+      0.22
+    ]
+  },
+  "gate": {
+    "status": "pass",
+    "min_exact_match": 0.25,
+    "min_key_copy_rate": 0.4
+  },
+  "promotion": {
+    "promoted": true,
+    "active_file": "data/curriculum_active_adapter.json",
+    "previous": "rehearsal_focus"
+  },
+  "base_weights": "0.8.0"
+}

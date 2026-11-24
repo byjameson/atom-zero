@@ -122,6 +122,32 @@ This ladder is a data-isolation tool, not a training result. It says nothing
 about model quality until each stage is trained and measured on its own
 held-out split.
 
+## Specialize then rehearse (best result)
+
+Starting from `multi_pure` and training on the balanced rehearsal mix at low LR
+recovered the forgotten skills and improved the best overall result:
+
+| metric | rehearsal_focus | multi_recover |
+|---|---:|---:|
+| mixed exact | 40.0% | **48.0%** |
+| mixed key copy | 54.8% | **60.4%** |
+| mixed key recall | 62.8% | **70.0%** |
+| mixed loss | 0.974 | **0.777** |
+
+Per-stage (50 rows, exact / key copy):
+
+| stage | multi_recover |
+|---|---:|
+| echo_kv | 62% / 74% |
+| echo_json | 76% / 80% |
+| two_kv | 44% / 54% |
+| two_json | 46% / 72% |
+| multi | 12% / 22% |
+
+This adapter passed the behavior gate and replaced `rehearsal_focus` in the
+curriculum registry. Multi-key copying is still the weakest stage, but the
+specialize-then-rehearse recipe is clearly better than soup or pure multi.
+
 ## Conclusion
 
 Multi-key copying is still the bottleneck. The next experiments should target
