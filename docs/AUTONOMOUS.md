@@ -59,6 +59,61 @@ Inspect the sandbox backend:
 atomzero-self-improve --sandbox-info
 ```
 
+## Curriculum adapter runs
+
+The staged copy curriculum (`research/run_staged_curriculum.py`) can be one
+step of the same opt-in loop. It trains the stage adapters, runs the final
+mixed eval and behavior gate, and optionally promotes into the separate
+curriculum registry. It runs only when `--opt-in` and
+`--adapter-curriculum-command` are set; without the flag the code loop is
+unchanged.
+
+```powershell
+atomzero-self-improve --signal signals.json --opt-in `
+  --adapter-promotable 1 `
+  --adapter-base checkpoints/transformer_behavior_50m_long `
+  --adapter-curriculum-command "python research/run_staged_curriculum.py --data-dir {data_dir} --out-dir {out_dir} --base {base} --stages echo_kv,echo_json,two_kv,two_json,multi --seed 23 --final-eval {final_eval} --require-content --min-exact-match 0.25 --min-key-copy-rate 0.25 --result {result} --promote --active-file {active_file}" `
+  --adapter-curriculum-result research/results/staged_curriculum_run.json `
+  --adapter-curriculum-out checkpoints/staged_curriculum `
+  --adapter-curriculum-active-file data/curriculum_active_adapter.json `
+  --adapter-curriculum-final-eval data/staged_copy_v1/mixed_eval.jsonl `
+  --json
+```
+
+Template placeholders are `{base}`, `{data_dir}`, `{out_dir}`, `{result}`,
+`{active_file}` and `{final_eval}`. The loop-side floors default to 0.25 for
+exact match and key copy; see
+[STAGED_COPY_CURRICULUM.md](STAGED_COPY_CURRICULUM.md#autonomous-self-improve-integration)
+for every flag and default.
+
+The result contains a content-free block:
+
+```json
+"curriculum": {
+  "status": "pass",
+  "returncode": 0,
+  "elapsed_seconds": 41.27,
+  "gate_status": "pass",
+  "exact_match": 0.4,
+  "key_copy": 0.548,
+  "promotion": {"requested": true, "promoted": true,
+                "reason": "promoted"},
+  "result_path": "research/results/staged_curriculum_run.json",
+  "reasons": []
+}
+```
+
+A nonzero exit, missing/invalid ledger, failing gate or missed floor sets the
+loop status to `curriculum_failed`; no code change is attempted and no success
+is recorded. Raw command output, rows and prompt text are never copied into
+the loop result.
+
+When the planner selects `adapter_candidate_ready`, this command replaces the
+built-in adapter training step. On any other action it runs as a bounded
+pre-step before the code change. A passing promotion writes only the
+curriculum registry by default; it does not change `data/active_adapter.json`
+or the product weights.
+
 ## Sandbox reality on this machine
 
 `--sandbox-info` currently reports:
@@ -113,5 +168,8 @@ The first fully autonomous run is documented in `docs/LOOP_CYCLE_8.md`.
 - The worktree sandbox is a blast-radius reduction, not a security boundary.
 - Full test runs are expensive; the timeout defaults to 900 seconds.
 - Auto-merge changes local `main`; it does not update any remote surface.
-- Model weights still change only through an offline, separately approved
-  training step. The loop improves code, not weights.
+- Model training still happens only through an explicit curriculum command.
+  A passing curriculum promotion writes the separate curriculum registry; it
+  never changes the product registry or product weights unless an operator
+  points it at `data/active_adapter.json`, which the curriculum docs warn
+  against. The code loop itself improves code, not weights.

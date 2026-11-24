@@ -18,6 +18,17 @@ publishes, and it rolls back a failed post-merge suite.
 
     atomzero-self-improve --self-code-root . \
       --target-path src/atomzero/agent_runner.py --opt-in --json
+
+    atomzero-self-improve --signal signals.json --opt-in \
+      --adapter-curriculum-command "python research/run_staged_curriculum.py \
+        --data-dir {data_dir} --out-dir {out_dir} --base {base} \
+        --result {result} --final-eval {final_eval} \
+        --promote --active-file {active_file}" \
+      --adapter-curriculum-result research/results/staged_curriculum_run.json \
+      --adapter-curriculum-out checkpoints/staged_curriculum \
+      --adapter-curriculum-active-file data/curriculum_active_adapter.json \
+      --adapter-curriculum-final-eval data/staged_copy_v1/mixed_eval.jsonl \
+      --json
 """
 from __future__ import annotations
 
@@ -45,6 +56,18 @@ __all__ = ["run_loop", "main"]
 
 _SEVERITY_ORDER = {"high": 0, "medium": 1, "low": 2}
 _AUDIT_MAX_PER_KIND = 200
+
+# Defaults mirror research/run_staged_curriculum.py so a command template can
+# use every placeholder even when only --adapter-curriculum-command is set.
+_CURRICULUM_DEFAULT_DATA_DIR = "data/staged_copy_v1"
+_CURRICULUM_DEFAULT_OUT_DIR = "checkpoints/staged_curriculum"
+_CURRICULUM_DEFAULT_RESULT = "research/results/staged_curriculum_run.json"
+_CURRICULUM_DEFAULT_ACTIVE_FILE = "data/curriculum_active_adapter.json"
+_CURRICULUM_DEFAULT_FINAL_EVAL = "data/staged_copy_v1/mixed_eval.jsonl"
+_CURRICULUM_GATE_STATUSES = {"pass", "fail", "skipped", "error"}
+_CURRICULUM_PROMOTION_REASONS = {
+    "promoted", "gate_failed", "gate_skipped", "dry_run",
+    "not_requested", "promote_failed"}
 
 
 def _normalize_repo_path(path) -> str:
@@ -158,6 +181,185 @@ def _cleanup_worktree(repo_root, worktree, branch: str) -> dict:
     return result
 
 
+def _metric_number(value):
+    """Return a finite numeric metric, or None for anything else."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return value
+
+
+def _curriculum_command(template, values: dict) -> list[str]:
+    """Expand {placeholders} in one shell-style curriculum command."""
+    if isinstance(template, str):
+        parts = shlex.split(template, posix=False)
+    else:
+        parts = [str(item) for item in template]
+    if not parts:
+        raise RunnerError("adapter curriculum command is empty")
+    try:
+        return [part.format(**values) for part in parts]
+    except (KeyError, IndexError, ValueError) as exc:
+        raise RunnerError(
+            f"invalid adapter curriculum command template: {exc}") from exc
+
+
+def _curriculum_env(repo_root) -> dict:
+    """Expose the repo and src on PYTHONPATH for the runner subprocess."""
+    root = Path(repo_root).resolve()
+    env = os.environ.copy()
+    parts = [str(root), str(root / "src")]
+    existing = env.get("PYTHONPATH", "")
+    if existing:
+        parts.append(existing)
+    env["PYTHONPATH"] = os.pathsep.join(parts)
+    env.setdefault("PYTHONIOENCODING", "utf-8")
+    return env
+
+
+def _run_adapter_curriculum(
+    *,
+    command,
+    repo_root,
+    base=None,
+    data_dir=None,
+    out_dir=None,
+    result_path=None,
+    active_file=None,
+    final_eval=None,
+    min_exact_match=0.25,
+    min_key_copy_rate=0.25,
+    timeout: int = 900,
+) -> dict:
+    """Run the staged curriculum and return a content-free result block.
+
+    The command template may use ``{base}``, ``{data_dir}``, ``{out_dir}``,
+    ``{result}``, ``{active_file}`` and ``{final_eval}``. Only aggregate
+    numbers and fixed status labels from the runner ledger are copied into the
+    block; command output and ledger text fields are never recorded.
+    """
+    root = Path(repo_root).resolve()
+    values = {
+        "base": str(base or ""),
+        "data_dir": str(data_dir or _CURRICULUM_DEFAULT_DATA_DIR),
+        "out_dir": str(out_dir or _CURRICULUM_DEFAULT_OUT_DIR),
+        "result": str(result_path or _CURRICULUM_DEFAULT_RESULT),
+        "active_file": str(active_file or _CURRICULUM_DEFAULT_ACTIVE_FILE),
+        "final_eval": str(final_eval or _CURRICULUM_DEFAULT_FINAL_EVAL),
+    }
+    target = Path(values["result"]).expanduser()
+    if not target.is_absolute():
+        target = root / target
+    block = {
+        "status": "error",
+        "returncode": None,
+        "elapsed_seconds": 0.0,
+        "gate_status": None,
+        "exact_match": None,
+        "key_copy": None,
+        "promotion": None,
+        "result_path": str(target),
+        "reasons": [],
+    }
+    try:
+        argv = _curriculum_command(command, values)
+    except RunnerError as exc:
+        block["error"] = str(exc)
+        block["reasons"] = ["command_invalid"]
+        return block
+    started = time.monotonic()
+    try:
+        completed = subprocess.run(
+            argv, cwd=str(root), env=_curriculum_env(root),
+            capture_output=True, text=True, encoding="utf-8",
+            errors="replace", timeout=timeout)
+        block["returncode"] = completed.returncode
+    except subprocess.TimeoutExpired:
+        block["elapsed_seconds"] = round(time.monotonic() - started, 3)
+        block["reasons"] = ["timed_out"]
+        block["error"] = f"curriculum runner timed out after {timeout}s"
+        return block
+    except OSError as exc:
+        block["elapsed_seconds"] = round(time.monotonic() - started, 3)
+        block["reasons"] = ["runner_failed"]
+        block["error"] = (
+            "curriculum runner could not start "
+            f"({type(exc).__name__})")
+        return block
+    block["elapsed_seconds"] = round(time.monotonic() - started, 3)
+    payload = None
+    read_reason = ""
+    try:
+        raw = target.read_text(encoding="utf-8-sig")
+    except FileNotFoundError:
+        read_reason = "result_missing"
+        block["error"] = "curriculum runner did not write its result JSON"
+    except OSError:
+        read_reason = "result_unreadable"
+        block["error"] = "curriculum result JSON could not be read"
+    else:
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError:
+            read_reason = "result_invalid"
+            block["error"] = "curriculum result JSON is invalid"
+        if payload is not None and not isinstance(payload, dict):
+            payload = None
+            read_reason = "result_invalid"
+            block["error"] = "curriculum result JSON is not an object"
+    if payload is None:
+        block["reasons"] = [reason for reason in (
+            "runner_failed" if completed.returncode != 0 else "",
+            read_reason,
+        ) if reason]
+        return block
+    gate = payload.get("gate")
+    gate = gate if isinstance(gate, dict) else {}
+    gate_status = gate.get("status")
+    if gate_status is None:
+        gate_status = payload.get("status")
+    if gate_status in _CURRICULUM_GATE_STATUSES:
+        block["gate_status"] = gate_status
+    final_eval_payload = payload.get("final_eval")
+    final_eval_payload = (
+        final_eval_payload if isinstance(final_eval_payload, dict) else {})
+    exact_match = _metric_number(payload.get("exact_match_rate"))
+    if exact_match is None:
+        exact_match = _metric_number(
+            final_eval_payload.get("exact_match_rate"))
+    key_copy = _metric_number(payload.get("key_copy_rate"))
+    if key_copy is None:
+        key_copy = _metric_number(final_eval_payload.get("key_copy_rate"))
+    block["exact_match"] = exact_match
+    block["key_copy"] = key_copy
+    raw_promotion = payload.get("promotion")
+    if isinstance(raw_promotion, dict):
+        reason = raw_promotion.get("reason")
+        block["promotion"] = {
+            "requested": raw_promotion.get("requested") is True,
+            "promoted": raw_promotion.get("promoted") is True,
+            "reason": (reason if reason in _CURRICULUM_PROMOTION_REASONS
+                       else None),
+        }
+    reasons = []
+    if completed.returncode != 0:
+        reasons.append("runner_failed")
+    if block["gate_status"] != "pass":
+        reasons.append("gate_not_pass")
+    if gate.get("ok") is False:
+        reasons.append("gate_not_ok")
+    min_exact_match = _metric_number(min_exact_match)
+    if (exact_match is not None and min_exact_match is not None
+            and exact_match < min_exact_match):
+        reasons.append("exact_match_low")
+    min_key_copy_rate = _metric_number(min_key_copy_rate)
+    if (key_copy is not None and min_key_copy_rate is not None
+            and key_copy < min_key_copy_rate):
+        reasons.append("key_copy_low")
+    block["reasons"] = reasons
+    block["status"] = "pass" if not reasons else "fail"
+    return block
+
+
 def run_loop(
     *,
     signals: dict,
@@ -204,6 +406,14 @@ def run_loop(
     adapter_min_key_copy_rate=None,
     adapter_timeout: int = 900,
     adapter_trainer_timeout: int = 900,
+    adapter_curriculum_command=None,
+    adapter_curriculum_result=None,
+    adapter_curriculum_out=None,
+    adapter_curriculum_active_file=None,
+    adapter_curriculum_final_eval=None,
+    adapter_curriculum_data_dir=None,
+    adapter_curriculum_min_exact_match: float = 0.25,
+    adapter_curriculum_min_key_copy_rate: float = 0.25,
 ) -> dict:
     """Run one bounded loop, returning every stage and its evidence."""
     normalized = dict(signals) if isinstance(signals, dict) else {}
@@ -281,6 +491,23 @@ def run_loop(
             return result
         if not opt_in:
             result["status"] = "awaiting_opt_in"
+            return result
+        if adapter_curriculum_command:
+            result["curriculum"] = _run_adapter_curriculum(
+                command=adapter_curriculum_command,
+                repo_root=repo_root,
+                base=adapter_base,
+                data_dir=adapter_curriculum_data_dir,
+                out_dir=adapter_curriculum_out,
+                result_path=adapter_curriculum_result,
+                active_file=adapter_curriculum_active_file,
+                final_eval=adapter_curriculum_final_eval,
+                min_exact_match=adapter_curriculum_min_exact_match,
+                min_key_copy_rate=adapter_curriculum_min_key_copy_rate,
+                timeout=adapter_timeout)
+            result["status"] = (
+                "completed" if result["curriculum"]["status"] == "pass"
+                else "curriculum_failed")
             return result
         if not autonomous and not approve:
             return result
@@ -364,6 +591,22 @@ def run_loop(
     if not opt_in:
         result["status"] = "awaiting_opt_in"
         return result
+    if adapter_curriculum_command:
+        result["curriculum"] = _run_adapter_curriculum(
+            command=adapter_curriculum_command,
+            repo_root=repo_root,
+            base=adapter_base,
+            data_dir=adapter_curriculum_data_dir,
+            out_dir=adapter_curriculum_out,
+            result_path=adapter_curriculum_result,
+            active_file=adapter_curriculum_active_file,
+            final_eval=adapter_curriculum_final_eval,
+            min_exact_match=adapter_curriculum_min_exact_match,
+            min_key_copy_rate=adapter_curriculum_min_key_copy_rate,
+            timeout=adapter_timeout)
+        if result["curriculum"]["status"] != "pass":
+            result["status"] = "curriculum_failed"
+            return result
     if not autonomous and not approve:
         return result
     run_branch = branch
@@ -510,6 +753,30 @@ def main(argv=None) -> int:
                         default=None)
     parser.add_argument("--adapter-timeout", type=int, default=900)
     parser.add_argument("--adapter-trainer-timeout", type=int, default=900)
+    parser.add_argument(
+        "--adapter-curriculum-command", default="",
+        help=("shell command template for research/run_staged_curriculum.py; "
+              "placeholders: {base} {data_dir} {out_dir} {result} "
+              "{active_file} {final_eval}"))
+    parser.add_argument(
+        "--adapter-curriculum-result", default="",
+        help="path to the curriculum runner JSON ledger")
+    parser.add_argument(
+        "--adapter-curriculum-out", default="",
+        help="curriculum adapter output directory")
+    parser.add_argument(
+        "--adapter-curriculum-active-file", default="",
+        help="curriculum registry written by a passing promotion")
+    parser.add_argument(
+        "--adapter-curriculum-final-eval", default="",
+        help="final held-out mixed eval JSONL")
+    parser.add_argument(
+        "--adapter-curriculum-data-dir", default="",
+        help="staged curriculum queue root")
+    parser.add_argument(
+        "--adapter-curriculum-min-exact-match", type=float, default=0.25)
+    parser.add_argument(
+        "--adapter-curriculum-min-key-copy-rate", type=float, default=0.25)
     parser.add_argument("--adapter-promotable", type=int, default=0)
     parser.add_argument("--adapter-candidates", type=int, default=0)
     parser.add_argument("--sandbox-info", action="store_true")
@@ -614,7 +881,20 @@ def main(argv=None) -> int:
             adapter_max_content_ppl_ratio=args.adapter_max_content_ppl_ratio,
             adapter_min_key_copy_rate=args.adapter_min_key_copy_rate,
             adapter_timeout=args.adapter_timeout,
-            adapter_trainer_timeout=args.adapter_trainer_timeout)
+            adapter_trainer_timeout=args.adapter_trainer_timeout,
+            adapter_curriculum_command=args.adapter_curriculum_command or None,
+            adapter_curriculum_result=args.adapter_curriculum_result or None,
+            adapter_curriculum_out=args.adapter_curriculum_out or None,
+            adapter_curriculum_active_file=(
+                args.adapter_curriculum_active_file or None),
+            adapter_curriculum_final_eval=(
+                args.adapter_curriculum_final_eval or None),
+            adapter_curriculum_data_dir=(
+                args.adapter_curriculum_data_dir or None),
+            adapter_curriculum_min_exact_match=(
+                args.adapter_curriculum_min_exact_match),
+            adapter_curriculum_min_key_copy_rate=(
+                args.adapter_curriculum_min_key_copy_rate))
     except (OSError, ValueError, RunnerError, json.JSONDecodeError) as exc:
         print(f"input error: {exc}", file=sys.stderr)
         return 2

@@ -475,7 +475,74 @@ The stage records are unchanged. `promotion.promoted` is false with
 `"gate_skipped"` when no final eval was available and `"not_requested"` when
 `--promote` was not set.
 
+### Autonomous self-improve integration
+
+`atomzero-self-improve` can invoke this runner as one bounded step. The
+curriculum command runs only when `--opt-in` and
+`--adapter-curriculum-command` are both set; without the flag the loop behaves
+exactly as before.
+
+| flag | meaning | default |
+|---|---|---|
+| `--adapter-curriculum-command` | shell command template | unset |
+| `--adapter-curriculum-result` | runner JSON ledger read back by the loop | `research/results/staged_curriculum_run.json` |
+| `--adapter-curriculum-out` | adapter output directory (`{out_dir}`) | `checkpoints/staged_curriculum` |
+| `--adapter-curriculum-active-file` | curriculum registry (`{active_file}`) | `data/curriculum_active_adapter.json` |
+| `--adapter-curriculum-final-eval` | final mixed eval (`{final_eval}`) | `data/staged_copy_v1/mixed_eval.jsonl` |
+| `--adapter-curriculum-data-dir` | staged queue root (`{data_dir}`) | `data/staged_copy_v1` |
+| `--adapter-curriculum-min-exact-match` | loop-side exact-match floor | `0.25` |
+| `--adapter-curriculum-min-key-copy-rate` | loop-side key-copy floor | `0.25` |
+
+The template supports `{base}`, `{data_dir}`, `{out_dir}`, `{result}`,
+`{active_file}` and `{final_eval}`. `{base}` comes from `--adapter-base`; use
+`--adapter-curriculum-data-dir` to point `{data_dir}` at another staged queue.
+
+Exact command:
+
+```powershell
+$env:PYTHONPATH="$PWD;$PWD\src"
+$env:PYTHONIOENCODING="utf-8"
+atomzero-self-improve `
+  --signal data/staged_signals.json --opt-in `
+  --adapter-promotable 1 `
+  --adapter-base checkpoints/transformer_behavior_50m_long `
+  --adapter-curriculum-command "python research/run_staged_curriculum.py --data-dir {data_dir} --out-dir {out_dir} --base {base} --stages echo_kv,echo_json,two_kv,two_json,multi --steps 2000 --batch-size 4 --lr 3e-4 --content-weight 2 --seed 23 --final-eval {final_eval} --require-content --min-exact-match 0.25 --min-key-copy-rate 0.25 --candidate-json {out_dir}/candidate.json --gate-json {out_dir}/gate.json --result {result} --promote --active-file {active_file}" `
+  --adapter-curriculum-result research/results/staged_curriculum_run.json `
+  --adapter-curriculum-out checkpoints/staged_curriculum `
+  --adapter-curriculum-active-file data/curriculum_active_adapter.json `
+  --adapter-curriculum-final-eval data/staged_copy_v1/mixed_eval.jsonl `
+  --json
+```
+
+When the planner selects `adapter_candidate_ready`, the curriculum command
+replaces the built-in adapter training step. On any other action it runs as a
+bounded pre-step before the code change. The loop records a content-free
+`curriculum` block:
+
+```json
+"curriculum": {
+  "status": "pass",
+  "returncode": 0,
+  "elapsed_seconds": 41.27,
+  "gate_status": "pass",
+  "exact_match": 0.4,
+  "key_copy": 0.548,
+  "promotion": {"requested": true, "promoted": true,
+                "reason": "promoted"},
+  "result_path": "research/results/staged_curriculum_run.json",
+  "reasons": []
+}
+```
+
+`status` is `pass` only when the command exits 0, the ledger gate is `pass`
+and the loop-side exact-match/key-copy floors are met. A nonzero exit, missing
+or invalid ledger is `error`; a failing or skipped gate is `fail`. In both
+cases the loop status becomes `curriculum_failed` and it does not claim
+success. The loop never copies command output, rows or prompt text into this
+block.
+
 ### Dry run and tests
+
 
 `--dry-run` skips all subprocesses, writes fake trainer, comparator and gate
 outputs, needs no data files or checkpoint, and never writes a registry. The
