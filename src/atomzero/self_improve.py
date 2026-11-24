@@ -198,6 +198,9 @@ def run_loop(
     adapter_seed=13,
     adapter_min_loss_delta=None,
     adapter_max_ppl_ratio=None,
+    adapter_require_content=False,
+    adapter_min_content_delta=0.05,
+    adapter_max_content_ppl_ratio=1.0,
     adapter_timeout: int = 900,
     adapter_trainer_timeout: int = 900,
 ) -> dict:
@@ -303,6 +306,9 @@ def run_loop(
             eval_ratio=adapter_eval_ratio, seed=adapter_seed,
             min_loss_delta=adapter_min_loss_delta,
             max_ppl_ratio=adapter_max_ppl_ratio,
+            require_content=adapter_require_content,
+            min_content_delta=adapter_min_content_delta,
+            max_content_ppl_ratio=adapter_max_content_ppl_ratio,
             ledger_path=adapter_ledger_path, timeout=adapter_timeout,
             trainer_timeout=adapter_trainer_timeout)
         result["adapter"] = adapter
@@ -493,6 +499,11 @@ def main(argv=None) -> int:
     parser.add_argument("--adapter-seed", type=int, default=13)
     parser.add_argument("--adapter-min-loss-delta", type=float, default=None)
     parser.add_argument("--adapter-max-ppl-ratio", type=float, default=None)
+    parser.add_argument("--adapter-require-content", action="store_true")
+    parser.add_argument("--adapter-min-content-delta", type=float,
+                        default=0.05)
+    parser.add_argument("--adapter-max-content-ppl-ratio", type=float,
+                        default=1.0)
     parser.add_argument("--adapter-timeout", type=int, default=900)
     parser.add_argument("--adapter-trainer-timeout", type=int, default=900)
     parser.add_argument("--adapter-promotable", type=int, default=0)
@@ -594,6 +605,9 @@ def main(argv=None) -> int:
             adapter_seed=args.adapter_seed,
             adapter_min_loss_delta=args.adapter_min_loss_delta,
             adapter_max_ppl_ratio=args.adapter_max_ppl_ratio,
+            adapter_require_content=args.adapter_require_content,
+            adapter_min_content_delta=args.adapter_min_content_delta,
+            adapter_max_content_ppl_ratio=args.adapter_max_content_ppl_ratio,
             adapter_timeout=args.adapter_timeout,
             adapter_trainer_timeout=args.adapter_trainer_timeout)
     except (OSError, ValueError, RunnerError, json.JSONDecodeError) as exc:

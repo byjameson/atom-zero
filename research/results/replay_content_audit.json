@@ -1,0 +1,29 @@
+{
+  "status": "fail",
+  "ok": false,
+  "promotable": false,
+  "candidate_id": "ad-8cf19d2b5840de59",
+  "adapter_label": "adapters_replay/v0001",
+  "eval_examples": 48,
+  "baseline_loss": 5.254859422798236,
+  "adapter_loss": 2.6001756758916947,
+  "loss_delta": -2.654684,
+  "baseline_ppl": 191.49456419214835,
+  "adapter_ppl": 13.46610349695777,
+  "ppl_ratio": 0.070321,
+  "baseline_content_loss": 4.432719733215168,
+  "adapter_content_loss": 4.412255594914721,
+  "content_loss_delta": -0.020464,
+  "content_ppl_ratio": 0.979744,
+  "require_content": true,
+  "min_content_delta": 0.05,
+  "reasons": [
+    "loss_improved",
+    "ppl_not_worse",
+    "content_loss_not_improved",
+    "content_ppl_not_worse"
+  ],
+  "auto_apply": false,
+  "weights_changed": false,
+  "method": "held_out_adapter_gate_v1"
+}

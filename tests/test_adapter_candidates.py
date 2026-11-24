@@ -10,6 +10,7 @@ from atomzero.adapter_candidates import (
     evaluate_candidate,
     family_summary,
     main,
+    promote_candidate,
     run_adapter_loop,
     summarize_adapter_ledger,
     write_candidate,
@@ -323,6 +324,53 @@ def test_run_adapter_loop_with_explicit_splits(tmp_path):
         "explicit_cross_distribution")
     assert result["candidate"]["train_examples"] == 4
     assert result["candidate"]["eval_examples"] == 2
+
+
+def test_content_gate_requires_content_metrics():
+    candidate = _candidate()
+    comparison = _comparison()
+    missing = evaluate_candidate(
+        candidate, comparison, require_content=True)
+    assert missing["status"] == "invalid" or missing["ok"] is False
+    assert "content_metrics_missing" in missing["reasons"]
+    comparison["baseline"]["content_loss"] = 2.0
+    comparison["baseline"]["content_ppl"] = 7.4
+    comparison["adapter"]["content_loss"] = 1.5
+    comparison["adapter"]["content_ppl"] = 4.5
+    passed = evaluate_candidate(
+        candidate, comparison, require_content=True)
+    assert passed["status"] == "pass"
+    assert "content_loss_improved" in passed["reasons"]
+    comparison["adapter"]["content_loss"] = 2.5
+    failed = evaluate_candidate(
+        candidate, comparison, require_content=True)
+    assert failed["status"] == "fail"
+    assert "content_loss_not_improved" in failed["reasons"]
+
+
+def test_promotion_requires_passing_gate(tmp_path):
+    adapter = tmp_path / "adapter"
+    adapter.mkdir()
+    (adapter / "adapter.pt").write_bytes(b"fake")
+    candidate = {"candidate_id": "ad-1", "family_separation": True}
+    pass_gate = {"status": "pass", "ok": True, "promotable": True,
+                 "candidate_id": "ad-1",
+                 "reasons": ["content_loss_improved",
+                             "content_ppl_not_worse"]}
+    record = promote_candidate(
+        candidate, pass_gate, adapter, tmp_path / "active.json")
+    assert record["candidate_id"] == "ad-1"
+    assert record["promotable"] is True
+    assert record["weights_changed"] is False
+    assert (tmp_path / "active.json").is_file()
+    with pytest.raises(ValueError):
+        promote_candidate(
+            candidate, {"status": "fail", "ok": False, "promotable": False},
+            adapter, tmp_path / "bad.json")
+    with pytest.raises(ValueError):
+        promote_candidate(
+            {"candidate_id": "ad-2"}, pass_gate, adapter,
+            tmp_path / "mismatch.json")
 
 
 def test_cli_export(tmp_path, capsys):

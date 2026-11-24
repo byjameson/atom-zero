@@ -45,6 +45,7 @@ __all__ = [
     "family_summary",
     "load_examples",
     "main",
+    "promote_candidate",
     "run_adapter_loop",
     "summarize_adapter_ledger",
     "write_candidate",
@@ -55,6 +56,7 @@ DEFAULT_FAMILY = "unspecified"
 MAX_FAMILY_LENGTH = 64
 DEFAULT_SEED = 13
 DEFAULT_MIN_LOSS_DELTA = 0.01
+DEFAULT_MIN_CONTENT_DELTA = 0.05
 DEFAULT_MAX_PPL_RATIO = 1.0
 EVAL_METHOD = "held_out_adapter_gate_v1"
 EVENT_METHOD = "content_free_adapter_candidate_event_v1"
@@ -348,7 +350,9 @@ def _number(value, name: str) -> float:
 
 
 def evaluate_candidate(candidate, comparison, *, min_loss_delta=None,
-                       max_ppl_ratio=None) -> dict:
+                       max_ppl_ratio=None, require_content=False,
+                       min_content_delta=DEFAULT_MIN_CONTENT_DELTA,
+                       max_content_ppl_ratio=1.0) -> dict:
     """Run the held-out adapter gate against a comparison report."""
     if not isinstance(candidate, dict):
         raise ValueError("candidate must be an object")
@@ -366,6 +370,15 @@ def evaluate_candidate(candidate, comparison, *, min_loss_delta=None,
         raise ValueError("min_loss_delta must be finite and non-negative")
     if not math.isfinite(max_ratio) or max_ratio <= 0:
         raise ValueError("max_ppl_ratio must be finite and positive")
+    try:
+        content_threshold = float(min_content_delta)
+        content_max_ratio = float(max_content_ppl_ratio)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("content thresholds must be numeric") from exc
+    if not math.isfinite(content_threshold) or content_threshold < 0:
+        raise ValueError("min_content_delta must be finite and non-negative")
+    if not math.isfinite(content_max_ratio) or content_max_ratio <= 0:
+        raise ValueError("max_content_ppl_ratio must be finite and positive")
     try:
         base, adapter, label, examples = _metric_pair(comparison)
         base_loss = _number(base.get("loss"), "baseline.loss")
@@ -401,11 +414,44 @@ def evaluate_candidate(candidate, comparison, *, min_loss_delta=None,
         reasons.append("ppl_not_worse")
     else:
         reasons.append("ppl_regression")
+    content_loss_delta = None
+    content_ppl_ratio = None
+    content_ok = True
+    base_content = base.get("content_loss")
+    adapter_content = adapter.get("content_loss")
+    base_content_ppl = base.get("content_ppl")
+    adapter_content_ppl = adapter.get("content_ppl")
+    if require_content:
+        if not all(isinstance(value, (int, float))
+                   and not isinstance(value, bool)
+                   for value in (base_content, adapter_content,
+                                 base_content_ppl, adapter_content_ppl)):
+            reasons.append("content_metrics_missing")
+            content_ok = False
+        else:
+            base_content = float(base_content)
+            adapter_content = float(adapter_content)
+            base_content_ppl = float(base_content_ppl)
+            adapter_content_ppl = float(adapter_content_ppl)
+            content_loss_delta = adapter_content - base_content
+            content_ppl_ratio = (adapter_content_ppl / base_content_ppl
+                                 if base_content_ppl else float("inf"))
+            if content_loss_delta <= -content_threshold:
+                reasons.append("content_loss_improved")
+            else:
+                reasons.append("content_loss_not_improved")
+                content_ok = False
+            if content_ppl_ratio <= content_max_ratio:
+                reasons.append("content_ppl_not_worse")
+            else:
+                reasons.append("content_ppl_regression")
+                content_ok = False
     ok = (
         not any(reason.startswith(("eval_count", "invalid"))
                 for reason in reasons)
         and "loss_improved" in reasons
         and "ppl_not_worse" in reasons
+        and content_ok
     )
     return {
         "status": "pass" if ok else "fail",
@@ -420,6 +466,13 @@ def evaluate_candidate(candidate, comparison, *, min_loss_delta=None,
         "baseline_ppl": base_ppl,
         "adapter_ppl": adapter_ppl,
         "ppl_ratio": round(ppl_ratio, 6),
+        "baseline_content_loss": base_content,
+        "adapter_content_loss": adapter_content,
+        "content_loss_delta": (round(content_loss_delta, 6)
+                               if content_loss_delta is not None else None),
+        "content_ppl_ratio": (round(content_ppl_ratio, 6)
+                              if content_ppl_ratio is not None else None),
+        "require_content": bool(require_content),
         "min_loss_delta": threshold,
         "max_ppl_ratio": max_ratio,
         "reasons": reasons,
@@ -521,6 +574,9 @@ def run_adapter_loop(examples, out_dir, *, base=None, trainer_command=None,
                      repo_root=".", train_examples=None, eval_examples=None,
                      eval_ratio=DEFAULT_EVAL_RATIO, seed=DEFAULT_SEED,
                      min_loss_delta=None, max_ppl_ratio=None,
+                     require_content=False,
+                     min_content_delta=DEFAULT_MIN_CONTENT_DELTA,
+                     max_content_ppl_ratio=1.0,
                      ledger_path=None, timeout: int = 900,
                      trainer_timeout: int = 900) -> dict:
     """Export a candidate, optionally train/evaluate, and record a gate event."""
@@ -662,7 +718,9 @@ def run_adapter_loop(examples, out_dir, *, base=None, trainer_command=None,
     if comparison is not None:
         evaluation = evaluate_candidate(
             candidate, comparison, min_loss_delta=min_loss_delta,
-            max_ppl_ratio=max_ppl_ratio)
+            max_ppl_ratio=max_ppl_ratio, require_content=require_content,
+            min_content_delta=min_content_delta,
+            max_content_ppl_ratio=max_content_ppl_ratio)
     else:
         evaluation = {
             "status": "awaiting_evaluation",
@@ -698,6 +756,73 @@ def _adapter_result(candidate, paths, evaluation, trainer, extra_paths,
         "auto_apply": False,
         "weights_changed": False,
     }
+
+
+def promote_candidate(candidate, gate, adapter_dir, active_file,
+                      *, now=None) -> dict:
+    """Write the active-adapter registry only after a passing gate.
+
+    This is a product configuration action, not training: it does not modify
+    base weights. The record is content-free except for the local adapter path.
+    """
+    if not isinstance(candidate, dict):
+        raise ValueError("candidate must be an object")
+    metadata = candidate.get("metadata", candidate)
+    if not isinstance(metadata, dict):
+        raise ValueError("candidate.metadata must be an object")
+    if not isinstance(gate, dict):
+        raise ValueError("gate must be an object")
+    actual_gate = gate.get("gate", gate)
+    if not isinstance(actual_gate, dict):
+        raise ValueError("gate.gate must be an object")
+    if actual_gate.get("status") != "pass" or actual_gate.get("ok") is not True:
+        raise ValueError("gate must be a passing gate result")
+    if actual_gate.get("promotable") is not True:
+        raise ValueError("gate must mark the candidate promotable")
+    reasons = actual_gate.get("reasons")
+    if not isinstance(reasons, list) or (
+            "content_loss_improved" not in reasons
+            or "content_ppl_not_worse" not in reasons):
+        raise ValueError(
+            "gate must include a passing content audit "
+            "(content_loss_improved, content_ppl_not_worse)")
+    if metadata.get("family_separation") is not True:
+        raise ValueError(
+            "candidate must have family_separation: true for promotion")
+    candidate_id = str(metadata.get("candidate_id") or "")
+    if not candidate_id:
+        raise ValueError("candidate_id is required")
+    if actual_gate.get("candidate_id") and (
+            str(actual_gate["candidate_id"]) != candidate_id):
+        raise ValueError("gate candidate_id does not match candidate")
+    adapter_path = Path(adapter_dir).expanduser()
+    if not (adapter_path / "adapter.pt").is_file():
+        raise ValueError(f"adapter.pt not found in {adapter_path}")
+    target = Path(active_file).expanduser()
+    previous = ""
+    if target.exists():
+        try:
+            previous = str(json.loads(
+                target.read_text(encoding="utf-8")).get("path", ""))
+        except (OSError, json.JSONDecodeError):
+            previous = ""
+    stamp = now or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    record = {
+        "path": str(adapter_path),
+        "candidate_id": candidate_id,
+        "gate_status": actual_gate.get("status"),
+        "promotable": True,
+        "family_separation": metadata.get("family_separation"),
+        "adapter_bytes": (adapter_path / "adapter.pt").stat().st_size,
+        "promoted_at": stamp,
+        "previous": previous,
+        "weights_changed": False,
+        "auto_apply": False,
+        "method": "gated_adapter_promotion_v1",
+    }
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    return record
 
 
 def summarize_adapter_ledger(ledger) -> dict:
@@ -763,7 +888,18 @@ def main(argv=None) -> int:
     evaluate.add_argument("--comparison-json", required=True)
     evaluate.add_argument("--min-loss-delta", type=float, default=None)
     evaluate.add_argument("--max-ppl-ratio", type=float, default=None)
+    evaluate.add_argument("--require-content", action="store_true")
+    evaluate.add_argument("--min-content-delta", type=float,
+                          default=DEFAULT_MIN_CONTENT_DELTA)
+    evaluate.add_argument("--max-content-ppl-ratio", type=float, default=1.0)
     evaluate.add_argument("--json", action="store_true")
+
+    promote = sub.add_parser("promote")
+    promote.add_argument("--candidate-json", required=True)
+    promote.add_argument("--gate-json", required=True)
+    promote.add_argument("--adapter-dir", required=True)
+    promote.add_argument("--active-file", default="data/active_adapter.json")
+    promote.add_argument("--json", action="store_true")
 
     loop = sub.add_parser("loop")
     loop.add_argument("--examples-jsonl", default="")
@@ -783,6 +919,10 @@ def main(argv=None) -> int:
     loop.add_argument("--seed", type=int, default=DEFAULT_SEED)
     loop.add_argument("--min-loss-delta", type=float, default=None)
     loop.add_argument("--max-ppl-ratio", type=float, default=None)
+    loop.add_argument("--require-content", action="store_true")
+    loop.add_argument("--min-content-delta", type=float,
+                      default=DEFAULT_MIN_CONTENT_DELTA)
+    loop.add_argument("--max-content-ppl-ratio", type=float, default=1.0)
     loop.add_argument("--timeout", type=int, default=900)
     loop.add_argument("--json", action="store_true")
 
@@ -816,12 +956,22 @@ def main(argv=None) -> int:
                 "weights_changed": False,
             }
             code = 0
+        elif args.command == "promote":
+            payload = promote_candidate(
+                _load_json(args.candidate_json),
+                _load_json(args.gate_json),
+                args.adapter_dir,
+                args.active_file)
+            code = 0
         elif args.command == "evaluate":
             candidate = _load_json(args.candidate_json)
             comparison = _load_json(args.comparison_json)
             payload = evaluate_candidate(
                 candidate, comparison, min_loss_delta=args.min_loss_delta,
-                max_ppl_ratio=args.max_ppl_ratio)
+                max_ppl_ratio=args.max_ppl_ratio,
+                require_content=args.require_content,
+                min_content_delta=args.min_content_delta,
+                max_content_ppl_ratio=args.max_content_ppl_ratio)
             code = 0 if payload["ok"] else 1
         else:
             comparison = (_load_json(args.comparison_json)
@@ -855,6 +1005,9 @@ def main(argv=None) -> int:
                 eval_ratio=args.eval_ratio, seed=args.seed,
                 min_loss_delta=args.min_loss_delta,
                 max_ppl_ratio=args.max_ppl_ratio,
+                require_content=args.require_content,
+                min_content_delta=args.min_content_delta,
+                max_content_ppl_ratio=args.max_content_ppl_ratio,
                 ledger_path=args.ledger or None, timeout=args.timeout,
                 trainer_timeout=args.trainer_timeout)
             code = 0 if payload["status"] in ("pass", "awaiting_evaluation") else 1

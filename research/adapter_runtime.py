@@ -133,6 +133,10 @@ def score_rows(model, tok, rows: list[dict]) -> dict:
     model.eval()
     total_nll = 0.0
     total_tokens = 0
+    content_nll = 0.0
+    content_tokens = 0
+    syntax_nll = 0.0
+    syntax_tokens = 0
     per_row = []
     with torch.no_grad():
         for index, row in enumerate(rows):
@@ -155,22 +159,48 @@ def score_rows(model, tok, rows: list[dict]) -> dict:
             nll = float((token_loss * mask.reshape(-1)).sum())
             total_nll += nll
             total_tokens += count
+            row_content_nll = 0.0
+            row_content_tokens = 0
+            for position in range(y.size(1)):
+                if not bool(mask[0, position]):
+                    continue
+                token_text = tok.decode([int(y[0, position])])
+                loss_value = float(token_loss[position])
+                if any(char.isalnum() for char in token_text):
+                    content_nll += loss_value
+                    content_tokens += 1
+                    row_content_nll += loss_value
+                    row_content_tokens += 1
+                else:
+                    syntax_nll += loss_value
+                    syntax_tokens += 1
             per_row.append({
                 "index": index,
                 "user": row["user"][:120],
                 "assistant": row["assistant"][:120],
                 "loss": nll / count,
                 "tokens": count,
+                "content_loss": (row_content_nll / row_content_tokens
+                                 if row_content_tokens else None),
+                "content_tokens": row_content_tokens,
                 "truncated": truncated,
             })
     if total_tokens == 0:
         raise SystemExit("no assistant tokens scored")
     loss = total_nll / total_tokens
+    content_loss = (content_nll / content_tokens if content_tokens else None)
+    syntax_loss = (syntax_nll / syntax_tokens if syntax_tokens else None)
     return {
         "examples": len(per_row),
         "tokens": total_tokens,
         "loss": loss,
         "ppl": math.exp(min(loss, 20.0)),
+        "content_loss": content_loss,
+        "content_ppl": (math.exp(min(content_loss, 20.0))
+                        if content_loss is not None else None),
+        "content_tokens": content_tokens,
+        "syntax_loss": syntax_loss,
+        "syntax_tokens": syntax_tokens,
         "rows": per_row,
     }
 

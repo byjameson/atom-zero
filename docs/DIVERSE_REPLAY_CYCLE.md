@@ -133,13 +133,31 @@ ppl_ratio: 0.011826
 gate: pass
 ```
 
-This is the first cross-family gate pass in the project: the held-out city
-family never appears in training, and the replay mix retains the older formats.
+This is the first cross-family **full-loss** gate pass in the project: the
+held-out city family never appears in training, and the replay mix retains the
+older formats. It is not yet a content-transfer pass.
+
+## Content audit - promotion blocked
+
+A content-token audit was added after the full-loss pass:
+
+```text
+baseline content loss: 4.432720
+adapter content loss:  4.412256
+content delta:        -0.020464
+required delta:       -0.05
+content ppl ratio:     0.979744
+gate:                  fail / not promotable
+```
+
+The full-loss gain is almost entirely syntax/format learning. The active
+adapter registry was removed; no candidate is promoted.
 
 ## Evidence
 
 - `research/results/diverse_cycle_summary.json`
 - `research/results/replay_cross_pass.json`
+- `research/results/replay_content_audit.json`
 - `research/results/diverse_adapter_v1_indist_gate.json`
 - `research/results/diverse_adapter_v1_cross_gate.json`
 - `docs/TEACHER_QUEUE.md`

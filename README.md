@@ -429,6 +429,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Teacher task families (JSON, key-value, YAML, arithmetic): <https://github.com/byjameson/atom-zero/blob/main/docs/TEACHER_FAMILIES.md>
 - Adapter training cycle 2 (real LoRA): <https://github.com/byjameson/atom-zero/blob/main/docs/ADAPTER_TRAINING.md>
 - Adapter cross-distribution cycle: <https://github.com/byjameson/atom-zero/blob/main/docs/ADAPTER_CROSS_CYCLE.md>
+- Adapter promotion: <https://github.com/byjameson/atom-zero/blob/main/docs/ADAPTER_PROMOTION.md>
 - Diverse teacher + replay cycle: <https://github.com/byjameson/atom-zero/blob/main/docs/DIVERSE_REPLAY_CYCLE.md>
 - Replay-aware adapter training: <https://github.com/byjameson/atom-zero/blob/main/docs/REPLAY_TRAINING.md>
 - Adapter growth cycle 1: <https://github.com/byjameson/atom-zero/blob/main/docs/ADAPTER_CYCLE_1.md>

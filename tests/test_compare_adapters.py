@@ -26,6 +26,10 @@ class DummyTokenizer:
         return SimpleNamespace(
             ids=[self.ids.get(word, 6) for word in text.split()])
 
+    def decode(self, ids):
+        reverse = {value: key for key, value in self.ids.items()}
+        return " ".join(reverse.get(int(item), "?") for item in ids)
+
 
 class DummyLM(nn.Module):
     def __init__(self):

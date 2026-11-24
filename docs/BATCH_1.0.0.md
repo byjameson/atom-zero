@@ -14,7 +14,7 @@ boundary.
   `gate_id 7f0d5be2bce36219`, 1033/0 -> 1035/0;
   `gate_id da83c0302933d484`, 1064/0 -> 1066/0). Per-change human approval is
   optional with `--require-approval`.
-- Main gate: 1128 Atom Zero tests, 223 AISC tests, 26 strict specs
+- Main gate: 1130 Atom Zero tests, 223 AISC tests, 26 strict specs
   (24 PASS, 2 expected answerability FAIL), benchmark 20/20.
 - Weights remain `0.8.0`; answerability gate remains closed.
 - Merged post-release branches: self-code audit/diff, history-aware planner,
@@ -22,8 +22,8 @@ boundary.
   teacher verification, growth report, self-code regression gate, loop history,
   autonomous sandbox, verified-teacher adapter candidates, a real LoRA training
   harness, a real teacher queue with cross-distribution fixture and a VM-run
-  cross-distribution gate result, a multi-family replay cycle and the first
-  replay-weighted cross-family gate pass.
+  cross-distribution gate result, a multi-family replay cycle, a full-loss cross-family pass and a content-loss
+  audit that blocked promotion.
 
 ## Parallel Implementers
 

@@ -41,7 +41,7 @@ PYTHONPATH=src .venv/bin/python benchmarks/self_improvement_regression.py
 ## Current VM evidence
 
 ```text
-pytest tests -q:  1086 passed
+pytest tests -q:  1130 passed
 benchmark:        20/20
 ```
 
