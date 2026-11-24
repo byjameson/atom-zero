@@ -1,5 +1,13 @@
 # Changelog
 
+## atomzero 0.50.0 - unreleased
+
+- **Copy tool router**: explicit transcription requests now route to `atomzero-copy` in the product chat/agent paths, with `source: "copy_tool"`. Non-copy prompts keep the previous model/RAG path. The router is conservative and returns 2-4 pair JSON/KV/YAML answers.
+- **Weak-stage rehearsal loop**: `research/run_weak_stage_rehearsal.py` ranks stages, builds a weak-focused mix and retrains with before/after ledgers. Two real configs did not improve the aggregate: the gentle run moved multi exact 12% -> 15% but echo_json 76% -> 65%; the aggressive run degraded every stage. This is a tool, not yet a win.
+- **Fused QKV attention LoRA**: `--qkv-rank`/`--qkv-alpha` adapt Q/K/V `in_proj_weight`, not just out_proj + MLP. The first from-base multi-short run reached only 6% exact / 18% key copy on the mixed set (3short 0/3, 4short 0/0); it needs a proper control and longer training before any conclusion.
+- VM disk grown from 20 GB to 40 GB with `growpart` + `resize2fs`.
+- 1399 tests passed on the VM in 44.36s; benchmark 20/20. Base remains 0.8.0.
+
 ## atomzero 0.40.0 - 2026-11-25
 
 - **Real self-improve curriculum promotion**: a VM run trained `echo_kv,echo_json`, passed the 0.40 exact / 0.50 key-copy / content gate with **53% exact / 60% key copy**, and promoted automatically to `data/self_improve_curriculum_active.json`. A first attempt at a 0.40 exact threshold failed closed on content loss and did not promote.
