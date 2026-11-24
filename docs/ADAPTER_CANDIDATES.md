@@ -58,6 +58,9 @@ atomzero-adapter-candidate export-cross `
 
 - keeps the two distributions separate;
 - rejects an identical row that appears in both sides;
+- requires a disjoint held-out task family when rows carry `family` labels,
+  and fails hard on a family that appears in training (see
+  `docs/FAMILY_GATE.md`);
 - marks the candidate metadata with `split_method:
   explicit_cross_distribution`;
 - still requires every row to be verified.
