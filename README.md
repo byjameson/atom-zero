@@ -165,6 +165,11 @@ The product benchmark is narrow and authored: tools, memory, tasks,
 source-cited retrieval, teacher-note review, missing-source detection and one
 short generation. It is **not MMLU, GSM8K or HumanEval**.
 
+Capability claims are reported separately in the six-criterion
+[capability scorecard](docs/CAPABILITY_SCORECARD.md): `met`, `partial`,
+`not_met` and `unknown` stay distinct, and runtime tool accuracy is not counted
+as model transfer.
+
 ## Documents and citations
 
 - **Text, Markdown, HTML, PDF and DOCX** ingestion.
