@@ -78,6 +78,11 @@ the self-code branch and its planner/runner integration.
   appears in training, and candidate metadata reports `family_separation`,
   `train_families`, `eval_families` and content-free family counts. Random
   splits report `not_applicable`. See `docs/FAMILY_GATE.md`.
+- Extended the diverse teacher fixture with reusable `FamilySpec` rows for
+  `city_yaml`, `arith_plain` and `arith_json`, dependency-free JSON/key-value/
+  YAML/plain validators, per-family CLI counts and a stub-friendly
+  `build_rows`. `city_yaml` stays held out of train; tests need no GPU or
+  teacher model. See `docs/TEACHER_FAMILIES.md`.
 - Added the first **real teacher cross-distribution gate run** in the Ubuntu
   VM: in-distribution loss `6.5393 -> 1.2733` (pass); cross key-value loss
   `3.3621 -> 9.9921` (fail, ppl ratio `757.47`). The gate correctly blocked
