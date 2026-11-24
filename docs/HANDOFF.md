@@ -37,14 +37,13 @@
   and `AtomZeroAnswerabilityGenerated` remain **FAIL** with the measured
   Brier 0.233 / ECE 0.064 and refusal-policy misses. The ECE target is met;
   the Brier target is not. This is reported, not hidden.
-- Build/twine: **PASSED** (`atomzero-0.19.0` wheel + sdist)
+- Build/twine: **PASSED** (`atomzero-0.30.0` wheel + sdist)
 - No model weights changed; weights remain `0.8.0`.
-- Release status: `0.20.0` is published on PyPI, GitHub, Hugging Face,
+- Release status: `0.30.0` is published on PyPI, GitHub, Hugging Face,
   ModelScope, dev.to, Medium, LinkedIn and X. `scripts/verify_release.py
-  --version 0.20.0` reported **0 failures**; release commit `378fd0e`, annotated
-  tag `v0.20.0`. `0.30.0` is published on PyPI, GitHub, Hugging Face, ModelScope, dev.to,
-  Medium, LinkedIn and X. The next release boundary is **0.40.0**; release once
-  every 10 minor versions, so 0.31-0.39 are not release boundaries.
+  --version 0.30.0` reported **0 failures**; release commit `4621bbb`, annotated
+  tag `v0.30.0`. The next release boundary is **0.40.0**; release once every 10
+  minor versions, so 0.31-0.39 are not release boundaries.
 
 ## Completed in this session
 
