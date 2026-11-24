@@ -7,6 +7,7 @@ from pathlib import Path
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 ATTN_SUFFIXES = (".q_proj", ".k_proj", ".v_proj", ".o_proj", ".out_proj",
                  ".query", ".key", ".value", ".dense")
@@ -58,21 +59,175 @@ class LoRALinear(nn.Module):
         return out + delta.to(out.dtype)
 
 
+class LoRAMultiheadAttention(nn.Module):
+    """Low-rank adapter for the fused Q/K/V projection of an MHA module.
+
+    ``nn.MultiheadAttention`` stores Q, K and V in one ``in_proj_weight``
+    Parameter of shape ``(3 * embed_dim, embed_dim)``, so the usual
+    :class:`LoRALinear` cannot wrap it. This wrapper keeps the base module
+    frozen and adds ``A`` of shape ``(r, embed_dim)`` and ``B`` of shape
+    ``(3 * embed_dim, r)``. The projection passed to
+    ``F.multi_head_attention_forward`` is::
+
+        in_proj_weight + (B @ A) * (alpha / r)
+
+    ``B`` is initialized to zero, so applying the adapter starts from the
+    exact base behavior. ``adapt_bias`` optionally adds a low-rank delta to
+    ``in_proj_bias`` (``A`` of shape ``(r, 1)`` and ``B`` of shape
+    ``(3 * embed_dim, r)``); it is off by default and is only needed for
+    experiments that want to move the Q/K/V bias as well.
+
+    Unlike ``nn.MultiheadAttention.forward`` this always uses the functional
+    attention path: the merged weight carries a gradient, so the native
+    inference fast path cannot be used.
+    """
+
+    def __init__(self, base: nn.MultiheadAttention, r: int = 8,
+                 alpha: int = 16, adapt_bias: bool = False):
+        super().__init__()
+        if not isinstance(base, nn.MultiheadAttention):
+            raise TypeError(
+                "LoRAMultiheadAttention expects nn.MultiheadAttention, "
+                f"got {type(base).__name__}")
+        if not base._qkv_same_embed_dim:
+            raise ValueError(
+                "QKV LoRA requires a fused in_proj_weight "
+                "(q, k and v must share embed_dim)")
+        if r <= 0:
+            raise ValueError("QKV LoRA rank must be > 0")
+        if alpha <= 0:
+            raise ValueError("QKV LoRA alpha must be > 0")
+        self.base = base
+        for param in self.base.parameters():
+            param.requires_grad = False
+        self.r = int(r)
+        self.alpha = int(alpha)
+        self.scaling = self.alpha / self.r
+        self.embed_dim = base.embed_dim
+        self.num_heads = base.num_heads
+        self.batch_first = base.batch_first
+        self.dropout = base.dropout
+        self.adapt_bias = bool(adapt_bias)
+        self.lora_A = nn.Parameter(torch.empty(self.r, self.embed_dim))
+        self.lora_B = nn.Parameter(torch.zeros(3 * self.embed_dim, self.r))
+        nn.init.kaiming_uniform_(self.lora_A, a=math.sqrt(5))
+        if self.adapt_bias:
+            self.lora_bias_A = nn.Parameter(torch.empty(self.r, 1))
+            self.lora_bias_B = nn.Parameter(
+                torch.zeros(3 * self.embed_dim, self.r))
+            nn.init.kaiming_uniform_(self.lora_bias_A, a=math.sqrt(5))
+
+    @property
+    def in_proj_weight(self):
+        """Base QKV weight, exposed for callers that inspect the module."""
+        return self.base.in_proj_weight
+
+    @property
+    def in_proj_bias(self):
+        return self.base.in_proj_bias
+
+    @property
+    def out_proj(self):
+        return self.base.out_proj
+
+    @property
+    def bias_k(self):
+        return self.base.bias_k
+
+    @property
+    def bias_v(self):
+        return self.base.bias_v
+
+    @property
+    def add_zero_attn(self):
+        return self.base.add_zero_attn
+
+    def merged_in_proj_weight(self) -> torch.Tensor:
+        delta = (self.lora_B @ self.lora_A) * self.scaling
+        return self.base.in_proj_weight + delta.to(
+            self.base.in_proj_weight.dtype)
+
+    def merged_in_proj_bias(self):
+        base_bias = self.base.in_proj_bias
+        if not self.adapt_bias:
+            return base_bias
+        delta = (self.lora_bias_B @ self.lora_bias_A).squeeze(1) * self.scaling
+        if base_bias is None:
+            return delta
+        return base_bias + delta.to(base_bias.dtype)
+
+    def forward(self, query, key, value, key_padding_mask=None,
+                need_weights: bool = True, attn_mask=None,
+                average_attn_weights: bool = True,
+                is_causal: bool = False):
+        is_batched = query.dim() == 3
+        if self.batch_first and is_batched:
+            # Match nn.MultiheadAttention: preserve tensor identity where
+            # possible so self-attention stays a single tensor.
+            if key is value:
+                if query is key:
+                    query = key = value = query.transpose(1, 0)
+                else:
+                    query, key = (x.transpose(1, 0) for x in (query, key))
+                    value = key
+            else:
+                query, key, value = (
+                    x.transpose(1, 0) for x in (query, key, value))
+        attn_output, attn_output_weights = F.multi_head_attention_forward(
+            query, key, value,
+            self.embed_dim, self.num_heads,
+            self.merged_in_proj_weight(), self.merged_in_proj_bias(),
+            self.base.bias_k, self.base.bias_v,
+            self.base.add_zero_attn, self.base.dropout,
+            self.base.out_proj.weight, self.base.out_proj.bias,
+            training=self.training,
+            key_padding_mask=key_padding_mask,
+            need_weights=need_weights,
+            attn_mask=attn_mask,
+            average_attn_weights=average_attn_weights,
+            is_causal=is_causal,
+        )
+        if self.batch_first and is_batched:
+            attn_output = attn_output.transpose(1, 0)
+        return attn_output, attn_output_weights
+
+
 def _lora_parameter_names(model: nn.Module) -> set[str]:
-    """Fully-qualified names of the A/B parameters of every LoRALinear."""
+    """Fully-qualified names of every LoRA A/B parameter in ``model``."""
     names = set()
     for module_name, module in model.named_modules():
-        if not isinstance(module, LoRALinear):
+        prefix = f"{module_name}." if module_name else ""
+        if isinstance(module, LoRALinear):
+            names.add(prefix + "A")
+            names.add(prefix + "B")
+        elif isinstance(module, LoRAMultiheadAttention):
+            names.add(prefix + "lora_A")
+            names.add(prefix + "lora_B")
+            if module.adapt_bias:
+                names.add(prefix + "lora_bias_A")
+                names.add(prefix + "lora_bias_B")
+    return names
+
+
+def _qkv_parameter_names(model: nn.Module) -> set[str]:
+    """Fully-qualified names of the QKV LoRA parameters in ``model``."""
+    names = set()
+    for module_name, module in model.named_modules():
+        if not isinstance(module, LoRAMultiheadAttention):
             continue
         prefix = f"{module_name}." if module_name else ""
-        names.add(prefix + "A")
-        names.add(prefix + "B")
+        names.add(prefix + "lora_A")
+        names.add(prefix + "lora_B")
+        if module.adapt_bias:
+            names.add(prefix + "lora_bias_A")
+            names.add(prefix + "lora_bias_B")
     return names
 
 
 def _lora_tensors(state: dict) -> dict:
     return {key: value for key, value in state.items()
-            if key.endswith((".A", ".B", "lora_A", "lora_B"))}
+            if key.endswith((".A", ".B", "lora_A", "lora_B",
+                             "lora_bias_A", "lora_bias_B"))}
 
 
 def _load_lora_tensors(model: nn.Module, state: dict) -> None:
@@ -95,9 +250,23 @@ def _load_lora_tensors(model: nn.Module, state: dict) -> None:
 
 
 def _infer_lora_config(model: nn.Module) -> dict:
-    """Recover r/alpha per target group from the LoRALinear modules."""
+    """Recover r/alpha per target group from the wrapped modules.
+
+    The QKV keys are only emitted when a :class:`LoRAMultiheadAttention`
+    exists, so adapters trained without QKV LoRA keep their old config shape.
+    """
     found = {}
+    qkv_bias = False
     for name, module in model.named_modules():
+        if isinstance(module, LoRAMultiheadAttention):
+            geometry = (module.r,
+                        int(round(module.scaling * module.r)))
+            previous = found.get("qkv")
+            if previous is not None and previous != geometry:
+                raise ValueError("QKV LoRA geometry differs between modules")
+            found["qkv"] = geometry
+            qkv_bias = qkv_bias or module.adapt_bias
+            continue
         if not isinstance(module, LoRALinear):
             continue
         if name.endswith(ATTN_SUFFIXES):
@@ -110,23 +279,85 @@ def _infer_lora_config(model: nn.Module) -> dict:
             module.scaling * module.r))))
     r_attn, alpha_attn = found.get("attn", (0, 0))
     r_mlp, alpha_mlp = found.get("mlp", (0, 0))
-    return {"r_attn": r_attn, "alpha_attn": alpha_attn,
-            "r_mlp": r_mlp, "alpha_mlp": alpha_mlp}
+    config = {"r_attn": r_attn, "alpha_attn": alpha_attn,
+              "r_mlp": r_mlp, "alpha_mlp": alpha_mlp}
+    if "qkv" in found:
+        r_qkv, alpha_qkv = found["qkv"]
+        config["r_qkv"] = r_qkv
+        config["alpha_qkv"] = alpha_qkv
+        config["qkv_bias"] = qkv_bias
+    return config
+
+
+def apply_qkv_lora(model: nn.Module, rank: int = 8,
+                   alpha: int | None = None,
+                   adapt_bias: bool = False) -> nn.Module:
+    """Wrap fused-QKV attention modules with :class:`LoRAMultiheadAttention`.
+
+    Every ``nn.MultiheadAttention`` in ``model`` is wrapped and its base
+    parameters are frozen. ``rank=0`` is a no-op, which keeps the default
+    adapter geometry untouched. The wrapper stores A/B for the fused
+    ``in_proj_weight`` and, when ``adapt_bias`` is true, for
+    ``in_proj_bias``.
+    """
+    if rank < 0:
+        raise ValueError("QKV LoRA rank must be >= 0")
+    if rank == 0:
+        return model
+    if alpha is None:
+        alpha = rank
+    if alpha <= 0:
+        raise ValueError("QKV LoRA alpha must be > 0 when rank > 0")
+    targets = [
+        (name, module) for name, module in model.named_modules()
+        if isinstance(module, nn.MultiheadAttention)
+        and not isinstance(module, LoRAMultiheadAttention)
+    ]
+    if not targets:
+        raise ValueError(
+            "QKV LoRA requested but model has no nn.MultiheadAttention "
+            "modules with fused Q/K/V weights")
+    for name, module in targets:
+        parent_name, _, child = name.rpartition(".")
+        parent = model.get_submodule(parent_name) if parent_name else model
+        setattr(parent, child, LoRAMultiheadAttention(
+            module, rank, int(alpha), adapt_bias=adapt_bias))
+    # A standalone call should leave only adapter parameters trainable, just
+    # like apply_lora. Re-enable any LoRA modules that were already present.
+    for param in model.parameters():
+        param.requires_grad = False
+    for module in model.modules():
+        if isinstance(module, LoRALinear):
+            module.A.requires_grad = True
+            module.B.requires_grad = True
+        elif isinstance(module, LoRAMultiheadAttention):
+            module.lora_A.requires_grad = True
+            module.lora_B.requires_grad = True
+            if module.adapt_bias:
+                module.lora_bias_A.requires_grad = True
+                module.lora_bias_B.requires_grad = True
+    return model
 
 
 def apply_lora(model: nn.Module, r_attn: int = 8, r_mlp: int = 0,
                alpha_attn: int | None = None,
-               alpha_mlp: int | None = None) -> nn.Module:
-    """Replace target Linear modules with LoRALinear and freeze the base.
+               alpha_mlp: int | None = None,
+               r_qkv: int = 0, alpha_qkv: int | None = None,
+               qkv_bias: bool = False) -> nn.Module:
+    """Replace target Linear/MHA modules with LoRA wrappers and freeze base.
 
-    With ``r_attn > 0`` the attention ``out_proj`` Linear is wrapped. The
-    fused QKV ``in_proj_weight`` is a Parameter, not a module, so it cannot be
-    adapted and stays frozen. MLP linears are wrapped when ``r_mlp > 0``.
+    With ``r_attn > 0`` the attention ``out_proj`` Linear is wrapped. With
+    ``r_qkv > 0`` each fused ``nn.MultiheadAttention`` is replaced by
+    :class:`LoRAMultiheadAttention`, which adapts ``in_proj_weight`` (and
+    optionally ``in_proj_bias`` when ``qkv_bias`` is true). MLP linears are
+    wrapped when ``r_mlp > 0``. The defaults keep QKV frozen and preserve the
+    previous behavior exactly.
     """
-    if r_attn < 0 or r_mlp < 0:
+    if r_attn < 0 or r_mlp < 0 or r_qkv < 0:
         raise ValueError("LoRA ranks must be >= 0")
     for label, r, alpha in (("attn", r_attn, alpha_attn),
-                            ("mlp", r_mlp, alpha_mlp)):
+                            ("mlp", r_mlp, alpha_mlp),
+                            ("qkv", r_qkv, alpha_qkv)):
         if r > 0 and alpha is not None and alpha <= 0:
             raise ValueError(
                 f"{label} LoRA alpha must be > 0 when rank > 0")
@@ -145,12 +376,20 @@ def apply_lora(model: nn.Module, r_attn: int = 8, r_mlp: int = 0,
         parent_name, _, child = name.rpartition(".")
         parent = model.get_submodule(parent_name) if parent_name else model
         setattr(parent, child, LoRALinear(module, r, int(alpha)))
+    if r_qkv > 0:
+        apply_qkv_lora(model, r_qkv, alpha_qkv, adapt_bias=qkv_bias)
     for param in model.parameters():
         param.requires_grad = False
     for module in model.modules():
         if isinstance(module, LoRALinear):
             module.A.requires_grad = True
             module.B.requires_grad = True
+        elif isinstance(module, LoRAMultiheadAttention):
+            module.lora_A.requires_grad = True
+            module.lora_B.requires_grad = True
+            if module.adapt_bias:
+                module.lora_bias_A.requires_grad = True
+                module.lora_bias_B.requires_grad = True
     return model
 
 
@@ -171,7 +410,15 @@ def lora_parameters(model: nn.Module):
 def lora_state_dict(model: nn.Module) -> dict:
     return {k: v.detach().cpu() for k, v in model.state_dict().items()
             if k.endswith(".A") or k.endswith(".B")
-            or k.endswith("lora_A") or k.endswith("lora_B")}
+            or k.endswith("lora_A") or k.endswith("lora_B")
+            or k.endswith("lora_bias_A") or k.endswith("lora_bias_B")}
+
+
+def qkv_lora_state_dict(model: nn.Module) -> dict:
+    """Return only the QKV LoRA tensors, detached on CPU."""
+    names = _qkv_parameter_names(model)
+    return {k: v.detach().cpu() for k, v in model.state_dict().items()
+            if k in names}
 
 
 def set_lora_state_dict(model: nn.Module, state: dict):
@@ -182,15 +429,45 @@ def set_lora_state_dict(model: nn.Module, state: dict):
     _load_lora_tensors(model, state)
 
 
+def set_qkv_lora_state_dict(model: nn.Module, state: dict):
+    """Load QKV LoRA tensors from a QKV-only or full LoRA state dict.
+
+    The state may contain tensors for other LoRA modules; only QKV parameters
+    are loaded. Missing QKV tensors raise ``ValueError``.
+    """
+    expected = _qkv_parameter_names(model)
+    if not expected:
+        raise ValueError("model has no QKV LoRA parameters")
+    tensors = _lora_tensors(state)
+    missing = sorted(expected - tensors.keys())
+    if missing:
+        raise ValueError(f"QKV adapter is missing tensors: {missing}")
+    model.load_state_dict({key: tensors[key] for key in expected},
+                          strict=False)
+
+
 def merge_lora(model: nn.Module):
     with torch.no_grad():
         for module in model.modules():
-            if not isinstance(module, LoRALinear):
-                continue
-            delta = (module.B @ module.A) * module.scaling
-            module.base.weight.add_(delta.to(module.base.weight.dtype))
-            module.A.zero_()
-            module.B.zero_()
+            if isinstance(module, LoRALinear):
+                delta = (module.B @ module.A) * module.scaling
+                module.base.weight.add_(delta.to(module.base.weight.dtype))
+                module.A.zero_()
+                module.B.zero_()
+            elif isinstance(module, LoRAMultiheadAttention):
+                delta = (module.lora_B @ module.lora_A) * module.scaling
+                module.base.in_proj_weight.add_(
+                    delta.to(module.base.in_proj_weight.dtype))
+                module.lora_A.zero_()
+                module.lora_B.zero_()
+                if module.adapt_bias:
+                    delta = (module.lora_bias_B @ module.lora_bias_A
+                             ).squeeze(1) * module.scaling
+                    if module.base.in_proj_bias is not None:
+                        module.base.in_proj_bias.add_(
+                            delta.to(module.base.in_proj_bias.dtype))
+                    module.lora_bias_A.zero_()
+                    module.lora_bias_B.zero_()
 
 
 def save_adapter(model: nn.Module, out: str | Path, **config) -> Path:
@@ -198,7 +475,9 @@ def save_adapter(model: nn.Module, out: str | Path, **config) -> Path:
 
     ``r_attn``/``alpha_attn``/``r_mlp``/``alpha_mlp`` are inferred from the
     model when the caller does not pass them, so an attention adapter can
-    always be reloaded with :func:`apply_adapter`.
+    always be reloaded with :func:`apply_adapter`. ``r_qkv``/``alpha_qkv``
+    (and ``qkv_bias`` when used) are inferred from any
+    :class:`LoRAMultiheadAttention` modules.
     """
     out = Path(out)
     for key, value in _infer_lora_config(model).items():
@@ -218,7 +497,10 @@ def apply_adapter(model: nn.Module, path: str | Path) -> dict:
     apply_lora(model, r_attn=int(config.get("r_attn", 0) or 0),
                r_mlp=int(config.get("r_mlp", config.get("rank", 8)) or 0),
                alpha_attn=config.get("alpha_attn"),
-               alpha_mlp=config.get("alpha_mlp", config.get("alpha")))
+               alpha_mlp=config.get("alpha_mlp", config.get("alpha")),
+               r_qkv=int(config.get("r_qkv", 0) or 0),
+               alpha_qkv=config.get("alpha_qkv"),
+               qkv_bias=bool(config.get("qkv_bias", False)))
     _load_lora_tensors(model, ck.get("lora", {}))
     model.eval()
     return config

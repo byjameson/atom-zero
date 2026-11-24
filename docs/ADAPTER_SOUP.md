@@ -12,6 +12,10 @@ The implementation lives in `atomzero.lora` (`merge_adapters`,
 `research/merge_adapters.py`. It never modifies the input adapters, the base
 checkpoint or the active registry.
 
+Fused-QKV attention adapters (`docs/QKV_LORA.md`) are **not** soup-compatible
+yet: their `lora_A`/`lora_B` tensors are rejected by the `.A`/`.B` merge
+contract instead of being silently dropped.
+
 ## Method
 
 All adapters must share the same LoRA geometry and the same A/B tensor names
