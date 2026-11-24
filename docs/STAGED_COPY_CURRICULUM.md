@@ -239,10 +239,14 @@ After training a stage, the runner evaluates the adapter twice:
 
 Each comparison runs `compare_adapters.py` with `--per-family`,
 `--exact-match` and `--key-copy`. The runner extracts only aggregate numbers:
-full/content/key/value/syntax loss, exact-match rate, key-copy rate, key
-recall and per-family aggregates. The comparator's raw output contains
-`user`/`assistant` rows; the runner reads that temporary file, strips it and
-deletes it. No prompt or answer text is written to the ledger.
+full/content/key/value/syntax loss, content perplexity, exact-match rate,
+key-copy rate, key recall and per-family aggregates. The comparator's raw
+output contains `user`/`assistant` rows; the runner reads that temporary file,
+strips it and deletes it. No prompt or answer text is written to the ledger.
+
+After the last stage the runner repeats this comparison on the final mixed
+eval and feeds the content-free aggregate to the adapter gate; see
+[Final eval, gate and promotion](#final-eval-gate-and-promotion).
 
 ### Expected output
 
@@ -256,12 +260,15 @@ checkpoints/staged_curriculum/
   two_kv/
   two_json/
   multi/
+  candidate.json
+  gate.json
   ledger.json
 research/results/staged_curriculum_run.json
+data/curriculum_active_adapter.json   # only with --promote and a passing gate
 ```
 
-Both JSON files contain the same content-free ledger. A stage record looks
-like this (abridged):
+Both ledger JSON files contain the same content-free ledger. A stage record
+looks like this (abridged):
 
 ```json
 {
@@ -323,18 +330,173 @@ eval split, not on the final `multi` split. A stage is recorded with
 gate is a schedule stop, not an adapter promotion: it does not change the
 trainer, the comparator or the product weights.
 
+### Final eval, gate and promotion
+
+After the last trained stage the runner closes the loop:
+
+1. choose the final held-out eval:
+   - `--final-eval PATH` when given (missing path is an error);
+   - otherwise `<data-dir>/mixed_eval.jsonl` when it exists;
+   - otherwise `<data-dir>/stage_multi/eval.jsonl` when it exists;
+   - otherwise the gate is recorded as `skipped` and no promotion happens.
+
+   `mixed_eval.jsonl` is the optional 250-row mixed held-out file (50 rows per
+   stage) used by the manual run. When it is absent, the runner falls back to
+   the held-out `stage_multi/eval.jsonl`, so a standard build still produces a
+   gate result.
+
+2. run `research/compare_adapters.py` on that file with `--per-family`,
+   `--exact-match` and `--key-copy`, against the last stage adapter;
+3. write a content-free aggregate (loss, ppl, content/key/value/syntax loss,
+   content perplexity, exact-match and key-copy rates, per-family numbers);
+4. write the candidate metadata and call
+   `python -m atomzero.adapter_candidates evaluate` with the requested
+   thresholds;
+5. when `--promote` is set and the gate passes, call
+   `python -m atomzero.adapter_candidates promote` with the gate JSON, the
+   candidate JSON and the last adapter directory.
+
+The exact command, including a promotion into a **separate curriculum
+registry**:
+
+```powershell
+$env:PYTHONPATH="$PWD;$PWD\src"
+$env:PYTHONIOENCODING="utf-8"
+python research/run_staged_curriculum.py `
+  --data-dir data/staged_copy_v1 `
+  --out-dir checkpoints/staged_curriculum `
+  --base checkpoints/transformer_behavior_50m_long `
+  --stages echo_kv,echo_json,two_kv,two_json,multi `
+  --steps 2000 --batch-size 4 --lr 3e-4 --content-weight 2 `
+  --replay-weight 0 --rank 8 --alpha 8 --rank-attn 4 --alpha-attn 8 `
+  --seed 23 `
+  --final-eval data/staged_copy_v1/mixed_eval.jsonl `
+  --require-content --min-exact-match 0.25 --min-key-copy-rate 0.25 `
+  --min-content-delta 0.05 --max-content-ppl-ratio 1.0 `
+  --candidate-json checkpoints/staged_curriculum/candidate.json `
+  --gate-json checkpoints/staged_curriculum/gate.json `
+  --result research/results/staged_curriculum_run.json `
+  --promote --active-file data/curriculum_active_adapter.json
+```
+
+`--promote` is deliberately strict: it requires `--active-file`,
+`--require-content`, `--min-exact-match` and `--min-key-copy-rate`, because
+the promotion command rejects a gate that lacks
+`content_loss_improved`, `content_ppl_not_worse`, `exact_match_ok` or
+`key_copy_ok`. The gate also checks the full loss/perplexity improvement.
+A failing gate leaves the registry untouched and records the failure in the
+ledger; a promotion subprocess failure is also recorded and exits with code 2.
+
+#### Safe curriculum registry
+
+Use `data/curriculum_active_adapter.json` for curriculum experiments. It is a
+separate file from the product registry `data/active_adapter.json`:
+
+- `data/active_adapter.json` is read by `atomzero --adapter auto` and changes
+  what the product serves;
+- `data/curriculum_active_adapter.json` records only the last passing
+  curriculum adapter and does not affect the product;
+- a curriculum run with no `--promote` (or a failing gate) never touches
+  either registry.
+
+To inspect the curriculum result without activating it:
+
+```powershell
+Get-Content data/curriculum_active_adapter.json
+```
+
+To use it explicitly, point the server at that file:
+
+```powershell
+atomzero --adapter auto `
+  --active-adapter-file data/curriculum_active_adapter.json
+```
+
+Do not point a curriculum promotion at `data/active_adapter.json` unless the
+adapter has also passed the product review process described in
+`docs/ADAPTER_PROMOTION.md`.
+
+#### Candidate metadata and family separation
+
+The gate needs `candidate_id` and `eval_examples`; promotion additionally
+needs the family separation evidence. Neither file stores prompt or answer
+text. The final
+mixed eval intentionally uses the same task-family names as training, so the
+runner does not claim family-name disjointness. Instead it records
+`family_separation: true` only when:
+
+- every final-eval row has an explicit family label;
+- no final-eval row appears in any stage train split;
+- no final-eval key or value appears in any stage train split.
+
+The metadata also carries the counts (`row_overlap`, `key_overlap`,
+`value_overlap`, `train_rows_checked`, `eval_rows_checked`) and
+`family_separation_basis`, so the claim is auditable. On the default
+`data/staged_copy_v1` build the mixed eval has 250 held-out rows and the
+overlap counts are all zero.
+
+#### Ledger fields
+
+The ledger and `--gate-json`/`--candidate-json` outputs are content-free. The
+top-level fields include:
+
+```json
+{
+  "final_eval": {
+    "data": "data/staged_copy_v1/mixed_eval.jsonl",
+    "examples": 250,
+    "metrics": {"adapter": {"loss": 0.9, "content_loss": 1.0,
+                            "exact_match_rate": 0.4,
+                            "key_copy_rate": 0.548}}
+  },
+  "candidate_id": "ad-...",
+  "candidate_json": "checkpoints/staged_curriculum/candidate.json",
+  "gate_json": "checkpoints/staged_curriculum/gate.json",
+  "gate": {
+    "status": "pass",
+    "ok": true,
+    "reasons": ["loss_improved", "ppl_not_worse",
+                "content_loss_improved", "content_ppl_not_worse",
+                "exact_match_ok", "key_copy_ok"],
+    "adapter_exact_match": 0.4,
+    "adapter_key_copy_rate": 0.548
+  },
+  "exact_match_rate": 0.4,
+  "key_copy_rate": 0.548,
+  "promotion": {"requested": true, "promoted": true,
+                "reason": "promoted",
+                "active_file": "data/curriculum_active_adapter.json"},
+  "active_file": "data/curriculum_active_adapter.json"
+}
+```
+
+The stage records are unchanged. `promotion.promoted` is false with
+`reason: "gate_failed"` when the final gate fails, `"dry_run"` in a dry run,
+`"gate_skipped"` when no final eval was available and `"not_requested"` when
+`--promote` was not set.
+
 ### Dry run and tests
 
-`--dry-run` skips all subprocesses, writes fake aggregate metrics and needs no
-data files or checkpoint. It is useful to check option validation and produce
-a sample result:
+`--dry-run` skips all subprocesses, writes fake trainer, comparator and gate
+outputs, needs no data files or checkpoint, and never writes a registry. The
+fake final eval mirrors the manual 250-row mixed run (exact match 0.40,
+key-copy 0.548, content loss 4.04 -> 1.00). It is useful to check option
+validation and produce a sample result:
 
 ```powershell
 python research/run_staged_curriculum.py `
   --dry-run --stages echo_kv,echo_json,multi `
   --out-dir checkpoints/staged_curriculum_dry_run `
-  --result research/results/staged_curriculum_dry_run.json
+  --result research/results/staged_curriculum_dry_run.json `
+  --candidate-json research/results/staged_curriculum_dry_candidate.json `
+  --gate-json research/results/staged_curriculum_dry_gate.json `
+  --require-content --min-exact-match 0.25 --min-key-copy-rate 0.25 `
+  --promote --active-file data/curriculum_active_adapter_dry_run.json
 ```
+
+The dry run records `promotion.reason: "dry_run"` and does not create the
+active file. Without explicit `--candidate-json`/`--gate-json`, a dry run does
+not create the output directory either.
 
 ```powershell
 python -m pytest tests/test_curriculum_runner.py -q
