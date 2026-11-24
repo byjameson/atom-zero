@@ -1,6 +1,6 @@
 # atomzero 0.40.0 - real autonomous promotion and a runtime copy tool
 
-Status: **release candidate**. Base weights remain `0.8.0`.
+Status: **published on 2026-11-25**. Base weights remain `0.8.0`.
 
 ## Highlights
 
@@ -46,3 +46,5 @@ pip install atomzero==0.40.0
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-49m>
 - X: <https://x.com/aigokhan>
 - Instagram: <https://instagram.com/quantsinner>
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-0400-the-loop-promotes-on-its-own-and-a-copy-tool-for-the-wall-4p8b>
+- Medium: <https://medium.com/@myredditacc9393/atom-zero-0-40-0-is-the-0-4-release-boundary-0-20-0-0-30-0-0-40-0-71b064fa920c>

@@ -1,6 +1,6 @@
 # Changelog
 
-## atomzero 0.40.0 - unreleased
+## atomzero 0.40.0 - 2026-11-25
 
 - **Real self-improve curriculum promotion**: a VM run trained `echo_kv,echo_json`, passed the 0.40 exact / 0.50 key-copy / content gate with **53% exact / 60% key copy**, and promoted automatically to `data/self_improve_curriculum_active.json`. A first attempt at a 0.40 exact threshold failed closed on content loss and did not promote.
 - **Runtime copy tool**: `atomzero-copy` deterministically parses explicit key=value pairs and emits JSON/KV/YAML. Benchmark: **200/200 exact / 1.0 key-copy** on the real 4-key eval set. This is tool use, not a model capability.

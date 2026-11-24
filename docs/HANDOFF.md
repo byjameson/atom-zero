@@ -2,7 +2,7 @@
 
 ## Current state
 
-- Release candidate: `0.40.0` on `main`; last published boundary `0.30.0` (bounded self-improve loop,
+- Last released boundary: `0.40.0` on `main`; all canonical surfaces published (bounded self-improve loop,
   committed-change scope check, fifth measured cycle)
 - Post-release main: self-code audit/diff/targeting with suppressions,
   planner history, scoreboard output collectors, escalation ladder, teacher
