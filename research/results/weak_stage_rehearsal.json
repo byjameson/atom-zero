@@ -1,0 +1,230 @@
+{
+  "schema": "atomzero.weak_stage_rehearsal.v1",
+  "created": "2026-11-24T17:02:10",
+  "content_free": true,
+  "status": "completed",
+  "seed": 23,
+  "rows": 1000,
+  "data_dir": "/tmp/weak_stage_data",
+  "base_adapter": "checkpoints/staged_curriculum/multi_recover",
+  "new_adapter": "checkpoints/weak_stage_rehearsal",
+  "stage_order": [
+    "multi",
+    "two_kv",
+    "two_json",
+    "echo_kv",
+    "echo_json"
+  ],
+  "ranking": [
+    {
+      "stage": "multi",
+      "exact": 0.12,
+      "key_copy": 0.22,
+      "score": 0.34,
+      "rank": 1
+    },
+    {
+      "stage": "two_kv",
+      "exact": 0.44,
+      "key_copy": 0.54,
+      "score": 0.98,
+      "rank": 2
+    },
+    {
+      "stage": "two_json",
+      "exact": 0.46,
+      "key_copy": 0.72,
+      "score": 1.18,
+      "rank": 3
+    },
+    {
+      "stage": "echo_kv",
+      "exact": 0.62,
+      "key_copy": 0.74,
+      "score": 1.36,
+      "rank": 4
+    },
+    {
+      "stage": "echo_json",
+      "exact": 0.76,
+      "key_copy": 0.8,
+      "score": 1.56,
+      "rank": 5
+    }
+  ],
+  "mix": {
+    "weights": {
+      "multi": 0.25,
+      "two_kv": 0.25,
+      "two_json": 0.3,
+      "echo_kv": 0.1,
+      "echo_json": 0.1
+    },
+    "counts": {
+      "multi": 250,
+      "two_kv": 250,
+      "two_json": 300,
+      "echo_kv": 100,
+      "echo_json": 100
+    },
+    "total": 1000,
+    "groups": {
+      "weakest": [
+        "multi",
+        "two_kv"
+      ],
+      "middle": [
+        "two_json"
+      ],
+      "strongest": [
+        "echo_kv",
+        "echo_json"
+      ]
+    }
+  },
+  "stages": [
+    {
+      "stage": "multi",
+      "rank": 1,
+      "group": "weakest",
+      "score": 0.34,
+      "before": {
+        "exact": 0.12,
+        "key_copy": 0.22
+      },
+      "after": {
+        "exact": 0.1,
+        "key_copy": 0.2
+      },
+      "delta": {
+        "exact": -0.02,
+        "key_copy": -0.02
+      },
+      "mix_weight": 0.25,
+      "mix_rows": 250
+    },
+    {
+      "stage": "two_kv",
+      "rank": 2,
+      "group": "weakest",
+      "score": 0.98,
+      "before": {
+        "exact": 0.44,
+        "key_copy": 0.54
+      },
+      "after": {
+        "exact": 0.35,
+        "key_copy": 0.5
+      },
+      "delta": {
+        "exact": -0.09,
+        "key_copy": -0.04
+      },
+      "mix_weight": 0.25,
+      "mix_rows": 250
+    },
+    {
+      "stage": "two_json",
+      "rank": 3,
+      "group": "middle",
+      "score": 1.18,
+      "before": {
+        "exact": 0.46,
+        "key_copy": 0.72
+      },
+      "after": {
+        "exact": 0.4,
+        "key_copy": 0.7
+      },
+      "delta": {
+        "exact": -0.06,
+        "key_copy": -0.02
+      },
+      "mix_weight": 0.3,
+      "mix_rows": 300
+    },
+    {
+      "stage": "echo_kv",
+      "rank": 4,
+      "group": "strongest",
+      "score": 1.36,
+      "before": {
+        "exact": 0.62,
+        "key_copy": 0.74
+      },
+      "after": {
+        "exact": 0.55,
+        "key_copy": 0.6
+      },
+      "delta": {
+        "exact": -0.07,
+        "key_copy": -0.14
+      },
+      "mix_weight": 0.1,
+      "mix_rows": 100
+    },
+    {
+      "stage": "echo_json",
+      "rank": 5,
+      "group": "strongest",
+      "score": 1.56,
+      "before": {
+        "exact": 0.76,
+        "key_copy": 0.8
+      },
+      "after": {
+        "exact": 0.6,
+        "key_copy": 0.65
+      },
+      "delta": {
+        "exact": -0.16,
+        "key_copy": -0.15
+      },
+      "mix_weight": 0.1,
+      "mix_rows": 100
+    }
+  ],
+  "trainer": {
+    "status": "completed",
+    "returncode": 0,
+    "elapsed_seconds": 49.275,
+    "adapter_exists": true,
+    "result": {
+      "train_loss": 0.6657148580998182,
+      "train_steps": 300,
+      "optimizer_steps": 300,
+      "lora_parameters": 405504,
+      "batch_size": 1,
+      "content_weight": 2.0,
+      "init_adapter": "checkpoints/staged_curriculum/multi_recover"
+    },
+    "command": [
+      "/home/byjameson/atom-zero/.venv/bin/python",
+      "research/train_adapter_candidate.py",
+      "--base",
+      "/home/byjameson/atom-zero/checkpoints/base_0.8.0",
+      "--train",
+      "/home/byjameson/atom-zero/checkpoints/weak_stage_rehearsal_train.jsonl",
+      "--eval",
+      "/tmp/weak_stage_data/stage_multi/eval.jsonl",
+      "--out",
+      "/home/byjameson/atom-zero/checkpoints/weak_stage_rehearsal",
+      "--init-adapter",
+      "/home/byjameson/atom-zero/checkpoints/staged_curriculum/multi_recover",
+      "--steps",
+      "300",
+      "--batch-size",
+      "1",
+      "--lr",
+      "0.0005",
+      "--content-weight",
+      "2.0",
+      "--seed",
+      "23",
+      "--result",
+      "/home/byjameson/atom-zero/research/results/weak_stage_rehearsal_trainer.json",
+      "--comparison",
+      "/home/byjameson/atom-zero/research/results/weak_stage_rehearsal_trainer_comparison.json"
+    ]
+  }
+}
