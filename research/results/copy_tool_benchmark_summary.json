@@ -1,0 +1,15 @@
+{
+  "date": "2026-11-24",
+  "dataset": "data/multi_short_v1/stage_4short/eval.jsonl",
+  "examples": 200,
+  "valid": 200,
+  "invalid": 0,
+  "exact_match": 1.0,
+  "key_copy_rate": 1.0,
+  "value_copy_rate": 1.0,
+  "formats": {
+    "json": 100,
+    "kv": 100
+  },
+  "note": "deterministic runtime transcription; not a model capability"
+}
