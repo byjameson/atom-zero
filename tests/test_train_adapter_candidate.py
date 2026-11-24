@@ -1,4 +1,6 @@
 import json
+import re
+from types import SimpleNamespace
 
 import pytest
 import torch
@@ -11,6 +13,7 @@ from atomzero.transformer import TransformerLM
 from research import train_adapter_candidate as trainer
 from research.train_adapter_candidate import (
     _token_weights,
+    answer_token_weights,
     group_weighted_loss,
     load_init_adapter,
 )
@@ -62,6 +65,140 @@ def test_token_weights_default_is_plain_cross_entropy():
     y = torch.tensor([[1, 2, 3, -100]])
     weights = _token_weights(_Tokenizer(), y, 1.0)
     assert weights.tolist() == [[1.0, 1.0, 1.0, 0.0]]
+
+
+class _OffsetTokenizer:
+    """Whitespace tokenizer that reports real character offsets."""
+
+    def __init__(self, words):
+        self._vocab = {}
+        for word in words:
+            self._vocab.setdefault(word, len(self._vocab))
+        self._vocab.setdefault("<|unk|>", len(self._vocab))
+        self._inverse = {index: word for word, index in self._vocab.items()}
+
+    def token_to_id(self, token):
+        return self._vocab.get(token)
+
+    def decode(self, ids):
+        return self._inverse.get(int(ids[0]), "<|unk|>")
+
+    def encode(self, text):
+        ids = []
+        offsets = []
+        for match in re.finditer(r"\S+", text):
+            piece = match.group(0)
+            ids.append(self._vocab.get(piece, self._vocab["<|unk|>"]))
+            offsets.append((match.start(), match.end()))
+        return SimpleNamespace(ids=ids, offsets=offsets)
+
+
+def _masked_labels(tok, row, max_seq=64):
+    ids = tok.encode(trainer.fmt(row)).ids[:max_seq]
+    y = torch.tensor([ids[1:]])
+    return trainer.mask_user_labels(
+        y, tok.token_to_id("<|user|>"), tok.token_to_id("<|assistant|>"))
+
+
+_JSON_TOKENS = [
+    "<|user|>", "<|assistant|>", "<|end|>", "<|unk|>", "give", "name",
+    "{", "}", ":", '"name"', '"Ada"',
+]
+_KV_TOKENS = [
+    "<|user|>", "<|assistant|>", "<|end|>", "<|unk|>", "give", "keys",
+    "name", "=", "Ada", ";", "color", "blue",
+]
+
+
+def test_json_key_tokens_outweigh_value_tokens():
+    tok = _OffsetTokenizer(_JSON_TOKENS)
+    row = {"user": "give name", "assistant": '{ "name" : "Ada" }'}
+    y = _masked_labels(tok, row)
+    weights = answer_token_weights(
+        tok, row, y, key_weight=10.0, value_weight=5.0)
+    # user -> 0, syntax/tags -> 1, "name" -> 10, "Ada" -> 5
+    assert weights.tolist() == [[
+        0.0, 0.0, 1.0, 1.0, 10.0, 1.0, 5.0, 1.0, 1.0]]
+
+
+def test_kv_key_tokens_outweigh_value_tokens():
+    tok = _OffsetTokenizer(_KV_TOKENS)
+    row = {"user": "give keys", "assistant": "name = Ada ; color = blue"}
+    y = _masked_labels(tok, row)
+    weights = answer_token_weights(
+        tok, row, y, key_weight=10.0, value_weight=5.0)
+    # key names -> 10, values -> 5, "=" and ";" syntax -> 1, user -> 0
+    assert weights.tolist() == [[
+        0.0, 0.0, 1.0, 10.0, 1.0, 5.0, 1.0, 10.0, 1.0, 5.0, 1.0]]
+
+
+def test_key_weighting_updates_output_class_and_default_value_weight():
+    tok = _OffsetTokenizer(_KV_TOKENS)
+    row = {"user": "give keys", "assistant": "name = Ada ; color = blue"}
+    y = _masked_labels(tok, row)
+    weights = answer_token_weights(tok, row, y, key_weight=10.0)
+    assert weights[0, 3].item() == 10.0
+    assert weights[0, 7].item() == 10.0
+    # value_weight defaults to the content weight (1.0 here)
+    assert weights[0, 5].item() == 1.0
+    assert weights[0, 9].item() == 1.0
+
+
+def test_key_weighting_keeps_content_weight_on_unspanned_words():
+    tok = _OffsetTokenizer([
+        "<|user|>", "<|assistant|>", "<|end|>", "<|unk|>", "give", "name",
+        "name:", "Ada", "note",
+    ])
+    row = {"user": "give name", "assistant": "name: Ada\nnote"}
+    y = _masked_labels(tok, row)
+    weights = answer_token_weights(
+        tok, row, y, key_weight=10.0, value_weight=5.0, content_weight=2.0)
+    # "name:" overlaps the key, "Ada" is the value, "note" has no span.
+    assert weights[0, 3].item() == 10.0
+    assert weights[0, 4].item() == 5.0
+    assert weights[0, 5].item() == 2.0
+
+
+def test_key_weighting_defaults_match_legacy_weights_bitwise():
+    tok = _OffsetTokenizer(_JSON_TOKENS)
+    row = {"user": "give name", "assistant": '{ "name" : "Ada" }'}
+    y = _masked_labels(tok, row)
+    legacy = _token_weights(tok, y, 5.0)
+    explicit = answer_token_weights(
+        tok, row, y, key_weight=1.0, value_weight=1.0, content_weight=5.0)
+    defaulted = answer_token_weights(tok, row, y)
+    assert torch.equal(explicit, legacy)
+    assert torch.equal(defaulted, _token_weights(tok, y, 1.0))
+
+
+@pytest.mark.parametrize("kwargs", [
+    {"key_weight": -1.0},
+    {"key_weight": float("nan")},
+    {"key_weight": float("inf")},
+    {"value_weight": -0.5},
+    {"value_weight": float("nan")},
+])
+def test_train_rejects_invalid_key_value_weights(tmp_path, kwargs):
+    with pytest.raises(ValueError):
+        trainer.train(
+            str(tmp_path / "base"), [], tmp_path / "adapter", steps=1,
+            lr=1e-2, rank=2, alpha=4, max_seq=8, device="cpu", **kwargs)
+
+
+@pytest.mark.parametrize("flag,value", [
+    ("--key-weight", "-1"),
+    ("--key-weight", "nan"),
+    ("--key-weight", "inf"),
+    ("--value-weight", "-0.5"),
+    ("--value-weight", "nan"),
+])
+def test_cli_rejects_invalid_key_value_weights(flag, value):
+    with pytest.raises(SystemExit):
+        trainer.main([
+            "--base", "base", "--train", "train.jsonl",
+            "--eval", "eval.jsonl", "--out", "adapter",
+            flag, value,
+        ])
 
 
 def test_group_weighted_loss_normalizes_by_total_token_weight():
@@ -392,3 +529,62 @@ def test_cli_records_gradient_accumulation_flags(tmp_path):
     assert config["batch_size"] == 4
     assert config["optimizer_steps"] == 2
     assert config["rows_seen"] == 8
+
+
+def test_cli_records_key_value_weights(tmp_path):
+    base = _tiny_base(tmp_path)
+    train_path = tmp_path / "train.jsonl"
+    eval_path = tmp_path / "eval.jsonl"
+    _write_jsonl(train_path, _rows("alpha", 2))
+    _write_jsonl(eval_path, _rows("gamma", 1))
+    result_path = tmp_path / "result.json"
+    out = tmp_path / "adapter"
+    code = trainer.main([
+        "--base", str(base),
+        "--train", str(train_path),
+        "--eval", str(eval_path),
+        "--out", str(out),
+        "--steps", "2", "--lr", "0.01", "--rank", "2", "--alpha", "4",
+        "--max-seq", "32", "--seed", "3",
+        "--key-weight", "10", "--value-weight", "5",
+        "--result", str(result_path),
+        "--comparison", str(tmp_path / "comparison.json"),
+    ])
+    assert code == 0
+    result = json.loads(result_path.read_text(encoding="utf-8"))
+    assert result["key_weight"] == pytest.approx(10.0)
+    assert result["value_weight"] == pytest.approx(5.0)
+    assert result["content_weight"] == pytest.approx(1.0)
+    config = json.loads((out / "config.json").read_text(encoding="utf-8"))
+    assert config["key_weight"] == pytest.approx(10.0)
+    assert config["value_weight"] == pytest.approx(5.0)
+    assert config["content_weight"] == pytest.approx(1.0)
+
+
+def test_cli_value_weight_defaults_to_content_weight(tmp_path):
+    base = _tiny_base(tmp_path)
+    train_path = tmp_path / "train.jsonl"
+    eval_path = tmp_path / "eval.jsonl"
+    _write_jsonl(train_path, _rows("alpha", 2))
+    _write_jsonl(eval_path, _rows("gamma", 1))
+    result_path = tmp_path / "result.json"
+    out = tmp_path / "adapter"
+    code = trainer.main([
+        "--base", str(base),
+        "--train", str(train_path),
+        "--eval", str(eval_path),
+        "--out", str(out),
+        "--steps", "2", "--lr", "0.01", "--rank", "2", "--alpha", "4",
+        "--max-seq", "32", "--seed", "3",
+        "--content-weight", "3",
+        "--result", str(result_path),
+        "--comparison", str(tmp_path / "comparison.json"),
+    ])
+    assert code == 0
+    result = json.loads(result_path.read_text(encoding="utf-8"))
+    assert result["key_weight"] == pytest.approx(1.0)
+    assert result["value_weight"] == pytest.approx(3.0)
+    config = json.loads((out / "config.json").read_text(encoding="utf-8"))
+    assert config["key_weight"] == pytest.approx(1.0)
+    assert config["value_weight"] == pytest.approx(3.0)
+    assert config["content_weight"] == pytest.approx(3.0)
