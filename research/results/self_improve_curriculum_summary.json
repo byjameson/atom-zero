@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-24",
+  "mode": "real self-improve curriculum run (no dry-run)",
+  "stages": [
+    "echo_kv",
+    "echo_json"
+  ],
+  "final_eval": "echo_mixed_eval (100 rows)",
+  "first_attempt": {
+    "status": "curriculum_failed",
+    "gate": "fail",
+    "exact_match": 0.37,
+    "key_copy": 0.55,
+    "promotion": false,
+    "reasons": [
+      "content_loss_not_improved",
+      "content_ppl_regression"
+    ]
+  },
+  "successful_attempt": {
+    "status": "completed",
+    "gate": "pass",
+    "exact_match": 0.53,
+    "key_copy": 0.6,
+    "promotion": true,
+    "adapter": "checkpoints/self_improve_curriculum/echo_json",
+    "registry": "data/self_improve_curriculum_active.json"
+  },
+  "product_default": "base 0.8.0",
+  "copy_tool_4key_exact": 1.0
+}
