@@ -45,7 +45,8 @@
   tag `v0.20.0`. `0.21.0` is published on PyPI, GitHub, Hugging Face,
   ModelScope, dev.to, Medium, LinkedIn and X. `0.22.0` is an intermediate patch
   with the self-improve curriculum integration. The next release boundary is
-  **0.30.0**; do not publish 0.23-0.29 as boundaries.
+  **0.30.0**; release once every 10 minor versions, so 0.23-0.29 are not
+  release boundaries.
 
 ## Completed in this session
 

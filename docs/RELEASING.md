@@ -12,9 +12,10 @@ planner/runner integration and the sixth measured cycle.
 
 ## Release cadence
 
-Releases follow **one 0.1 boundary per release**: `0.20.0 -> 0.30.0 -> 0.40.0`
-and so on. Do not publish `0.21.x`-`0.29.x` as release boundaries. Intermediate
-patch uploads may exist only as hotfixes and are not the 0.1 milestone.
+Releases happen **once every 10 minor versions**: `0.20.0 -> 0.30.0 ->
+0.40.0` and so on. Do not publish `0.21.x`-`0.29.x` as release boundaries.
+Intermediate patch uploads may exist only as hotfixes and are not the release
+milestone.
 
 `0.20.0` was the last 0.1 boundary; the next boundary is **`0.30.0`**. Every
 0.1 boundary is published on all canonical surfaces.
