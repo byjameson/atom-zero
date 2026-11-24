@@ -46,6 +46,14 @@ loss `4.6015 -> 0.7789`. It passed the behavior gate and was promoted to the
 curriculum registry. Per-stage: echo_kv 62/74, echo_json 76/80, two_kv 44/54,
 two_json 46/72, multi 12/22.
 
+## Follow-up results - negative for 3-4 keys
+
+Key-weighted multi-short: mixed **40.4% / 53.2%**; 2short 36/46, 2mixed
+38/56, 3short 2/8, 4short 0/0. Multi-short standard: mixed **42.0% /
+54.4%**; 2short 42/54, 2mixed 44/58, 3short 6/24, 4short 0/0. The best
+overall adapter remains **multi_recover: 48.0% / 60.4%**. The 3-4 key wall is
+likely a capacity/locus limit, not just data.
+
 ## Release gate
 
 - All tests on the VM (8 vCPU) and benchmark 20/20.

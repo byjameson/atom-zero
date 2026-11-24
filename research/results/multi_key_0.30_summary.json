@@ -1,0 +1,56 @@
+{
+  "date": "2026-11-24",
+  "best_adapter": {
+    "name": "multi_recover",
+    "mixed_exact": 0.48,
+    "mixed_key_copy": 0.604,
+    "mixed_key_recall": 0.700333,
+    "mixed_loss": 0.776904
+  },
+  "key_weighted": {
+    "mixed_exact": 0.404,
+    "mixed_key_copy": 0.532,
+    "per_stage": {
+      "2short": [
+        0.36,
+        0.46
+      ],
+      "2mixed": [
+        0.38,
+        0.56
+      ],
+      "3short": [
+        0.02,
+        0.08
+      ],
+      "4short": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "multi_short_standard": {
+    "mixed_exact": 0.42,
+    "mixed_key_copy": 0.544,
+    "per_stage": {
+      "2short": [
+        0.42,
+        0.54
+      ],
+      "2mixed": [
+        0.44,
+        0.58
+      ],
+      "3short": [
+        0.06,
+        0.24
+      ],
+      "4short": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "conclusion": "2-key copying improves; 3-4 arbitrary keys remain at 0-6% exact; multi_recover is the best overall adapter",
+  "base_weights": "0.8.0"
+}

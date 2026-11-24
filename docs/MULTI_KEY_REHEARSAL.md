@@ -148,6 +148,22 @@ This adapter passed the behavior gate and replaced `rehearsal_focus` in the
 curriculum registry. Multi-key copying is still the weakest stage, but the
 specialize-then-rehearse recipe is clearly better than soup or pure multi.
 
+## Key weighting and short-value curriculum (negative for 3-4 keys)
+
+Two follow-up experiments tried to break the 3-4 key wall:
+
+| experiment | mixed exact | mixed key copy | 2short | 2mixed | 3short | 4short |
+|---|---:|---:|---:|---:|---:|---:|
+| multi_recover (best) | **48.0%** | **60.4%** | - | - | 12% multi | - |
+| key-weighted multi-short | 40.4% | 53.2% | 36/46 | 38/56 | 2/8 | 0/0 |
+| multi-short standard | 42.0% | 54.4% | 42/54 | 44/58 | 6/24 | 0/0 |
+
+The short-value curriculum helps 2-key rows but does not transfer to 3-4
+arbitrary keys. Key weighting does not help either; it slightly hurts the
+mixed result. The 3-4 key wall is therefore not just a tokenization or value
+difficulty problem. It is likely a capacity/locus limit of the 49M base with
+LoRA.
+
 ## Conclusion
 
 Multi-key copying is still the bottleneck. The next experiments should target
