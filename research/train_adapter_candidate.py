@@ -76,9 +76,23 @@ def _encode(tok, row, max_seq: int, device):
     return x, y
 
 
+def _token_weights(tok, y, content_weight: float):
+    weights = torch.ones_like(y, dtype=torch.float)
+    weights[y == -100] = 0.0
+    if content_weight == 1.0:
+        return weights
+    for position in range(y.size(1)):
+        if int(y[0, position]) == -100:
+            continue
+        text = tok.decode([int(y[0, position])])
+        if any(char.isalnum() for char in text):
+            weights[0, position] = content_weight
+    return weights
+
+
 def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
           lr: float, rank: int, alpha: int, max_seq: int,
-          device, seed: int = 13,
+          device, seed: int = 13, content_weight: float = 1.0,
           replay_rows: list[dict] | None = None,
           replay_weight: float = DEFAULT_REPLAY_WEIGHT) -> dict:
     replay_rows = list(replay_rows or [])
@@ -104,9 +118,11 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
             continue
         x, y = encoded
         logits = model(x)
-        loss = F.cross_entropy(
+        token_loss = F.cross_entropy(
             logits.reshape(-1, model.vocab), y.reshape(-1),
-            ignore_index=-100)
+            ignore_index=-100, reduction="none")
+        weights = _token_weights(tok, y, content_weight).reshape(-1)
+        loss = (token_loss * weights).sum() / weights.sum().clamp_min(1e-8)
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(params, 1.0)
@@ -123,6 +139,7 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
         rank=rank, alpha=alpha, steps=steps, lr=lr,
         base=str(base), train_examples=len(train_rows),
         replay_examples=len(replay_rows), replay_weight=replay_weight,
+        content_weight=content_weight,
         method="external_train_adapter_candidate_v1")
     tail = losses[-20:] if losses else [0.0]
     try:
@@ -135,6 +152,7 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
         "train_examples": len(train_rows),
         "replay_examples": len(replay_rows),
         "replay_weight": replay_weight,
+        "content_weight": content_weight,
         "train_mix": mix,
         "lora_parameters": count_lora_params(model),
         "adapter": adapter_path,
@@ -172,11 +190,16 @@ def main(argv=None) -> int:
         "--replay-weight", type=_bounded_weight,
         default=DEFAULT_REPLAY_WEIGHT,
         help="fraction of training steps drawn from --replay-jsonl (0..1)")
+    parser.add_argument(
+        "--content-weight", type=float, default=1.0,
+        help="loss multiplier for alphanumeric content tokens (>=1)")
     parser.add_argument("--result", default="research/results/adapter_candidate.json")
     parser.add_argument(
         "--comparison",
         default="research/results/adapter_candidate_comparison.json")
     args = parser.parse_args(argv)
+    if not math.isfinite(args.content_weight) or args.content_weight < 1.0:
+        parser.error("--content-weight must be finite and >= 1.0")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     train_rows = read_rows(_resolve(args.train))
     eval_rows = read_rows(_resolve(args.eval))
@@ -188,8 +211,8 @@ def main(argv=None) -> int:
     summary = train(
         args.base, train_rows, out, steps=args.steps, lr=args.lr,
         rank=args.rank, alpha=args.alpha, max_seq=args.max_seq,
-        device=device, seed=args.seed, replay_rows=replay_rows,
-        replay_weight=args.replay_weight)
+        device=device, seed=args.seed, content_weight=args.content_weight,
+        replay_rows=replay_rows, replay_weight=args.replay_weight)
     comparison = compare(
         args.base, str(_resolve(args.eval)), [str(out)])
     models = comparison.get("models", [])

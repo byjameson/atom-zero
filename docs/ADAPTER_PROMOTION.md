@@ -54,19 +54,24 @@ remains `0.8.0`.
 Delete `data/active_adapter.json`, or point `path` back to the `previous`
 adapter. Restart the server. Rejected candidates never touch the registry.
 
-## Promotion audit - not promoted
+## Current promotion - content-gated
 
-The replay-weighted candidate passed the **full-loss** gate but failed the
-content audit:
+The replay-weighted candidate was retrained with content-weighted loss
+(`--content-weight 5`) and passed both gates:
 
 ```text
-candidate:          ad-8cf19d2b5840de59
-full loss:          5.2549 -> 2.6002   (pass)
-content loss:       4.4327 -> 4.4123   (delta -0.0205, required -0.05; fail)
-content ppl ratio:  0.9797
-result:             not promotable
+candidate:          ad-e396366ef725656c
+full loss:          5.2549 -> 2.8489   (pass)
+full ppl ratio:     0.0902
+content loss:       4.4327 -> 3.4892   (delta -0.9435, required -0.05; pass)
+content ppl ratio:  0.3893
+family separation:  true
+result:             promotable
+adapter bytes:      1,482,139
+weights_changed:    false
 ```
 
-The registry was removed after the audit. The adapter is a synthetic teacher
-format-transfer candidate; the full-loss gain is largely syntax/format
-learning. Do not promote it until a content-passing candidate exists.
+The active registry points at `checkpoints/adapters_content/v0001` on the host
+and `data/diverse_autonomous_content/adapter` in the VM. The base checkpoint
+remains `0.8.0`. The earlier unweighted adapter failed the content audit and was
+removed.
