@@ -388,6 +388,54 @@ def test_min_exact_match_must_be_a_rate():
                            min_exact_match="high")
 
 
+def test_key_copy_gate_is_opt_in_and_thresholded():
+    candidate = _candidate()
+    comparison = _comparison()
+    comparison["baseline"]["key_copy"] = {"rate": 0.1}
+    comparison["adapter"]["key_copy"] = {"rate": 0.6}
+    default = evaluate_candidate(candidate, comparison)
+    assert default["status"] == "pass"
+    assert "key_copy_ok" not in default["reasons"]
+    assert default["adapter_key_copy_rate"] == pytest.approx(0.6)
+
+    passed = evaluate_candidate(
+        candidate, comparison, min_key_copy_rate=0.5)
+    assert passed["status"] == "pass"
+    assert "key_copy_ok" in passed["reasons"]
+    assert passed["baseline_key_copy_rate"] == pytest.approx(0.1)
+    assert passed["key_copy_delta"] == pytest.approx(0.5)
+    assert passed["min_key_copy_rate"] == pytest.approx(0.5)
+
+    comparison["adapter"]["key_copy"] = {"rate": 0.4}
+    low = evaluate_candidate(
+        candidate, comparison, min_key_copy_rate=0.5)
+    assert low["status"] == "fail"
+    assert low["ok"] is False
+    assert "key_copy_low" in low["reasons"]
+
+    comparison["adapter"]["key_copy"] = {"rate": 0.8}
+    comparison["adapter"].pop("key_copy")
+    comparison["adapter"]["key_copy_rate"] = 0.8
+    numeric = evaluate_candidate(
+        candidate, comparison, min_key_copy_rate=0.5)
+    assert numeric["status"] == "pass"
+    assert "key_copy_ok" in numeric["reasons"]
+
+    missing = evaluate_candidate(
+        _candidate(), _comparison(), min_key_copy_rate=0.5)
+    assert missing["status"] == "fail"
+    assert "key_copy_missing" in missing["reasons"]
+
+
+def test_min_key_copy_rate_must_be_a_rate():
+    with pytest.raises(ValueError):
+        evaluate_candidate(_candidate(), _comparison(),
+                           min_key_copy_rate=1.5)
+    with pytest.raises(ValueError):
+        evaluate_candidate(_candidate(), _comparison(),
+                           min_key_copy_rate="high")
+
+
 def test_cli_evaluate_wires_min_exact_match(tmp_path, capsys):
     comparison = _comparison()
     comparison["baseline"]["exact_match"] = 0.2
@@ -411,17 +459,78 @@ def test_cli_evaluate_wires_min_exact_match(tmp_path, capsys):
     assert "exact_match_low" in payload["reasons"]
 
 
-def test_promotion_requires_passing_gate(tmp_path):
+def test_cli_evaluate_wires_min_key_copy_rate(tmp_path, capsys):
+    comparison = _comparison()
+    comparison["baseline"]["key_copy"] = {"rate": 0.1}
+    comparison["adapter"]["key_copy"] = {"rate": 0.4}
+    candidate_path = tmp_path / "candidate.json"
+    comparison_path = tmp_path / "comparison.json"
+    candidate_path.write_text(
+        json.dumps(_candidate()["metadata"]), encoding="utf-8")
+    comparison_path.write_text(json.dumps(comparison), encoding="utf-8")
+    code = main([
+        "evaluate",
+        "--candidate-json", str(candidate_path),
+        "--comparison-json", str(comparison_path),
+        "--min-key-copy-rate", "0.5",
+        "--json",
+    ])
+    assert code == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["min_key_copy_rate"] == pytest.approx(0.5)
+    assert payload["adapter_key_copy_rate"] == pytest.approx(0.4)
+    assert "key_copy_low" in payload["reasons"]
+
+
+def test_cli_loop_wires_min_key_copy_rate(tmp_path, capsys):
+    examples = tmp_path / "examples.jsonl"
+    examples.write_text(
+        "".join(json.dumps(_example(index)) + "\n" for index in range(4)),
+        encoding="utf-8")
+    comparison = _comparison()
+    comparison["adapter"]["key_copy"] = {"rate": 0.4}
+    comparison_path = tmp_path / "comparison.json"
+    comparison_path.write_text(json.dumps(comparison), encoding="utf-8")
+    code = main([
+        "loop", "--examples-jsonl", str(examples),
+        "--out-dir", str(tmp_path / "out"),
+        "--comparison-json", str(comparison_path),
+        "--min-key-copy-rate", "0.5",
+        "--json",
+    ])
+    assert code == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["status"] == "fail"
+    assert payload["evaluation"]["min_key_copy_rate"] == pytest.approx(0.5)
+    assert "key_copy_low" in payload["evaluation"]["reasons"]
+
+
+def _promotable_gate(candidate_id="ad-1"):
+    return {
+        "status": "pass",
+        "ok": True,
+        "promotable": True,
+        "candidate_id": candidate_id,
+        "min_exact_match": 0.5,
+        "adapter_exact_match": 0.75,
+        "min_key_copy_rate": 0.5,
+        "adapter_key_copy_rate": 0.75,
+        "reasons": [
+            "content_loss_improved",
+            "content_ppl_not_worse",
+            "exact_match_ok",
+            "key_copy_ok",
+        ],
+    }
+
+
+def test_promotion_accepts_fully_passing_gate(tmp_path):
     adapter = tmp_path / "adapter"
     adapter.mkdir()
     (adapter / "adapter.pt").write_bytes(b"fake")
     candidate = {"candidate_id": "ad-1", "family_separation": True}
-    pass_gate = {"status": "pass", "ok": True, "promotable": True,
-                 "candidate_id": "ad-1",
-                 "reasons": ["content_loss_improved",
-                             "content_ppl_not_worse"]}
     record = promote_candidate(
-        candidate, pass_gate, adapter, tmp_path / "active.json")
+        candidate, _promotable_gate(), adapter, tmp_path / "active.json")
     assert record["candidate_id"] == "ad-1"
     assert record["promotable"] is True
     assert record["weights_changed"] is False
@@ -432,8 +541,40 @@ def test_promotion_requires_passing_gate(tmp_path):
             adapter, tmp_path / "bad.json")
     with pytest.raises(ValueError):
         promote_candidate(
-            {"candidate_id": "ad-2"}, pass_gate, adapter,
+            {"candidate_id": "ad-2"}, _promotable_gate(), adapter,
             tmp_path / "mismatch.json")
+
+
+def test_promotion_rejects_legacy_gate_without_behavior_reasons(tmp_path):
+    adapter = tmp_path / "adapter"
+    adapter.mkdir()
+    (adapter / "adapter.pt").write_bytes(b"fake")
+    candidate = {"candidate_id": "ad-1", "family_separation": True}
+    legacy = {
+        "status": "pass", "ok": True, "promotable": True,
+        "candidate_id": "ad-1",
+        "reasons": ["content_loss_improved", "content_ppl_not_worse"],
+    }
+    with pytest.raises(ValueError) as excinfo:
+        promote_candidate(
+            candidate, legacy, adapter, tmp_path / "legacy.json")
+    message = str(excinfo.value)
+    assert "exact_match_ok" in message
+    assert "key_copy_ok" in message
+    assert not (tmp_path / "legacy.json").exists()
+
+
+def test_promotion_rejects_gate_below_exact_threshold(tmp_path):
+    adapter = tmp_path / "adapter"
+    adapter.mkdir()
+    (adapter / "adapter.pt").write_bytes(b"fake")
+    candidate = {"candidate_id": "ad-1", "family_separation": True}
+    gate = _promotable_gate()
+    gate["adapter_exact_match"] = 0.25
+    with pytest.raises(ValueError, match="below min_exact_match"):
+        promote_candidate(
+            candidate, gate, adapter, tmp_path / "threshold.json")
+    assert not (tmp_path / "threshold.json").exists()
 
 
 def test_cli_export(tmp_path, capsys):

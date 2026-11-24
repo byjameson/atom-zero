@@ -287,6 +287,61 @@ def test_loop_runs_adapter_candidate(tmp_path):
     assert ledger.is_file()
 
 
+def test_loop_adapter_key_copy_threshold(tmp_path):
+    examples = [
+        {"user": f"q{index}", "assistant": f"a{index}",
+         "verification": {"verified": True, "promotable": True}}
+        for index in range(4)
+    ]
+    result = run_loop(
+        signals={"adapter": {"promotable": 4, "candidates": 0}},
+        allowed_files=[], checks=[], opt_in=True, approve=False,
+        autonomous=True, repo_root=tmp_path,
+        adapter_examples=examples,
+        adapter_out_dir=tmp_path / "candidate",
+        adapter_comparison={
+            "examples": 1,
+            "baseline": {"loss": 1.2, "ppl": 3.3,
+                         "key_copy": {"rate": 0.1}},
+            "adapter": {"loss": 1.0, "ppl": 3.0,
+                        "key_copy": {"rate": 0.4}}},
+        adapter_min_key_copy_rate=0.5,
+        adapter_eval_ratio=0.25)
+    assert result["status"] == "adapter_gate_failed"
+    evaluation = result["adapter"]["evaluation"]
+    assert evaluation["min_key_copy_rate"] == pytest.approx(0.5)
+    assert "key_copy_low" in evaluation["reasons"]
+
+
+def test_main_passes_adapter_min_key_copy_rate(tmp_path, capsys, monkeypatch):
+    import atomzero.self_improve as self_improve
+
+    captured = {}
+
+    def fake_run_loop(**kwargs):
+        captured.update(kwargs)
+        return {"status": "completed"}
+
+    monkeypatch.setattr(self_improve, "run_loop", fake_run_loop)
+    examples = tmp_path / "examples.jsonl"
+    examples.write_text(
+        "".join(json.dumps({"user": f"q{index}",
+                            "assistant": f"a{index}",
+                            "verification": {"verified": True,
+                                             "promotable": True}}) + "\n"
+                for index in range(4)), encoding="utf-8")
+    code = main([
+        "--adapter-promotable", "1",
+        "--adapter-examples-jsonl", str(examples),
+        "--adapter-out", str(tmp_path / "out"),
+        "--adapter-min-key-copy-rate", "0.5",
+        "--json",
+    ])
+    assert code == 0
+    assert captured["adapter_min_key_copy_rate"] == pytest.approx(0.5)
+    capsys.readouterr()
+
+
 def test_loop_adapter_gate_failure(tmp_path):
     examples = [
         {"user": f"q{index}", "assistant": f"a{index}",
