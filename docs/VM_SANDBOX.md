@@ -43,12 +43,13 @@ PYTHONPATH=src .venv/bin/python benchmarks/self_improvement_regression.py
 ```text
 pytest tests -q:  1337 passed in 48.82s
 benchmark:        20/20
-resources:        8 vCPU, 16 GB RAM, 20 GB disk
+resources:        8 vCPU, 16 GB RAM, 40 GB disk (26 GB free)
 ```
 
 The VM originally ran with 2 vCPU / 6 GB and was saturated (load average
 2.00). It was resized to 8 vCPU / 16 GB from the host's 12 logical CPUs and
-32 GB RAM. The test suite is mostly serial, so the wall-clock gain is modest;
+32 GB RAM, and the disk was grown from 20 GB to 40 GB with `growpart` +
+`resize2fs`. The test suite is mostly serial, so the wall-clock gain is modest;
 LoRA/full fine-tune jobs benefit from the extra cores.
 
 ## Notes
