@@ -1,0 +1,52 @@
+{
+  "dataset": {
+    "train": 2000,
+    "eval": 200,
+    "formats": ["json", "kv"],
+    "keys_per_row_mean": 2.979,
+    "unique_keys_train": 5959,
+    "unique_keys_eval": 595,
+    "key_overlap": 0,
+    "value_overlap": 0
+  },
+  "training": {
+    "base": "0.8.0",
+    "lora_parameters": 405504,
+    "rank_mlp": 8,
+    "alpha_mlp": 8,
+    "rank_attn": 4,
+    "alpha_attn": 8,
+    "batch_size": 4,
+    "learning_rate": 0.0003,
+    "content_weight": 2.0,
+    "replay_weight": 0.2,
+    "seed": 23
+  },
+  "short_run": {
+    "sampled_rows": 1000,
+    "optimizer_steps": 250,
+    "baseline_loss": 4.966439,
+    "adapter_loss": 2.257480,
+    "content_loss": 2.231102,
+    "key_loss": 1.957455,
+    "value_loss": 2.443176,
+    "syntax_loss": 2.539667,
+    "exact_match": 0.005,
+    "key_copy_rate": 0.01,
+    "key_recall": 0.048333
+  },
+  "long_run": {
+    "sampled_rows": 4000,
+    "optimizer_steps": 1000,
+    "baseline_loss": 4.966439,
+    "adapter_loss": 1.368717,
+    "content_loss": 1.529899,
+    "key_loss": 1.280364,
+    "value_loss": 1.692167,
+    "syntax_loss": 1.140791,
+    "exact_match": 0.015,
+    "key_copy_rate": 0.045,
+    "key_recall": 0.190417
+  },
+  "interpretation": "partial key copying on randomized unseen keys; not yet reliable"
+}

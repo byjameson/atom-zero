@@ -433,6 +433,9 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Diverse teacher + replay cycle: <https://github.com/byjameson/atom-zero/blob/main/docs/DIVERSE_REPLAY_CYCLE.md>
 - Exact-match content audit: <https://github.com/byjameson/atom-zero/blob/main/docs/CONTENT_AUDIT.md>
 - Copy-curriculum value-vs-key cycle: <https://github.com/byjameson/atom-zero/blob/main/docs/COPY_CURRICULUM_CYCLE.md>
+- Randomized-key copy cycle: <https://github.com/byjameson/atom-zero/blob/main/docs/RANDOM_KEY_COPY_CYCLE.md>
+- Full fine-tune copy control: <https://github.com/byjameson/atom-zero/blob/main/docs/FULL_FINETUNE_CONTROL.md>
+- Gradient accumulation: <https://github.com/byjameson/atom-zero/blob/main/docs/GRADIENT_ACCUMULATION.md>
 - Replay-aware adapter training: <https://github.com/byjameson/atom-zero/blob/main/docs/REPLAY_TRAINING.md>
 - Adapter growth cycle 1: <https://github.com/byjameson/atom-zero/blob/main/docs/ADAPTER_CYCLE_1.md>
 - AISC spec generator: <https://github.com/byjameson/atom-zero/blob/main/docs/AISC_SPEC_GENERATOR.md>
