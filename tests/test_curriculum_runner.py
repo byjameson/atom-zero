@@ -414,7 +414,7 @@ def test_first_stage_init_adapter(tmp_path):
         base="checkpoints/base",
         data_dir=data_dir,
         out_dir=out_dir,
-        init_adapter=seed,
+        init_adapter=str(seed),
         stages="echo_kv",
         steps=10,
         trainer_command=trainer,

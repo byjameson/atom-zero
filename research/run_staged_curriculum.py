@@ -163,9 +163,10 @@ def _resolve(path: str | Path) -> Path:
     return value if value.is_absolute() else ROOT / value
 
 
-def _display_path(path: Path | None) -> str | None:
+def _display_path(path: Path | str | None) -> str | None:
     if path is None:
         return None
+    path = Path(path)
     try:
         return str(path.resolve().relative_to(ROOT))
     except (OSError, ValueError):
