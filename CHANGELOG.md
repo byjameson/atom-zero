@@ -1,9 +1,36 @@
 # Changelog
 
-## atomzero 1.0.0 - unreleased
+## atomzero 0.20.0 - unreleased
 
-Release cadence changes to **one major version per release**. This batch adds
-the self-code branch and its planner/runner integration.
+Release cadence is now **one 0.1 version per release**. This batch adds the
+self-code branch and its planner/runner integration, plus the content/behavior
+gate and the first copy-curriculum experiments.
+
+- Added a **content-loss audit** and an **exact-match / key-copy behavior
+audit**. The replay-weighted adapter passed the full-loss and content gates but
+had 0/48 held-out exact matches, so the active registry was removed and base
+`0.8.0` remains the only active model.
+- Added **behavior-gated promotion**: `promote` now requires
+`content_loss_improved`, `content_ppl_not_worse`, `exact_match_ok` and
+`key_copy_ok`, and re-checks the exact-match threshold.
+- Added **key-token and key-copy metrics** (`key_loss`, `value_loss`,
+`syntax_loss`, `key_copy_rate`, `key_recall`) to `compare_adapters.py`.
+- Added a **randomized-key copy curriculum** and a **staged copy curriculum**
+(`echo_kv` -> `echo_json` -> `two_kv` -> `two_json` -> `multi`), with disjoint
+train/eval keys and zero key/value overlap.
+- The staged echo adapter reached **58% exact match / 68% key copy** on its
+held-out echo stage; `two_kv` reached **29% / 41%**, but sequential training
+forgot the earlier JSON skill (50% -> 3%). A focus rehearsal recovered
+one-key JSON to **72% / 82%** and two-key JSON to **28% / 46%**, while keeping
+echo_kv at **58% / 68%**. The multi stage remains hard at **8% / 18%**.
+- Added **`--init-adapter`** for resumable/staged adapter training,
+**gradient accumulation** (`--batch-size`, `--lr-scale`) and a staged
+**curriculum runner** with a content-free ledger.
+- Added a **full fine-tune copy control** for research only; it is never a
+product checkpoint.
+- Resized the test VM to **8 vCPU / 16 GB** (from 2 vCPU / 6 GB); the full
+suite runs in about 41s there.
+
 
 - Added **`atomzero-self-code`**: deterministic AST audit of Atom Zero's own
   source for `eval`/`exec` boundaries, `shell=True`, broad exceptions,

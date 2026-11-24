@@ -41,7 +41,7 @@ PYTHONPATH=src .venv/bin/python benchmarks/self_improvement_regression.py
 ## Current VM evidence
 
 ```text
-pytest tests -q:  1205 passed in 41.46s
+pytest tests -q:  1248 passed in 49.02s
 benchmark:        20/20
 resources:        8 vCPU, 16 GB RAM, 20 GB disk
 ```

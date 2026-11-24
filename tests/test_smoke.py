@@ -12,7 +12,7 @@ from atomzero.tool_planner import execute_plan
 
 
 def test_imports_do_not_require_streamft():
-    assert __version__ == "0.19.0"
+    assert __version__ == "0.20.0"
     code = (
         "import sys; import atomzero.chat_server; "
         "assert 'streamft' not in sys.modules"
