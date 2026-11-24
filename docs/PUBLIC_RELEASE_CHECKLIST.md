@@ -1,8 +1,8 @@
 # Public release checklist
 
-Current status: **0.6.0 published**. PyPI, GitHub source/tag/release,
-Hugging Face, ModelScope, dev.to, Medium and LinkedIn are updated; no hosted
-service is operated. `scripts/verify_release.py --version 0.6.0` reports zero
+Current status: **0.20.0 published**. PyPI, GitHub source/tag/release,
+Hugging Face, ModelScope, dev.to, Medium, LinkedIn and X are updated; no hosted
+service is operated. `scripts/verify_release.py --version 0.20.0` reports zero
 failures. Data attribution and per-source review remain caveats for commercial
 redistribution; the unchecked legal/data items below are not silently marked
 as complete.

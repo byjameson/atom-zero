@@ -2,7 +2,7 @@
 
 ## Current state
 
-- Release candidate: `0.20.0` on `main`; last published batch `0.19.0` (bounded self-improve loop,
+- Last released batch: `0.20.0` on `main`; all canonical surfaces published (bounded self-improve loop,
   committed-change scope check, fifth measured cycle)
 - Post-release main: self-code audit/diff/targeting with suppressions,
   planner history, scoreboard output collectors, escalation ladder, teacher
@@ -39,13 +39,10 @@
   the Brier target is not. This is reported, not hidden.
 - Build/twine: **PASSED** (`atomzero-0.19.0` wheel + sdist)
 - No model weights changed; weights remain `0.8.0`.
-- Release status: `0.19.0` is published on PyPI, GitHub, Hugging Face,
-  ModelScope, dev.to and Medium. `scripts/verify_release.py --version 0.19.0`
-  reports **0 failures**; release commit `a6ad17c`, annotated tag `v0.19.0`.
-  LinkedIn remains blocked/unverified. The `publish.yml` trusted-publisher run
-  remains a historical failed attempt; uploads use a project token from the
-  owner's local token file. The next boundary is **1.0.0**; release only at a
-  major version boundary, not every 0.1 or 0.3.
+- Release status: `0.20.0` is published on PyPI, GitHub, Hugging Face,
+  ModelScope, dev.to, Medium, LinkedIn and X. `scripts/verify_release.py
+  --version 0.20.0` reports **0 failures**; release commit `378fd0e`, annotated
+  tag `v0.20.0`. The next boundary is **0.21.0**.
 
 ## Completed in this session
 

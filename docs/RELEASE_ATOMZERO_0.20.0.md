@@ -1,6 +1,6 @@
 # atomzero 0.20.0 - gated self-improvement and copy-curriculum evidence
 
-Status: **release candidate**. Base weights remain `0.8.0`; no model checkpoint
+Status: **published on 2026-11-24**. Base weights remain `0.8.0`; no model checkpoint
 was changed by this release.
 
 ## Highlights
@@ -75,6 +75,10 @@ pip install atomzero==0.20.0
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-49m>
 - X: <https://x.com/aigokhan>
 - Instagram: <https://instagram.com/quantsinner>
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-0200-gated-self-improvement-and-the-copy-curriculum-evidence-13pj>
+- Medium: <https://medium.com/@myredditacc9393/atom-zero-0-20-0-gated-self-improvement-and-the-copy-curriculum-evidence-63edc5daa21c>
+- LinkedIn: <https://www.linkedin.com/in/g%C3%B6khan-cava-874a32157/>
+- X release post: <https://x.com/aigokhan>
 
 ## Honest limits
 

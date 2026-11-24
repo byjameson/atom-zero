@@ -1,6 +1,6 @@
 # Changelog
 
-## atomzero 0.20.0 - unreleased
+## atomzero 0.20.0 - 2026-11-24
 
 Release cadence is now **one 0.1 version per release**. This batch adds the
 self-code branch and its planner/runner integration, plus the content/behavior
