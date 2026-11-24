@@ -362,11 +362,34 @@ def _exact_match_rate(metrics: dict):
     return number
 
 
+def _key_copy_rate(metrics: dict):
+    """Read an optional key-copy rate from a metrics object.
+
+    The comparison report emits ``key_copy`` as an object with a ``rate`` and
+    also mirrors it as a numeric ``key_copy_rate``. Either form is accepted.
+    """
+    if not isinstance(metrics, dict):
+        return None
+    value = None
+    copy = metrics.get("key_copy")
+    if isinstance(copy, dict):
+        value = copy.get("rate")
+    if value is None:
+        value = metrics.get("key_copy_rate")
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    number = float(value)
+    if not math.isfinite(number) or not 0.0 <= number <= 1.0:
+        return None
+    return number
+
+
 def evaluate_candidate(candidate, comparison, *, min_loss_delta=None,
                        max_ppl_ratio=None, require_content=False,
                        min_content_delta=DEFAULT_MIN_CONTENT_DELTA,
                        max_content_ppl_ratio=1.0,
-                       min_exact_match=None) -> dict:
+                       min_exact_match=None,
+                       min_key_copy_rate=None) -> dict:
     """Run the held-out adapter gate against a comparison report."""
     if not isinstance(candidate, dict):
         raise ValueError("candidate must be an object")
@@ -402,6 +425,15 @@ def evaluate_candidate(candidate, comparison, *, min_loss_delta=None,
         if (not math.isfinite(exact_threshold)
                 or not 0.0 <= exact_threshold <= 1.0):
             raise ValueError("min_exact_match must be between 0 and 1")
+    key_copy_threshold = None
+    if min_key_copy_rate is not None:
+        try:
+            key_copy_threshold = float(min_key_copy_rate)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("min_key_copy_rate must be numeric") from exc
+        if (not math.isfinite(key_copy_threshold)
+                or not 0.0 <= key_copy_threshold <= 1.0):
+            raise ValueError("min_key_copy_rate must be between 0 and 1")
     try:
         base, adapter, label, examples = _metric_pair(comparison)
         base_loss = _number(base.get("loss"), "baseline.loss")
@@ -481,6 +513,18 @@ def evaluate_candidate(candidate, comparison, *, min_loss_delta=None,
         else:
             reasons.append("exact_match_low")
             exact_ok = False
+    baseline_key_copy = _key_copy_rate(base)
+    adapter_key_copy = _key_copy_rate(adapter)
+    key_copy_ok = True
+    if key_copy_threshold is not None:
+        if adapter_key_copy is None:
+            reasons.append("key_copy_missing")
+            key_copy_ok = False
+        elif adapter_key_copy >= key_copy_threshold:
+            reasons.append("key_copy_ok")
+        else:
+            reasons.append("key_copy_low")
+            key_copy_ok = False
     ok = (
         not any(reason.startswith(("eval_count", "invalid"))
                 for reason in reasons)
@@ -488,6 +532,7 @@ def evaluate_candidate(candidate, comparison, *, min_loss_delta=None,
         and "ppl_not_worse" in reasons
         and content_ok
         and exact_ok
+        and key_copy_ok
     )
     return {
         "status": "pass" if ok else "fail",
@@ -515,6 +560,13 @@ def evaluate_candidate(candidate, comparison, *, min_loss_delta=None,
             if adapter_exact is not None and baseline_exact is not None
             else None),
         "min_exact_match": exact_threshold,
+        "baseline_key_copy_rate": baseline_key_copy,
+        "adapter_key_copy_rate": adapter_key_copy,
+        "key_copy_delta": (
+            round(adapter_key_copy - baseline_key_copy, 6)
+            if adapter_key_copy is not None and baseline_key_copy is not None
+            else None),
+        "min_key_copy_rate": key_copy_threshold,
         "require_content": bool(require_content),
         "min_loss_delta": threshold,
         "max_ppl_ratio": max_ratio,
@@ -620,7 +672,7 @@ def run_adapter_loop(examples, out_dir, *, base=None, trainer_command=None,
                      require_content=False,
                      min_content_delta=DEFAULT_MIN_CONTENT_DELTA,
                      max_content_ppl_ratio=1.0,
-                     min_exact_match=None,
+                     min_exact_match=None, min_key_copy_rate=None,
                      ledger_path=None, timeout: int = 900,
                      trainer_timeout: int = 900) -> dict:
     """Export a candidate, optionally train/evaluate, and record a gate event."""
@@ -765,7 +817,8 @@ def run_adapter_loop(examples, out_dir, *, base=None, trainer_command=None,
             max_ppl_ratio=max_ppl_ratio, require_content=require_content,
             min_content_delta=min_content_delta,
             max_content_ppl_ratio=max_content_ppl_ratio,
-            min_exact_match=min_exact_match)
+            min_exact_match=min_exact_match,
+            min_key_copy_rate=min_key_copy_rate)
     else:
         evaluation = {
             "status": "awaiting_evaluation",
@@ -825,12 +878,31 @@ def promote_candidate(candidate, gate, adapter_dir, active_file,
     if actual_gate.get("promotable") is not True:
         raise ValueError("gate must mark the candidate promotable")
     reasons = actual_gate.get("reasons")
-    if not isinstance(reasons, list) or (
-            "content_loss_improved" not in reasons
-            or "content_ppl_not_worse" not in reasons):
+    required = (
+        "content_loss_improved",
+        "content_ppl_not_worse",
+        "exact_match_ok",
+        "key_copy_ok",
+    )
+    missing = ([reason for reason in required if reason not in reasons]
+               if isinstance(reasons, list) else list(required))
+    if missing:
         raise ValueError(
-            "gate must include a passing content audit "
-            "(content_loss_improved, content_ppl_not_worse)")
+            "gate must include a passing content and behavior audit "
+            "(content_loss_improved, content_ppl_not_worse, exact_match_ok, "
+            "key_copy_ok); missing: " + ", ".join(missing))
+    gate_min_exact = actual_gate.get("min_exact_match")
+    if gate_min_exact is not None:
+        gate_exact = actual_gate.get("adapter_exact_match")
+        if (isinstance(gate_exact, bool)
+                or not isinstance(gate_exact, (int, float))):
+            raise ValueError(
+                "gate must include adapter_exact_match when min_exact_match "
+                "is set")
+        if float(gate_exact) < float(gate_min_exact):
+            raise ValueError(
+                f"gate adapter_exact_match {gate_exact} is below "
+                f"min_exact_match {gate_min_exact}")
     if metadata.get("family_separation") is not True:
         raise ValueError(
             "candidate must have family_separation: true for promotion")
@@ -938,6 +1010,7 @@ def main(argv=None) -> int:
                           default=DEFAULT_MIN_CONTENT_DELTA)
     evaluate.add_argument("--max-content-ppl-ratio", type=float, default=1.0)
     evaluate.add_argument("--min-exact-match", type=float, default=None)
+    evaluate.add_argument("--min-key-copy-rate", type=float, default=None)
     evaluate.add_argument("--json", action="store_true")
 
     promote = sub.add_parser("promote")
@@ -970,6 +1043,7 @@ def main(argv=None) -> int:
                       default=DEFAULT_MIN_CONTENT_DELTA)
     loop.add_argument("--max-content-ppl-ratio", type=float, default=1.0)
     loop.add_argument("--min-exact-match", type=float, default=None)
+    loop.add_argument("--min-key-copy-rate", type=float, default=None)
     loop.add_argument("--timeout", type=int, default=900)
     loop.add_argument("--json", action="store_true")
 
@@ -1019,7 +1093,8 @@ def main(argv=None) -> int:
                 require_content=args.require_content,
                 min_content_delta=args.min_content_delta,
                 max_content_ppl_ratio=args.max_content_ppl_ratio,
-                min_exact_match=args.min_exact_match)
+                min_exact_match=args.min_exact_match,
+                min_key_copy_rate=args.min_key_copy_rate)
             code = 0 if payload["ok"] else 1
         else:
             comparison = (_load_json(args.comparison_json)
@@ -1057,6 +1132,7 @@ def main(argv=None) -> int:
                 min_content_delta=args.min_content_delta,
                 max_content_ppl_ratio=args.max_content_ppl_ratio,
                 min_exact_match=args.min_exact_match,
+                min_key_copy_rate=args.min_key_copy_rate,
                 ledger_path=args.ledger or None, timeout=args.timeout,
                 trainer_timeout=args.trainer_timeout)
             code = 0 if payload["status"] in ("pass", "awaiting_evaluation") else 1

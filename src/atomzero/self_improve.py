@@ -201,6 +201,7 @@ def run_loop(
     adapter_require_content=False,
     adapter_min_content_delta=0.05,
     adapter_max_content_ppl_ratio=1.0,
+    adapter_min_key_copy_rate=None,
     adapter_timeout: int = 900,
     adapter_trainer_timeout: int = 900,
 ) -> dict:
@@ -309,6 +310,7 @@ def run_loop(
             require_content=adapter_require_content,
             min_content_delta=adapter_min_content_delta,
             max_content_ppl_ratio=adapter_max_content_ppl_ratio,
+            min_key_copy_rate=adapter_min_key_copy_rate,
             ledger_path=adapter_ledger_path, timeout=adapter_timeout,
             trainer_timeout=adapter_trainer_timeout)
         result["adapter"] = adapter
@@ -504,6 +506,8 @@ def main(argv=None) -> int:
                         default=0.05)
     parser.add_argument("--adapter-max-content-ppl-ratio", type=float,
                         default=1.0)
+    parser.add_argument("--adapter-min-key-copy-rate", type=float,
+                        default=None)
     parser.add_argument("--adapter-timeout", type=int, default=900)
     parser.add_argument("--adapter-trainer-timeout", type=int, default=900)
     parser.add_argument("--adapter-promotable", type=int, default=0)
@@ -608,6 +612,7 @@ def main(argv=None) -> int:
             adapter_require_content=args.adapter_require_content,
             adapter_min_content_delta=args.adapter_min_content_delta,
             adapter_max_content_ppl_ratio=args.adapter_max_content_ppl_ratio,
+            adapter_min_key_copy_rate=args.adapter_min_key_copy_rate,
             adapter_timeout=args.adapter_timeout,
             adapter_trainer_timeout=args.adapter_trainer_timeout)
     except (OSError, ValueError, RunnerError, json.JSONDecodeError) as exc:
