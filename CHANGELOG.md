@@ -1,6 +1,6 @@
 # Changelog
 
-## atomzero 0.50.0 - unreleased
+## atomzero 0.50.0 - 2026-11-25
 
 - **Copy tool router**: explicit transcription requests now route to `atomzero-copy` in the product chat/agent paths, with `source: "copy_tool"`. Non-copy prompts keep the previous model/RAG path. The router is conservative and returns 2-4 pair JSON/KV/YAML answers.
 - **Weak-stage rehearsal loop**: `research/run_weak_stage_rehearsal.py` ranks stages, builds a weak-focused mix and retrains with before/after ledgers. Two real configs did not improve the aggregate: the gentle run moved multi exact 12% -> 15% but echo_json 76% -> 65%; the aggressive run degraded every stage. This is a tool, not yet a win.
