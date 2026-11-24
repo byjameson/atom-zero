@@ -61,8 +61,10 @@ current post-release evidence is the clean `1130 passed` run.
   blocked promotion. See `docs/DIVERSE_REPLAY_CYCLE.md`.
 - Replay-weighted retry: 117 primary + 154 replay rows at weight `0.35`.
   Cross-city full loss moved **5.2549 -> 2.8027** and ppl ratio **0.086**;
-  family separation was true. The content-loss audit then failed
-  (`4.4327 -> 4.4123`, required `-0.05`), so promotion was rolled back. See
+  family separation was true. The unweighted adapter's content-loss audit
+  failed (`4.4327 -> 4.4123`, required `-0.05`). A content-weighted retrain
+  (`--content-weight 5`) passed: content loss `4.4327 -> 3.4892`, full loss
+  `5.2549 -> 2.8489`, and the adapter was promoted locally. See
   `docs/DIVERSE_REPLAY_CYCLE.md` and `docs/ADAPTER_PROMOTION.md`.
 - `0.7.0` cross-source consensus branch: **12 passed**
   (`tests/test_consensus.py`); the `AtomZeroConsensus` AISC spec is **PASS**

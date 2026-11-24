@@ -22,8 +22,8 @@ boundary.
   teacher verification, growth report, self-code regression gate, loop history,
   autonomous sandbox, verified-teacher adapter candidates, a real LoRA training
   harness, a real teacher queue with cross-distribution fixture and a VM-run
-  cross-distribution gate result, a multi-family replay cycle, a full-loss cross-family pass and a content-loss
-  audit that blocked promotion.
+  cross-distribution gate result, a multi-family replay cycle, a full-loss cross-family pass, a content-loss audit that
+  blocked the unweighted adapter, and a content-weighted retrain that passed.
 
 ## Parallel Implementers
 

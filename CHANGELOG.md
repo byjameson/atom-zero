@@ -99,10 +99,12 @@ the self-code branch and its planner/runner integration.
   held-out family was never in training. See `docs/DIVERSE_REPLAY_CYCLE.md`.
 - Added **content-loss audit + gated adapter promotion**: `promote` now requires
   `content_loss_improved`/`content_ppl_not_worse`, candidate-id validation,
-  `family_separation: true` and `adapter.pt`. The replay-weighted candidate
+  `family_separation: true` and `adapter.pt`. The unweighted replay candidate
   passed the full-loss gate but its content loss was only `4.4327 -> 4.4123`
-  (required `-0.05`), so promotion was rolled back and the active registry was
-  removed. Base remains `0.8.0`. See `docs/ADAPTER_PROMOTION.md`.
+  (required `-0.05`), so promotion was blocked. A content-weighted retrain
+  (`--content-weight 5`) moved content loss `4.4327 -> 3.4892` and was
+  promoted as a local adapter; base remains `0.8.0`. See
+  `docs/ADAPTER_PROMOTION.md` and `docs/DIVERSE_REPLAY_CYCLE.md`.
 - Added **external adapter training harness** (`research/train_adapter_candidate.py`)
   and `--adapter-trainer-command`/`--base` wiring. A real LoRA run on the local
   0.8.0 base moved held-out loss from 5.9941 to 0.7949 and perplexity from

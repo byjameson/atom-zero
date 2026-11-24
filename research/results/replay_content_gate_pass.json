@@ -1,0 +1,20 @@
+{
+  "candidate_id": "ad-e396366ef725656c",
+  "eval_examples": 48,
+  "family_separation": true,
+  "content_weight": 5.0,
+  "replay_weight": 0.35,
+  "steps": 600,
+  "baseline_loss": 5.254859422798236,
+  "adapter_loss": 2.8489259222279424,
+  "loss_delta": -2.405934,
+  "ppl_ratio": 0.090181,
+  "baseline_content_loss": 4.432719733215168,
+  "adapter_content_loss": 3.489204379622079,
+  "content_loss_delta": -0.943515,
+  "content_ppl_ratio": 0.389257,
+  "gate": "pass",
+  "promotable": true,
+  "weights_changed": false,
+  "method": "held_out_adapter_gate_v1"
+}

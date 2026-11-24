@@ -137,7 +137,7 @@ This is the first cross-family **full-loss** gate pass in the project: the
 held-out city family never appears in training, and the replay mix retains the
 older formats. It is not yet a content-transfer pass.
 
-## Content audit - promotion blocked
+## Content audit - first pass blocked
 
 A content-token audit was added after the full-loss pass:
 
@@ -150,14 +150,35 @@ content ppl ratio:     0.979744
 gate:                  fail / not promotable
 ```
 
-The full-loss gain is almost entirely syntax/format learning. The active
-adapter registry was removed; no candidate is promoted.
+The full-loss gain of the unweighted adapter was almost entirely
+syntax/format learning, so the active registry was removed.
+
+## Content-weighted retrain - promotion pass
+
+The same mix was retrained with `--content-weight 5` (alphanumeric answer
+tokens weighted 5x) and passed both gates:
+
+```text
+candidate:          ad-e396366ef725656c
+full loss:          5.254859 -> 2.848926   (pass)
+full ppl ratio:     0.090181
+content loss:       4.432720 -> 3.489204   (delta -0.943515; pass)
+content ppl ratio:  0.389257
+family separation:  true
+gate:                pass / promotable
+```
+
+The autonomous VM loop produced the same candidate with content delta
+`-0.9435` and gate `pass`. The host active registry now points at
+`checkpoints/adapters_content/v0001`; the VM registry points at
+`data/diverse_autonomous_content/adapter`. Base `0.8.0` remains unchanged.
 
 ## Evidence
 
 - `research/results/diverse_cycle_summary.json`
 - `research/results/replay_cross_pass.json`
 - `research/results/replay_content_audit.json`
+- `research/results/replay_content_gate_pass.json`
 - `research/results/diverse_adapter_v1_indist_gate.json`
 - `research/results/diverse_adapter_v1_cross_gate.json`
 - `docs/TEACHER_QUEUE.md`
@@ -170,7 +191,9 @@ adapter registry was removed; no candidate is promoted.
   distributions; the held-out city family is new.
 - The replay mix contains the old name/score key-value distribution, so format
   transfer is not the same as learning an unseen task family from scratch.
-- The adapter was not promoted; `0.8.0` remains the product base.
+- The unweighted adapter was not promoted; the content-weighted retrain
+  passed and is registered as a local adapter while `0.8.0` remains the
+  product base.
 - Next experiments should test an entirely new task family (YAML/arithmetic),
   family-balanced replay weights, and a true deployment smoke test before any
   promotion.
