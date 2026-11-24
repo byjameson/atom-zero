@@ -1,0 +1,204 @@
+# Six-criterion capability scorecard
+
+This is an honest, content-free scorecard for six separate capabilities. It is
+not a single aggregate loss number and it is not a claim that Atom Zero is
+generally capable.
+
+The scorecard reads only numeric metrics and fixed labels from result JSON. It
+never writes prompt text, answer text, raw completions or free-form notes.
+
+## Current scorecard
+
+Generated from the checked-in result files listed under
+[Input sources](#input-sources).
+
+| # | Criterion | Status | Score | Evidence | Next measurable target |
+|---:|---|---|---:|---|---|
+| 1 | Discovers its own knowledge gaps | partial | 0.35 | Answerability ECE 0.064 passes, but Brier 0.233 misses, refusal recall is 0.546, and 2/2 specs FAIL. No content-free gap-closure ledger was supplied. | Close one self-discovered gap end-to-end; reach Brier <=0.15, refusal recall >=0.80 and zero failed specs. |
+| 2 | Decides what, when and how to learn | partial | 0.80 | First curriculum attempt failed closed (0.37 exact / 0.55 key copy); the second passed (0.53 / 0.60) and was promoted. Selection is still human-gated. | One autonomous learn/stop decision with no human approval, a rejected alternative and a passing held-out gate. |
+| 3 | Retains old knowledge while learning | partial | 0.53 | Best rehearsal kept only 2/5 stages within 0.02; mixed copy is 0.48 exact / 0.604 key copy; 3-4 arbitrary keys remain at 0.06 exact. | Keep >=4/5 stages within 0.02 after a new learning step and reach mixed exact >=0.70. |
+| 4 | Transfers learning to different problems | not_met | 0.04 | Held-out arithmetic, city-YAML and city/river are all 0/30 exact; adapter content loss is worse on arithmetic and city-YAML. Copy curriculum is 0/200 exact. The 1.0 runtime copy tool is tool use, not model transfer. | >=0.50 exact on held-out city/river and arithmetic/YAML with n>=100; >=0.30 exact on 3-4 keys. |
+| 5 | Improves its own learning algorithm | not_met | 0.30 | Weak-stage rehearsal and key-weighted loss were negative; QKV LoRA's first result is negative/uncontrolled. Process evidence is not counted as improvement. | One learning-algorithm change that beats its own mixed-exact baseline by >=0.05, retains >=4/5 stages and reproduces across >=2 seeds. |
+| 6 | Does this at low hardware cost | met | 1.00 | 8 vCPU / 16 GB RAM / 40 GB disk; 49.2M base; 405,504 adapter parameters; 149.0 s recorded adapter training; 1,399 tests. | Keep the full loop inside the envelope while adding a held-out transfer eval; report peak RAM and wall-clock per cycle. |
+
+Status counts: **met 1 · partial 3 · not_met 2 · unknown 0**. No aggregate
+score is reported because the six criteria are not interchangeable.
+
+## Held-out tasks
+
+The current held-out evidence is in
+[`research/results/heldout_task_transfer_summary.json`](../research/results/heldout_task_transfer_summary.json):
+30 rows per task, base and `multi_recover` both 0% exact.
+
+| Task | n | Base exact | Adapter exact | Model transfer? | Status |
+|---|---:|---:|---:|---|---|
+| city/river | 30 | 0.000 | 0.000 | yes | not_met |
+| 3-4 arbitrary keys | — | — | 0.060 | yes | not_met |
+| arithmetic | 30 | 0.000 | 0.000 | yes | not_met |
+| city YAML | 30 | 0.000 | 0.000 | yes | not_met |
+| runtime copy tool | 200 | — | 1.000 | **no, tool use** | met |
+
+The runtime copy tool is a deterministic transcription tool. Its 1.0 accuracy
+is a harness result, not evidence that the model learned to transfer copying.
+It is excluded from the transfer score.
+
+The held-out copy result is not rescued by a lower loss: on arithmetic the
+adapter content loss is 5.142 versus 4.391 for the base, and on city-YAML it is
+3.632 versus 3.484. Lower loss without an exact match is not transfer. On
+city/river the adapter content loss improves (3.243 versus 4.794) but exact
+match is still 0/30, so the scorecard does not count it as a win.
+
+## Scoring rules
+
+The status vocabulary is fixed:
+
+- `met`: the criterion-specific gate passed;
+- `partial`: some measured evidence, but not the full gate;
+- `not_met`: measured evidence exists and the criterion failed;
+- `unknown`: no defensible measurement was supplied. Missing data is never
+  silently treated as a pass.
+
+Scores are bounded to `[0, 1]` and rounded to three decimals. They are
+defensible summaries of the named measurements, not probabilities.
+
+### 1. Gap discovery
+
+`0.25` for a recorded gap action, `0.20` for an answerability measurement,
+`0.15` for ECE <=0.10, `0.20` for Brier <=0.15 and `0.20` for refusal recall
+>=0.80. `met` additionally requires zero failed answerability specs. A high
+score is impossible without both a gap mechanism and a calibrated refusal
+signal.
+
+### 2. Learning policy
+
+`0.25` for a recorded learning attempt, `0.20` for a fail-closed rejection,
+`0.15` for a promotion, `0.20` for a recorded selection among two or more
+measured strategies and `0.20` for an end-to-end decision with no human gate.
+`met` additionally requires the autonomous end-to-end decision.
+
+### 3. Retention
+
+`0.50 * retention_fraction + 0.30 * min(mixed_exact / 0.80, 1) + 0.20 *
+min(mixed_key_copy / 0.80, 1)`. A stage is retained when both its exact and
+key-copy deltas are at least `-0.02`. `met` additionally requires
+`retention_fraction >= 0.80` and `mixed_exact >= 0.70`.
+
+### 4. Transfer
+
+Weighted, renormalised over the components that were measured:
+
+- city/river: `0.50 * min(exact / 0.50, 1)`;
+- arithmetic/YAML: `0.30 * min(exact / 0.50, 1)`;
+- 3-4 arbitrary keys: `0.20 * min(exact / 0.30, 1)`.
+
+`met` requires city/river, arithmetic and city-YAML each at `>=0.50`; a single
+strong arithmetic/YAML family is not enough. `partial` requires the best
+measured exact rate at `>=0.20`; otherwise `not_met`. Runtime copy-tool
+accuracy is not an input to this formula.
+
+### 5. Improving its own learning algorithm
+
+`0.10` for a recorded change attempt, `0.10` for a measured comparison, `0.10`
+for a fail-closed/reverted negative result and `0.70` for a change that beats
+its own aggregate baseline by `>=0.05`. `met` requires the positive result.
+Attempts and negative results are evidence of process, not improvement.
+
+### 6. Low hardware cost
+
+Each supplied resource scores `1` when it is inside the envelope and
+`limit / value` when it is outside. The envelope is **8 vCPU, 16 GB RAM,
+40 GB disk**. All three resources must be supplied and inside the envelope for
+`met`; a partial resource set is capped at `0.80` and cannot be `met`.
+
+## Honest interpretation
+
+- **Only low hardware cost is met.** That says the loop fits a small machine;
+  it does not say the model is capable.
+- **Gap discovery is partial, not solved.** The answerability signal is
+  calibrated at ECE 0.064, but Brier 0.233 is above the 0.15 target, refusal
+  recall is 0.546, and 2/2 specs FAIL. The system still misses many
+  unanswerable inputs.
+- **Learning policy is partial.** The loop can reject a bad candidate and
+  promote a later one, and it can rank stages before choosing a mix. The
+  curriculum and the promotion decision are still human-authored/human-gated,
+  so this is not autonomous learning policy.
+- **Retention is partial and fragile.** The best rehearsal retained 2/5 stages
+  within 0.02; the first rehearsal retained 1/5. Mixed exact is 0.48 and 3-4
+  key exact is 0.06. Learning a new stage still erodes old stages.
+- **Transfer is not met.** Base and `multi_recover` are both 0/30 exact on
+  arithmetic, city-YAML and city/river. The copy curriculum is 0/200 exact
+  across its five city/river families. Lower content loss on one family does
+  not override zero exact match.
+- **Improving the learning algorithm is not met.** Weak-stage rehearsal,
+  key-weighted loss and the first QKV run are negative. The scorecard records
+  the attempts, but does not turn them into a capability claim.
+- **The runtime copy tool is not model capability.** It is 1.0 on explicit
+  transcription by construction. It is reported separately so it cannot inflate
+  the transfer criterion.
+
+## Caveats
+
+- The held-out tasks use **30 rows per task**. `0/30` is a clear failure, but
+  the exact confidence interval is wide; this is a smoke test, not a
+  publication-grade transfer benchmark.
+- The thresholds (`0.50`, `0.15`, `0.10`, `0.80`, `0.02`, the hardware
+  envelope) are project conventions chosen to make failure visible. They are
+  not universal standards.
+- The scorecard is only as honest as the supplied files. A missing file
+  produces `unknown`, not a pass. The current run supplies the answerability
+  profile, the copy-tool benchmark and the held-out transfer summary.
+- The `0.30` score for learning-algorithm improvement is process evidence
+  (attempts, measurements, a negative result). The status remains `not_met`
+  because no change improved the aggregate target.
+- The results come from narrow synthetic copy and QA tasks. They do not
+  establish general reasoning, coding ability or production readiness.
+- The generated JSON has no timestamp. Use the commit and the listed input
+  sources to identify a run. Do not hand-edit the generated JSON or Markdown.
+
+## Regenerate
+
+```powershell
+$env:PYTHONPATH="$PWD;$PWD\src"
+$env:PYTHONIOENCODING="utf-8"
+
+python research/capability_scorecard.py `
+  --result research/results/self_improve_curriculum_summary.json `
+  --result research/results/multi_recover_summary.json `
+  --result research/results/multi_key_0.30_summary.json `
+  --result research/results/weak_stage_rehearsal.json `
+  --result research/results/weak_stage_rehearsal_gentle.json `
+  --result research/results/copy_curriculum_summary.json `
+  --result research/results/copy_tool_benchmark_summary.json `
+  --result research/results/heldout_task_transfer_summary.json `
+  --answerability benchmarks/results/answerability_hybrid/answerability_profile.json `
+  --answerability-specs-failed 2 --answerability-specs-total 2 `
+  --cpu 8 --ram-gb 16 --disk-gb 40 `
+  --model-params-m 49.2 --adapter-params 405504 --tests 1399 `
+  --json-out research/results/capability_scorecard.json `
+  --md-out research/results/capability_scorecard.md
+```
+
+The generated table is
+[`research/results/capability_scorecard.md`](../research/results/capability_scorecard.md)
+and the machine-readable record is
+[`research/results/capability_scorecard.json`](../research/results/capability_scorecard.json).
+
+## Input sources
+
+- `research/results/self_improve_curriculum_summary.json`
+- `research/results/multi_recover_summary.json`
+- `research/results/multi_key_0.30_summary.json`
+- `research/results/weak_stage_rehearsal.json`
+- `research/results/weak_stage_rehearsal_gentle.json`
+- `research/results/copy_curriculum_summary.json`
+- `research/results/copy_tool_benchmark_summary.json`
+- `research/results/heldout_task_transfer_summary.json`
+- `benchmarks/results/answerability_hybrid/answerability_profile.json`
+- `docs/BATCH_0.60.0.md` (QKV first-result caveat)
+
+## Verification
+
+```powershell
+$env:PYTHONPATH="$PWD;$PWD\src"
+python -m pytest tests/test_capability_scorecard.py -q
+```
