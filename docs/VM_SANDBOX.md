@@ -41,9 +41,15 @@ PYTHONPATH=src .venv/bin/python benchmarks/self_improvement_regression.py
 ## Current VM evidence
 
 ```text
-pytest tests -q:  1130 passed
+pytest tests -q:  1205 passed in 41.46s
 benchmark:        20/20
+resources:        8 vCPU, 16 GB RAM, 20 GB disk
 ```
+
+The VM originally ran with 2 vCPU / 6 GB and was saturated (load average
+2.00). It was resized to 8 vCPU / 16 GB from the host's 12 logical CPUs and
+32 GB RAM. The test suite is mostly serial, so the wall-clock gain is modest;
+LoRA/full fine-tune jobs benefit from the extra cores.
 
 ## Notes
 

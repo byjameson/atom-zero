@@ -71,10 +71,9 @@ adapter bytes:      1,482,139
 weights_changed:    false
 ```
 
-The active registry points at `checkpoints/adapters_content/v0001` on the host
-and `data/diverse_autonomous_content/adapter` in the VM. The base checkpoint
-remains `0.8.0`. The earlier unweighted adapter failed the content audit and was
-removed.
+The registry was removed after the behavior audit: the adapter had no
+held-out exact matches. The base checkpoint remains `0.8.0`; no adapter is
+active.
 
 ## Behavior gate - required for 1.0.0 promotion
 
@@ -91,6 +90,6 @@ atomzero-adapter-candidate evaluate `
 ```
 
 Any new promotion must pass both `--require-content` and `--min-exact-match`.
-The existing registry entry predates that requirement and must not be treated
-as a task-copy proof or used as the default chat model.
+No registry entry is active. The earlier content-only registry entry was
+removed because it could not pass the behavior gate.
 

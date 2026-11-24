@@ -65,8 +65,8 @@ exact match:    fail (0.0, required 0.25)
 overall gate:   fail / not promotable
 ```
 
-The earlier local promotion used the content gate only. It remains an opt-in
-`--adapter auto` registry entry; the default chat path is the base `0.8.0`
+The earlier local promotion used the content gate only. The registry was
+removed after this audit; the default and only active model is the base `0.8.0`
 checkpoint. Before the `1.0.0` boundary, promotion must require the
 exact-match gate as well.
 

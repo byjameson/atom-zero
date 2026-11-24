@@ -169,9 +169,8 @@ gate:                pass / promotable
 ```
 
 The autonomous VM loop produced the same candidate with content delta
-`-0.9435` and gate `pass`. The host active registry now points at
-`checkpoints/adapters_content/v0001`; the VM registry points at
-`data/diverse_autonomous_content/adapter`. Base `0.8.0` remains unchanged.
+`-0.9435` and gate `pass`. The later exact-match audit found 0/48 held-out
+matches, so the active registry was removed. Base `0.8.0` remains unchanged.
 
 ## Evidence
 

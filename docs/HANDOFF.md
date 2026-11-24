@@ -21,12 +21,18 @@
   (`docs/ADAPTER_CROSS_CYCLE.md`). A multi-family teacher + replay cycle
   improved the in-distribution gate and reduced the cross-family regression
   from 757x to 6.07x; replay weighting then produced a full-loss cross-family
-  pass (`5.2549 -> 2.8027`, ppl ratio `0.086`), but the new content-loss audit
-  failed (`4.4327 -> 4.4123`, required `-0.05`) and promotion was rolled back
-  (`docs/DIVERSE_REPLAY_CYCLE.md`, `docs/ADAPTER_PROMOTION.md`). Accumulating for the **1.0.0** boundary;
-  not pushed yet.
+  pass (`5.2549 -> 2.8027`, ppl ratio `0.086`). The unweighted content audit
+  failed (`4.4327 -> 4.4123`); a content-weighted retrain passed the loss and
+  content gates (`5.2549 -> 2.8489`, content `4.4327 -> 3.4892`), but the new
+  exact-match audit found 0/48 held-out matches, so the registry was removed
+  (`docs/DIVERSE_REPLAY_CYCLE.md`, `docs/CONTENT_AUDIT.md`,
+  `docs/ADAPTER_PROMOTION.md`). A fixed-key copy curriculum improved
+  content-token loss but still got 0/200 exact match; randomized-key training
+  reached 3/200 exact and 19% key recall after 1,000 optimizer steps
+  (`docs/COPY_CURRICULUM_CYCLE.md`, `docs/RANDOM_KEY_COPY_CYCLE.md`).
+  Accumulating for the **1.0.0** boundary; not pushed yet.
 - Working tree after the release-doc commits: clean
-- Atom Zero tests: **1130 passed**
+- Atom Zero tests: **1205 passed** (host) / **1205 passed** (VM, 8 vCPU)
 - AISC strict audit: **26 specs, 24 PASS, 0 errors**; `AtomZeroAnswerability`
   and `AtomZeroAnswerabilityGenerated` remain **FAIL** with the measured
   Brier 0.233 / ECE 0.064 and refusal-policy misses. The ECE target is met;
