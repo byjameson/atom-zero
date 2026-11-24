@@ -93,6 +93,14 @@ the self-code branch and its planner/runner integration.
   401.04 to 2.214; the held-out gate passed with 60 examples.
   See `docs/ADAPTER_TRAINING.md`. The adapter is a local candidate; no product
   weights changed.
+- Added **replay-aware adapter training**: `research/replay_sampler.py` mixes a
+  deterministic, bounded fraction of older rows into
+  `research/train_adapter_candidate.py` via `--replay-jsonl` and
+  `--replay-weight` (default `0.25`). The adapter config and result record
+  `replay_examples`, `replay_weight` and the actual `train_mix`. With no replay
+  file the trainer keeps cycling primary rows. This is a forgetting mitigation,
+  not a retention guarantee; the held-out gate and promotion boundary are
+  unchanged. See `docs/REPLAY_TRAINING.md`.
 - Added **prevalence-corrected isotonic calibration** for the answerability
   signal: hybrid Brier `0.2443 -> 0.2326`, ECE `0.1299 -> 0.0642`; feature-only
   Brier `0.2703 -> 0.2535`, ECE `0.1407 -> 0.0519`; AUC unchanged. The Brier

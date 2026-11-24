@@ -13,6 +13,11 @@ held-out JSONL with :mod:`research.compare_adapters`.
       --steps 300 --lr 1e-3 --rank 8 --alpha 16 \
       --result research/results/adapter_candidate.json
 
+An optional ``--replay-jsonl`` mixes a bounded fraction (``--replay-weight``,
+default 0.25) of older rows into the training sequence with
+:mod:`research.replay_sampler`. Without it the trainer cycles primary rows
+exactly as before.
+
 It does not apply the adapter to the product and does not change `0.8.0`
 weights. Promotion is a separate decision.
 """
@@ -39,10 +44,14 @@ try:
     from research.adapter_runtime import (
         fmt, load_model, mask_user_labels, read_rows, score_rows)
     from research.compare_adapters import compare
+    from research.replay_sampler import (
+        DEFAULT_REPLAY_WEIGHT, sample_steps, summarize_mix)
 except ImportError:  # running as `python research/train_adapter_candidate.py`
     from adapter_runtime import (
         fmt, load_model, mask_user_labels, read_rows, score_rows)
     from compare_adapters import compare
+    from replay_sampler import (
+        DEFAULT_REPLAY_WEIGHT, sample_steps, summarize_mix)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -69,7 +78,14 @@ def _encode(tok, row, max_seq: int, device):
 
 def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
           lr: float, rank: int, alpha: int, max_seq: int,
-          device, seed: int = 13) -> dict:
+          device, seed: int = 13,
+          replay_rows: list[dict] | None = None,
+          replay_weight: float = DEFAULT_REPLAY_WEIGHT) -> dict:
+    replay_rows = list(replay_rows or [])
+    sequence = sample_steps(
+        train_rows, replay_rows, max(1, steps),
+        replay_weight=replay_weight, seed=seed)
+    mix = summarize_mix(sequence, train_rows, replay_rows)
     torch.manual_seed(seed)
     model, tok = load_model(base, device=device)
     model = apply_lora(
@@ -82,8 +98,7 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
     model.train()
     losses = []
     started = time.time()
-    for step in range(max(1, steps)):
-        row = train_rows[step % len(train_rows)]
+    for step, row in enumerate(sequence):
         encoded = _encode(tok, row, max_seq, device)
         if encoded is None:
             continue
@@ -107,6 +122,7 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
         model, out, r_attn=0, r_mlp=rank, alpha_mlp=alpha,
         rank=rank, alpha=alpha, steps=steps, lr=lr,
         base=str(base), train_examples=len(train_rows),
+        replay_examples=len(replay_rows), replay_weight=replay_weight,
         method="external_train_adapter_candidate_v1")
     tail = losses[-20:] if losses else [0.0]
     try:
@@ -116,9 +132,25 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
     return {
         "train_loss": sum(tail) / len(tail),
         "train_steps": steps,
+        "train_examples": len(train_rows),
+        "replay_examples": len(replay_rows),
+        "replay_weight": replay_weight,
+        "train_mix": mix,
         "lora_parameters": count_lora_params(model),
         "adapter": adapter_path,
     }
+
+
+def _bounded_weight(value: str) -> float:
+    try:
+        weight = float(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            f"invalid replay weight: {value!r}") from exc
+    if not math.isfinite(weight) or not 0.0 <= weight <= 1.0:
+        raise argparse.ArgumentTypeError(
+            "replay weight must be between 0.0 and 1.0")
+    return weight
 
 
 def main(argv=None) -> int:
@@ -133,6 +165,13 @@ def main(argv=None) -> int:
     parser.add_argument("--alpha", type=int, default=16)
     parser.add_argument("--max-seq", type=int, default=256)
     parser.add_argument("--seed", type=int, default=13)
+    parser.add_argument(
+        "--replay-jsonl", default=None,
+        help="optional older-distribution JSONL mixed into training")
+    parser.add_argument(
+        "--replay-weight", type=_bounded_weight,
+        default=DEFAULT_REPLAY_WEIGHT,
+        help="fraction of training steps drawn from --replay-jsonl (0..1)")
     parser.add_argument("--result", default="research/results/adapter_candidate.json")
     parser.add_argument(
         "--comparison",
@@ -141,13 +180,16 @@ def main(argv=None) -> int:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     train_rows = read_rows(_resolve(args.train))
     eval_rows = read_rows(_resolve(args.eval))
+    replay_rows = (read_rows(_resolve(args.replay_jsonl))
+                   if args.replay_jsonl else [])
     if not train_rows or not eval_rows:
         raise SystemExit("train and eval need at least one row")
     out = _resolve(args.out)
     summary = train(
         args.base, train_rows, out, steps=args.steps, lr=args.lr,
         rank=args.rank, alpha=args.alpha, max_seq=args.max_seq,
-        device=device, seed=args.seed)
+        device=device, seed=args.seed, replay_rows=replay_rows,
+        replay_weight=args.replay_weight)
     comparison = compare(
         args.base, str(_resolve(args.eval)), [str(out)])
     models = comparison.get("models", [])
