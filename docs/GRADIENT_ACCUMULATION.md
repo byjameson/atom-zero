@@ -77,3 +77,42 @@ python research/train_adapter_candidate.py `
 - The result JSON and the new adapter's `config.json` record `init_adapter`.
 - Without `--init-adapter`, training is unchanged: fresh LoRA initialization
   with the same defaults and the same result/adapter config fields.
+
+## Key/value token weighting
+
+`--key-weight` and `--value-weight` (both finite and `>= 0`) weight the
+assistant answer tokens that overlap a key name or a value. Spans come from
+`research.adapter_runtime.answer_spans`, so JSON objects, `k=v;k=v` KV lines
+and `k: v` YAML lines are recognised. Plain-text answers have no spans.
+
+Token categories and their weights:
+
+| token | weight |
+|---|---:|
+| user turn / ignored label (`-100`) | 0 |
+| overlaps a key-name span | `--key-weight` |
+| overlaps a value span | `--value-weight` |
+| other alphanumeric token | `--content-weight` |
+| syntax token | 1.0 |
+
+`--key-weight` defaults to `1.0`. `--value-weight` defaults to the effective
+`--content-weight`. When both key and value weights are `1.0`, the trainer
+calls the legacy `_token_weights` path and the weights are bitwise identical to
+the previous release. A tokenizer without usable offsets also falls back to
+content-only weighting. The weighted loss is unchanged:
+`sum(ce * weights) / sum(weights)`.
+
+The result JSON and adapter `config.json` record `key_weight`, `value_weight`
+and `content_weight`.
+
+```powershell
+python research/train_adapter_candidate.py `
+  --base "$env:USERPROFILE\.cache\atomzero\atom-zero-49m" `
+  --train data/adapter_candidates/train.jsonl `
+  --eval data/adapter_candidates/eval.jsonl `
+  --out checkpoints/adapters_candidate/key_weighted_v0001 `
+  --steps 2000 --batch-size 4 --lr 0.001 --rank 8 --alpha 16 `
+  --key-weight 10 --value-weight 5 `
+  --result research/results/adapter_candidate_key_weighted.json `
+  --comparison research/results/adapter_candidate_key_weighted_comparison.json
+```

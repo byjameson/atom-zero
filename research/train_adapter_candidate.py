@@ -34,6 +34,14 @@ default 0.25) of older rows into the training sequence with
 :mod:`research.replay_sampler`. Without it the trainer cycles primary rows
 exactly as before.
 
+``--key-weight`` and ``--value-weight`` weight the key-name and value tokens of
+a JSON/KV/YAML assistant answer separately, using the character spans from
+:func:`research.adapter_runtime.answer_spans`. Other alphanumeric tokens keep
+``--content-weight`` and syntax tokens keep weight 1.0. ``--value-weight``
+defaults to the content weight. With the default content weight of 1.0 both
+are 1.0, which reproduces the legacy content-only weighting exactly.
+Plain-text answers have no key/value spans and fall back to content weighting.
+
 ``--init-adapter PATH`` resumes from a saved adapter directory: the LoRA
 geometry (``r_attn``/``alpha_attn``/``r_mlp``/``alpha_mlp``) is taken from the
 checkpoint and its A/B tensors are loaded strictly before training continues.
@@ -65,13 +73,15 @@ from atomzero.lora import (
 
 try:
     from research.adapter_runtime import (
-        fmt, load_model, mask_user_labels, read_rows, score_rows)
+        answer_spans, assistant_label_mask, fmt, load_model,
+        mask_user_labels, read_rows, score_rows)
     from research.compare_adapters import compare
     from research.replay_sampler import (
         DEFAULT_REPLAY_WEIGHT, sample_steps, summarize_mix)
 except ImportError:  # running as `python research/train_adapter_candidate.py`
     from adapter_runtime import (
-        fmt, load_model, mask_user_labels, read_rows, score_rows)
+        answer_spans, assistant_label_mask, fmt, load_model,
+        mask_user_labels, read_rows, score_rows)
     from compare_adapters import compare
     from replay_sampler import (
         DEFAULT_REPLAY_WEIGHT, sample_steps, summarize_mix)
@@ -117,6 +127,82 @@ def _token_weights(tok, y, content_weight: float):
         text = tok.decode([int(y[0, position])])
         if any(char.isalnum() for char in text):
             weights[0, position] = content_weight
+    return weights
+
+
+def _overlaps(span, spans) -> bool:
+    start, end = span
+    if end <= start:
+        return False
+    return any(start < other_end and other_start < end
+               for other_start, other_end in spans)
+
+
+def answer_token_weights(tok, row, y, *, key_weight: float = 1.0,
+                         value_weight: float | None = None,
+                         content_weight: float = 1.0) -> torch.Tensor:
+    """Per-token loss weights for one assistant-masked label row.
+
+    ``y`` is the ``(1, seq)`` label tensor returned by :func:`_encode`.
+    Ignored labels (``-100``) get 0. Tokens whose target offsets overlap a
+    key name or value span from :func:`answer_spans` get ``key_weight`` or
+    ``value_weight``; other alphanumeric tokens keep ``content_weight`` and
+    syntax tokens stay at 1.0.
+
+    ``value_weight`` defaults to ``content_weight``. When both key and value
+    weights are 1.0 this returns ``_token_weights`` unchanged, so the legacy
+    content-only weighting is bitwise identical. Tokenizers without usable
+    offsets (or plain-text answers without spans) also fall back to
+    ``_token_weights``.
+    """
+    if value_weight is None:
+        value_weight = content_weight
+    if key_weight == 1.0 and value_weight == 1.0:
+        return _token_weights(tok, y, content_weight)
+    weights = _token_weights(tok, y, content_weight)
+    mask = y != -100
+    token_to_id = getattr(tok, "token_to_id", None)
+    assistant_id = (token_to_id("<|assistant|>")
+                    if callable(token_to_id) else None)
+    end_id = token_to_id("<|end|>") if callable(token_to_id) else None
+    if assistant_id is not None and end_id is not None:
+        turn = assistant_label_mask(y, assistant_id, end_id)
+        if bool(turn.any()):
+            mask = mask & turn
+    weights = weights.masked_fill(~mask, 0.0)
+    encoding = tok.encode(fmt(row))
+    ids = list(getattr(encoding, "ids", []))
+    offsets = getattr(encoding, "offsets", None)
+    if offsets is None:
+        return weights
+    limit = y.size(1) + 1
+    ids = ids[:limit]
+    offsets = list(offsets)[:limit]
+    if len(ids) < 2 or len(offsets) != len(ids):
+        return weights
+    prefix = f"<|user|> {row['user']} <|assistant|> "
+    text = fmt(row)
+    if not text.startswith(prefix):
+        return weights
+    spans = answer_spans(row)
+    answer_start = len(prefix)
+    key_spans = [(item["start"] + answer_start,
+                  item["end"] + answer_start) for item in spans["keys"]]
+    value_spans = [(item["start"] + answer_start,
+                    item["end"] + answer_start) for item in spans["values"]]
+    if not key_spans and not value_spans:
+        return weights
+    for position in range(y.size(1)):
+        if not bool(mask[0, position]):
+            continue
+        token_index = position + 1
+        if token_index >= len(offsets):
+            continue
+        token_span = tuple(offsets[token_index])
+        if _overlaps(token_span, key_spans):
+            weights[0, position] = key_weight
+        elif _overlaps(token_span, value_spans):
+            weights[0, position] = value_weight
     return weights
 
 
@@ -286,7 +372,15 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
           replay_weight: float = DEFAULT_REPLAY_WEIGHT,
           rank_attn: int | None = None, alpha_attn: int | None = None,
           batch_size: int = 1, lr_scale: str = "none",
-          init_adapter: str | Path | None = None) -> dict:
+          init_adapter: str | Path | None = None,
+          key_weight: float = 1.0,
+          value_weight: float | None = None) -> dict:
+    if value_weight is None:
+        value_weight = content_weight
+    for name, weight in (("key_weight", key_weight),
+                         ("value_weight", value_weight)):
+        if not math.isfinite(weight) or weight < 0:
+            raise ValueError(f"{name} must be finite and >= 0")
     init_dir = _resolve(str(init_adapter)) if init_adapter else None
     if init_dir is None:
         rank = 8 if rank is None else rank
@@ -357,7 +451,9 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
         token_loss = F.cross_entropy(
             logits.reshape(-1, model.vocab), y.reshape(-1),
             ignore_index=-100, reduction="none")
-        weights = _token_weights(tok, y, content_weight).reshape(-1)
+        weights = answer_token_weights(
+            tok, row, y, key_weight=key_weight, value_weight=value_weight,
+            content_weight=content_weight).reshape(-1)
         pending.append(((token_loss * weights).sum(), weights.sum()))
         rows_seen += 1
         if len(pending) < batch_size:
@@ -389,7 +485,8 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
         rank=rank, alpha=alpha, steps=steps, lr=lr,
         base=str(base), train_examples=len(train_rows),
         replay_examples=len(replay_rows), replay_weight=replay_weight,
-        content_weight=content_weight, batch_size=batch_size,
+        content_weight=content_weight, key_weight=key_weight,
+        value_weight=value_weight, batch_size=batch_size,
         optimizer_steps=optimizer_steps, rows_seen=rows_seen,
         lr_scale=lr_scale, effective_lr=effective_lr,
         method="external_train_adapter_candidate_v1", **extra_config)
@@ -402,6 +499,8 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
         "replay_examples": len(replay_rows),
         "replay_weight": replay_weight,
         "content_weight": content_weight,
+        "key_weight": key_weight,
+        "value_weight": value_weight,
         "batch_size": batch_size,
         "optimizer_steps": optimizer_steps,
         "rows_seen": rows_seen,
@@ -498,7 +597,14 @@ def main(argv=None) -> int:
         help="fraction of training steps drawn from --replay-jsonl (0..1)")
     parser.add_argument(
         "--content-weight", type=float, default=1.0,
-        help="loss multiplier for alphanumeric content tokens (>=1)")
+        help="loss multiplier for other alphanumeric tokens (>=1)")
+    parser.add_argument(
+        "--key-weight", type=float, default=1.0,
+        help="loss multiplier for answer key-name tokens (>=0, default 1.0)")
+    parser.add_argument(
+        "--value-weight", type=float, default=None,
+        help="loss multiplier for answer value tokens "
+             "(>=0, default: --content-weight)")
     parser.add_argument("--result", default="research/results/adapter_candidate.json")
     parser.add_argument(
         "--comparison",
@@ -528,6 +634,13 @@ def main(argv=None) -> int:
         parser.error(lora_error)
     if not math.isfinite(args.content_weight) or args.content_weight < 1.0:
         parser.error("--content-weight must be finite and >= 1.0")
+    if not math.isfinite(args.key_weight) or args.key_weight < 0:
+        parser.error("--key-weight must be finite and >= 0")
+    if args.value_weight is not None and (
+            not math.isfinite(args.value_weight) or args.value_weight < 0):
+        parser.error("--value-weight must be finite and >= 0")
+    value_weight = (args.content_weight if args.value_weight is None
+                    else args.value_weight)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     train_rows = read_rows(_resolve(args.train))
     eval_rows = read_rows(_resolve(args.eval))
@@ -543,7 +656,8 @@ def main(argv=None) -> int:
         replay_rows=replay_rows, replay_weight=args.replay_weight,
         rank_attn=rank_attn, alpha_attn=alpha_attn,
         batch_size=args.batch_size, lr_scale=args.lr_scale,
-        init_adapter=init_adapter or None)
+        init_adapter=init_adapter or None, key_weight=args.key_weight,
+        value_weight=value_weight)
     comparison = compare(
         args.base, str(_resolve(args.eval)), [str(out)])
     models = comparison.get("models", [])
