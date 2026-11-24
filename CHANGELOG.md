@@ -1,5 +1,12 @@
 # Changelog
 
+## atomzero 0.40.0 - unreleased
+
+- **Real self-improve curriculum promotion**: a VM run trained `echo_kv,echo_json`, passed the 0.40 exact / 0.50 key-copy / content gate with **53% exact / 60% key copy**, and promoted automatically to `data/self_improve_curriculum_active.json`. A first attempt at a 0.40 exact threshold failed closed on content loss and did not promote.
+- **Runtime copy tool**: `atomzero-copy` deterministically parses explicit key=value pairs and emits JSON/KV/YAML. Benchmark: **200/200 exact / 1.0 key-copy** on the real 4-key eval set. This is tool use, not a model capability.
+- Curriculum runner `--init-adapter` starts the first stage from an existing adapter; later stages chain from the previous stage.
+- 1337 tests passed on the VM in 48.82s; benchmark 20/20. Base remains 0.8.0.
+
 ## atomzero 0.30.0 - 2026-11-24
 
 - **Best copy adapter so far**: specialize on multi, then rehearse on the balanced mix. `multi_recover` reached **48.0% exact / 60.4% key copy / 70.0% key recall** on the 250-row mixed held-out set, with content loss `4.6015 -> 0.7789`; behavior gate pass; curriculum registry updated.

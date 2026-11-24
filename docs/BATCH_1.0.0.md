@@ -17,7 +17,7 @@ boundary.
   `gate_id 7f0d5be2bce36219`, 1033/0 -> 1035/0;
   `gate_id da83c0302933d484`, 1064/0 -> 1066/0). Per-change human approval is
   optional with `--require-approval`.
-- Main gate: 1303 Atom Zero tests, 223 AISC tests, 26 strict specs
+- Main gate: 1337 Atom Zero tests, 223 AISC tests, 26 strict specs
   (24 PASS, 2 expected answerability FAIL), benchmark 20/20.
 - Weights remain `0.8.0`; answerability gate remains closed.
 - Merged post-release branches: self-code audit/diff, history-aware planner,
