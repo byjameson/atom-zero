@@ -6,9 +6,10 @@ import torch
 import torch.nn as nn
 
 from research.compare_adapters import (answers_match, assistant_label_mask,
-                                       exact_match_metrics, label_for,
-                                       normalize_answer, per_family_metrics,
-                                       per_family_summary, score_rows)
+                                       exact_match_metrics, key_copy_metrics,
+                                       label_for, normalize_answer,
+                                       per_family_metrics, per_family_summary,
+                                       score_rows)
 
 
 class DummyTokenizer:
@@ -180,6 +181,106 @@ def test_exact_match_metrics_returns_no_rate_for_empty_rows():
         generator=lambda *args: "")
     assert result["examples"] == 0
     assert result["rate"] is None
+
+
+def test_key_copy_metrics_with_stub_copier_and_replacer():
+    rows = [
+        {"user": "q1", "assistant": '{"name": "Alice", "city": "Paris"}',
+         "family": "json"},
+        {"user": "q2", "assistant": '{"population": 10, "unit": "km"}',
+         "family": "units"},
+        {"user": "q3", "assistant": "plain answer"},
+    ]
+    answers = {
+        "<|user|> q1 <|assistant|>": '{"name": "Bob", "city": "Rome"}',
+        "<|user|> q2 <|assistant|>": '{"length": 10, "price": "km"}',
+    }
+
+    def fake_generator(model, tok, prompt, max_new):
+        return answers[prompt]
+
+    result = key_copy_metrics(
+        DummyLM(), DummyTokenizer(), rows, generator=fake_generator,
+        max_new=16)
+    assert result["examples"] == 2
+    assert result["skipped"] == 1
+    assert result["matches"] == 1
+    assert result["rate"] == pytest.approx(0.5)
+    assert result["key_recall"] == pytest.approx(0.5)
+    assert result["families"]["json"]["rate"] == 1.0
+    assert result["families"]["json"]["key_recall"] == pytest.approx(1.0)
+    assert result["families"]["units"]["rate"] == 0.0
+    assert result["families"]["units"]["key_recall"] == pytest.approx(0.0)
+
+
+def _category_rows(family, key_loss, key_tokens, value_loss, value_tokens,
+                   syntax_loss, syntax_tokens):
+    return {
+        "family": family,
+        "loss": 1.0,
+        "tokens": key_tokens + value_tokens + syntax_tokens,
+        "key_loss": key_loss,
+        "key_tokens": key_tokens,
+        "value_loss": value_loss,
+        "value_tokens": value_tokens,
+        "syntax_loss": syntax_loss,
+        "syntax_tokens": syntax_tokens,
+    }
+
+
+def test_per_family_summary_aggregates_key_value_and_syntax():
+    baseline = {"rows": [
+        _category_rows("json", 2.0, 4, 4.0, 6, 1.0, 10),
+        _category_rows("json", 4.0, 6, 6.0, 4, 3.0, 10),
+    ]}
+    adapter = {"rows": [
+        _category_rows("json", 1.0, 10, 2.0, 10, 1.5, 20),
+    ]}
+    families = per_family_summary(baseline, adapter)
+    json_base = families["json"]["baseline"]
+    assert json_base["key_loss"] == pytest.approx((2.0 * 4 + 4.0 * 6) / 10)
+    assert json_base["key_tokens"] == 10
+    assert json_base["value_loss"] == pytest.approx((4.0 * 6 + 6.0 * 4) / 10)
+    assert json_base["value_tokens"] == 10
+    assert json_base["syntax_loss"] == pytest.approx(
+        (1.0 * 10 + 3.0 * 10) / 20)
+    assert json_base["syntax_tokens"] == 20
+    assert families["json"]["adapter"]["key_loss"] == pytest.approx(1.0)
+
+
+def test_compare_emits_key_copy_and_reuses_generation(monkeypatch, tmp_path):
+    import research.compare_adapters as module
+
+    data = tmp_path / "rows.jsonl"
+    data.write_text(
+        '{"user": "q1", "assistant": "{\\"name\\": \\"Alice\\"}", '
+        '"family": "json"}\n'
+        '{"user": "q2", "assistant": "{\\"city\\": \\"Paris\\"}", '
+        '"family": "json"}\n',
+        encoding="utf-8")
+    monkeypatch.setattr(
+        module, "load_model",
+        lambda *args, **kwargs: (DummyLM(), DummyTokenizer()))
+    answers = {
+        "<|user|> q1 <|assistant|>": '{"name": "Alice"}',
+        "<|user|> q2 <|assistant|>": '{"city": "Paris"}',
+    }
+    calls = []
+
+    def generator(model, tok, prompt, max_new):
+        calls.append(prompt)
+        return answers[prompt]
+
+    payload = module.compare(
+        "base", data, ["adapter"], per_family=True, exact_match=True,
+        key_copy=True, generator=generator)
+    adapter = payload["models"][1]
+    assert adapter["metrics"]["key_copy"]["rate"] == pytest.approx(1.0)
+    assert adapter["metrics"]["key_copy_rate"] == pytest.approx(1.0)
+    assert adapter["metrics"]["key_copy"]["key_recall"] == pytest.approx(1.0)
+    assert adapter["metrics"]["exact_match"]["rate"] == pytest.approx(1.0)
+    assert adapter["families"]["json"]["adapter"]["key_tokens"] >= 0
+    assert len(calls) == 4  # two rows on base + adapter, generated once each
 
 
 def test_compare_emits_families_and_exact_match(monkeypatch, tmp_path):

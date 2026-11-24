@@ -8,6 +8,9 @@
 
 The score is assistant-turn cross-entropy: user turns are masked, the
 ``<|assistant|>`` tag, the answer and ``<|end|>`` are scored. Lower is better.
+When the tokenizer exposes offsets, scored tokens are also split into answer
+key names, values and syntax. ``--exact-match`` generates answers and
+``--key-copy`` reports whether generated answers copy the expected key names.
 This is a comparison tool, not a general benchmark.
 
 The adapter can be produced by an external trainer. This script only needs the
@@ -24,10 +27,12 @@ from pathlib import Path
 
 try:
     from research.adapter_runtime import (
-        assistant_label_mask, fmt, load_model, read_rows, score_rows)
+        answer_spans, assistant_label_mask, fmt, load_model, read_rows,
+        score_rows)
 except ImportError:  # running as `python research/compare_adapters.py`
     from adapter_runtime import (
-        assistant_label_mask, fmt, load_model, read_rows, score_rows)
+        answer_spans, assistant_label_mask, fmt, load_model, read_rows,
+        score_rows)
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_EXACT_MATCH_MAX_NEW = 64
@@ -53,11 +58,25 @@ def _family_of(row) -> str | None:
     return family or None
 
 
+def _weighted_loss(rows: list[dict], loss_key: str,
+                   tokens_key: str) -> tuple[float | None, int]:
+    tokens = 0
+    nll = 0.0
+    for row in rows:
+        count = int(row.get(tokens_key) or 0)
+        loss = row.get(loss_key)
+        if isinstance(loss, bool) or not isinstance(loss, (int, float)):
+            continue
+        if count <= 0:
+            continue
+        tokens += count
+        nll += float(loss) * count
+    return (nll / tokens if tokens else None), tokens
+
+
 def _aggregate_rows(rows: list[dict]) -> dict | None:
     tokens = 0
     nll = 0.0
-    content_tokens = 0
-    content_nll = 0.0
     for row in rows:
         count = int(row.get("tokens") or 0)
         loss = row.get("loss")
@@ -65,16 +84,16 @@ def _aggregate_rows(rows: list[dict]) -> dict | None:
             continue
         tokens += count
         nll += float(loss) * count
-        content_count = int(row.get("content_tokens") or 0)
-        content_loss = row.get("content_loss")
-        if content_count and isinstance(content_loss, (int, float)) and not (
-                isinstance(content_loss, bool)):
-            content_tokens += content_count
-            content_nll += float(content_loss) * content_count
     if tokens == 0:
         return None
     loss = nll / tokens
-    content_loss = content_nll / content_tokens if content_tokens else None
+    content_loss, content_tokens = _weighted_loss(
+        rows, "content_loss", "content_tokens")
+    key_loss, key_tokens = _weighted_loss(rows, "key_loss", "key_tokens")
+    value_loss, value_tokens = _weighted_loss(
+        rows, "value_loss", "value_tokens")
+    syntax_loss, syntax_tokens = _weighted_loss(
+        rows, "syntax_loss", "syntax_tokens")
     return {
         "examples": len(rows),
         "tokens": tokens,
@@ -82,6 +101,12 @@ def _aggregate_rows(rows: list[dict]) -> dict | None:
         "ppl": math.exp(min(loss, 20.0)),
         "content_loss": content_loss,
         "content_tokens": content_tokens,
+        "key_loss": key_loss,
+        "key_tokens": key_tokens,
+        "value_loss": value_loss,
+        "value_tokens": value_tokens,
+        "syntax_loss": syntax_loss,
+        "syntax_tokens": syntax_tokens,
     }
 
 
@@ -237,9 +262,73 @@ def exact_match_metrics(model, tok, rows: list[dict], *, generator=None,
     }
 
 
+def key_copy_metrics(model, tok, rows: list[dict], *, generator=None,
+                     max_new: int = DEFAULT_EXACT_MATCH_MAX_NEW) -> dict:
+    """Generate answers and measure whether key names are copied.
+
+    A row counts as a match when the generated answer exposes exactly the
+    expected key-name set. ``key_recall`` is the mean fraction of expected
+    keys present, so partial copying is visible even when the set differs.
+    Rows whose expected answer has no keys are skipped. ``generator`` is
+    injectable so tests never need a real checkpoint.
+    """
+    generate_fn = generator or _default_generator
+    cap = max(1, int(max_new))
+    examples = 0
+    skipped = 0
+    matches = 0
+    recall_sum = 0.0
+    family_counts: dict[str, dict] = {}
+    for row in rows:
+        if not isinstance(row, dict) or not row.get("user"):
+            continue
+        expected = {span["text"] for span in answer_spans(
+            row.get("assistant", ""))["keys"]}
+        if not expected:
+            skipped += 1
+            continue
+        examples += 1
+        limit = _generation_limit(tok, row, cap)
+        text = generate_fn(model, tok, generation_prompt(row), limit)
+        generated = {span["text"] for span in answer_spans(text)["keys"]}
+        overlap = len(expected & generated)
+        recall = overlap / len(expected)
+        matched = generated == expected
+        matches += int(matched)
+        recall_sum += recall
+        family = _family_of(row)
+        if family is not None:
+            bucket = family_counts.setdefault(
+                family, {"examples": 0, "matches": 0, "recall_sum": 0.0})
+            bucket["examples"] += 1
+            bucket["matches"] += int(matched)
+            bucket["recall_sum"] += recall
+    families = {}
+    for family in sorted(family_counts):
+        bucket = family_counts[family]
+        families[family] = {
+            "examples": bucket["examples"],
+            "matches": bucket["matches"],
+            "rate": (bucket["matches"] / bucket["examples"]
+                     if bucket["examples"] else None),
+            "key_recall": (bucket["recall_sum"] / bucket["examples"]
+                           if bucket["examples"] else None),
+        }
+    return {
+        "examples": examples,
+        "skipped": skipped,
+        "matches": matches,
+        "rate": matches / examples if examples else None,
+        "key_recall": recall_sum / examples if examples else None,
+        "max_new": cap,
+        "families": families,
+    }
+
+
 def compare(base: str, data: str | Path, adapters: list[str],
             tokenizer: str = "", per_family: bool = False,
-            exact_match: bool = False, generator=None,
+            exact_match: bool = False, key_copy: bool = False,
+            generator=None,
             exact_match_max_new: int = DEFAULT_EXACT_MATCH_MAX_NEW) -> dict:
     rows = read_rows(data)
     base_model, tok = load_model(base, tokenizer=tokenizer)
@@ -260,18 +349,45 @@ def compare(base: str, data: str | Path, adapters: list[str],
             "loss_relative": metrics["loss"] / reference["loss"] - 1,
             "ppl_ratio": metrics["ppl"] / reference["ppl"] - 1,
         }
-    if exact_match:
+    if exact_match or key_copy:
+        base_generator = generator or _default_generator
+        cache: dict[tuple[int, str, int], str] = {}
+        if exact_match and key_copy:
+            def generate_fn(model, tok, prompt, max_new):
+                cache_key = (id(model), prompt, max_new)
+                if cache_key not in cache:
+                    cache[cache_key] = base_generator(
+                        model, tok, prompt, max_new)
+                return cache[cache_key]
+        else:
+            generate_fn = base_generator
         for item, model in loaded:
-            try:
-                item["metrics"]["exact_match"] = exact_match_metrics(
-                    model, tok, rows, generator=generator,
-                    max_new=exact_match_max_new)
-            except (AttributeError, IndexError, KeyError, RuntimeError,
-                    TypeError, ValueError) as exc:
-                item["metrics"]["exact_match"] = {
-                    "available": False,
-                    "error": f"{type(exc).__name__}: {exc}",
-                }
+            if exact_match:
+                try:
+                    item["metrics"]["exact_match"] = exact_match_metrics(
+                        model, tok, rows, generator=generate_fn,
+                        max_new=exact_match_max_new)
+                except (AttributeError, IndexError, KeyError, RuntimeError,
+                        TypeError, ValueError) as exc:
+                    item["metrics"]["exact_match"] = {
+                        "available": False,
+                        "error": f"{type(exc).__name__}: {exc}",
+                    }
+            if key_copy:
+                try:
+                    copy_metrics = key_copy_metrics(
+                        model, tok, rows, generator=generate_fn,
+                        max_new=exact_match_max_new)
+                    item["metrics"]["key_copy"] = copy_metrics
+                    item["metrics"]["key_copy_rate"] = copy_metrics.get(
+                        "rate")
+                except (AttributeError, IndexError, KeyError, RuntimeError,
+                        TypeError, ValueError) as exc:
+                    item["metrics"]["key_copy"] = {
+                        "available": False,
+                        "error": f"{type(exc).__name__}: {exc}",
+                    }
+                    item["metrics"]["key_copy_rate"] = None
     payload = {
         "base": base,
         "data": str(data),
@@ -298,9 +414,14 @@ def main(argv=None) -> int:
                          "data/chat_en_bpe8k.json")
     ap.add_argument("--out", default="research/results/adapter_comparison.json")
     ap.add_argument("--per-family", action="store_true",
-                    help="report loss/ppl/content_loss per family label")
+                    help="report per-family loss/ppl/content/key/value metrics")
     ap.add_argument("--exact-match", action="store_true",
                     help="generate answers and report normalized exact match")
+    ap.add_argument("--key-copy", action="store_true",
+                    help="generate answers and report key-name copy rate")
+    ap.add_argument("--categories", action="store_true",
+                    help="key/value/syntax token metrics (always on when "
+                         "the tokenizer exposes offsets)")
     ap.add_argument("--exact-match-max-new", type=int,
                     default=DEFAULT_EXACT_MATCH_MAX_NEW,
                     help="cap on generated answer tokens (default: 64)")
@@ -308,6 +429,7 @@ def main(argv=None) -> int:
     payload = compare(
         args.base, args.data, args.adapters, args.tokenizer,
         per_family=args.per_family, exact_match=args.exact_match,
+        key_copy=args.key_copy,
         exact_match_max_new=args.exact_match_max_new)
     if args.out:
         out = ROOT / args.out
@@ -316,17 +438,32 @@ def main(argv=None) -> int:
                        encoding="utf-8")
     summary = []
     for item in payload["models"]:
+        metrics = item["metrics"]
         entry = {
             "label": item["label"],
             "path": item["path"],
-            "loss": round(item["metrics"]["loss"], 6),
-            "ppl": round(item["metrics"]["ppl"], 4),
-            "tokens": item["metrics"]["tokens"],
+            "loss": round(metrics["loss"], 6),
+            "ppl": round(metrics["ppl"], 4),
+            "tokens": metrics["tokens"],
             **{k: round(v, 6) for k, v in item.get("vs_base", {}).items()},
         }
-        exact = item["metrics"].get("exact_match")
+        for field in ("content_loss", "key_loss", "value_loss",
+                      "syntax_loss"):
+            if isinstance(metrics.get(field), (int, float)) and not isinstance(
+                    metrics.get(field), bool):
+                entry[field] = round(metrics[field], 6)
+        for field in ("content_tokens", "key_tokens", "value_tokens",
+                      "syntax_tokens"):
+            if metrics.get(field):
+                entry[field] = metrics[field]
+        exact = metrics.get("exact_match")
         if isinstance(exact, dict) and exact.get("rate") is not None:
             entry["exact_match"] = round(exact["rate"], 6)
+        copy = metrics.get("key_copy")
+        if isinstance(copy, dict) and copy.get("rate") is not None:
+            entry["key_copy_rate"] = round(copy["rate"], 6)
+            if copy.get("key_recall") is not None:
+                entry["key_recall"] = round(copy["key_recall"], 6)
         summary.append(entry)
     print(json.dumps({"examples": payload["examples"], "models": summary},
                      indent=2, ensure_ascii=False))

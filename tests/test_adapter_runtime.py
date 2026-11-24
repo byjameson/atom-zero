@@ -1,4 +1,5 @@
 import json
+import math
 from types import SimpleNamespace
 
 import pytest
@@ -10,8 +11,9 @@ from tokenizers.pre_tokenizers import WhitespaceSplit
 from atomzero.lora import count_lora_params, inject_lora, save_adapter
 from atomzero.transformer import TransformerLM
 from research.adapter_runtime import (
-    adapter_metadata, assistant_label_mask, check_adapter, evaluate_bpb,
-    fixed_windows, load_model, mask_user_labels, read_rows, score_rows)
+    adapter_metadata, answer_spans, assistant_label_mask, check_adapter,
+    evaluate_bpb, fixed_windows, load_model, mask_user_labels, read_rows,
+    score_rows)
 
 VOCAB = ["<|user|>", "<|assistant|>", "<|end|>", "hello", "hi", "bye",
          "[UNK]"]
@@ -162,3 +164,127 @@ def test_read_rows_preserves_optional_family_fields(tmp_path):
     }
     assert rows[1] == {"user": "bye", "assistant": "hello"}
     assert rows[2] == {"user": "hey", "assistant": "hi"}
+
+
+def _span_texts(answer: str) -> tuple[str, list[str], list[str]]:
+    spans = answer_spans({"assistant": answer})
+    keys = [answer[item["start"]:item["end"]] for item in spans["keys"]]
+    values = [answer[item["start"]:item["end"]] for item in spans["values"]]
+    return spans["format"], keys, values
+
+
+def test_answer_spans_extracts_json_keys_and_values():
+    answer = '{"name": "Alice", "age": 30, "active": true}'
+    fmt_name, keys, values = _span_texts(answer)
+    assert fmt_name == "json"
+    assert keys == ["name", "age", "active"]
+    assert values == ["Alice", "30", "true"]
+
+
+def test_answer_spans_extracts_kv_and_yaml_pairs():
+    assert _span_texts("name=Alice;city=Paris") == (
+        "kv", ["name", "city"], ["Alice", "Paris"])
+    assert _span_texts("name = Alice ; city = Paris") == (
+        "kv", ["name", "city"], ["Alice", "Paris"])
+    assert _span_texts("name: Alice\nage: 30") == (
+        "yaml", ["name", "age"], ["Alice", "30"])
+    assert _span_texts("- name: Alice\n- age: 30") == (
+        "yaml", ["name", "age"], ["Alice", "30"])
+
+
+def test_answer_spans_plain_text_has_no_keys_or_values():
+    fmt_name, keys, values = _span_texts("hello there")
+    assert fmt_name == "text"
+    assert keys == []
+    assert values == []
+
+
+class OffsetTokenizer:
+    ids = {
+        "<|user|>": 0,
+        "<|assistant|>": 1,
+        "<|end|>": 2,
+        "hello": 3,
+        "hi": 4,
+        "name": 5,
+        "=": 6,
+        "Alice": 7,
+        ";": 8,
+        "city": 9,
+        "Paris": 10,
+    }
+
+    def token_to_id(self, token):
+        return self.ids.get(token)
+
+    def encode(self, text):
+        ids = []
+        offsets = []
+        cursor = 0
+        for word in text.split():
+            start = text.find(word, cursor)
+            end = start + len(word)
+            cursor = end
+            ids.append(self.ids.get(word, 11))
+            offsets.append((start, end))
+        return SimpleNamespace(ids=ids, offsets=offsets)
+
+    def decode(self, ids):
+        reverse = {value: key for key, value in self.ids.items()}
+        return " ".join(reverse.get(int(item), "?") for item in ids)
+
+
+class OffsetLM(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.vocab = 12
+        self.max_seq = 64
+        self.bias = torch.nn.Parameter(torch.zeros(self.vocab))
+
+    def forward(self, x):
+        return self.bias.view(1, 1, -1).expand(x.size(0), x.size(1), -1)
+
+
+def test_score_rows_splits_key_value_and_syntax_tokens():
+    row = {"user": "hello", "assistant": "name = Alice ; city = Paris"}
+    result = score_rows(OffsetLM(), OffsetTokenizer(), [row])
+    assert result["categories"] is True
+    assert result["tokens"] == 9
+    assert result["key_tokens"] == 2
+    assert result["value_tokens"] == 2
+    assert result["syntax_tokens"] == 5
+    assert result["content_tokens"] == 6
+    expected = pytest.approx(math.log(12.0), abs=1e-6)
+    assert result["key_loss"] == expected
+    assert result["value_loss"] == expected
+    assert result["syntax_loss"] == expected
+    weighted = (result["key_loss"] * result["key_tokens"]
+                + result["value_loss"] * result["value_tokens"]
+                + result["syntax_loss"] * result["syntax_tokens"])
+    assert weighted == pytest.approx(result["loss"] * result["tokens"])
+    scored = result["rows"][0]
+    assert scored["key_tokens"] == 2
+    assert scored["value_tokens"] == 2
+    assert scored["syntax_tokens"] == 5
+
+
+def test_score_rows_marks_categories_unavailable_without_offsets():
+    from types import SimpleNamespace as Namespace
+
+    class NoOffsetTokenizer:
+        def token_to_id(self, token):
+            return {"<|user|>": 0, "<|assistant|>": 1,
+                    "<|end|>": 2}.get(token)
+
+        def encode(self, text):
+            return Namespace(ids=[0, 1, 2])
+
+        def decode(self, ids):
+            return "ok"
+
+    result = score_rows(OffsetLM(), NoOffsetTokenizer(),
+                        [{"user": "hello", "assistant": "hi"}])
+    assert result["categories"] is False
+    assert result["key_tokens"] == 0
+    assert result["value_tokens"] == 0
+    assert result["syntax_tokens"] == result["tokens"]
