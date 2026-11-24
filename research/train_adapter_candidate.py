@@ -2,7 +2,7 @@
 
 This is an **external trainer harness**: it lives in ``research``, not in the
 ``atomzero`` package. It loads the local base checkpoint, trains only the LoRA
-MLP parameters, saves an adapter directory and compares base vs adapter on a
+parameters, saves an adapter directory and compares base vs adapter on a
 held-out JSONL with :mod:`research.compare_adapters`.
 
     python research/train_adapter_candidate.py \
@@ -11,7 +11,14 @@ held-out JSONL with :mod:`research.compare_adapters`.
       --eval data/adapter_candidates/eval.jsonl \
       --out checkpoints/adapters_candidate/v0001 \
       --steps 300 --lr 1e-3 --rank 8 --alpha 16 \
+      --rank-attn 4 --alpha-attn 8 \
       --result research/results/adapter_candidate.json
+
+``--rank-attn`` (default ``0``) additionally adapts the attention output
+projection (``out_proj``). The model uses a fused
+``nn.MultiheadAttention.in_proj_weight`` Parameter for Q/K/V; that projection
+is not a module and remains frozen. Only ``out_proj`` is adapted with
+``--rank-attn``, so the trainable attention parameters are small.
 
 An optional ``--replay-jsonl`` mixes a bounded fraction (``--replay-weight``,
 default 0.25) of older rows into the training sequence with
@@ -94,7 +101,11 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
           lr: float, rank: int, alpha: int, max_seq: int,
           device, seed: int = 13, content_weight: float = 1.0,
           replay_rows: list[dict] | None = None,
-          replay_weight: float = DEFAULT_REPLAY_WEIGHT) -> dict:
+          replay_weight: float = DEFAULT_REPLAY_WEIGHT,
+          rank_attn: int = 0, alpha_attn: int = 0) -> dict:
+    error = _lora_arg_error(rank, alpha, rank_attn, alpha_attn)
+    if error:
+        raise ValueError(error)
     replay_rows = list(replay_rows or [])
     sequence = sample_steps(
         train_rows, replay_rows, max(1, steps),
@@ -103,7 +114,8 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
     torch.manual_seed(seed)
     model, tok = load_model(base, device=device)
     model = apply_lora(
-        model, r_attn=0, r_mlp=rank, alpha_mlp=alpha)
+        model, r_attn=rank_attn, r_mlp=rank,
+        alpha_attn=alpha_attn, alpha_mlp=alpha)
     model.to(device)
     params = lora_parameters(model)
     if not params:
@@ -135,7 +147,8 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
             }), flush=True)
     out.mkdir(parents=True, exist_ok=True)
     save_adapter(
-        model, out, r_attn=0, r_mlp=rank, alpha_mlp=alpha,
+        model, out, r_attn=rank_attn, r_mlp=rank,
+        alpha_attn=alpha_attn, alpha_mlp=alpha,
         rank=rank, alpha=alpha, steps=steps, lr=lr,
         base=str(base), train_examples=len(train_rows),
         replay_examples=len(replay_rows), replay_weight=replay_weight,
@@ -154,6 +167,10 @@ def train(base: str, train_rows: list[dict], out: Path, *, steps: int,
         "replay_weight": replay_weight,
         "content_weight": content_weight,
         "train_mix": mix,
+        "rank_attn": rank_attn,
+        "alpha_attn": alpha_attn,
+        "rank_mlp": rank,
+        "alpha_mlp": alpha,
         "lora_parameters": count_lora_params(model),
         "adapter": adapter_path,
     }
@@ -171,6 +188,19 @@ def _bounded_weight(value: str) -> float:
     return weight
 
 
+def _lora_arg_error(rank: int, alpha: int, rank_attn: int,
+                    alpha_attn: int) -> str | None:
+    if rank < 0 or rank_attn < 0:
+        return "LoRA ranks must be >= 0"
+    if alpha < 0 or alpha_attn < 0:
+        return "LoRA alphas must be >= 0"
+    if rank > 0 and alpha <= 0:
+        return "--alpha must be > 0 when --rank > 0"
+    if rank_attn > 0 and alpha_attn <= 0:
+        return "--alpha-attn must be > 0 when --rank-attn > 0"
+    return None
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base", required=True)
@@ -181,6 +211,12 @@ def main(argv=None) -> int:
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--rank", type=int, default=8)
     parser.add_argument("--alpha", type=int, default=16)
+    parser.add_argument(
+        "--rank-attn", type=int, default=0,
+        help="LoRA rank for attention out_proj (0 disables)")
+    parser.add_argument(
+        "--alpha-attn", type=int, default=0,
+        help="LoRA alpha for attention out_proj (>0 when rank-attn >0)")
     parser.add_argument("--max-seq", type=int, default=256)
     parser.add_argument("--seed", type=int, default=13)
     parser.add_argument(
@@ -198,6 +234,10 @@ def main(argv=None) -> int:
         "--comparison",
         default="research/results/adapter_candidate_comparison.json")
     args = parser.parse_args(argv)
+    lora_error = _lora_arg_error(
+        args.rank, args.alpha, args.rank_attn, args.alpha_attn)
+    if lora_error:
+        parser.error(lora_error)
     if not math.isfinite(args.content_weight) or args.content_weight < 1.0:
         parser.error("--content-weight must be finite and >= 1.0")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -212,7 +252,8 @@ def main(argv=None) -> int:
         args.base, train_rows, out, steps=args.steps, lr=args.lr,
         rank=args.rank, alpha=args.alpha, max_seq=args.max_seq,
         device=device, seed=args.seed, content_weight=args.content_weight,
-        replay_rows=replay_rows, replay_weight=args.replay_weight)
+        replay_rows=replay_rows, replay_weight=args.replay_weight,
+        rank_attn=args.rank_attn, alpha_attn=args.alpha_attn)
     comparison = compare(
         args.base, str(_resolve(args.eval)), [str(out)])
     models = comparison.get("models", [])
