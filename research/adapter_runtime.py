@@ -55,10 +55,14 @@ def load_tokenizer(path: str | Path):
 
 def load_model(base: str | Path, adapter: str | Path = "",
                device=None, tokenizer: str | Path = ""):
-    """Load a base transformer checkpoint, optionally applying a LoRA adapter.
+    """Load a base transformer checkpoint, optionally applying weights.
 
     Returns ``(model, tokenizer)``. The base directory must contain
-    ``model.pt`` with ``config`` and ``state`` keys.
+    ``model.pt`` with ``config`` and ``state`` keys. The optional ``adapter``
+    may be a LoRA adapter directory (``adapter.pt``) or a full research
+    checkpoint directory containing its own ``model.pt``; in the latter case
+    the saved state is loaded directly. Full checkpoints are research
+    artifacts, not product adapters.
     """
     base_dir = resolve_path(base)
     checkpoint = torch.load(base_dir / "model.pt", map_location="cpu",
@@ -68,7 +72,14 @@ def load_model(base: str | Path, adapter: str | Path = "",
                           config["heads"], config["ff"])
     model.load_state_dict(checkpoint["state"])
     if adapter:
-        apply_adapter(model, resolve_path(adapter))
+        adapter_dir = resolve_path(adapter)
+        full_checkpoint = adapter_dir / "model.pt"
+        if full_checkpoint.is_file():
+            full = torch.load(full_checkpoint, map_location="cpu",
+                              weights_only=False)
+            model.load_state_dict(full["state"])
+        else:
+            apply_adapter(model, adapter_dir)
     target = torch.device(device or "cpu")
     model.to(target)
     model.eval()
