@@ -28,10 +28,73 @@ learned to copy, and it is **not** a training result.
   helper for explicit pairs.
 - **Not a fact source.** It copies what the prompt says; it does not verify that
   a value is true.
-- **Not automatic.** The runtime does not route model replies through it unless
-  a caller explicitly invokes the tool or its functions.
+- **Not automatic for arbitrary prompts.** The chat server routes only
+  explicit transcription requests (see below). Every other prompt keeps the
+  normal RAG/model path.
 - **Not a parser for arbitrary prose.** It expects pair-shaped input, optionally
   inside `[...]` blocks.
+
+## Chat router
+
+`atomzero.copy_router` adds a small, conservative intent check in front of the
+normal chat answer path. When a prompt explicitly asks to transcribe pairs, the
+server returns the deterministic copy output and flags provenance with
+`"source": "copy_tool"`. Otherwise the router returns `None` and the existing
+RAG/model flow runs exactly as before.
+
+The boundary is **explicit transcription only**:
+
+- The prompt must contain a clear instruction such as `copy these pairs`,
+  `transcribe`, `return only`, or `exactly these keys and values`.
+- It must contain pair-shaped content (`key=value` or `key: value`) with
+  **2-4 pairs**, preferably inside one `[...]` block.
+- Questions, summaries, comparisons, explanations, paraphrases and open-ended
+  chat are never routed, even if they mention keys or values.
+- Requests outside the 2-4 pair range fall back to the normal chat path.
+- Malformed pairs fall back too: `route_copy` returns `handled=False` with a
+  reason instead of raising.
+
+Handled examples:
+
+```text
+Copy these pairs exactly into compact JSON: [alpha=one; beta=two].
+Return only the JSON object.
+  -> {"alpha":"one","beta":"two"}            source: copy_tool
+
+Return only one line of semicolon-separated key=value pairs:
+[alpha=one; beta=two]. Copy every key and value exactly.
+  -> alpha=one;beta=two                      source: copy_tool
+
+Return only YAML with exactly these keys and values:
+[alpha=one; beta=two]. Do not add prose.
+  -> alpha: one
+     beta: two                               source: copy_tool
+```
+
+Not handled (normal RAG/model path):
+
+```text
+What is the launch code?
+Summarize the document about Apollo.
+How do I copy a file in PowerShell?
+Copy the launch code from the document.
+Explain this config: host=localhost; port=8080.
+Return only JSON.
+```
+
+Python API:
+
+```python
+from atomzero.copy_router import detect_copy_request, route_copy
+
+detect_copy_request(prompt)   # "json" | "kv" | "yaml" | None
+route_copy(prompt)            # {handled, format, answer, pairs_count, reason}
+```
+
+The router changes no weights and no copy-tool output format. It is a routing
+convenience for a deterministic tool, not model self-improvement, training,
+general intelligence or ASI. When the router does not handle a prompt, the
+model's own behaviour is unchanged.
 
 ## Commands
 
@@ -154,9 +217,12 @@ capability. The model and its copy curricula are unchanged.
 
 ```powershell
 $env:PYTHONPATH="$PWD;$PWD\src"
-python -m pytest tests/test_copy_tool.py -q
+python -m pytest tests/test_copy_tool.py tests/test_copy_router.py -q
 ```
 
-The tests cover 2, 3 and 4 pairs in JSON/KV/YAML, multiword and quoted values,
-colon/newline syntax, malformed input, missing/duplicate keys, CLI output and
-exit codes, and the benchmark's 1.0 exact rate on a small fixture.
+The copy-tool tests cover 2, 3 and 4 pairs in JSON/KV/YAML, multiword and quoted
+values, colon/newline syntax, malformed input, missing/duplicate keys, CLI
+output and exit codes, and the benchmark's 1.0 exact rate on a small fixture.
+The router tests cover format detection, the 2-4 pair bound, malformed-pair
+fallback, non-copy questions/summaries/RAG prompts and the chat helper's
+`copy_tool` provenance marker.
