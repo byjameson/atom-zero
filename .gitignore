@@ -9,3 +9,5 @@ checkpoints/
 models/
 research/results/content_adapter_cross_audit.json
 research/results/content_adapter_indist_audit.json
+research/results/copy_tool_benchmark_local.json
+research/results/self_improve_curriculum_run.json
