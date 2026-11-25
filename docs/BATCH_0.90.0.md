@@ -36,6 +36,26 @@ retention: 49M baseline vs 24L candidate, city YAML/river, 200 rows, GPU
 The instance is destroyed automatically at the end; a 3.5-hour failsafe
 automation exists in case the launcher process dies.
 
+
+## Gate result: 8L is not product-viable
+
+The full checkpoint gate on the 90-row city set (not the 20-row preview) is
+decisive:
+
+```text
+content loss: 4.153867 -> 4.522974  (delta +0.369107, +8.9%)
+exact match:  0.0 -> 0.655
+key copy:     0.0 -> 0.74
+status:       fail   (reason: content_worse)
+safety:       skipped (no probe file yet)
+```
+
+The 20-row preview had shown a content improvement; the full set reversed it.
+Small subsets are not evidence. The 8L copy specialist therefore stays a
+research artifact. The 0.90.0 question is now sharper: can **mixed
+copy+content training** keep the copy gain while removing the content
+regression? That is what `feat/mixed-replay` prepares.
+
 ## Decision tree
 
 1. **4short exact rises well above 65.5% and retention stays <= 1.10**
