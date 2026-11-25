@@ -1,0 +1,70 @@
+{
+  "method": "manual_large_base_probe_v1",
+  "date": "2026-11-25",
+  "model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "model_family": "Qwen2.5",
+  "model_parameters": "about 0.5B",
+  "base_comparison": "Atom Zero 49.2M",
+  "dataset": "data/multi_short_v1/stage_{2short,3short,4short}/eval.jsonl",
+  "rows_per_stage": 20,
+  "decoding": "greedy",
+  "parser": "tolerant_flat_json_pairs_fences_kv_yaml_v1",
+  "flat_prompt_intent": "flat compact JSON object only; no pairs list, code fences or prose (manual wording not preserved)",
+  "stages": [
+    {
+      "stage": "2short",
+      "pairs_per_row": 2,
+      "rows": 20,
+      "baseline": {
+        "exact": 13,
+        "exact_rate": 0.65
+      },
+      "flat_prompt": {
+        "exact": 17,
+        "exact_rate": 0.85
+      }
+    },
+    {
+      "stage": "3short",
+      "pairs_per_row": 3,
+      "rows": 20,
+      "baseline": {
+        "exact": 11,
+        "exact_rate": 0.55
+      },
+      "flat_prompt": {
+        "exact": 13,
+        "exact_rate": 0.65
+      }
+    },
+    {
+      "stage": "4short",
+      "pairs_per_row": 4,
+      "rows": 20,
+      "baseline": {
+        "exact": 11,
+        "exact_rate": 0.55
+      },
+      "flat_prompt": {
+        "exact": 17,
+        "exact_rate": 0.85
+      }
+    }
+  ],
+  "flat_format_compliance_recorded": false,
+  "status": "capacity_evidence_not_product_claim",
+  "decision": {
+    "default": "keep Atom Zero 49.2M 0.8.0 as the low-cost default",
+    "larger_backend": "evaluate separately as a research backend",
+    "weights_replaced": false,
+    "requires_full_integration_and_gate": true
+  },
+  "notes": [
+    "Exact match is counted after tolerant parsing, so correctly copied content inside a pairs list or code fence still counts.",
+    "The probe is not a controlled scaling experiment; pretraining data, compute, tokenizer and tuning differ from the 49.2M model.",
+    "Twenty rows per stage give wide uncertainty and directional, not precise, differences.",
+    "No prompts, keys, values or generated text are stored in this file."
+  ],
+  "content_free": true,
+  "weights_changed": false
+}
