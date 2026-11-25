@@ -443,7 +443,9 @@ hard-label distillation rows are very close to the original training rows.
 That means this pipeline tests whether teacher-generated **surface variation**
 helps; it does not add new content. A null result would not prove distillation
 is useless, but it would rule out this hard-label variant. New-task generation
-or soft-target/sequence distillation would be a different experiment.
+or soft-target/sequence distillation would be a different experiment. The
+new-task variant has its own builder and data contract in
+[`DISTILL_NEW_TASKS.md`](DISTILL_NEW_TASKS.md).
 
 
 ## Measured 300-row teacher run
