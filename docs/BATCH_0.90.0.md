@@ -38,6 +38,20 @@ automation exists in case the launcher process dies.
 
 
 
+## 24L result (two seeds, Vast.ai RTX 3090)
+
+```text
+seed     2short exact   3short exact   4short exact   retention
+101      90.5%          84.5%          67.5%          1.647 (fail)
+102      94.0%          82.5%          71.5%          1.681 (fail)
+mean     92.3%          83.5%          69.5%          1.664 (fail)
+```
+
+Against the 8L reference (89.5 / 77.0 / 65.5, retention 1.089), depth adds
+about **+4 points** on 4short and makes content retention roughly **65% worse**.
+Depth is not the lever. The run cost about **$0.42** for 2.2 hours and the
+instance was destroyed.
+
 ## Preliminary 24L result (seed 101)
 
 ```text

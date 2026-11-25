@@ -1,0 +1,82 @@
+{
+  "schema": "atomzero.vastai_24l_summary.v1",
+  "date": "2026-11-25",
+  "content_free": true,
+  "params": 176795136,
+  "layers": 24,
+  "training": {
+    "steps": 4000,
+    "batch": 16,
+    "lr": 5e-05,
+    "content_weight": 2,
+    "seeds": [
+      101,
+      102
+    ]
+  },
+  "seeds": {
+    "s101": {
+      "stages": {
+        "2short": {
+          "examples": 200,
+          "exact": 0.905,
+          "key_copy": 0.925,
+          "loss": 0.055874
+        },
+        "3short": {
+          "examples": 200,
+          "exact": 0.845,
+          "key_copy": 0.87,
+          "loss": 0.05645
+        },
+        "4short": {
+          "examples": 200,
+          "exact": 0.675,
+          "key_copy": 0.75,
+          "loss": 0.075398
+        }
+      },
+      "retention": {
+        "ratio": 1.647,
+        "ok": false,
+        "rows": 90
+      },
+      "train_loss": 0.17660374715924262
+    },
+    "s102": {
+      "stages": {
+        "2short": {
+          "examples": 200,
+          "exact": 0.94,
+          "key_copy": 0.94,
+          "loss": 0.054003
+        },
+        "3short": {
+          "examples": 200,
+          "exact": 0.825,
+          "key_copy": 0.88,
+          "loss": 0.062327
+        },
+        "4short": {
+          "examples": 200,
+          "exact": 0.715,
+          "key_copy": 0.77,
+          "loss": 0.073006
+        }
+      },
+      "retention": {
+        "ratio": 1.6805,
+        "ok": false,
+        "rows": 90
+      },
+      "train_loss": 0.1737232282757759
+    }
+  },
+  "cost": {
+    "elapsed_hours": 2.2,
+    "dph": 0.19,
+    "estimated_usd": 0.42
+  },
+  "instance_destroyed": true,
+  "interpretation": "Depth adds about +4 points on 4-key copy over 8L but pushes content loss to 1.65-1.68x the 49M baseline. Not product-viable; data mix is the next lever."
+}

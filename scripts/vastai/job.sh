@@ -156,8 +156,9 @@ for name in names:
     train = out / f"{name}.json"
     if train.exists():
         t = json.loads(train.read_text(encoding="utf-8"))
-        run["train_loss"] = t.get("train_loss")
-        run["params"] = t.get("total_parameters", t.get("trainable_parameters"))
+        tr = t.get("train", t)
+        run["train_loss"] = tr.get("train_loss")
+        run["params"] = tr.get("total_parameters", tr.get("trainable_parameters"))
     summary["runs"][name] = run
 (out / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
 print(json.dumps(summary, indent=2))
