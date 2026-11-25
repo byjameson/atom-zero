@@ -1,5 +1,15 @@
 # Changelog
 
+## atomzero 0.80.0 - unreleased
+
+- Added **depth upcycling** (`research/upcycle_model.py`): the 6-layer 49.2M checkpoint expands to 8 layers / **63,389,184 params** with interpolated block copies and research-only metadata.
+- Full fine-tune of the 8L research base on the copy curriculum + verified teacher rows broke the 4-key wall on held-out data: **2short 89.5% exact / 91.5% key-copy, 3short 77.0% / 83.5%, 4short 65.5% / 74.0%** (200 rows each), versus 49M at 32/12/0 exact.
+- Added a **new-task teacher generator** (`research/build_distill_new_tasks.py`): 1000 requested tasks produced **656 verified rows** (246 four-key), 344 rejected, 28 duplicates.
+- Data-only control: training the 49M on those 656 new tasks moved 4short to **0% exact / 5% key-copy** and left 2-3 key performance flat. New data alone did not break the wall.
+- The gain is bounded: a 30-row out-of-distribution key-style set (`field_`, `k_` prefixes) scored **0/30**. The 63M model copies within the trained key grammar, not generally.
+- Product base remains `0.8.0`; the 63M checkpoint is a copy-specialized research artifact, not a promoted assistant.
+- VM: **1521 tests passed in 48.69s**; benchmark **20/20**.
+
 ## atomzero 0.70.0 - 2026-11-25
 
 - Added a **verified teacher distillation pipeline**: Qwen2.5-0.5B generates copy answers, a tolerant parser recovers the exact pairs, and only verified rows are canonicalized into 49M training data. A 300-prompt run accepted **153 rows** (json 66, kv 87, yaml 0; 4short 32) and rejected 147.

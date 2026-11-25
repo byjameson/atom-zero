@@ -60,3 +60,19 @@ tests two different doors:
 
 PyPI, GitHub, Hugging Face, ModelScope, dev.to, Medium, LinkedIn and X.
 New posts only; no edits of the 0.70.0 posts.
+
+## Final result
+
+The capacity experiment succeeded and the data-only control failed, which is
+the useful combination:
+
+- 8L upcycle + full fine-tune (63,389,184 params, 3000 steps on the host GPU):
+  **2short 89.5% exact / 91.5% key-copy, 3short 77.0% / 83.5%, 4short 65.5% /
+  74.0%** on 200 held-out rows per stage.
+- 49M trained on 656 new teacher tasks (246 four-key): **4short 0% / 5%**,
+  2-3 key flat. Data alone did not break the wall.
+- Out-of-distribution key styles (`field_`, `k_` prefixes): **0/30**. The gain
+  is inside the trained 3-6 lowercase alphanumeric key grammar.
+
+Product base stays `0.8.0`. The 63M checkpoint is a copy-specialized research
+artifact. Evidence: `research/results/upcycle_8l_capability_summary.json`.

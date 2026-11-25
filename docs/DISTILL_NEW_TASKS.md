@@ -193,3 +193,24 @@ teacher output and refusal of eval sources.
   an external corpus.
 - The output is training data. It is not a model result, a product claim or
   evidence that the 49M model has improved.
+
+## Measured 1000-task run
+
+The host GPU run with `--rows 1000 --batch-size 5 --max-new-tokens 512`
+produced:
+
+```text
+requested:      1000
+accepted:        656
+rejected:        344
+duplicates:       28
+invalid tasks:   174
+teacher calls:   201
+json 332, kv 324
+2-key 194, 3-key 216, 4-key 246
+```
+
+Training the 49M student on the 656 rows plus rehearsal left 2-3 key copy flat
+and moved 4short only to **0% exact / 5% key-copy** (20 rows). New content
+alone did not break the 4-key wall; the 63M depth-upcycle experiment did. See
+`docs/UPCYCLE.md`.

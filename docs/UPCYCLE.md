@@ -220,3 +220,23 @@ The tiny-model tests cover layer expansion, the copied layer mapping,
 interpolation, forward shape, research metadata flags, dry-run (no writes),
 refusing to overwrite the base, `--force`, report contents and the missing
 tokenizer error.
+
+## Measured full fine-tune
+
+The 8-layer checkpoint was fully fine-tuned on the copy curriculum (6000 rows)
+plus 153 verified teacher rows: 3000 steps, lr 5e-5, batch 4, content weight 2,
+seed 71, host GPU. Mixed loss moved `6.2225 -> 0.9934` and mixed exact match
+`0% -> 8.4%`.
+
+Held-out copy results, 200 rows per stage:
+
+| stage | exact | key-copy |
+|---|---:|---:|
+| 2short | 89.5% | 91.5% |
+| 3short | 77.0% | 83.5% |
+| 4short | 65.5% | 74.0% |
+
+The same 4short set scored 0% for the 49M distilled student. A 30-row
+out-of-distribution set with `field_`/`k_` prefixed keys scored **0/30**, so the
+result is bounded to the trained key grammar. This checkpoint is a research
+artifact, not a product base.

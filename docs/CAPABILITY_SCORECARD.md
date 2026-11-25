@@ -291,3 +291,13 @@ capacity effect, not an attention-locus effect. The matched follow-up is an
 MLP widening with the same added parameter budget, run through the same
 seeds and data. See [`docs/QKV_LORA.md`](QKV_LORA.md) for the adapter
 details and limitations.
+
+## Capacity evidence (0.80.0)
+
+Depth upcycling the 49M checkpoint to 8 layers (**63,389,184 params**) and
+fully fine-tuning on the copy curriculum broke the 4-key wall on held-out rows:
+**65.5% exact / 74.0% key-copy** on 200 four-key rows, versus 0% for the 49M
+student. A data-only control with 656 new teacher tasks did not move the 49M
+model (0% / 5%). The gain is bounded: `field_`/`k_` prefixed out-of-distribution
+keys score 0/30. This is counted as capacity evidence for the copy task, not as
+general transfer and not as a product-base promotion.
