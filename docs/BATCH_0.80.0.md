@@ -42,6 +42,20 @@ tests two different doors:
 - Full VM suite + benchmark.
 - Release only at the 0.80.0 boundary with verification.
 
+
+## Progress log
+
+- `feat/depth-upcycle` merged: `research/upcycle_model.py`, report utility and tests
+  (12 passed).
+- 8-layer research checkpoint built from the 49M base with interpolate mode:
+  **63,389,184 params**, mapping `[0,0,1,2,3,3,4,5]`, marked
+  `research_control: true`, `product_weights: false`. Untrained 4short copy is
+  0% with loss 6.90, as expected for a copied-depth base.
+- `data/multi_short_v1/train_all_plus_distill.jsonl` combines the three
+  curriculum stages (6000 rows) with the 153 verified teacher rows.
+- Full fine-tune of the 8L research base is running on the host GPU
+  (`fullft_upcycle8l_v1`, 3000 steps, lr 5e-5, content weight 2).
+
 ## Publication
 
 PyPI, GitHub, Hugging Face, ModelScope, dev.to, Medium, LinkedIn and X.

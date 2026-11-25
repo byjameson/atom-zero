@@ -1,0 +1,132 @@
+{
+  "schema": "atomzero.upcycle_report.v1",
+  "created": "2026-11-25T08:53:29",
+  "content_free": true,
+  "research_control": true,
+  "product_weights": false,
+  "weights_changed": true,
+  "trained": false,
+  "base": "C:/Users/biris/.cache/atomzero/atom-zero-49m",
+  "output": "checkpoints/upcycle/atom-zero-49m-8l",
+  "mode": "interpolate",
+  "seed": 23,
+  "layers": {
+    "source": 6,
+    "target": 8
+  },
+  "layer_mapping": [
+    0,
+    0,
+    1,
+    2,
+    3,
+    3,
+    4,
+    5
+  ],
+  "interpolated_blocks": [
+    {
+      "target": 1,
+      "source": 0,
+      "neighbor": 1,
+      "alpha": 0.5
+    },
+    {
+      "target": 5,
+      "source": 3,
+      "neighbor": 4,
+      "alpha": 0.5
+    }
+  ],
+  "parameters": {
+    "source": {
+      "layers": 6,
+      "vocab": 8192,
+      "dim": 768,
+      "heads": 12,
+      "ff": 3072,
+      "max_seq": 512,
+      "parameters": 49213440,
+      "non_block_parameters": 6686208,
+      "block_parameters": 7087872,
+      "weights_fp32_gb": 0.1969,
+      "state_dict_parameters": 55504896
+    },
+    "target": {
+      "layers": 8,
+      "vocab": 8192,
+      "dim": 768,
+      "heads": 12,
+      "ff": 3072,
+      "max_seq": 512,
+      "parameters": 63389184,
+      "non_block_parameters": 6686208,
+      "block_parameters": 7087872,
+      "weights_fp32_gb": 0.2536,
+      "state_dict_parameters": 69680640
+    },
+    "added": 14175744,
+    "added_percent": 28.8,
+    "target_over_source": 1.288
+  },
+  "estimates": {
+    "device": "RTX 3050 Laptop 6 GB (planning target)",
+    "assumptions": {
+      "optimizer": "AdamW full fine-tune",
+      "bytes_per_parameter": 16,
+      "batch_size": 4,
+      "seq": 128,
+      "chinchilla_tokens_per_parameter": 20,
+      "reference_tokens_per_second": 14628.6,
+      "reference_parameters": 49213440
+    },
+    "weights_fp32_gb": 0.254,
+    "optimizer_state_gb": 0.761,
+    "training_state_gb": 1.014,
+    "activation_lower_bound_gb": 0.129,
+    "estimated_training_gb_range": [
+      1.5,
+      2.6
+    ],
+    "fits_6gb": "likely",
+    "tokens_per_second_estimate": 11357,
+    "chinchilla_tokens": 1267783680,
+    "hours_for_chinchilla": 31.0,
+    "existing_replay_tokens": 214805319,
+    "hours_for_existing_replay": 5.3,
+    "reference_note": "Linear scaling from a measured 6-layer, 49.2M-parameter step time of about 0.14 s at batch 16 x seq 128 on an RTX 3050 6 GB. Actual throughput depends on optimizer, batch size, sequence length, gradient checkpointing, data loading and thermal state.",
+    "note": "Rough planning estimate. The lower activation bound omits allocator, attention and CUDA-context overhead; measure the actual fit before starting a long run. On 6 GB, reduce batch size or use gradient accumulation/checkpointing if CUDA runs out of memory."
+  },
+  "tokenizer": "C:/Users/biris/.cache/atomzero/atom-zero-49m/chat_en_bpe8k.json",
+  "notes": [
+    "This is a research base, not the product 0.8.0 checkpoint and not a capability claim.",
+    "No training was run. New layers are copied or interpolated from the base; copied depth alone does not add capability.",
+    "The checkpoint needs continued research pretraining or fine-tuning on cached data before it can be evaluated fairly.",
+    "Parameter counts exclude the tied LM head, which shares storage with tok.weight.",
+    "Memory, throughput and token figures are planning estimates for an RTX 3050 6 GB, not benchmarks.",
+    "Keep the product 0.8.0 checkpoint unchanged. Do not promote this checkpoint without the full capability, behavior and safety gate."
+  ],
+  "status": "completed",
+  "dry_run": false,
+  "checkpoint": {
+    "checkpoint": "checkpoints/upcycle/atom-zero-49m-8l",
+    "model_file": "checkpoints/upcycle/atom-zero-49m-8l/model.pt",
+    "config_file": "checkpoints/upcycle/atom-zero-49m-8l/config.json",
+    "metadata_file": "checkpoints/upcycle/atom-zero-49m-8l/upcycle.json",
+    "tokenizer": "chat_en_bpe8k.json"
+  },
+  "forward_check": {
+    "ok": true,
+    "input_shape": [
+      1,
+      8
+    ],
+    "logits_shape": [
+      1,
+      8,
+      8192
+    ],
+    "finite": true
+  },
+  "base_step": 40000
+}
