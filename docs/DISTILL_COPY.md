@@ -444,3 +444,20 @@ That means this pipeline tests whether teacher-generated **surface variation**
 helps; it does not add new content. A null result would not prove distillation
 is useless, but it would rule out this hard-label variant. New-task generation
 or soft-target/sequence distillation would be a different experiment.
+
+
+## Measured 300-row teacher run
+
+The builder was run with 300 attempted prompts on the host GPU:
+
+```text
+generated:      153
+teacher_valid:  153
+rejected:       147
+by_format:      json 66, kv 87, yaml 0
+by_stage:       2short 66, 3short 55, 4short 32
+```
+
+The teacher produced no valid YAML in this run. The accepted rows are
+canonicalized JSON/KV; the rejection rate is 49%, so the cycle must report
+teacher counts and never assume every prompt produced data.
