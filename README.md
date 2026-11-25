@@ -407,6 +407,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Documents: <https://github.com/byjameson/atom-zero/blob/main/docs/DOCUMENTS.md>
 - Tool plans: <https://github.com/byjameson/atom-zero/blob/main/docs/TOOL_PLANNING.md>
 - Copy tool: <https://github.com/byjameson/atom-zero/blob/main/docs/COPY_TOOL.md>
+- Content retention eval: <https://github.com/byjameson/atom-zero/blob/main/docs/RETENTION.md>
 - Adapters: <https://github.com/byjameson/atom-zero/blob/main/docs/ADAPTERS.md>
 - Answerability experiment: <https://github.com/byjameson/atom-zero/blob/main/docs/ANSWERABILITY.md>
 - Context budget: <https://github.com/byjameson/atom-zero/blob/main/docs/CONTEXT_BUDGET.md>
