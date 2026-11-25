@@ -423,3 +423,24 @@ automatic one.
 - The ledger proves what happened in the harness; it does not prove that the
   adapter is safe to ship or that the teacher model is appropriate for other
   tasks.
+
+
+## Measured 100-row smoke
+
+The builder was run on the host GPU with 100 attempted prompts:
+
+```text
+generated:      53
+teacher_valid:  53
+rejected:       47
+by_format:      json 23, kv 30, yaml 0
+by_stage:       2short 23, 3short 19, 4short 11
+```
+
+The JSON/KV answers were canonicalized. Because a verified teacher answer
+contains exactly the same key/value pairs as the source oracle answer, the
+hard-label distillation rows are very close to the original training rows.
+That means this pipeline tests whether teacher-generated **surface variation**
+helps; it does not add new content. A null result would not prove distillation
+is useless, but it would rule out this hard-label variant. New-task generation
+or soft-target/sequence distillation would be a different experiment.
