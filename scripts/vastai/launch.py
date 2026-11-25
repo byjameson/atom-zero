@@ -255,11 +255,17 @@ def main(argv: list[str] | None = None) -> int:
             f"LAYERS={args.layers} SEEDS='{args.seeds}' STEPS={args.steps} "
             f"BATCH={args.batch} "
         )
-        start_cmd = (
-            f"cd /workspace && {env_prefix}"
-            "nohup bash /workspace/atomzero/scripts/vastai/job.sh "
-            "</dev/null >/workspace/job.out 2>&1 & echo started"
+        # A plain nohup still leaks the SSH channel's extra fds, so the server
+        # waits for the training process. Start a fully detached session with
+        # close_fds=True instead; the command returns immediately.
+        detach = (
+            "python3 -c \"import subprocess; "
+            "f=open('/workspace/job.out','wb'); "
+            "subprocess.Popen(['bash','/workspace/atomzero/scripts/vastai/job.sh'], "
+            "stdin=subprocess.DEVNULL, stdout=f, stderr=subprocess.STDOUT, "
+            "start_new_session=True, close_fds=True); print('started')\""
         )
+        start_cmd = f"cd /workspace && {env_prefix}{detach}"
         remote(ssh, start_cmd, timeout=60)
 
         # Confirm the detached process really exists before trusting it.
