@@ -32,7 +32,7 @@
   (`docs/COPY_CURRICULUM_CYCLE.md`, `docs/RANDOM_KEY_COPY_CYCLE.md`).
   Accumulating for the **1.0.0** boundary; not pushed yet.
 - Working tree after the release-doc commits: clean
-- Atom Zero tests: **1463 passed** (host) / **1463 passed** (VM, 8 vCPU)
+- Atom Zero tests: **1493 passed** (host) / **1493 passed** (VM, 8 vCPU)
 - AISC strict audit: **26 specs, 24 PASS, 0 errors**; `AtomZeroAnswerability`
   and `AtomZeroAnswerabilityGenerated` remain **FAIL** with the measured
   Brier 0.233 / ECE 0.064 and refusal-policy misses. The ECE target is met;
