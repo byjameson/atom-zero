@@ -1,0 +1,981 @@
+{
+  "schema": "atomzero.qkv_capacity_ablation.v1",
+  "created": "2026-11-24T19:43:47",
+  "content_free": true,
+  "dry_run": false,
+  "status": "completed",
+  "base": "checkpoints/base_0.8.0",
+  "train": "data/multi_short_v1/stage_3short/train.jsonl",
+  "eval": "data/multi_short_v1/stage_3short/eval.jsonl",
+  "eval_rows": 200,
+  "eval_rows_used": 30,
+  "eval_subset": {
+    "applied": true,
+    "selection": "sha256_sample",
+    "seed": 0,
+    "rows": 30,
+    "total_rows": 200,
+    "sha256": "656c446d48c33dc8542330ae4261cf7a726a3766121064f3a3eeefd592e18df3"
+  },
+  "settings": {
+    "arms": [
+      "qkv4",
+      "mlp"
+    ],
+    "seeds": [
+      23,
+      29,
+      37
+    ],
+    "steps": 2000,
+    "batch_size": 4,
+    "lr": 0.0003,
+    "content_weight": 2.0,
+    "key_weight": 3.0,
+    "value_weight": 2.0,
+    "rank": 8,
+    "alpha": 8,
+    "rank_attn": 4,
+    "alpha_attn": 8,
+    "qkv_rank": 4,
+    "qkv_alpha": 8,
+    "max_eval_rows": 30
+  },
+  "arms": {
+    "qkv4": {
+      "geometry": {
+        "rank_mlp": 8,
+        "alpha_mlp": 8,
+        "rank_attn": 4,
+        "alpha_attn": 8,
+        "rank_qkv": 4,
+        "alpha_qkv": 8
+      },
+      "status": "completed",
+      "completed": 3,
+      "failed": 0,
+      "aggregate": {
+        "exact": {
+          "count": 3,
+          "mean": 0.033333,
+          "std": 0.0,
+          "min": 0.033333,
+          "max": 0.033333,
+          "ci95": [
+            0.033333,
+            0.033333
+          ]
+        },
+        "key_copy": {
+          "count": 3,
+          "mean": 0.088889,
+          "std": 0.019245,
+          "min": 0.066667,
+          "max": 0.1,
+          "ci95": [
+            0.041078,
+            0.1367
+          ]
+        },
+        "key_recall": {
+          "count": 3,
+          "mean": 0.2,
+          "std": 0.011111,
+          "min": 0.188889,
+          "max": 0.211111,
+          "ci95": [
+            0.172396,
+            0.227604
+          ]
+        },
+        "loss": {
+          "count": 3,
+          "mean": 0.753822,
+          "std": 0.009312,
+          "min": 0.743154,
+          "max": 0.760318,
+          "ci95": [
+            0.730689,
+            0.776955
+          ]
+        },
+        "content_loss": {
+          "count": 3,
+          "mean": 0.75607,
+          "std": 0.013121,
+          "min": 0.742627,
+          "max": 0.768843,
+          "ci95": [
+            0.723473,
+            0.788667
+          ]
+        },
+        "train_loss": {
+          "count": 3,
+          "mean": 0.749236,
+          "std": 0.011882,
+          "min": 0.742009,
+          "max": 0.762949,
+          "ci95": [
+            0.719718,
+            0.778753
+          ]
+        },
+        "lora_parameters": {
+          "count": 3,
+          "mean": 479232.0,
+          "std": 0.0,
+          "min": 479232.0,
+          "max": 479232.0,
+          "ci95": [
+            479232.0,
+            479232.0
+          ]
+        }
+      },
+      "runs": [
+        {
+          "arm": "qkv4",
+          "seed": 23,
+          "status": "completed",
+          "returncode": 0,
+          "elapsed_seconds": 612.312,
+          "adapter": "checkpoints/qkv_capacity_ablation/qkv4_s23/adapter",
+          "exact": 0.03333333333333333,
+          "key_copy": 0.1,
+          "key_recall": 0.1888888888888889,
+          "loss": 0.760317531078631,
+          "content_loss": 0.7688431276436938,
+          "eval_examples": 30,
+          "train_loss": 0.7629485994577407,
+          "lora_parameters": 479232,
+          "trainer": {
+            "status": "completed",
+            "returncode": 0,
+            "elapsed_seconds": 346.138,
+            "adapter_exists": true,
+            "command": [
+              "/home/byjameson/atom-zero/.venv/bin/python",
+              "research/train_adapter_candidate.py",
+              "--base",
+              "/home/byjameson/atom-zero/checkpoints/base_0.8.0",
+              "--train",
+              "/home/byjameson/atom-zero/data/multi_short_v1/stage_3short/train.jsonl",
+              "--eval",
+              "/tmp/atomzero_qkv_ablation_tylnb7rb/eval_subset.jsonl",
+              "--out",
+              "/home/byjameson/atom-zero/checkpoints/qkv_capacity_ablation/qkv4_s23/adapter",
+              "--steps",
+              "2000",
+              "--batch-size",
+              "4",
+              "--lr",
+              "0.0003",
+              "--content-weight",
+              "2.0",
+              "--key-weight",
+              "3.0",
+              "--value-weight",
+              "2.0",
+              "--rank",
+              "8",
+              "--alpha",
+              "8",
+              "--rank-attn",
+              "4",
+              "--alpha-attn",
+              "8",
+              "--qkv-rank",
+              "4",
+              "--qkv-alpha",
+              "8",
+              "--seed",
+              "23",
+              "--result",
+              "/home/byjameson/atom-zero/checkpoints/qkv_capacity_ablation/qkv4_s23/trainer_result.json",
+              "--comparison",
+              "/tmp/atomzero_qkv_ablation_tylnb7rb/qkv4_s23_comparison.json"
+            ],
+            "result": {
+              "train_loss": 0.7629485994577407,
+              "train_steps": 2000,
+              "train_examples": 2000,
+              "optimizer_steps": 500,
+              "rows_seen": 2000,
+              "batch_size": 4,
+              "effective_lr": 0.0003,
+              "content_weight": 2.0,
+              "key_weight": 3.0,
+              "value_weight": 2.0,
+              "lora_parameters": 479232,
+              "rank_mlp": 8,
+              "alpha_mlp": 8,
+              "rank_attn": 4,
+              "alpha_attn": 8,
+              "rank_qkv": 4,
+              "alpha_qkv": 8
+            }
+          },
+          "evaluator": {
+            "status": "completed",
+            "returncode": 0,
+            "elapsed_seconds": 266.173,
+            "command": [
+              "/home/byjameson/atom-zero/.venv/bin/python",
+              "research/compare_adapters.py",
+              "--base",
+              "/home/byjameson/atom-zero/checkpoints/base_0.8.0",
+              "--data",
+              "/tmp/atomzero_qkv_ablation_tylnb7rb/eval_subset.jsonl",
+              "--adapters",
+              "/home/byjameson/atom-zero/checkpoints/qkv_capacity_ablation/qkv4_s23/adapter",
+              "--key-copy",
+              "--exact-match",
+              "--out",
+              "/tmp/atomzero_qkv_ablation_tylnb7rb/qkv4_s23_eval.json"
+            ],
+            "metrics": {
+              "exact": 0.03333333333333333,
+              "key_copy": 0.1,
+              "key_recall": 0.1888888888888889,
+              "loss": 0.760317531078631,
+              "content_loss": 0.7688431276436938,
+              "eval_examples": 30
+            }
+          }
+        },
+        {
+          "arm": "qkv4",
+          "seed": 29,
+          "status": "completed",
+          "returncode": 0,
+          "elapsed_seconds": 1256.529,
+          "adapter": "checkpoints/qkv_capacity_ablation/qkv4_s29/adapter",
+          "exact": 0.03333333333333333,
+          "key_copy": 0.06666666666666667,
+          "key_recall": 0.2,
+          "loss": 0.7431536379464979,
+          "content_loss": 0.7426266228102988,
+          "eval_examples": 30,
+          "train_loss": 0.7427488878369332,
+          "lora_parameters": 479232,
+          "trainer": {
+            "status": "completed",
+            "returncode": 0,
+            "elapsed_seconds": 1118.145,
+            "adapter_exists": true,
+            "command": [
+              "/home/byjameson/atom-zero/.venv/bin/python",
+              "research/train_adapter_candidate.py",
+              "--base",
+              "/home/byjameson/atom-zero/checkpoints/base_0.8.0",
+              "--train",
+              "/home/byjameson/atom-zero/data/multi_short_v1/stage_3short/train.jsonl",
+              "--eval",
+              "/tmp/atomzero_qkv_ablation_tylnb7rb/eval_subset.jsonl",
+              "--out",
+              "/home/byjameson/atom-zero/checkpoints/qkv_capacity_ablation/qkv4_s29/adapter",
+              "--steps",
+              "2000",
+              "--batch-size",
+              "4",
+              "--lr",
+              "0.0003",
+              "--content-weight",
+              "2.0",
+              "--key-weight",
+              "3.0",
+              "--value-weight",
+              "2.0",
+              "--rank",
+              "8",
+              "--alpha",
+              "8",
+              "--rank-attn",
+              "4",
+              "--alpha-attn",
+              "8",
+              "--qkv-rank",
+              "4",
+              "--qkv-alpha",
+              "8",
+              "--seed",
+              "29",
+              "--result",
+              "/home/byjameson/atom-zero/checkpoints/qkv_capacity_ablation/qkv4_s29/trainer_result.json",
+              "--comparison",
+              "/tmp/atomzero_qkv_ablation_tylnb7rb/qkv4_s29_comparison.json"
+            ],
+            "result": {
+              "train_loss": 0.7427488878369332,
+              "train_steps": 2000,
+              "train_examples": 2000,
+              "optimizer_steps": 500,
+              "rows_seen": 2000,
+              "batch_size": 4,
+              "effective_lr": 0.0003,
+              "content_weight": 2.0,
+              "key_weight": 3.0,
+              "value_weight": 2.0,
+              "lora_parameters": 479232,
+              "rank_mlp": 8,
+              "alpha_mlp": 8,
+              "rank_attn": 4,
+              "alpha_attn": 8,
+              "rank_qkv": 4,
+              "alpha_qkv": 8
+            }
+          },
+          "evaluator": {
+            "status": "completed",
+            "returncode": 0,
+            "elapsed_seconds": 138.382,
+            "command": [
+              "/home/byjameson/atom-zero/.venv/bin/python",
+              "research/compare_adapters.py",
+              "--base",
+              "/home/byjameson/atom-zero/checkpoints/base_0.8.0",
+              "--data",
+              "/tmp/atomzero_qkv_ablation_tylnb7rb/eval_subset.jsonl",
+              "--adapters",
+              "/home/byjameson/atom-zero/checkpoints/qkv_capacity_ablation/qkv4_s29/adapter",
+              "--key-copy",
+              "--exact-match",
+              "--out",
+              "/tmp/atomzero_qkv_ablation_tylnb7rb/qkv4_s29_eval.json"
+            ],
+            "metrics": {
+              "exact": 0.03333333333333333,
+              "key_copy": 0.06666666666666667,
+              "key_recall": 0.2,
+              "loss": 0.7431536379464979,
+              "content_loss": 0.7426266228102988,
+              "eval_examples": 30
+            }
+          }
+        },
+        {
+          "arm": "qkv4",
+          "seed": 37,
+          "status": "completed",
+          "returncode": 0,
+          "elapsed_seconds": 556.598,
+          "adapter": "checkpoints/qkv_capacity_ablation/qkv4_s37/adapter",
+          "exact": 0.03333333333333333,
+          "key_copy": 0.1,
+          "key_recall": 0.21111111111111114,
+          "loss": 0.7579942489414703,
+          "content_loss": 0.756740073971974,
+          "eval_examples": 30,
+          "train_loss": 0.7420092791318893,
+          "lora_parameters": 479232,
+          "trainer": {
+            "status": "completed",
+            "returncode": 0,
+            "elapsed_seconds": 418.454,
+            "adapter_exists": true,
+            "command": [
+              "/home/byjameson/atom-zero/.venv/bin/python",
+              "research/train_adapter_candidate.py",
+              "--base",
+              "/home/byjameson/atom-zero/checkpoints/base_0.8.0",
+              "--train",
+              "/home/byjameson/atom-zero/data/multi_short_v1/stage_3short/train.jsonl",
+              "--eval",
+              "/tmp/atomzero_qkv_ablation_tylnb7rb/eval_subset.jsonl",
+              "--out",
+              "/home/byjameson/atom-zero/checkpoints/qkv_capacity_ablation/qkv4_s37/adapter",
+              "--steps",
+              "2000",
+              "--batch-size",
+              "4",
+              "--lr",
+              "0.0003",
+              "--content-weight",
+              "2.0",
+              "--key-weight",
+              "3.0",
+              "--value-weight",
+              "2.0",
+              "--rank",
+              "8",
+              "--alpha",
+              "8",
+              "--rank-attn",
+              "4",
+              "--alpha-attn",
+              "8",
+              "--qkv-rank",
+              "4",
+              "--qkv-alpha",
+              "8",
+              "--seed",
+              "37",
+              "--result",
+              "/home/byjameson/atom-zero/checkpoints/qkv_capacity_ablation/qkv4_s37/trainer_result.json",
+              "--comparison",
+              "/tmp/atomzero_qkv_ablation_tylnb7rb/qkv4_s37_comparison.json"
+            ],
+            "result": {
+              "train_loss": 0.7420092791318893,
+              "train_steps": 2000,
+              "train_examples": 2000,
+              "optimizer_steps": 500,
+              "rows_seen": 2000,
+              "batch_size": 4,
+              "effective_lr": 0.0003,
+              "content_weight": 2.0,
+              "key_weight": 3.0,
+              "value_weight": 2.0,
+              "lora_parameters": 479232,
+              "rank_mlp": 8,
+              "alpha_mlp": 8,
+              "rank_attn": 4,
+              "alpha_attn": 8,
+              "rank_qkv": 4,
+              "alpha_qkv": 8
+            }
+          },
+          "evaluator": {
+            "status": "completed",
+            "returncode": 0,
+            "elapsed_seconds": 138.143,
+            "command": [
+              "/home/byjameson/atom-zero/.venv/bin/python",
+              "research/compare_adapters.py",
+              "--base",
+              "/home/byjameson/atom-zero/checkpoints/base_0.8.0",
+              "--data",
+              "/tmp/atomzero_qkv_ablation_tylnb7rb/eval_subset.jsonl",
+              "--adapters",
+              "/home/byjameson/atom-zero/checkpoints/qkv_capacity_ablation/qkv4_s37/adapter",
+              "--key-copy",
+              "--exact-match",
+              "--out",
+              "/tmp/atomzero_qkv_ablation_tylnb7rb/qkv4_s37_eval.json"
+            ],
+            "metrics": {
+              "exact": 0.03333333333333333,
+              "key_copy": 0.1,
+              "key_recall": 0.21111111111111114,
+              "loss": 0.7579942489414703,
+              "content_loss": 0.756740073971974,
+              "eval_examples": 30
+            }
+          }
+        }
+      ]
+    },
+    "mlp": {
+      "geometry": {
+        "rank_mlp": 8,
+        "alpha_mlp": 8,
+        "rank_attn": 4,
+        "alpha_attn": 8,
+        "rank_qkv": 0,
+        "alpha_qkv": 0
+      },
+      "status": "completed",
+      "completed": 3,
+      "failed": 0,
+      "aggregate": {
+        "exact": {
+          "count": 3,
+          "mean": 0.033333,
+          "std": 0.0,
+          "min": 0.033333,
+          "max": 0.033333,
+          "ci95": [
+            0.033333,
+            0.033333
+          ]
+        },
+        "key_copy": {
+          "count": 3,
+          "mean": 0.055556,
+          "std": 0.019245,
+          "min": 0.033333,
+          "max": 0.066667,
+          "ci95": [
+            0.007744,
+            0.103367
+          ]
+        },
+        "key_recall": {
+          "count": 3,
+          "mean": 0.148148,
+          "std": 0.042066,
+          "min": 0.1,
+          "max": 0.177778,
+          "ci95": [
+            0.043642,
+            0.252654
+          ]
+        },
+        "loss": {
+          "count": 3,
+          "mean": 0.87544,
+          "std": 0.011446,
+          "min": 0.862905,
+          "max": 0.885337,
+          "ci95": [
+            0.847003,
+            0.903877
+          ]
+        },
+        "content_loss": {
+          "count": 3,
+          "mean": 0.887104,
+          "std": 0.011463,
+          "min": 0.875096,
+          "max": 0.897932,
+          "ci95": [
+            0.858625,
+            0.915583
+          ]
+        },
+        "train_loss": {
+          "count": 3,
+          "mean": 0.860885,
+          "std": 0.002432,
+          "min": 0.858521,
+          "max": 0.863381,
+          "ci95": [
+            0.854842,
+            0.866928
+          ]
+        },
+        "lora_parameters": {
+          "count": 3,
+          "mean": 405504.0,
+          "std": 0.0,
+          "min": 405504.0,
+          "max": 405504.0,
+          "ci95": [
+            405504.0,
+            405504.0
+          ]
+        }
+      },
+      "runs": [
+        {
+          "arm": "mlp",
+          "seed": 23,
+          "status": "completed",
+          "returncode": 0,
+          "elapsed_seconds": 465.918,
+          "adapter": "checkpoints/qkv_capacity_ablation/mlp_s23/adapter",
+          "exact": 0.03333333333333333,
+          "key_copy": 0.06666666666666667,
+          "key_recall": 0.17777777777777776,
+          "loss": 0.8629051671348434,
+          "content_loss": 0.8750960135018585,
+          "eval_examples": 30,
+          "train_loss": 0.8607536286115647,
+          "lora_parameters": 405504,
+          "trainer": {
+            "status": "completed",
+            "returncode": 0,
+            "elapsed_seconds": 346.862,
+            "adapter_exists": true,
+            "command": [
+              "/home/byjameson/atom-zero/.venv/bin/python",
+              "research/train_adapter_candidate.py",
+              "--base",
+              "/home/byjameson/atom-zero/checkpoints/base_0.8.0",
+              "--train",
+              "/home/byjameson/atom-zero/data/multi_short_v1/stage_3short/train.jsonl",
+              "--eval",
+              "/tmp/atomzero_qkv_ablation_tylnb7rb/eval_subset.jsonl",
+              "--out",
+              "/home/byjameson/atom-zero/checkpoints/qkv_capacity_ablation/mlp_s23/adapter",
+              "--steps",
+              "2000",
+              "--batch-size",
+              "4",
+              "--lr",
+              "0.0003",
+              "--content-weight",
+              "2.0",
+              "--key-weight",
+              "3.0",
+              "--value-weight",
+              "2.0",
+              "--rank",
+              "8",
+              "--alpha",
+              "8",
+              "--rank-attn",
+              "4",
+              "--alpha-attn",
+              "8",
+              "--qkv-rank",
+              "0",
+              "--qkv-alpha",
+              "0",
+              "--seed",
+              "23",
+              "--result",
+              "/home/byjameson/atom-zero/checkpoints/qkv_capacity_ablation/mlp_s23/trainer_result.json",
+              "--comparison",
+              "/tmp/atomzero_qkv_ablation_tylnb7rb/mlp_s23_comparison.json"
+            ],
+            "result": {
+              "train_loss": 0.8607536286115647,
+              "train_steps": 2000,
+              "train_examples": 2000,
+              "optimizer_steps": 500,
+              "rows_seen": 2000,
+              "batch_size": 4,
+              "effective_lr": 0.0003,
+              "content_weight": 2.0,
+              "key_weight": 3.0,
+              "value_weight": 2.0,
+              "lora_parameters": 405504,
+              "rank_mlp": 8,
+              "alpha_mlp": 8,
+              "rank_attn": 4,
+              "alpha_attn": 8,
+              "rank_qkv": 0,
+              "alpha_qkv": 0
+            }
+          },
+          "evaluator": {
+            "status": "completed",
+            "returncode": 0,
+            "elapsed_seconds": 119.054,
+            "command": [
+              "/home/byjameson/atom-zero/.venv/bin/python",
+              "research/compare_adapters.py",
+              "--base",
+              "/home/byjameson/atom-zero/checkpoints/base_0.8.0",
+              "--data",
+              "/tmp/atomzero_qkv_ablation_tylnb7rb/eval_subset.jsonl",
+              "--adapters",
+              "/home/byjameson/atom-zero/checkpoints/qkv_capacity_ablation/mlp_s23/adapter",
+              "--key-copy",
+              "--exact-match",
+              "--out",
+              "/tmp/atomzero_qkv_ablation_tylnb7rb/mlp_s23_eval.json"
+            ],
+            "metrics": {
+              "exact": 0.03333333333333333,
+              "key_copy": 0.06666666666666667,
+              "key_recall": 0.17777777777777776,
+              "loss": 0.8629051671348434,
+              "content_loss": 0.8750960135018585,
+              "eval_examples": 30
+            }
+          }
+        },
+        {
+          "arm": "mlp",
+          "seed": 29,
+          "status": "completed",
+          "returncode": 0,
+          "elapsed_seconds": 429.438,
+          "adapter": "checkpoints/qkv_capacity_ablation/mlp_s29/adapter",
+          "exact": 0.03333333333333333,
+          "key_copy": 0.03333333333333333,
+          "key_recall": 0.09999999999999999,
+          "loss": 0.8853374921497356,
+          "content_loss": 0.897931658936507,
+          "eval_examples": 30,
+          "train_loss": 0.8585210472345353,
+          "lora_parameters": 405504,
+          "trainer": {
+            "status": "completed",
+            "returncode": 0,
+            "elapsed_seconds": 315.462,
+            "adapter_exists": true,
+            "command": [
+              "/home/byjameson/atom-zero/.venv/bin/python",
+              "research/train_adapter_candidate.py",
+              "--base",
+              "/home/byjameson/atom-zero/checkpoints/base_0.8.0",
+              "--train",
+              "/home/byjameson/atom-zero/data/multi_short_v1/stage_3short/train.jsonl",
+              "--eval",
+              "/tmp/atomzero_qkv_ablation_tylnb7rb/eval_subset.jsonl",
+              "--out",
+              "/home/byjameson/atom-zero/checkpoints/qkv_capacity_ablation/mlp_s29/adapter",
+              "--steps",
+              "2000",
+              "--batch-size",
+              "4",
+              "--lr",
+              "0.0003",
+              "--content-weight",
+              "2.0",
+              "--key-weight",
+              "3.0",
+              "--value-weight",
+              "2.0",
+              "--rank",
+              "8",
+              "--alpha",
+              "8",
+              "--rank-attn",
+              "4",
+              "--alpha-attn",
+              "8",
+              "--qkv-rank",
+              "0",
+              "--qkv-alpha",
+              "0",
+              "--seed",
+              "29",
+              "--result",
+              "/home/byjameson/atom-zero/checkpoints/qkv_capacity_ablation/mlp_s29/trainer_result.json",
+              "--comparison",
+              "/tmp/atomzero_qkv_ablation_tylnb7rb/mlp_s29_comparison.json"
+            ],
+            "result": {
+              "train_loss": 0.8585210472345353,
+              "train_steps": 2000,
+              "train_examples": 2000,
+              "optimizer_steps": 500,
+              "rows_seen": 2000,
+              "batch_size": 4,
+              "effective_lr": 0.0003,
+              "content_weight": 2.0,
+              "key_weight": 3.0,
+              "value_weight": 2.0,
+              "lora_parameters": 405504,
+              "rank_mlp": 8,
+              "alpha_mlp": 8,
+              "rank_attn": 4,
+              "alpha_attn": 8,
+              "rank_qkv": 0,
+              "alpha_qkv": 0
+            }
+          },
+          "evaluator": {
+            "status": "completed",
+            "returncode": 0,
+            "elapsed_seconds": 113.975,
+            "command": [
+              "/home/byjameson/atom-zero/.venv/bin/python",
+              "research/compare_adapters.py",
+              "--base",
+              "/home/byjameson/atom-zero/checkpoints/base_0.8.0",
+              "--data",
+              "/tmp/atomzero_qkv_ablation_tylnb7rb/eval_subset.jsonl",
+              "--adapters",
+              "/home/byjameson/atom-zero/checkpoints/qkv_capacity_ablation/mlp_s29/adapter",
+              "--key-copy",
+              "--exact-match",
+              "--out",
+              "/tmp/atomzero_qkv_ablation_tylnb7rb/mlp_s29_eval.json"
+            ],
+            "metrics": {
+              "exact": 0.03333333333333333,
+              "key_copy": 0.03333333333333333,
+              "key_recall": 0.09999999999999999,
+              "loss": 0.8853374921497356,
+              "content_loss": 0.897931658936507,
+              "eval_examples": 30
+            }
+          }
+        },
+        {
+          "arm": "mlp",
+          "seed": 37,
+          "status": "completed",
+          "returncode": 0,
+          "elapsed_seconds": 650.597,
+          "adapter": "checkpoints/qkv_capacity_ablation/mlp_s37/adapter",
+          "exact": 0.03333333333333333,
+          "key_copy": 0.06666666666666667,
+          "key_recall": 0.16666666666666666,
+          "loss": 0.8780778011513297,
+          "content_loss": 0.8882841496757863,
+          "eval_examples": 30,
+          "train_loss": 0.8633807003498077,
+          "lora_parameters": 405504,
+          "trainer": {
+            "status": "completed",
+            "returncode": 0,
+            "elapsed_seconds": 368.956,
+            "adapter_exists": true,
+            "command": [
+              "/home/byjameson/atom-zero/.venv/bin/python",
+              "research/train_adapter_candidate.py",
+              "--base",
+              "/home/byjameson/atom-zero/checkpoints/base_0.8.0",
+              "--train",
+              "/home/byjameson/atom-zero/data/multi_short_v1/stage_3short/train.jsonl",
+              "--eval",
+              "/tmp/atomzero_qkv_ablation_tylnb7rb/eval_subset.jsonl",
+              "--out",
+              "/home/byjameson/atom-zero/checkpoints/qkv_capacity_ablation/mlp_s37/adapter",
+              "--steps",
+              "2000",
+              "--batch-size",
+              "4",
+              "--lr",
+              "0.0003",
+              "--content-weight",
+              "2.0",
+              "--key-weight",
+              "3.0",
+              "--value-weight",
+              "2.0",
+              "--rank",
+              "8",
+              "--alpha",
+              "8",
+              "--rank-attn",
+              "4",
+              "--alpha-attn",
+              "8",
+              "--qkv-rank",
+              "0",
+              "--qkv-alpha",
+              "0",
+              "--seed",
+              "37",
+              "--result",
+              "/home/byjameson/atom-zero/checkpoints/qkv_capacity_ablation/mlp_s37/trainer_result.json",
+              "--comparison",
+              "/tmp/atomzero_qkv_ablation_tylnb7rb/mlp_s37_comparison.json"
+            ],
+            "result": {
+              "train_loss": 0.8633807003498077,
+              "train_steps": 2000,
+              "train_examples": 2000,
+              "optimizer_steps": 500,
+              "rows_seen": 2000,
+              "batch_size": 4,
+              "effective_lr": 0.0003,
+              "content_weight": 2.0,
+              "key_weight": 3.0,
+              "value_weight": 2.0,
+              "lora_parameters": 405504,
+              "rank_mlp": 8,
+              "alpha_mlp": 8,
+              "rank_attn": 4,
+              "alpha_attn": 8,
+              "rank_qkv": 0,
+              "alpha_qkv": 0
+            }
+          },
+          "evaluator": {
+            "status": "completed",
+            "returncode": 0,
+            "elapsed_seconds": 281.639,
+            "command": [
+              "/home/byjameson/atom-zero/.venv/bin/python",
+              "research/compare_adapters.py",
+              "--base",
+              "/home/byjameson/atom-zero/checkpoints/base_0.8.0",
+              "--data",
+              "/tmp/atomzero_qkv_ablation_tylnb7rb/eval_subset.jsonl",
+              "--adapters",
+              "/home/byjameson/atom-zero/checkpoints/qkv_capacity_ablation/mlp_s37/adapter",
+              "--key-copy",
+              "--exact-match",
+              "--out",
+              "/tmp/atomzero_qkv_ablation_tylnb7rb/mlp_s37_eval.json"
+            ],
+            "metrics": {
+              "exact": 0.03333333333333333,
+              "key_copy": 0.06666666666666667,
+              "key_recall": 0.16666666666666666,
+              "loss": 0.8780778011513297,
+              "content_loss": 0.8882841496757863,
+              "eval_examples": 30
+            }
+          }
+        }
+      ]
+    }
+  },
+  "verdict": {
+    "claim": "inconclusive",
+    "qkv_improves": null,
+    "confidence": "95% t-interval over seeds",
+    "min_seeds_for_claim": 2,
+    "metrics": {
+      "exact": {
+        "qkv4": {
+          "count": 3,
+          "mean": 0.033333,
+          "ci95": [
+            0.033333,
+            0.033333
+          ]
+        },
+        "mlp": {
+          "count": 3,
+          "mean": 0.033333,
+          "ci95": [
+            0.033333,
+            0.033333
+          ]
+        },
+        "delta": 0.0,
+        "interval_overlap": true,
+        "winner": null,
+        "status": "ok"
+      },
+      "key_copy": {
+        "qkv4": {
+          "count": 3,
+          "mean": 0.088889,
+          "ci95": [
+            0.041078,
+            0.1367
+          ]
+        },
+        "mlp": {
+          "count": 3,
+          "mean": 0.055556,
+          "ci95": [
+            0.007744,
+            0.103367
+          ]
+        },
+        "delta": 0.033333,
+        "interval_overlap": true,
+        "winner": null,
+        "status": "ok"
+      }
+    },
+    "note": "No claim is made when the 95% intervals overlap. With three seeds only large effects are detectable; overlap means the experiment did not establish a difference, not that there is none."
+  },
+  "fair_comparison": {
+    "same_seed_per_pair": true,
+    "same_train_data": true,
+    "same_eval_data": true,
+    "same_steps": 2000,
+    "same_batch_size": 4,
+    "same_lr": 0.0003,
+    "same_loss_weights": {
+      "content_weight": 2.0,
+      "key_weight": 3.0,
+      "value_weight": 2.0
+    },
+    "same_mlp_geometry": {
+      "rank": 8,
+      "alpha": 8
+    },
+    "same_attn_geometry": {
+      "rank": 4,
+      "alpha": 8
+    },
+    "only_planned_difference": "fused QKV LoRA rank/alpha",
+    "qkv_adds_trainable_parameters": true,
+    "trainable_parameters": {
+      "qkv4": 479232.0,
+      "mlp": 405504.0
+    },
+    "note": "Both arms use the same seeds, data order, steps, batch size, learning rate, loss weights, MLP geometry and out_proj geometry. The QKV arm adds trainable parameters, so a win can reflect extra capacity rather than the attention locus. A matched-capacity MLP widening is the follow-up control."
+  },
+  "notes": [
+    "Both arms use the same seeds, training data, evaluation rows, steps, batch size, learning rate, loss weights and MLP/out_proj geometry; only the fused QKV rank/alpha differs.",
+    "The QKV arm adds trainable parameters, so a win can be extra capacity rather than the attention locus.",
+    "No claim is made when the 95% confidence intervals overlap.",
+    "Only numeric metrics and paths are stored; prompt and answer text are never copied into this report."
+  ]
+}

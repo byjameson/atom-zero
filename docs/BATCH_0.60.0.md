@@ -53,6 +53,19 @@ That is far above the 49M adapter's 0-6% on 3-4 keys. The decision is:
 The larger base is capacity evidence, not a product claim or a from-scratch
 model.
 
+## Controlled QKV vs MLP result
+
+Three seeds, 2000 sampled rows per run, 30-row eval subset:
+
+| arm | exact mean | key-copy mean | exact 95% CI | key-copy 95% CI |
+|---|---:|---:|---|---|
+| qkv4 (QKV r4/a8) | 3.33% | 8.89% | 3.33-3.33% | 4.11-13.67% |
+| mlp (QKV off) | 3.33% | 5.56% | 3.33-3.33% | 0.77-10.34% |
+
+Verdict: **inconclusive**. Exact match is identical across both arms; the
+key-copy difference is 3.3 points with overlapping 95% intervals. QKV LoRA
+does not establish a win and does not break the 3-4 key wall.
+
 ## Release gate
 
 - QKV ablation complete on VM with 3 seeds × 2 arms.
