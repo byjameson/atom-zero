@@ -46,6 +46,21 @@ The API key is read at runtime from `Desktop/vastai.txt`. It is never printed
 or written into the repository. The local SSH public key is registered with
 Vast.ai so `scp`/`ssh` work; `vastai show ssh-keys` lists it.
 
+## One-command workflow
+
+```powershell
+# preflight + bundle + dry run (no cost)
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/vastai/run.ps1 `
+  -OfferId 62329792 -Dph 0.11
+
+# same, but actually rent and destroy at the end
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/vastai/run.ps1 `
+  -OfferId 62329792 -Dph 0.11 -Execute
+```
+
+`run.ps1` forwards layers, seeds, steps, batch and the hour cap. The dry run is
+the default; `-Execute` is required to spend credit.
+
 ## Standard workflow
 
 ### 1. Preflight
