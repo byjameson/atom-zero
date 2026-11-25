@@ -24,7 +24,7 @@ Status: **release candidate**. Base weights remain `0.8.0`.
 - **Honest reading:** this is a partial 2-3 key distillation win. The 4-key
   wall is unchanged. The runtime `atomzero-copy` tool remains the exact 4-key
   path; it is tool use, not model capability.
-- **1493 tests** passed on the VM in 48.59s; benchmark 20/20.
+- **1493 tests** passed on the VM in 50.08s; benchmark 20/20.
 
 ## Why the mixed loss is flat
 

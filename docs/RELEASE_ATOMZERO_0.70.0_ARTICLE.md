@@ -54,7 +54,7 @@ distillation, or grow the model.
 
 ## Verification
 
-- VM: 1493 tests passed in 48.59s.
+- VM: 1493 tests passed in 50.08s.
 - Benchmark: 20/20.
 - No model weights changed; base remains 0.8.0.
 
