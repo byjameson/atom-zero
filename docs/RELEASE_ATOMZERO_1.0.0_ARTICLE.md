@@ -70,7 +70,7 @@ rerun the product suite, not just the gate.
 
 ## Verification
 
-- VM Ubuntu: **1613 tests passed in 49.31s**.
+- VM Ubuntu: **1612 tests passed in 51.02s**.
 - Benchmark: 20/20.
 - Product suite: ten prompts, same corpus, both servers.
 - Product base: `0.8.0`, unchanged.

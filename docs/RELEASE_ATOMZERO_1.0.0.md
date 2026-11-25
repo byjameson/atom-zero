@@ -31,7 +31,7 @@ Status: **release candidate**. Product base weights remain `0.8.0`.
   content rows, safety probes/replay, pretokenized cache and the Vast.ai
   rent-run-destroy pipeline. The 24L depth experiment remains rejected: +4
   points on 4-key, retention 1.66.
-- **Verification:** 1613 tests passed on the VM in 49.31s; benchmark 20/20.
+- **Verification:** 1612 tests passed on the VM in 51.02s; benchmark 20/20.
 
 ## What ships
 

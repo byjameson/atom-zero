@@ -7,7 +7,7 @@
 - **Decision**: the 63M mixed-replay model stays an optional research base. A gate pass is necessary but not sufficient; the product default does not change.
 - New `docs/OPTIONAL_BASES.md`, product-suite evidence in `research/results/product_suite_1.0_summary.json`, and quickstart tests for local bases and custom repositories.
 - Carried from 0.90.0: retention eval, checkpoint gate, mixed replay, content rows, safety probes/replay, pretokenized cache, Vast.ai pipeline; 24L depth rejected (+4 points, retention 1.66).
-- VM: **1613 tests passed in 49.31s**; benchmark **20/20**.
+- VM: **1612 tests passed in 51.02s**; benchmark **20/20**.
 
 ## atomzero 0.90.0 - 2026-11-26
 
