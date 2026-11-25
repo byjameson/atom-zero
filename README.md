@@ -286,6 +286,9 @@ See [DOCUMENTS.md](https://github.com/byjameson/atom-zero/blob/main/docs/DOCUMEN
   [`docs/COPY_TOOL.md`](docs/COPY_TOOL.md).
 - **Teacher distillation data:** verified, canonicalized copy rows for offline
   student training; see [`docs/DISTILL_COPY.md`](docs/DISTILL_COPY.md).
+- **New-task teacher data:** teacher-invented 2/3/4-key copy tasks with new
+  keys/values, checked by deterministic constraints; see
+  [`docs/DISTILL_NEW_TASKS.md`](docs/DISTILL_NEW_TASKS.md).
 - `POST /v1/agent/plan` executes a small JSON plan through an allowlist:
   - at most **3 steps**;
   - no shell, arbitrary URL or code execution;
