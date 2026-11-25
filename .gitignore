@@ -11,3 +11,7 @@ research/results/content_adapter_cross_audit.json
 research/results/content_adapter_indist_audit.json
 research/results/copy_tool_benchmark_local.json
 research/results/self_improve_curriculum_run.json
+research/results/large_base_arith.json
+research/results/large_base_arith_result.json
+research/results/large_base_yaml.json
+research/results/large_base_yaml_result.json
