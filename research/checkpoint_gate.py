@@ -61,10 +61,12 @@ def _compare_adapters():
     return compare_adapters
 
 
-def _load_checkpoint(path: str | Path, tokenizer: str | Path = ""):
+def _load_checkpoint(path: str | Path, tokenizer: str | Path = "",
+                     device: str = "cpu"):
     # ``research.adapter_check`` is intentionally not used here: it validates
     # LoRA adapter directories, while this gate loads full model.pt checkpoints.
-    return _compare_adapters().load_model(path, tokenizer=tokenizer)
+    return _compare_adapters().load_model(
+        path, tokenizer=tokenizer, device=device)
 
 
 def _read_eval_rows(path: str | Path) -> list[dict]:
@@ -176,13 +178,14 @@ def _tokenizer_for(directory: Path) -> str:
     return ""
 
 
-def _load_pair(candidate: str | Path, baseline: str | Path):
+def _load_pair(candidate: str | Path, baseline: str | Path,
+               device: str = "cpu"):
     candidate_dir = _resolve(candidate)
     baseline_dir = _resolve(baseline)
     baseline_model, baseline_tok = _load_checkpoint(
-        baseline, _tokenizer_for(baseline_dir))
+        baseline, _tokenizer_for(baseline_dir), device=device)
     candidate_model, candidate_tok = _load_checkpoint(
-        candidate, _tokenizer_for(candidate_dir))
+        candidate, _tokenizer_for(candidate_dir), device=device)
     sources = {
         "baseline": ("checkpoint" if _tokenizer_for(baseline_dir)
                      else "default"),
@@ -451,7 +454,8 @@ def run_gate(candidate: str | Path, baseline: str | Path,
              min_safety_pass_rate: float = 1.0,
              allow_missing: bool = False,
              generator=None,
-             exact_match_max_new: int = DEFAULT_EXACT_MATCH_MAX_NEW) -> dict:
+             exact_match_max_new: int = DEFAULT_EXACT_MATCH_MAX_NEW,
+             device: str = "cpu") -> dict:
     """Compare a candidate checkpoint with the product base and gate promotion.
 
     ``generator`` is injectable for tests. The default is deterministic
@@ -476,7 +480,7 @@ def run_gate(candidate: str | Path, baseline: str | Path,
         safety_rows, safety_invalid = read_safety_rows(safety_eval)
 
     (baseline_model, baseline_tok, candidate_model, candidate_tok,
-     tokenizer_sources) = _load_pair(candidate, baseline)
+     tokenizer_sources) = _load_pair(candidate, baseline, device=device)
     generate_fn = generator or generate
     max_new = int(exact_match_max_new)
 
@@ -701,6 +705,8 @@ def main(argv=None) -> int:
     ap.add_argument("--exact-match-max-new", type=int,
                     default=DEFAULT_EXACT_MATCH_MAX_NEW,
                     help="cap on generated answer tokens (default: 64)")
+    ap.add_argument("--device", default="cpu",
+                    help="torch device, e.g. cpu or cuda (default: cpu)")
     ap.add_argument("--json", action="store_true",
                     help="print the content-free JSON report")
     args = ap.parse_args(argv)
@@ -714,7 +720,8 @@ def main(argv=None) -> int:
             min_key_copy_rate=args.min_key_copy_rate,
             min_safety_pass_rate=args.min_safety_pass_rate,
             allow_missing=args.allow_missing,
-            exact_match_max_new=args.exact_match_max_new)
+            exact_match_max_new=args.exact_match_max_new,
+            device=args.device)
     except (AttributeError, IndexError, KeyError, OSError, RuntimeError,
             TypeError, ValueError, SystemExit) as exc:
         report = _error_report(exc)

@@ -1,0 +1,192 @@
+{
+  "allow_missing": true,
+  "answers_included": false,
+  "checkpoints": {
+    "baseline": "atom-zero-49m",
+    "candidate": "fullft_upcycle8l_v1"
+  },
+  "checks": {
+    "content_not_worse": {
+      "baseline_content_loss": 4.788256,
+      "candidate_content_loss": 4.680686,
+      "content_loss_delta": -0.10757,
+      "ok": true,
+      "reason": "content_not_worse",
+      "required": true,
+      "status": "pass",
+      "threshold": 0.0
+    },
+    "exact_match_ok": {
+      "baseline_exact_match": 0.0,
+      "candidate_exact_match": 0.75,
+      "ok": true,
+      "reason": "exact_match_ok",
+      "required": true,
+      "status": "pass",
+      "threshold": 0.25
+    },
+    "key_copy_ok": {
+      "baseline_key_copy_rate": 0.0,
+      "candidate_key_copy_rate": 0.8,
+      "ok": true,
+      "reason": "key_copy_ok",
+      "required": true,
+      "status": "pass",
+      "threshold": 0.25
+    },
+    "safety_ok": {
+      "baseline_safety_pass_rate": null,
+      "candidate_safety_pass_rate": null,
+      "ok": null,
+      "reason": "safety_eval_not_provided",
+      "required": true,
+      "status": "skipped",
+      "threshold": 1.0
+    }
+  },
+  "content_free": true,
+  "decision": "promotable_with_missing_checks",
+  "eval": {
+    "content": {
+      "rows": 20
+    },
+    "copy": {
+      "rows": 20
+    },
+    "safety": {
+      "reason": "safety_eval_not_provided",
+      "status": "skipped"
+    }
+  },
+  "failed_checks": [],
+  "keys_included": false,
+  "method": "checkpoint_behavior_gate_v1",
+  "metrics": {
+    "baseline": {
+      "content": {
+        "content_loss": 4.788256,
+        "content_tokens": 217,
+        "examples": 20,
+        "loss": 5.113873,
+        "ppl": 166.313234,
+        "tokens": 385
+      },
+      "exact_match": {
+        "examples": 20,
+        "matches": 0,
+        "max_new": 64,
+        "rate": 0.0
+      },
+      "key_copy": {
+        "examples": 20,
+        "key_recall": 0.0,
+        "matches": 0,
+        "max_new": 64,
+        "rate": 0.0,
+        "skipped": 0
+      },
+      "safety": {
+        "examples": 0,
+        "failures": {},
+        "passed": 0,
+        "rate": null,
+        "reason": "safety_eval_not_provided",
+        "status": "skipped"
+      }
+    },
+    "candidate": {
+      "content": {
+        "content_loss": 4.680686,
+        "content_tokens": 217,
+        "examples": 20,
+        "loss": 3.454533,
+        "ppl": 31.643508,
+        "tokens": 385
+      },
+      "exact_match": {
+        "examples": 20,
+        "matches": 15,
+        "max_new": 64,
+        "rate": 0.75
+      },
+      "key_copy": {
+        "examples": 20,
+        "key_recall": 0.9125,
+        "matches": 16,
+        "max_new": 64,
+        "rate": 0.8,
+        "skipped": 0
+      },
+      "safety": {
+        "examples": 0,
+        "failures": {},
+        "passed": 0,
+        "rate": null,
+        "reason": "safety_eval_not_provided",
+        "status": "skipped"
+      }
+    },
+    "delta": {
+      "content_loss": -0.10757,
+      "exact_match": 0.75,
+      "key_copy": 0.8,
+      "loss": -1.65934,
+      "safety": null
+    }
+  },
+  "missing_checks": [
+    "safety_ok"
+  ],
+  "note": "A pass is necessary but not sufficient for product replacement; human review remains required.",
+  "ok": true,
+  "passed_checks": [
+    "content_not_worse",
+    "exact_match_ok",
+    "key_copy_ok"
+  ],
+  "product_replacement": {
+    "automatic_replacement": false,
+    "eligible_for_review": true,
+    "reason": "human_review_required"
+  },
+  "promotable": true,
+  "prompts_included": false,
+  "reasons": [
+    "content_not_worse",
+    "exact_match_ok",
+    "key_copy_ok",
+    "safety_eval_not_provided"
+  ],
+  "status": "pass_with_missing",
+  "strict_promotable": false,
+  "summary": {
+    "baseline_content_loss": 4.788256,
+    "baseline_exact_match": 0.0,
+    "baseline_key_copy_rate": 0.0,
+    "baseline_loss": 5.113873,
+    "baseline_safety_pass_rate": null,
+    "candidate_content_loss": 4.680686,
+    "candidate_exact_match": 0.75,
+    "candidate_key_copy_rate": 0.8,
+    "candidate_loss": 3.454533,
+    "candidate_safety_pass_rate": null,
+    "content_loss_delta": -0.10757,
+    "exact_match_delta": 0.75,
+    "key_copy_delta": 0.8,
+    "loss_delta": -1.65934,
+    "safety_delta": null
+  },
+  "thresholds": {
+    "min_content_loss_delta": 0.0,
+    "min_exact_match": 0.25,
+    "min_key_copy_rate": 0.25,
+    "min_safety_pass_rate": 1.0
+  },
+  "tokenizer_source": {
+    "baseline": "checkpoint",
+    "candidate": "checkpoint"
+  },
+  "training_performed": false,
+  "values_included": false,
+  "weights_changed": false
+}
