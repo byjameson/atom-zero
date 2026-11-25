@@ -37,6 +37,24 @@ The instance is destroyed automatically at the end; a 3.5-hour failsafe
 automation exists in case the launcher process dies.
 
 
+
+## Preliminary 24L result (seed 101)
+
+```text
+2short: 90.5% exact / 92.5% key-copy
+3short: 84.5% / 87.0%
+4short: 67.5% / 75.0%
+retention ratio: 1.647  (threshold 1.10 -> fail)
+```
+
+Against the 8L reference (89.5 / 77.0 / 65.5, retention 1.089), depth adds
+**+2.0 points** on 4short and makes content retention clearly worse. Depth is
+not the lever. Seed 102 is running for variance, but the direction is already
+clear: the next experiment must change the data mix, not the layer count.
+
+Safety gate on the 8L copy specialist: baseline 12.5% (5/40), candidate 0%
+(0/40). The copy-only fine-tune regressed refusal behavior as well as content.
+
 ## Gate result: 8L is not product-viable
 
 The full checkpoint gate on the 90-row city set (not the 20-row preview) is
