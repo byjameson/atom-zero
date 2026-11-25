@@ -8,7 +8,7 @@
 - Data-only control: training the 49M on those 656 new tasks moved 4short to **0% exact / 5% key-copy** and left 2-3 key performance flat. New data alone did not break the wall.
 - The gain is bounded: a 30-row out-of-distribution key-style set (`field_`, `k_` prefixes) scored **0/30**. The 63M model copies within the trained key grammar, not generally.
 - Product base remains `0.8.0`; the 63M checkpoint is a copy-specialized research artifact, not a promoted assistant.
-- VM: **1521 tests passed in 48.69s**; benchmark **20/20**.
+- VM: **1521 tests passed in 47.52s**; benchmark **20/20**.
 
 ## atomzero 0.70.0 - 2026-11-25
 

@@ -24,7 +24,7 @@ checkpoint is a research artifact.
 - **The claim is bounded.** A 30-row out-of-distribution set with `field_` and
   `k_` prefixed keys scored **0/30**. The 63M model copies within the trained
   3-6 lowercase alphanumeric key grammar; it is not a general copier.
-- **Verification:** 1521 tests passed on the VM in 48.69s; benchmark 20/20.
+- **Verification:** 1521 tests passed on the VM in 47.52s; benchmark 20/20.
 
 ## What ships
 

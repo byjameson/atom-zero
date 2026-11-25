@@ -72,7 +72,7 @@ and safety gates as a complete base.
 
 ## Verification
 
-- VM Ubuntu: **1521 tests passed in 48.69s**.
+- VM Ubuntu: **1521 tests passed in 47.52s**.
 - Benchmark: 20/20.
 - Base weights: `0.8.0` (unchanged).
 - No adapter is promoted.
