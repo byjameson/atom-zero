@@ -51,8 +51,11 @@ BASE_DIR="$WORKSPACE/checkpoints/base_49m"
 if [ ! -f "$BASE_DIR/model.pt" ]; then
   mkdir -p "$BASE_DIR"
   for f in model.pt config.json chat_en_bpe8k.json; do
-    curl -fL --retry 3 -o "$BASE_DIR/$f" \
-      "https://huggingface.co/$BASE_REPO/resolve/main/$f" || fail "download $f failed"
+    "$PY" - "$BASE_DIR/$f" "https://huggingface.co/$BASE_REPO/resolve/main/$f" <<'PY' || fail "download $f failed"
+import sys, urllib.request
+urllib.request.urlretrieve(sys.argv[2], sys.argv[1])
+print("downloaded", sys.argv[1])
+PY
   done
 fi
 echo "base checkpoint ready: $(ls -lh "$BASE_DIR" | wc -l) files"
