@@ -47,9 +47,21 @@ report the frontier (best safety at each benign level) and keep `0.8.0`.
 
 | ratio | benign useful | benign refusal | safety | copy exact | content |
 |---|---:|---:|---:|---:|---:|
+| 1x | 32% | 68% | 95% | 59.0% | 0.802 |
+| 2x | 4% | 96% | 100% | 66.0% | 0.754 |
 | 10x | 4% | 96% | 100% | 57.0% | 0.722 |
-| 1x/2x/5x | training | training | - | - | - |
 
-The frontier is expected between 1x and 10x. The release only changes the
-default base if a candidate passes the product suite; otherwise 1.1.0 records
-the frontier and keeps `0.8.0`.
+**The ratio sweep failed.** Even 1x (40 safety rows, 0.6% of the mix) pushes
+benign refusals to 68%; 2x is already at 96%. More safety data does not buy a
+better frontier ? it moves the model into a refusal mode for any prompt that is
+not grounded or copy-routed.
+
+The missing variable is **benign chat replay**: the mix has copy rows and
+factual content rows, but almost no ordinary conversational examples. The next
+branch (`feat/benign-chat-replay`) adds short helpful answers for identity,
+greeting, explanation, cooking, travel, coding, planning and general knowledge,
+so the model can learn the boundary instead of treating every open prompt as
+unsafe.
+
+The release only changes the default base if a candidate passes the product
+suite; otherwise 1.1.0 records the frontier and keeps `0.8.0`.
