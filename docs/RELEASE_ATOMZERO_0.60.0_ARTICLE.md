@@ -52,8 +52,8 @@ use, not model transfer.
 
 ## Verification
 
-- Host: 1428 tests passed.
-- VM: pending rerun.
+- Host: 1463 tests passed.
+- VM: 1463 passed in 46.72s.
 - Benchmark: 20/20.
 - No model weights changed; base remains `0.8.0`.
 

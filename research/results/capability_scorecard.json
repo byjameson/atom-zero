@@ -118,7 +118,7 @@
         "weak-stage rehearsal changed the stage mix; 2/5 stages retained after the change; worst exact delta -0.110 (echo_json)",
         "key-weighted loss: mixed exact 0.404 vs 0.420 standard (-0.016)",
         "copy curriculum compared MLP and attention adapter loci; best exact 0.000, delta +0.000",
-        "QKV LoRA first result is negative/uncontrolled (6% exact / 18% key copy on multi-short); no positive QKV result is counted",
+        "QKV LoRA first result is negative/uncontrolled (6% exact / 18% key copy on multi-short); the controlled 3-seed ablation was inconclusive (3.33% exact both arms); no positive QKV result is counted",
         "no learning-algorithm change improved the aggregate target by >=0.05; process evidence is not counted as improvement"
       ],
       "id": "meta_learning",
@@ -142,7 +142,7 @@
         "base model 49.2M parameters",
         "adapter 405,504 trainable parameters",
         "recorded adapter training 149.0s",
-        "1,428 tests recorded"
+        "1,463 tests recorded"
       ],
       "id": "low_cost",
       "name": "Does this at low hardware cost",
@@ -165,7 +165,7 @@
     },
     "model_params_m": 49.2,
     "ram_gb": 16.0,
-    "tests": 1428,
+    "tests": 1463,
     "train_seconds": 148.968
   },
   "held_out_tasks": {

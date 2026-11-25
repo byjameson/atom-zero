@@ -81,7 +81,7 @@ No aggregate score is reported. The six criteria are not interchangeable; status
   - weak-stage rehearsal changed the stage mix; 2/5 stages retained after the change; worst exact delta -0.110 (echo_json)
   - key-weighted loss: mixed exact 0.404 vs 0.420 standard (-0.016)
   - copy curriculum compared MLP and attention adapter loci; best exact 0.000, delta +0.000
-  - QKV LoRA first result is negative/uncontrolled (6% exact / 18% key copy on multi-short); no positive QKV result is counted
+  - QKV LoRA first result is negative/uncontrolled (6% exact / 18% key copy on multi-short); the controlled 3-seed ablation was inconclusive (3.33% exact both arms); no positive QKV result is counted
   - no learning-algorithm change improved the aggregate target by >=0.05; process evidence is not counted as improvement
 - **Sources:** `docs/BATCH_0.60.0.md`, `research/results/copy_curriculum_summary.json`, `research/results/multi_key_0.30_summary.json`, `research/results/weak_stage_rehearsal.json`, `research/results/weak_stage_rehearsal_gentle.json`
 - **Next measurable target:** show one learning-algorithm change that improves mixed exact by >=0.05 over its own baseline, retains >=4/5 stages and reproduces across >=2 seeds
@@ -96,7 +96,7 @@ No aggregate score is reported. The six criteria are not interchangeable; status
   - base model 49.2M parameters
   - adapter 405,504 trainable parameters
   - recorded adapter training 149.0s
-  - 1,428 tests recorded
+  - 1,463 tests recorded
 - **Sources:** `research/results/weak_stage_rehearsal.json`
 - **Next measurable target:** keep the full loop within 8 vCPU / 16 GB RAM / 40 GB disk while adding a held-out transfer eval; report wall-clock and peak RAM per cycle
 
@@ -134,7 +134,7 @@ This is capacity evidence about a larger pretrained model. It is not a from-scra
 | Base model (M params) | 49.2 | — |
 | Adapter params | 405,504 | — |
 | Recorded training (s) | 148.968 | — |
-| Tests recorded | 1,428 | — |
+| Tests recorded | 1,463 | — |
 
 ## Input sources
 

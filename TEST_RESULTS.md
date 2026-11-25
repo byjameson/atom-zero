@@ -34,7 +34,7 @@ current post-release evidence is the clean `1130 passed` run.
   and document-diff routes are covered. Full release suite **646 passed**.
 - Post-release self-improvement loop: improvement planner and decisions,
   evaluation gate, weekly-review ledger summary and proactive reminders.
-  Full main suite **1399 passed**; `benchmarks/self_improvement_regression.py`
+  Full main suite **1463 passed**; `benchmarks/self_improvement_regression.py`
   reports **20/20 checks passed**. Eight measured cycles are recorded:
   `docs/LOOP_CYCLE.md` (HTTP flake, `gate_id ab5fe9b0fa0f48bc`, 792/1 ->
   793/0), `docs/LOOP_CYCLE_2.md` (live claim conflict, `gate_id

@@ -7,7 +7,7 @@ Current batch: **0.50.0 published. Next boundary: 0.60.0.** It adds the bounded 
 committed-change scope verification and the fifth measured cycle with an actual
 nested `opencode run` process. Post-release work adds the self-code audit, its
 planner/runner integration and the sixth measured cycle.
-`1399` Atom Zero tests pass; AISC 0.5.1 has `223` tests and
+`1463` Atom Zero tests pass; AISC 0.5.1 has `223` tests and
 `benchmarks/self_improvement_regression.py` passes 20/20.
 
 ## Release cadence
