@@ -1,0 +1,47 @@
+{
+  "date": "2026-11-25",
+  "teacher": {
+    "requested": 300,
+    "valid": 153,
+    "rejected": 147,
+    "json": 66,
+    "kv": 87,
+    "yaml": 0,
+    "stages": {
+      "2short": 66,
+      "3short": 55,
+      "4short": 32
+    }
+  },
+  "student": {
+    "adapter": "distill_student_153",
+    "init": "multi_recover",
+    "mixed_loss_before": 0.776904,
+    "mixed_loss_after": 0.76826,
+    "replay_weight": 0.5,
+    "steps": 2000,
+    "device": "cuda"
+  },
+  "eval": {
+    "2short_50": {
+      "distill_exact": 0.32,
+      "distill_key_copy": 0.5,
+      "multi_recover_exact": 0.0,
+      "multi_recover_key_copy": 0.0
+    },
+    "3short_50": {
+      "distill_exact": 0.12,
+      "distill_key_copy": 0.28,
+      "multi_recover_exact": 0.0,
+      "multi_recover_key_copy": 0.0
+    },
+    "4short_20": {
+      "distill_exact": 0.0,
+      "distill_key_copy": 0.0,
+      "multi_recover_exact": 0.0,
+      "multi_recover_key_copy": 0.0
+    }
+  },
+  "interpretation": "partial 2-3 key copy improvement from teacher-canonicalized data; 4-key wall unchanged; not a general distillation win",
+  "content_free": true
+}
