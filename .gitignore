@@ -16,3 +16,7 @@ research/results/large_base_arith_result.json
 research/results/large_base_yaml.json
 research/results/large_base_yaml_result.json
 research/results/distill_*.json
+research/results/upcycle8l_*.json
+research/results/fullft_upcycle8l_*.json
+research/results/newtasks_*.json
+research/results/base49m_city20.json
