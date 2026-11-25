@@ -352,7 +352,10 @@ file still has to pass retention and the checkpoint gate; see
 
 The `--safety-eval` probe file is generated deterministically by
 `research/build_safety_probes.py`; see
-[`docs/SAFETY_PROBES.md`](docs/SAFETY_PROBES.md).
+[`docs/SAFETY_PROBES.md`](docs/SAFETY_PROBES.md). Disjoint safety refusal
+rehearsal rows and their held-out probes are built by
+`research/build_safety_replay.py`; see
+[`docs/SAFETY_REPLAY.md`](docs/SAFETY_REPLAY.md).
 
 The model never crawls, mutates its own weights or studies topics on its own
 during chat. **Hungry mode** is an explicit, bounded command for growing the
@@ -442,6 +445,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Document version diff: <https://github.com/byjameson/atom-zero/blob/main/docs/DOCUMENT_DIFF.md>
 - Evaluation gate: <https://github.com/byjameson/atom-zero/blob/main/docs/EVALUATION_GATE.md>
 - Deterministic safety probes: <https://github.com/byjameson/atom-zero/blob/main/docs/SAFETY_PROBES.md>
+- Safety refusal replay: <https://github.com/byjameson/atom-zero/blob/main/docs/SAFETY_REPLAY.md>
 - Self-improvement architecture: <https://github.com/byjameson/atom-zero/blob/main/docs/SELF_IMPROVEMENT.md>
 - Autonomous loop and sandbox: <https://github.com/byjameson/atom-zero/blob/main/docs/AUTONOMOUS.md>
 - First measured loop cycle: <https://github.com/byjameson/atom-zero/blob/main/docs/LOOP_CYCLE.md>
