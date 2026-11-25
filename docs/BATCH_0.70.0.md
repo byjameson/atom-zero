@@ -45,6 +45,21 @@ eval files.
 - Success is measured, not assumed: exact/key-copy before/after, per-stage
   retention, and behavior gate status.
 
+
+## Current result
+
+- 300 teacher attempts produced **153 verified rows** (json 66, kv 87, yaml 0);
+  147 were rejected. The 4short stage contributed only 32 rows.
+- A 49M student started from `multi_recover` and trained on the 153 rows plus
+  50% rehearsal. Mixed loss moved `0.7769 -> 0.7683` (essentially flat).
+- On a 20-row-per-stage check, the distilled adapter scored **20% exact on
+  2short, 15% on 3short, 0% on 4short**. The same subset gave `multi_recover`
+  0/0/0, but that subset is small and not the earlier 50-row split; a 50-row
+  comparison is running before any claim.
+- The honest hypothesis is **partial 2-3 key copy improvement, 4-key wall
+  unchanged**. Do not claim a general distillation win without the 50-row
+  result and a VM behavior gate.
+
 ## Release gate
 
 - Distillation cycle ledger complete.
