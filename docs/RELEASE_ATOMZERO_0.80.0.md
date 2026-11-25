@@ -1,6 +1,6 @@
 # atomzero 0.80.0 - depth upcycling breaks the 4-key copy wall at 63M
 
-Status: **release candidate**. Product base weights remain `0.8.0`; the 63M
+Status: **published on 2026-11-25**. Product base weights remain `0.8.0`; the 63M
 checkpoint is a research artifact.
 
 ## Highlights
@@ -59,3 +59,6 @@ pip install atomzero==0.80.0
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-49m>
 - X: <https://x.com/aigokhan>
 - Instagram: <https://instagram.com/quantsinner>
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-0800-the-4-key-copy-wall-was-capacity-not-data-54mg>
+- Medium: <https://medium.com/@myredditacc9393/atom-zero-0-80-0-the-4-key-copy-wall-was-capacity-not-data-edf130fad543>
+- 63M research checkpoint: <https://huggingface.co/byjameson/atom-zero-63m>

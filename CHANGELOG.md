@@ -1,6 +1,6 @@
 # Changelog
 
-## atomzero 0.80.0 - unreleased
+## atomzero 0.80.0 - 2026-11-25
 
 - Added **depth upcycling** (`research/upcycle_model.py`): the 6-layer 49.2M checkpoint expands to 8 layers / **63,389,184 params** with interpolated block copies and research-only metadata.
 - Full fine-tune of the 8L research base on the copy curriculum + verified teacher rows broke the 4-key wall on held-out data: **2short 89.5% exact / 91.5% key-copy, 3short 77.0% / 83.5%, 4short 65.5% / 74.0%** (200 rows each), versus 49M at 32/12/0 exact.
