@@ -118,7 +118,9 @@ def ssh_target(instance_id: int, key: str) -> tuple[str, str, int]:
 
 def ssh_base(user: str, host: str, port: int) -> list[str]:
     return [
-        "ssh", "-p", str(port),
+        # -T/-n: never allocate a tty and never hold the channel open on stdin.
+        "ssh", "-T", "-n", "-p", str(port),
+        "-o", "BatchMode=yes",
         "-o", "StrictHostKeyChecking=accept-new",
         "-o", "ConnectTimeout=20",
         "-o", "ServerAliveInterval=30",
@@ -235,13 +237,26 @@ def main(argv: list[str] | None = None) -> int:
             f"LAYERS={args.layers} SEEDS='{args.seeds}' STEPS={args.steps} "
             f"BATCH={args.batch} "
         )
-        remote(
-            ssh,
+        start_cmd = (
             f"cd /workspace && {env_prefix}"
             "nohup bash /workspace/atomzero/scripts/vastai/job.sh "
-            "> /workspace/job.out 2>&1 & echo started",
+            "</dev/null >/workspace/job.out 2>&1 & echo started"
         )
-        print("job started; polling...", flush=True)
+        remote(ssh, start_cmd, timeout=60)
+
+        # Confirm the detached process really exists before trusting it.
+        time.sleep(8)
+        check = remote(
+            ssh,
+            "pgrep -af 'vastai/job.sh' | head -n 2; "
+            "test -f /workspace/out/job.log && tail -n 1 /workspace/out/job.log || true",
+            check=False,
+        ).strip()
+        if "job.sh" not in check and "===" not in check:
+            log = remote(ssh, "tail -n 20 /workspace/job.out 2>/dev/null || true", check=False)
+            raise SystemExit(f"job did not start.\n{check}\n{log[:800]}")
+        print(f"job started: {check[:200]}", flush=True)
+        print("polling...", flush=True)
 
         deadline = started + args.max_hours * 3600
         last_log = ""
@@ -249,8 +264,10 @@ def main(argv: list[str] | None = None) -> int:
             time.sleep(args.poll_seconds)
             state = remote(
                 ssh,
-                "test -f /workspace/out/DONE && echo DONE || "
-                "(test -f /workspace/out/FAILED && echo FAILED || echo RUNNING); "
+                "if [ -f /workspace/out/DONE ]; then echo DONE; "
+                "elif [ -f /workspace/out/FAILED ]; then echo FAILED; "
+                "elif pgrep -f 'vastai/job.sh' >/dev/null; then echo RUNNING; "
+                "else echo CRASHED; fi; "
                 "tail -n 2 /workspace/out/job.log 2>/dev/null | tr '\\n' ' '",
                 check=False,
             )
@@ -258,10 +275,12 @@ def main(argv: list[str] | None = None) -> int:
             if state != last_log:
                 print(f"  {state[:300]}", flush=True)
                 last_log = state
-            if "DONE" in state:
+            first = state.splitlines()[0].strip() if state else ""
+            if first == "DONE":
                 ok = True
                 break
-            if "FAILED" in state:
+            if first in ("FAILED", "CRASHED"):
+                print(f"job stopped: {first}", flush=True)
                 break
 
         print("downloading out/...", flush=True)
