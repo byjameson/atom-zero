@@ -1,6 +1,6 @@
 # atomzero 0.90.0 - mixed replay makes the 63M copy base pass content and safety gates
 
-Status: **release candidate**. Product base weights remain `0.8.0`; the 63M
+Status: **published on 2026-11-26**. Product base weights remain `0.8.0`; the 63M
 mixed-replay candidate is a promotable research base.
 
 ## Highlights
@@ -68,3 +68,6 @@ pip install atomzero==0.90.0
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-49m>
 - X: <https://x.com/aigokhan>
 - Instagram: <https://instagram.com/quantsinner>
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-0900-depth-was-the-wrong-answer-data-was-the-right-one-3dfe>
+- Medium: <https://medium.com/@myredditacc9393/atom-zero-0-90-0-depth-was-the-wrong-answer-data-was-the-right-one-dffe5aa24f18>
+- 63M mixed research base: <https://huggingface.co/byjameson/atom-zero-63m-mixed>

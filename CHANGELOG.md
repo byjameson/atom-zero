@@ -1,6 +1,6 @@
 # Changelog
 
-## atomzero 0.90.0 - unreleased
+## atomzero 0.90.0 - 2026-11-26
 
 - **Depth is not the lever.** A 24-layer / 176,795,136-param upcycle improved 4-key exact only to **69.5%** (two seeds) while content retention fell to **1.664** (fail). The RTX 3090 run cost about $0.42 and the instance was destroyed.
 - **Mixed replay fixes retention.** The 8-layer 63M base fine-tuned on 6000 copy + 492 content + 40 safety rows kept four-key copy and improved content loss over the 49M product base.
