@@ -329,14 +329,15 @@ def compare(base: str, data: str | Path, adapters: list[str],
             tokenizer: str = "", per_family: bool = False,
             exact_match: bool = False, key_copy: bool = False,
             generator=None,
-            exact_match_max_new: int = DEFAULT_EXACT_MATCH_MAX_NEW) -> dict:
+            exact_match_max_new: int = DEFAULT_EXACT_MATCH_MAX_NEW,
+            device: str = "cpu") -> dict:
     rows = read_rows(data)
-    base_model, tok = load_model(base, tokenizer=tokenizer)
+    base_model, tok = load_model(base, tokenizer=tokenizer, device=device)
     models = [{"label": "base", "path": base,
                "metrics": score_rows(base_model, tok, rows)}]
     loaded = [(models[0], base_model)]
     for adapter in adapters:
-        model, _ = load_model(base, adapter, tokenizer=tokenizer)
+        model, _ = load_model(base, adapter, tokenizer=tokenizer, device=device)
         item = {"label": label_for(adapter), "path": adapter,
                 "metrics": score_rows(model, tok, rows)}
         models.append(item)
@@ -425,12 +426,15 @@ def main(argv=None) -> int:
     ap.add_argument("--exact-match-max-new", type=int,
                     default=DEFAULT_EXACT_MATCH_MAX_NEW,
                     help="cap on generated answer tokens (default: 64)")
+    ap.add_argument("--device", default="cpu",
+                    help="torch device, e.g. cpu or cuda (default: cpu)")
     args = ap.parse_args(argv)
     payload = compare(
         args.base, args.data, args.adapters, args.tokenizer,
         per_family=args.per_family, exact_match=args.exact_match,
         key_copy=args.key_copy,
-        exact_match_max_new=args.exact_match_max_new)
+        exact_match_max_new=args.exact_match_max_new,
+        device=args.device)
     if args.out:
         out = ROOT / args.out
         out.parent.mkdir(parents=True, exist_ok=True)

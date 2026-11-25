@@ -76,3 +76,24 @@ each), versus 49M at 32/12/0. Data-only control (656 new teacher tasks) left
   10-minor boundary.
 - Raw comparison JSONs under `research/results/` are gitignored; commit only
   content-free summaries.
+
+## Vast.ai infrastructure (ready, nothing rented)
+
+- `scripts/vastai/preflight.py` reads the API key from `Desktop/vastai.txt`,
+  reports balance + credit, filters 24 GB offers and estimates cost.
+- `scripts/vastai/bundle.py` builds a 2.84 MB reproducible bundle (573 files,
+  SHA-256 sidecar) with the exact copy/retention data.
+- `scripts/vastai/job.sh` upgrades to N layers, fine-tunes, evaluates copy and
+  retention, writes `out/summary.json`, `DONE` or `FAILED`.
+- `scripts/vastai/launch.py` is dry-run by default; `--execute` rents,
+  uploads, polls, downloads and destroys in `finally`.
+- Local SSH public key is registered with Vast.ai (key id 2070784).
+- Live offers at setup: RTX 3090 24 GB at **$0.11?0.25/hr**; a 3 h run is
+  about **$0.33?0.75**. Account shows **$10.00 credit**.
+- `--device cuda` was added to `research/compare_adapters.py` so instance
+  evaluation does not fall back to a slow CPU path.
+- Validation: 11 Vast.ai unit tests pass, bundle builds, dry-run prints the
+  plan, `bash -n job.sh` passes, and a 5-row GPU eval on the local 3050 works.
+- Next paid run: 24-layer upcycle (~177M), 2 seeds, 4000 steps, 200-row
+  2/3/4-key evals plus retention, then destroy. Do not run it for a trivial
+  job; the launcher refuses under 30 planned minutes.
