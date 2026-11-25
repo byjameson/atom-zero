@@ -136,6 +136,22 @@ def scp_base(port: int) -> list[str]:
     ]
 
 
+def wait_ssh_ready(ssh: list[str], *, timeout_s: int = 600) -> None:
+    """Wait until the SSH proxy accepts a command, not just until a host is assigned."""
+    deadline = time.time() + timeout_s
+    last = ""
+    while time.time() < deadline:
+        proc = subprocess.run(
+            [*ssh, "echo READY"], capture_output=True, text=True, timeout=40
+        )
+        if proc.returncode == 0 and "READY" in proc.stdout:
+            return
+        last = (proc.stderr or proc.stdout or "").strip()[-200:]
+        print(f"  ssh not ready: {last}", flush=True)
+        time.sleep(15)
+    raise SystemExit(f"SSH did not become ready: {last}")
+
+
 def remote(ssh: list[str], command: str, *, timeout: int = 120, check: bool = True) -> str:
     proc = subprocess.run([*ssh, command], capture_output=True, text=True, timeout=timeout)
     if check and proc.returncode != 0:
@@ -221,6 +237,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ssh: {user}@{host}:{port}", flush=True)
 
         ssh = ssh_base(user, host, port)
+        print("waiting for SSH...", flush=True)
+        wait_ssh_ready(ssh)
         remote(ssh, "mkdir -p /workspace/out")
         print("uploading bundle...", flush=True)
         subprocess.run(
