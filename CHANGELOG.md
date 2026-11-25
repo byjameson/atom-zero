@@ -1,6 +1,6 @@
 # Changelog
 
-## atomzero 1.0.0 - unreleased
+## atomzero 1.0.0 - 2026-11-26
 
 - **Optional research bases**: `atomzero-quickstart --model-dir PATH` serves a local checkpoint with no download; `--model-repo owner/name` serves a published base. The default remains the 49.2M `0.8.0` base.
 - **The 63M candidate failed the product suite.** Same server, same demo corpus, ten prompts: grounded document questions 3/3 on both, copy tool 1/1 on both, safety redteam 72/72 on both, but benign open prompts dropped to **0/5 useful with 4 refusals** on the candidate. RAG and copy answer before generation; open chat is broken.

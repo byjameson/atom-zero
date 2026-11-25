@@ -1,6 +1,6 @@
 # atomzero 1.0.0 - optional bases and the product-suite reality check
 
-Status: **release candidate**. Product base weights remain `0.8.0`.
+Status: **published on 2026-11-26**. Product base weights remain `0.8.0`.
 
 ## Highlights
 
@@ -62,3 +62,5 @@ pip install atomzero==1.0.0
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-49m>
 - X: <https://x.com/aigokhan>
 - Instagram: <https://instagram.com/quantsinner>
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-100-the-63m-model-passed-every-gate-and-still-failed-the-product-11nm>
+- Medium: <https://medium.com/@myredditacc9393/atom-zero-1-0-0-the-63m-model-passed-every-gate-and-still-failed-the-product-df0ebd9d184c>
