@@ -336,6 +336,12 @@ Adapters are trained by the separate `streamft` / `continual-lora` projects and
 validated locally with `research/adapter_check.py`; the product runtime does not
 import either trainer. See [`docs/ADAPTERS.md`](docs/ADAPTERS.md).
 
+Full research checkpoints are gated separately with
+`research/checkpoint_gate.py`: held-out content loss, exact match, key copy and
+an optional safety probe against the product base. A pass is necessary but not
+sufficient for replacing the base. See
+[`docs/CHECKPOINT_GATE.md`](docs/CHECKPOINT_GATE.md).
+
 The model never crawls, mutates its own weights or studies topics on its own
 during chat. **Hungry mode** is an explicit, bounded command for growing the
 retrieval index:
