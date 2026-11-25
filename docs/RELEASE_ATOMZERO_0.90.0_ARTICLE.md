@@ -80,7 +80,7 @@ adapter is promoted.
 
 ## Verification
 
-- VM Ubuntu: **1598 tests passed in 55.84s**.
+- VM Ubuntu: **1609 tests passed in 50.45s**.
 - Benchmark: 20/20.
 - 24L run: two seeds, 2.2 hours, $0.42, instance destroyed.
 - Candidate: two seeds, all four gates pass.

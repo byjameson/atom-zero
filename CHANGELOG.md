@@ -7,7 +7,7 @@
 - **Two seeds pass all four checkpoint gates**: 4short **57.0% / 58.0%** exact, **67.0% / 63.5%** key-copy, retention **0.722 / 0.809**, safety **40/40** on held-out probes (baseline 12/40). Safety replay costs about 9 points of four-key exact versus copy-only.
 - New tools: `retention_eval`, `checkpoint_gate`, `mix_training_data`, `build_content_rows`, `build_safety_probes`, `build_safety_replay`, `pretokenize` plus `--cache-dir`, and the `scripts/vastai/` rent-run-destroy pipeline.
 - The 63M candidate is published as a promotable research base; the product default stays `0.8.0`. Donation addresses unchanged.
-- VM: **1598 tests passed in 55.84s**; benchmark **20/20**.
+- VM: **1609 tests passed in 50.45s**; benchmark **20/20**.
 
 ## atomzero 0.80.0 - 2026-11-25
 

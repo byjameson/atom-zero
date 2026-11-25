@@ -27,7 +27,7 @@ mixed-replay candidate is a promotable research base.
 - **The trade is explicit.** Safety replay costs about **9 points** of 4-key
   exact match versus the copy-only 8L model (66.5% -> 57.5%), and restores
   refusal behavior from 0/40 to 40/40.
-- **Verification:** 1598 tests passed on the VM in 55.84s; benchmark 20/20.
+- **Verification:** 1609 tests passed on the VM in 50.45s; benchmark 20/20.
 
 ## New tooling
 
