@@ -124,9 +124,14 @@ Never leave an instance running while debugging locally.
 Question: does the 4-key copy gain scale with depth, and what does it cost in
 content retention?
 
+The 24-layer dry run reports **176,795,136 parameters** (0.707 GB fp32 weights).
+The 6 GB planning estimate puts full AdamW training at **3.7–5.9 GB**, which is
+"unlikely" to fit on the local 3050 once attention and allocator overhead are
+included. That is the concrete reason this run belongs on a 24 GB card.
+
 ```text
 base:            49M / 0.8.0
-upcycle:         24 layers (~177M), interpolate, seed 23
+upcycle:         24 layers (176,795,136 params), interpolate, seed 23
 training:        copy curriculum + 153 verified teacher rows, 4000 steps,
                  batch 16, lr 5e-5, content weight 2
 seeds:           101, 102
