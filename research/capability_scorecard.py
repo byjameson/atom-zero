@@ -1491,12 +1491,38 @@ def _validate_content_free(card: dict[str, Any]) -> None:
     walk(card)
 
 
+def _capacity_probe_summary(data: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not isinstance(data, dict):
+        return None
+    stages = []
+    for row in data.get("stages", []) or []:
+        if not isinstance(row, dict):
+            continue
+        baseline = row.get("baseline") if isinstance(row.get("baseline"), dict) else {}
+        flat = row.get("flat_prompt") if isinstance(row.get("flat_prompt"), dict) else {}
+        stages.append({
+            "stage": str(row.get("stage", "")),
+            "pairs_per_row": _integer(row.get("pairs_per_row")),
+            "rows": _integer(row.get("rows")),
+            "baseline_exact": _round(_number(baseline.get("exact_rate"))),
+            "flat_prompt_exact": _round(_number(flat.get("exact_rate"))),
+        })
+    return {
+        "model": str(data.get("model", "")),
+        "rows_per_stage": _integer(data.get("rows_per_stage")),
+        "stages": stages,
+        "status": str(data.get("status", "")),
+        "note": "capacity evidence only; not counted as 49M model transfer",
+    }
+
+
 def build_scorecard(
     documents: Iterable[tuple[str, dict[str, Any]]],
     *,
     answerability_flags: dict[str, Any] | None = None,
     hardware: dict[str, Any] | None = None,
     held_out_flags: dict[str, Any] | None = None,
+    capacity_probe: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a deterministic, content-free six-criterion scorecard."""
     bundle = _empty_bundle()
@@ -1578,6 +1604,9 @@ def build_scorecard(
             ),
         },
     }
+    capacity = _capacity_probe_summary(capacity_probe)
+    if capacity is not None:
+        card["capacity_probe"] = capacity
     _validate_content_free(card)
     return card
 
@@ -1688,6 +1717,36 @@ def render_markdown(card: dict[str, Any]) -> str:
                 "The runtime copy tool is a deterministic transcription tool. "
                 "Its accuracy is **not** counted as model transfer."
             ),
+        ]
+    )
+    capacity = card.get("capacity_probe")
+    if capacity:
+        lines.extend(
+            [
+                "",
+                "## Capacity probe (not counted as 49M transfer)",
+                "",
+                f"Model: `{capacity.get('model', 'unknown')}`",
+                "",
+                "| Stage | Pairs | Rows | Baseline exact | Flat-prompt exact |",
+                "|---|---:|---:|---:|---:|",
+            ]
+        )
+        for row in capacity.get("stages", []):
+            lines.append(
+                f"| {row.get('stage', 'unknown')} | "
+                f"{row.get('pairs_per_row', '?')} | {row.get('rows', '?')} | "
+                f"{exact(row.get('baseline_exact'))} | "
+                f"{exact(row.get('flat_prompt_exact'))} |"
+            )
+        lines.append("")
+        lines.append(
+            "This is capacity evidence about a larger pretrained model. "
+            "It is not a from-scratch Atom Zero result and is excluded from "
+            "the transfer score."
+        )
+    lines.extend(
+        [
             "",
             "## Hardware",
             "",
@@ -1804,6 +1863,11 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--json-out", metavar="PATH")
     parser.add_argument("--md-out", metavar="PATH")
     parser.add_argument(
+        "--capacity-probe",
+        metavar="PATH",
+        help="content-free large-base probe JSON (capacity evidence only)",
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         help="print JSON instead of the Markdown table",
@@ -1822,6 +1886,9 @@ def main(argv: list[str] | None = None) -> int:
         for raw in args.answerability:
             path = Path(raw)
             documents.append((_source_label(path), _load(str(path))))
+        capacity_probe = (
+            _load(args.capacity_probe) if args.capacity_probe else None
+        )
         card = build_scorecard(
             documents,
             answerability_flags={
@@ -1851,6 +1918,7 @@ def main(argv: list[str] | None = None) -> int:
                 "city_yaml_exact": args.city_yaml_exact,
                 "arith_yaml_examples": args.arith_yaml_examples,
             },
+            capacity_probe=capacity_probe,
         )
         markdown = render_markdown(card)
         if args.json_out:

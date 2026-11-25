@@ -48,6 +48,23 @@ adapter content loss is 5.142 versus 4.391 for the base, and on city-YAML it is
 city/river the adapter content loss improves (3.243 versus 4.794) but exact
 match is still 0/30, so the scorecard does not count it as a win.
 
+## Capacity probe
+
+A larger pretrained model was measured as a capacity reference, not as a
+product model. Qwen2.5-0.5B-Instruct, 20 rows per stage, tolerant parsing:
+
+| Stage | Baseline exact | Flat-prompt exact |
+|---|---:|---:|
+| 2short | 65% | 85% |
+| 3short | 55% | 65% |
+| 4short | 55% | 85% |
+
+This is far above the 49M adapter's 0-6% on 3-4 keys and confirms that the copy
+wall is capacity-related. It is **not** counted as 49M transfer: the model is
+pretrained, has a different tokenizer/data/compute, and scored 0/10 exact on
+arithmetic and city-YAML zero-shot. The decision is to keep `0.8.0` as the
+low-cost default and use larger models as teachers/research backends.
+
 ## Scoring rules
 
 The status vocabulary is fixed:

@@ -344,3 +344,27 @@ def test_cli_rejects_unreadable_result(tmp_path: Path):
     result = _run_scorecard("--result", str(missing))
     assert result.returncode == 2
     assert "capability_scorecard:" in result.stderr
+
+
+def test_capacity_probe_is_reported_and_not_counted_as_transfer():
+    probe = {
+        "model": "Qwen/Qwen2.5-0.5B-Instruct",
+        "rows_per_stage": 20,
+        "status": "capacity_evidence_not_product_claim",
+        "stages": [
+            {"stage": "2short", "pairs_per_row": 2, "rows": 20,
+             "baseline": {"exact_rate": 0.65},
+             "flat_prompt": {"exact_rate": 0.85}},
+            {"stage": "4short", "pairs_per_row": 4, "rows": 20,
+             "baseline": {"exact_rate": 0.55},
+             "flat_prompt": {"exact_rate": 0.85}},
+        ],
+    }
+    card = build_scorecard([], capacity_probe=probe)
+    assert card["capacity_probe"]["model"] == "Qwen/Qwen2.5-0.5B-Instruct"
+    assert card["capacity_probe"]["stages"][1]["flat_prompt_exact"] == 0.85
+    assert "capacity evidence only" in card["capacity_probe"]["note"]
+    text = render_markdown(card)
+    assert "Capacity probe" in text
+    assert "not counted as 49M transfer" in text
+    assert "4short" in text

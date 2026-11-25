@@ -96,7 +96,7 @@ No aggregate score is reported. The six criteria are not interchangeable; status
   - base model 49.2M parameters
   - adapter 405,504 trainable parameters
   - recorded adapter training 149.0s
-  - 1,399 tests recorded
+  - 1,428 tests recorded
 - **Sources:** `research/results/weak_stage_rehearsal.json`
 - **Next measurable target:** keep the full loop within 8 vCPU / 16 GB RAM / 40 GB disk while adding a held-out transfer eval; report wall-clock and peak RAM per cycle
 
@@ -112,6 +112,18 @@ No aggregate score is reported. The six criteria are not interchangeable; status
 
 The runtime copy tool is a deterministic transcription tool. Its accuracy is **not** counted as model transfer.
 
+## Capacity probe (not counted as 49M transfer)
+
+Model: `Qwen/Qwen2.5-0.5B-Instruct`
+
+| Stage | Pairs | Rows | Baseline exact | Flat-prompt exact |
+|---|---:|---:|---:|---:|
+| 2short | 2 | 20 | 0.650 | 0.850 |
+| 3short | 3 | 20 | 0.550 | 0.650 |
+| 4short | 4 | 20 | 0.550 | 0.850 |
+
+This is capacity evidence about a larger pretrained model. It is not a from-scratch Atom Zero result and is excluded from the transfer score.
+
 ## Hardware
 
 | Resource | Value | Envelope |
@@ -122,7 +134,7 @@ The runtime copy tool is a deterministic transcription tool. Its accuracy is **n
 | Base model (M params) | 49.2 | — |
 | Adapter params | 405,504 | — |
 | Recorded training (s) | 148.968 | — |
-| Tests recorded | 1,399 | — |
+| Tests recorded | 1,428 | — |
 
 ## Input sources
 

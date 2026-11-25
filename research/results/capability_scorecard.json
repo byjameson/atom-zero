@@ -1,4 +1,33 @@
 {
+  "capacity_probe": {
+    "model": "Qwen/Qwen2.5-0.5B-Instruct",
+    "note": "capacity evidence only; not counted as 49M model transfer",
+    "rows_per_stage": 20,
+    "stages": [
+      {
+        "baseline_exact": 0.65,
+        "flat_prompt_exact": 0.85,
+        "pairs_per_row": 2,
+        "rows": 20,
+        "stage": "2short"
+      },
+      {
+        "baseline_exact": 0.55,
+        "flat_prompt_exact": 0.65,
+        "pairs_per_row": 3,
+        "rows": 20,
+        "stage": "3short"
+      },
+      {
+        "baseline_exact": 0.55,
+        "flat_prompt_exact": 0.85,
+        "pairs_per_row": 4,
+        "rows": 20,
+        "stage": "4short"
+      }
+    ],
+    "status": "capacity_evidence_not_product_claim"
+  },
   "content_free": true,
   "criteria": [
     {
@@ -113,7 +142,7 @@
         "base model 49.2M parameters",
         "adapter 405,504 trainable parameters",
         "recorded adapter training 149.0s",
-        "1,399 tests recorded"
+        "1,428 tests recorded"
       ],
       "id": "low_cost",
       "name": "Does this at low hardware cost",
@@ -136,7 +165,7 @@
     },
     "model_params_m": 49.2,
     "ram_gb": 16.0,
-    "tests": 1399,
+    "tests": 1428,
     "train_seconds": 148.968
   },
   "held_out_tasks": {
