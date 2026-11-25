@@ -1,5 +1,14 @@
 # Changelog
 
+## atomzero 1.0.0 - unreleased
+
+- **Optional research bases**: `atomzero-quickstart --model-dir PATH` serves a local checkpoint with no download; `--model-repo owner/name` serves a published base. The default remains the 49.2M `0.8.0` base.
+- **The 63M candidate failed the product suite.** Same server, same demo corpus, ten prompts: grounded document questions 3/3 on both, copy tool 1/1 on both, safety redteam 72/72 on both, but benign open prompts dropped to **0/5 useful with 4 refusals** on the candidate. RAG and copy answer before generation; open chat is broken.
+- **Decision**: the 63M mixed-replay model stays an optional research base. A gate pass is necessary but not sufficient; the product default does not change.
+- New `docs/OPTIONAL_BASES.md`, product-suite evidence in `research/results/product_suite_1.0_summary.json`, and quickstart tests for local bases and custom repositories.
+- Carried from 0.90.0: retention eval, checkpoint gate, mixed replay, content rows, safety probes/replay, pretokenized cache, Vast.ai pipeline; 24L depth rejected (+4 points, retention 1.66).
+- VM: **1613 tests passed in 49.31s**; benchmark **20/20**.
+
 ## atomzero 0.90.0 - 2026-11-26
 
 - **Depth is not the lever.** A 24-layer / 176,795,136-param upcycle improved 4-key exact only to **69.5%** (two seeds) while content retention fell to **1.664** (fail). The RTX 3090 run cost about $0.42 and the instance was destroyed.

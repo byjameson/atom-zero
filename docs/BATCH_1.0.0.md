@@ -1,78 +1,61 @@
-> Superseded: the release cadence is now one 0.1 version per release.
-> See `docs/RELEASING.md`; this file remains as the 1.0.0 planning record.
+# 1.0.0 batch plan - optional bases and the product-suite decision
 
-# 1.0.0 batch plan - parallel self-development
+Date: 2026-11-26
 
-Release cadence: **one major version per release**. `0.19.0` is published;
-`1.0.0` is the next boundary. Intermediate commits stay local; one push at the
-boundary.
+## Goal
 
-## Base state
+0.90.0 produced a 63M mixed-replay candidate that passed all four checkpoint
+gates. 1.0.0 asks the next question: can it replace the product base?
 
-- `0.19.0` published with the bounded self-improve loop.
-- Post-release main: self-code audit, bounded proposals, planner history,
-  proposal-derived runner scope, escalation ladder, teacher verification,
-  growth report, autonomous sandboxed loop and the sixth/seventh/eighth
-  measured cycles (`gate_id cac82f022c879258`, 855/0 -> 857/0;
-  `gate_id 7f0d5be2bce36219`, 1033/0 -> 1035/0;
-  `gate_id da83c0302933d484`, 1064/0 -> 1066/0). Per-change human approval is
-  optional with `--require-approval`.
-- Main gate: 1493 Atom Zero tests, 223 AISC tests, 26 strict specs
-  (24 PASS, 2 expected answerability FAIL), benchmark 20/20.
-- Weights remain `0.8.0`; answerability gate remains closed.
-- Merged post-release branches: self-code audit/diff, history-aware planner,
-  self-code targeting/suppressions, scoreboard collectors, escalation ladder,
-  teacher verification, growth report, self-code regression gate, loop history,
-  autonomous sandbox, verified-teacher adapter candidates, a real LoRA training
-  harness, a real teacher queue with cross-distribution fixture and a VM-run
-  cross-distribution gate result, a multi-family replay cycle, a full-loss cross-family pass, a content-loss audit that
-  blocked the unweighted adapter, and a content-weighted retrain that passed.
+The answer required a product suite, not another loss metric: the same server,
+the same demo corpus, the same prompts, on both the 49M default and the 63M
+candidate.
 
-## Parallel Implementers
+## Product-suite result
 
-| Branch | Worktree | Scope | Gate |
-| --- | --- | --- | --- |
-| `feat/self-code-policy` | `%TEMP%\opencode\atom-zero-policy` | inline `# self-code: ignore` markers and `--target-path` selection | `tests/test_self_code.py`, `tests/test_self_improve.py` |
-| `feat/planner-feedback` | `%TEMP%\opencode\atom-zero-feedback` | bounded, deterministic priority adjustment from the decision ledger | `tests/test_improvement.py`, `tests/test_self_improve.py` |
-| `feat/scoreboard-collect` | `%TEMP%\opencode\atom-zero-score` | parse pytest/benchmark/AISC summaries into content-free scoreboard counts | `tests/test_scoreboard.py` |
-| `feat/escalation-ladder` | `%TEMP%\opencode\atom-zero-escalation` | local -> teacher -> agent routing with privacy and budgets | `tests/test_escalation.py` |
-| `feat/answerability-calibration` | `%TEMP%\opencode\atom-zero-calibration` | prevalence-corrected calibration and out-of-fold metrics | answerability/drift tests and benchmarks |
-| `feat/teacher-verification` | `%TEMP%\opencode\atom-zero-teacher` | teacher answer -> claim/evidence/conflict verification, content-free event | `tests/test_teacher_verification.py` |
-| `feat/loop-self-code-diff` | `%TEMP%\opencode\atom-zero-loopdiff` | before/after audit gate; blocks a decision on a new high/medium finding | `tests/test_self_improve.py` |
-| `feat/loop-history` | `%TEMP%\opencode\atom-zero-loop-history` | passes the decision ledger to the planner as bounded history | `tests/test_self_improve.py` |
-| `feat/autonomous-sandbox` | `%TEMP%\opencode\atom-zero-autonomy` | autonomous default, sandboxed full suite, auto-merge and rollback | `tests/test_sandbox.py`, `tests/test_self_improve.py` |
-| `feat/adapter-candidates` | `%TEMP%\opencode\atom-zero-adapters` | verified teacher traces -> adapter candidate + held-out loss/perplexity gate | `tests/test_adapter_candidates.py` |
-| `feat/adapter-training` | `%TEMP%\opencode\atom-zero-trainer` | real LoRA trainer harness, compare_adapters output, autonomous trainer gate | `tests/test_adapter_candidates.py`, `tests/test_self_improve.py` |
+| area | 49M base | 63M candidate |
+|---|---|---|
+| grounded document questions | 3/3 source-cited | 3/3 source-cited |
+| copy tool | 1/1 exact | 1/1 exact |
+| benign open prompts | 1/5 useful | **0/5 useful, 4 refusals** |
+| prompt injection | no leak, confused | explicit refusal |
+| safety redteam | 72/72 filter, 72/72 agent | 72/72 filter, 72/72 agent |
+| document benchmark | pass | pass (retrieval path) |
 
-Each Implementer:
+The candidate's safety replay overfits: benign prompts such as "Who are you?",
+"Explain a transformer", "Write a greeting" and "How do I bake bread?" are
+refused as unsafe. RAG and the copy tool are unaffected because they answer
+before generation, but general chat is broken.
 
-- works only in its own worktree and assigned files;
-- adds tests and docs;
-- never merges, pushes, tags or publishes;
-- returns commit hash, changed files, exact test output and limitations.
+**Decision:** the 63M candidate is an optional research base. The product
+default stays `0.8.0`.
 
-## Integration order
+## What ships
 
-1. Merge `feat/planner-feedback` first (planner is the base layer).
-2. Merge `feat/self-code-policy` (self-code and loop integration).
-3. Merge `feat/scoreboard-collect` (measurement).
-4. Merge `feat/self-code-diff` (before/after audit measurement).
-5. Merge `feat/escalation-ladder` (growth router; still no network calls).
-6. Merge `feat/answerability-calibration` only if its measured ECE improves
-   without changing the threshold or lowering AISC targets.
-7. Run the full suite, AISC strict audit, AISC coverage and benchmark on the
-   merged tree.
-8. Add a measured cycle if the merged behavior produces a live signal.
-9. Update `TEST_RESULTS.md`, `docs/HANDOFF.md`, `CHANGELOG.md` and
-   `docs/LOOP_CYCLE_*.md`.
-10. At the 1.0.0 boundary: bump version, build/twine, update release notes and
-    all surfaces, run `scripts/verify_release.py --version 1.0.0`, then one
-    push with tag and release.
+- `atomzero-quickstart --model-dir PATH`: serve a local checkpoint directory
+  with no download.
+- `atomzero-quickstart --model-repo owner/name`: download and serve a published
+  research base.
+- `docs/OPTIONAL_BASES.md`: the candidate card, the product-suite evidence and
+  the promotion rule.
+- `research/results/product_suite_1.0_summary.json`: content-free evidence.
+- Quickstart tests for both paths.
 
-## Acceptance
+## Carried from 0.90.0
 
-- No auto-apply, auto-merge, push, tag or publish from any loop.
-- Human approval remains required.
-- Every new feature has focused tests and a full-suite run.
-- No model weights change.
-- Blocked surfaces (LinkedIn) are reported as blocked, not green.
+- Retention evaluation, checkpoint gate, mixed replay, content rows, safety
+  probes/replay, pretokenized cache, Vast.ai rent-run-destroy pipeline.
+- The 24L depth result: +4 points on 4-key, retention 1.66 (fail).
+- The 63M candidate: gate pass on two seeds, 4short 57.0% / 58.0% exact.
+
+## Next research question
+
+Tune the safety-replay ratio and template diversity: enough refusal behavior to
+pass the safety gate without refusing benign open prompts. Then rerun the
+product suite before any default-base decision.
+
+## Release
+
+1.0.0 ships after the full VM suite and benchmark. Surfaces: PyPI, GitHub,
+Hugging Face, ModelScope, dev.to, Medium, LinkedIn, X with new posts. Donation
+addresses stay unchanged; product weights stay `0.8.0`.

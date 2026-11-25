@@ -13,7 +13,7 @@ ModelScope.
 ## Install
 
 ```powershell
-pip install atomzero==0.90.0
+pip install atomzero==1.0.0
 ```
 
 Optional local MiniLM reranker:
@@ -46,6 +46,16 @@ atomzero-quickstart --no-download       # use cached files
 atomzero-quickstart --no-browser
 atomzero-quickstart --reset-demo        # rebuild the demo document DB
 ```
+
+Optional research bases can be served without changing the default:
+
+```powershell
+atomzero-quickstart --model-dir checkpoints/mixed8_safety_v1
+atomzero-quickstart --model-repo byjameson/atom-zero-63m-mixed
+```
+
+The 63M candidate passes the checkpoint gate but fails open-chat quality, so it
+remains optional. See [`docs/OPTIONAL_BASES.md`](docs/OPTIONAL_BASES.md).
 
 The cache lives at `~/.cache/atomzero/atom-zero-49m`.
 
@@ -417,11 +427,11 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 
 ## Links
 
-- PyPI: <https://pypi.org/project/atomzero/0.90.0/>
+- PyPI: <https://pypi.org/project/atomzero/1.0.0/>
 - GitHub source: <https://github.com/byjameson/atom-zero>
 - X: <https://x.com/aigokhan>
 - Instagram: <https://instagram.com/quantsinner>
-- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v0.90.0>
+- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v1.0.0>
 - Quickstart: <https://github.com/byjameson/atom-zero/blob/main/docs/QUICKSTART_ATOMZERO.md>
 - Model card: <https://github.com/byjameson/atom-zero/blob/main/docs/MODEL_CARD.md>
 - Full project map: <https://github.com/byjameson/atom-zero/blob/main/docs/PROJECT_OVERVIEW.md>
