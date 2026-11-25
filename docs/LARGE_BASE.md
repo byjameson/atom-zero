@@ -154,3 +154,12 @@ only counts, rates and settings, never prompts, keys, values or generations.
 - `flat_format_rate`: fraction of raw generations that are exactly one flat
   JSON object with no code fences or `pairs` wrapper.
 - `rows_invalid`: malformed eval rows, excluded from the rates.
+
+
+## Transfer probe (negative)
+
+The same Qwen2.5-0.5B-Instruct probe was run zero-shot on 10 arithmetic
+rows and 10 city-YAML rows. Both scored **0/10 exact** and all outputs were
+parser-invalid. The larger model solves explicit copy, but it does not
+automatically solve a different task family. Capacity evidence is
+task-specific; the 49M default and the runtime copy tool remain unchanged.
