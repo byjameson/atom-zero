@@ -22,3 +22,4 @@ research/results/newtasks_*.json
 research/results/base49m_city20.json
 research/results/ret_shape.json
 research/results/retention_49m_vs_63m.json
+research/results/smoke_cached_v1*.json
