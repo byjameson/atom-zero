@@ -511,9 +511,13 @@ def main(argv=None) -> int:
     saved = save_checkpoint(
         model, out, config=checkpoint_config(model), tokenizer=tok,
         metadata=metadata, train_summary=training)
+    # Free the training state before loading fresh models for the comparison.
+    del model
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
     comparison = compare(
         args.base, str(eval_path), [str(out)],
-        per_family=True, exact_match=True)
+        per_family=True, exact_match=True, device=str(device))
     result = build_result(
         comparison, training, base=str(args.base),
         checkpoint=_display_path(saved["checkpoint"]),
