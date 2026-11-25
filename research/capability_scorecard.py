@@ -1314,11 +1314,13 @@ def _criterion_meta_learning(
     # The QKV first run is recorded as negative in the 0.60.0 plan.  It has no
     # positive result file, so it must never be counted as an improvement.
     qkv_source = "docs/BATCH_0.60.0.md"
+    evidence.append(
+        "QKV LoRA first result is negative/uncontrolled (6% exact / 18% "
+        "key copy on multi-short); the controlled 3-seed ablation was "
+        "inconclusive (3.33% exact both arms); no positive QKV result is "
+        "counted"
+    )
     if (ROOT / qkv_source).exists():
-        evidence.append(
-            "QKV LoRA first result is negative/uncontrolled (6% exact / 18% "
-            "key copy on multi-short); no positive QKV result is counted"
-        )
         sources.append(qkv_source)
     if not attempt_count and not measured:
         return {
