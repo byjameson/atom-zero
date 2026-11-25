@@ -1,0 +1,72 @@
+{
+  "schema": "atomzero.upcycle_capability_summary.v1",
+  "date": "2026-11-25",
+  "content_free": true,
+  "experiment": "depth_upcycle_full_finetune_v1",
+  "product_base": "atom-zero-49m/0.8.0 weights",
+  "research_checkpoint": "fullft_upcycle8l_v1",
+  "params": 63389184,
+  "layers": 8,
+  "upcycle": {
+    "source_layers": 6,
+    "mapping": [
+      0,
+      0,
+      1,
+      2,
+      3,
+      3,
+      4,
+      5
+    ],
+    "mode": "interpolate"
+  },
+  "training": {
+    "steps": 3000,
+    "lr": 5e-05,
+    "batch_size": 4,
+    "content_weight": 2,
+    "rows": 6153,
+    "device": "cuda",
+    "elapsed_minutes_approx": 82
+  },
+  "mixed_eval": {
+    "base_loss": 6.222525882074503,
+    "model_loss": 0.9934387091670851,
+    "base_exact": 0.0,
+    "model_exact": 0.084
+  },
+  "held_out_full": {
+    "2short": {
+      "n": 200,
+      "exact": 0.895,
+      "key_copy": 0.915
+    },
+    "3short": {
+      "n": 200,
+      "exact": 0.77,
+      "key_copy": 0.835
+    },
+    "4short": {
+      "n": 200,
+      "exact": 0.655,
+      "key_copy": 0.74
+    }
+  },
+  "ood_key_styles": {
+    "n": 30,
+    "exact": 0.0,
+    "key_copy": 0.0,
+    "note": "field_ and k_ prefixed keys; model fails outside the trained 3-6 lowercase alphanumeric key grammar"
+  },
+  "data_only_control_49m": {
+    "tasks_accepted": 656,
+    "tasks_4key": 246,
+    "4short_n": 20,
+    "exact": 0.15,
+    "key_copy": 0.3,
+    "2short_n": 20,
+    "3short_n": 20
+  },
+  "interpretation": "The 4-key wall is capacity-bound inside the trained key grammar: a 63M upcycled and fully fine-tuned model reaches 65.5% exact on 200 held-out 4-key rows, while the 49M model stays at 0% even with 246 new 4-key teacher tasks. This is not general copying: out-of-distribution key styles score 0/30. Product base remains 0.8.0; the 63M checkpoint is a research artifact."
+}
