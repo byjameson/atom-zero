@@ -27,6 +27,13 @@ The checkpoint is **not** a product adapter. It contains `model.pt`,
 
 The comparison JSON is stripped of per-row prompt/answer text before it is
 written; only aggregate and per-family metrics are stored.
+
+``--cache-dir`` (default empty) loads a cache built by
+:mod:`research.pretokenize` and draws encoded input ids, labels and token
+weights from it instead of tokenizing rows in the loop. ``--max-seq`` and
+``--content-weight`` must match the cache metadata; a mismatch is an error
+rather than a silent re-weighting. Without ``--cache-dir`` the trainer is
+unchanged.
 """
 from __future__ import annotations
 
@@ -42,10 +49,12 @@ import torch.nn.functional as F
 try:
     from research.adapter_runtime import load_model, read_rows
     from research.compare_adapters import compare
+    from research.pretokenize import file_sha256, load_training_cache
     from research.train_adapter_candidate import _encode, _token_weights
 except ImportError:  # running as `python research/finetune_copy_control.py`
     from adapter_runtime import load_model, read_rows
     from compare_adapters import compare
+    from pretokenize import file_sha256, load_training_cache
     from train_adapter_candidate import _encode, _token_weights
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -125,14 +134,40 @@ def _batch_stream(rows: list[dict], batch_size: int, seed: int):
             yield [rows[index] for index in order[start:start + batch_size]]
 
 
+def _cache_batch_stream(cache, batch_size: int, seed: int):
+    """Endless deterministic batches of cache indices.
+
+    The permutation is drawn exactly like :func:`_batch_stream`, so an
+    all-scorable cache visits rows in the same order as the on-the-fly path.
+    """
+    generator = torch.Generator().manual_seed(seed)
+    while True:
+        order = torch.randperm(len(cache), generator=generator).tolist()
+        for start in range(0, len(order), batch_size):
+            yield order[start:start + batch_size]
+
+
 def train_control(model, tok, rows: list[dict], *, steps: int, lr: float,
                   batch_size: int = 4, max_seq: int = 256,
                   content_weight: float = 1.0, seed: int = 13,
                   freeze: str = "none", device=None,
-                  log_every: int = 50) -> dict:
-    """Train the full model (or a frozen subset) for ``steps`` updates."""
-    if not rows:
-        raise ValueError("training needs at least one row")
+                  log_every: int = 50, cache=None) -> dict:
+    """Train the full model (or a frozen subset) for ``steps`` updates.
+
+    When ``cache`` is a :class:`research.pretokenize.PretokenizedCache`, rows
+    are drawn from the cache instead of tokenizing ``rows``. ``rows`` may be
+    empty in that mode. The per-row weighted loss is the same expression as
+    the on-the-fly path; only the source of ``x``, ``y`` and ``weights``
+    changes.
+    """
+    if cache is None:
+        if not rows:
+            raise ValueError("training needs at least one row")
+        train_examples = len(rows)
+    else:
+        if len(cache) < 1:
+            raise ValueError("training cache needs at least one row")
+        train_examples = len(rows) if rows else len(cache)
     if steps < 1:
         raise ValueError("steps must be >= 1")
     if batch_size < 1:
@@ -150,7 +185,8 @@ def train_control(model, tok, rows: list[dict], *, steps: int, lr: float,
     selection = set_trainable_parameters(model, freeze)
     params = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.AdamW(params, lr=lr)
-    stream = _batch_stream(rows, batch_size, seed)
+    stream = (_batch_stream(rows, batch_size, seed) if cache is None
+              else _cache_batch_stream(cache, batch_size, seed))
     model.train()
     losses = []
     empty_batches = 0
@@ -160,25 +196,31 @@ def train_control(model, tok, rows: list[dict], *, steps: int, lr: float,
         optimizer.zero_grad(set_to_none=True)
         batch_loss = 0.0
         valid = 0
-        for row in batch:
-            encoded = _encode(tok, row, max_seq, target)
-            if encoded is None:
+        for item in batch:
+            if cache is None:
+                encoded = _encode(tok, item, max_seq, target)
+                if encoded is None:
+                    continue
+                x, y = encoded
+                weights = _token_weights(tok, y, content_weight).reshape(-1)
+            else:
+                x, y, weights = cache[int(item)]
+                x = x.to(target)
+                y = y.to(target)
+                weights = weights.reshape(-1).to(target)
+            denominator = weights.sum()
+            if float(denominator) == 0.0:
                 continue
-            x, y = encoded
             logits = model(x)
             token_loss = F.cross_entropy(
                 logits.reshape(-1, model.vocab), y.reshape(-1),
                 ignore_index=-100, reduction="none")
-            weights = _token_weights(tok, y, content_weight).reshape(-1)
-            denominator = weights.sum()
-            if float(denominator) == 0.0:
-                continue
             batch_loss = batch_loss + (
                 (token_loss * weights).sum() / denominator)
             valid += 1
         if valid == 0:
             empty_batches += 1
-            if empty_batches > max(100, 10 * len(rows)):
+            if empty_batches > max(100, 10 * train_examples):
                 raise RuntimeError(
                     "no row produced a scorable assistant token; check the "
                     "tokenizer tags and max_seq")
@@ -195,11 +237,11 @@ def train_control(model, tok, rows: list[dict], *, steps: int, lr: float,
                 "elapsed_seconds": round(time.time() - started, 2),
             }), flush=True)
     tail = losses[-20:]
-    return {
+    summary = {
         **selection,
         "train_loss": sum(tail) / len(tail),
         "train_steps": steps,
-        "train_examples": len(rows),
+        "train_examples": train_examples,
         "batch_size": batch_size,
         "max_seq": max_seq,
         "content_weight": content_weight,
@@ -207,6 +249,12 @@ def train_control(model, tok, rows: list[dict], *, steps: int, lr: float,
         "seed": seed,
         "device": str(target),
     }
+    if cache is not None:
+        summary["cache_rows"] = len(cache)
+        summary["cache_dir"] = str(getattr(cache, "path", ""))
+        summary["cache_sha256"] = (getattr(cache, "meta", {}) or {}).get(
+            "sha256", "")
+    return summary
 
 
 def checkpoint_config(model) -> dict:
@@ -403,6 +451,10 @@ def main(argv=None) -> int:
     parser.add_argument("--result", default=DEFAULT_RESULT)
     parser.add_argument("--comparison", default=DEFAULT_COMPARISON)
     parser.add_argument("--freeze", choices=FREEZE_CHOICES, default="none")
+    parser.add_argument(
+        "--cache-dir", default="",
+        help="pretokenized training cache from research/pretokenize.py; "
+             "empty keeps the on-the-fly tokenizer path")
     args = parser.parse_args(argv)
     if args.steps < 1:
         parser.error("--steps must be >= 1")
@@ -425,23 +477,40 @@ def main(argv=None) -> int:
     eval_rows = read_rows(eval_path)
     if not train_rows or not eval_rows:
         raise SystemExit("train and eval need at least one row")
+    cache = None
+    cache_dir = _resolve(args.cache_dir) if args.cache_dir else None
+    if cache_dir is not None:
+        try:
+            cache = load_training_cache(
+                cache_dir, max_seq=args.max_seq,
+                content_weight=args.content_weight)
+        except (OSError, ValueError) as exc:
+            raise SystemExit(f"--cache-dir: {exc}") from exc
+        cached_source = (cache.meta.get("data") or {}).get("sha256", "")
+        if cached_source and cached_source != file_sha256(train_path):
+            raise SystemExit(
+                "--cache-dir: the cache was built from a different --train "
+                "file (sha256 mismatch); rebuild it from this training JSONL "
+                "or point --train at the cached source")
     model, tok = load_model(args.base, device=device)
     training = train_control(
         model, tok, train_rows, steps=args.steps, lr=args.lr,
         batch_size=args.batch_size, max_seq=args.max_seq,
         content_weight=args.content_weight, seed=args.seed,
-        freeze=args.freeze, device=device)
+        freeze=args.freeze, device=device, cache=cache)
     training["train_data"] = _display_path(train_path)
     out = _resolve(args.out)
+    metadata = {
+        "base": str(args.base),
+        "train_data": _display_path(train_path),
+        "steps": args.steps,
+        "freeze": args.freeze,
+    }
+    if cache_dir is not None:
+        metadata["cache_dir"] = _display_path(cache_dir)
     saved = save_checkpoint(
         model, out, config=checkpoint_config(model), tokenizer=tok,
-        metadata={
-            "base": str(args.base),
-            "train_data": _display_path(train_path),
-            "steps": args.steps,
-            "freeze": args.freeze,
-        },
-        train_summary=training)
+        metadata=metadata, train_summary=training)
     comparison = compare(
         args.base, str(eval_path), [str(out)],
         per_family=True, exact_match=True)
