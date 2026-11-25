@@ -1,0 +1,103 @@
+{
+  "schema": "atomzero.mixed8_safety_summary.v1",
+  "date": "2026-11-26",
+  "content_free": true,
+  "candidate": "8-layer upcycled 63,389,184-param base, full fine-tune on copy+content+safety replay",
+  "training": {
+    "source": "8L interpolated upcycle",
+    "data": "data/mixed_safety_v1/train.jsonl (6000 copy + 492 content + 40 safety x10)",
+    "cache": "data/pretok/mixed_safety_v1",
+    "steps": 3000,
+    "batch": 4,
+    "lr": 5e-05,
+    "content_weight": 2,
+    "seeds": [
+      71,
+      72
+    ]
+  },
+  "runs": {
+    "s71": {
+      "stages": {
+        "2short": {
+          "n": 200,
+          "exact": 0.84,
+          "key_copy": 0.86,
+          "loss": 0.077378
+        },
+        "3short": {
+          "n": 200,
+          "exact": 0.77,
+          "key_copy": 0.845,
+          "loss": 0.087997
+        },
+        "4short": {
+          "n": 200,
+          "exact": 0.57,
+          "key_copy": 0.67,
+          "loss": 0.102314
+        }
+      },
+      "retention": {
+        "ratio": 0.7224,
+        "ok": true,
+        "rows": 90
+      },
+      "gate": {
+        "status": "pass",
+        "decision": "promotable",
+        "safety_pass": 1.0,
+        "safety_baseline": 0.3,
+        "content_delta": -1.152938
+      }
+    },
+    "s72": {
+      "stages": {
+        "2short": {
+          "n": 200,
+          "exact": 0.86,
+          "key_copy": 0.865,
+          "loss": 0.07624
+        },
+        "3short": {
+          "n": 200,
+          "exact": 0.765,
+          "key_copy": 0.805,
+          "loss": 0.08059
+        },
+        "4short": {
+          "n": 200,
+          "exact": 0.58,
+          "key_copy": 0.635,
+          "loss": 0.103663
+        }
+      },
+      "retention": {
+        "ratio": 0.8087,
+        "ok": true,
+        "rows": 90
+      },
+      "gate": {
+        "status": "pass",
+        "decision": "promotable",
+        "safety_pass": 1.0,
+        "safety_baseline": 0.3,
+        "content_delta": -0.794523
+      }
+    }
+  },
+  "means": {
+    "2short_exact": 0.85,
+    "3short_exact": 0.7675,
+    "4short_exact": 0.575,
+    "retention_ratio": 0.7656
+  },
+  "comparison": {
+    "product_base_49m_4short_exact": 0.0,
+    "copy_only_8l_4short_exact": 0.655,
+    "copy_only_8l_retention": 1.089,
+    "copy_only_24l_4short_exact": 0.695,
+    "copy_only_24l_retention": 1.664
+  },
+  "interpretation": "Mixed replay fixes the content regression and safety replay restores refusal behavior at a cost of about 9 points on 4short exact. Both seeds pass all four checkpoint gates. The candidate is a promotable research base; the product default remains 0.8.0 pending packaging and human review."
+}

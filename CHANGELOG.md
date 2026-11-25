@@ -1,5 +1,14 @@
 # Changelog
 
+## atomzero 0.90.0 - unreleased
+
+- **Depth is not the lever.** A 24-layer / 176,795,136-param upcycle improved 4-key exact only to **69.5%** (two seeds) while content retention fell to **1.664** (fail). The RTX 3090 run cost about $0.42 and the instance was destroyed.
+- **Mixed replay fixes retention.** The 8-layer 63M base fine-tuned on 6000 copy + 492 content + 40 safety rows kept four-key copy and improved content loss over the 49M product base.
+- **Two seeds pass all four checkpoint gates**: 4short **57.0% / 58.0%** exact, **67.0% / 63.5%** key-copy, retention **0.722 / 0.809**, safety **40/40** on held-out probes (baseline 12/40). Safety replay costs about 9 points of four-key exact versus copy-only.
+- New tools: `retention_eval`, `checkpoint_gate`, `mix_training_data`, `build_content_rows`, `build_safety_probes`, `build_safety_replay`, `pretokenize` plus `--cache-dir`, and the `scripts/vastai/` rent-run-destroy pipeline.
+- The 63M candidate is published as a promotable research base; the product default stays `0.8.0`. Donation addresses unchanged.
+- VM: **1598 tests passed in 55.84s**; benchmark **20/20**.
+
 ## atomzero 0.80.0 - 2026-11-25
 
 - Added **depth upcycling** (`research/upcycle_model.py`): the 6-layer 49.2M checkpoint expands to 8 layers / **63,389,184 params** with interpolated block copies and research-only metadata.

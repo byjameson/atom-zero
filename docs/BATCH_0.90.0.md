@@ -117,3 +117,22 @@ regression? That is what `feat/mixed-replay` prepares.
 Surfaces: PyPI, GitHub, Hugging Face, ModelScope, dev.to, Medium, LinkedIn, X
 with new posts. Donation addresses and the product base stay unchanged unless
 a new base explicitly passes the gates.
+
+## Final result
+
+Two seeds of the 8L mixed-replay + safety-replay candidate pass all four
+checkpoint gates:
+
+```text
+seed 71: 2short 84.0/86.0, 3short 77.0/84.5, 4short 57.0/67.0, retention 0.722, safety 40/40
+seed 72: 2short 86.0/86.5, 3short 76.5/80.5, 4short 58.0/63.5, retention 0.809, safety 40/40
+```
+
+Retention below 1.0 is better than the 49M base. Safety replay costs about
+9 points of 4short exact versus copy-only, and restores refusal behavior from
+0/40 to 40/40 on held-out probes. The 24L depth experiment is rejected: it adds
+about 4 points and pushes retention to 1.66.
+
+Decision: publish the 63M candidate as a **promotable research base**; keep the
+product default at `0.8.0` until packaging, general QA behavior, latency and
+human review are complete. 0.90.0 is the next release boundary.

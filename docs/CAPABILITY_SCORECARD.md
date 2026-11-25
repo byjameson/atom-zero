@@ -74,6 +74,17 @@ student: 2short **32% exact / 50% key-copy**, 3short **12% / 28%**, 4short
 the 4-key wall remains and the runtime copy tool is still the exact path. This
 is counted as partial retention/transfer evidence, not as a general model win
 and not as a learning-algorithm improvement.
+
+## Mixed replay and gate evidence (0.90.0)
+
+The 8-layer 63M candidate fine-tuned on copy + content + safety replay passes
+the full checkpoint gate on two seeds: 4-key exact **57.0% / 58.0%**, key-copy
+**67.0% / 63.5%**, content loss **0.722 / 0.809** of the 49M baseline (lower is
+better), and safety **40/40** on held-out probes versus 12/40 for the baseline.
+The trade is explicit: safety replay costs about 9 points of 4-key exact versus
+the copy-only model. A 24-layer 177M model was rejected: +4 points on 4-key and
+retention 1.66. This is capacity + data evidence inside the trained key grammar,
+not general transfer or a product-base promotion.
 ## Scoring rules
 
 The status vocabulary is fixed:
