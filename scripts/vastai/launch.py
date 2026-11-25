@@ -178,6 +178,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--seeds", default="101 102")
     parser.add_argument("--steps", type=int, default=4000)
     parser.add_argument("--batch", type=int, default=16)
+    parser.add_argument("--train-data",
+                        default="data/multi_short_v1/train_all_plus_distill.jsonl")
+    parser.add_argument("--cache-dir", default="")
+    parser.add_argument("--run-tag", default="")
     parser.add_argument("--max-hours", type=float, default=3.0)
     parser.add_argument("--planned-minutes", type=float, default=60.0)
     parser.add_argument("--poll-seconds", type=int, default=60)
@@ -201,6 +205,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  disk:            {args.disk} GB")
         print(f"  layers/seeds:    {args.layers} / {args.seeds}")
         print(f"  steps/batch:     {args.steps} / {args.batch}")
+        print(f"  data:            {args.train_data}")
+        print(f"  cache:           {args.cache_dir or 'none'}")
         print(f"  max hours:       {args.max_hours:.1f} at ${args.dph:.2f}/hr")
         print(f"  worst-case cost: ${est:.2f} (compute only)")
         print(f"  planned minutes: {args.planned_minutes:.0f}")
@@ -251,9 +257,11 @@ def main(argv: list[str] | None = None) -> int:
             "tar -xzf /workspace/atomzero-bundle.tar.gz -C /workspace/atomzero",
             timeout=300,
         )
+        run_tag = args.run_tag or f"fullft_{args.layers}l"
         env_prefix = (
             f"LAYERS={args.layers} SEEDS='{args.seeds}' STEPS={args.steps} "
-            f"BATCH={args.batch} "
+            f"BATCH={args.batch} RUN_TAG='{run_tag}' "
+            f"TRAIN_DATA='{args.train_data}' CACHE_DIR='{args.cache_dir}' "
         )
         # A plain nohup still leaks the SSH channel's extra fds, so the server
         # waits for the training process. Start a fully detached session with

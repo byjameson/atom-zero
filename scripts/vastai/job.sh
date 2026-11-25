@@ -22,6 +22,9 @@ CONTENT_WEIGHT="${CONTENT_WEIGHT:-2}"
 EVAL_ROWS="${EVAL_ROWS:-200}"
 RUN_RETENTION="${RUN_RETENTION:-1}"
 BASE_REPO="${BASE_REPO:-byjameson/atom-zero-49m}"
+TRAIN_DATA="${TRAIN_DATA:-data/multi_short_v1/train_all_plus_distill.jsonl}"
+CACHE_DIR="${CACHE_DIR:-}"
+RUN_TAG="${RUN_TAG:-fullft_${LAYERS}l}"
 PY="${PYTHON:-python3}"
 
 mkdir -p "$OUT"
@@ -71,12 +74,13 @@ UP_DIR="$WORKSPACE/checkpoints/upcycle_${LAYERS}l"
 
 SUMMARY_ARGS=()
 for SEED in $SEEDS; do
-  NAME="fullft_${LAYERS}l_s${SEED}"
+  NAME="${RUN_TAG}_s${SEED}"
   CKPT="$WORKSPACE/checkpoints/$NAME"
-  echo "=== train $NAME ==="
+  echo "=== train $NAME on $TRAIN_DATA cache=${CACHE_DIR:-none} ==="
   "$PY" research/finetune_copy_control.py \
     --base "$UP_DIR" \
-    --train data/multi_short_v1/train_all_plus_distill.jsonl \
+    --train "$TRAIN_DATA" \
+    --cache-dir "$CACHE_DIR" \
     --eval data/staged_copy_v1/mixed_eval.jsonl \
     --out "$CKPT" \
     --steps "$STEPS" \

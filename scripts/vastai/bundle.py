@@ -30,6 +30,12 @@ DEFAULT_DATA = (
     "data/eval_frozen/heldout_city_yaml.jsonl",
     "data/eval_frozen/heldout_city_river.jsonl",
     "data/fresh4_v1/eval.jsonl",
+    "data/mixed_replay_v1/train.jsonl",
+    "data/pretok/mixed_v1/input_ids.npy",
+    "data/pretok/mixed_v1/labels.npy",
+    "data/pretok/mixed_v1/weights.npy",
+    "data/pretok/mixed_v1/lengths.npy",
+    "data/pretok/mixed_v1/meta.json",
 )
 
 EXCLUDE_PREFIXES = (".git/", "checkpoints/", "dist/", "data/", "__pycache__/")
