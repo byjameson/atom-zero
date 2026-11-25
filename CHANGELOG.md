@@ -1,6 +1,6 @@
 # Changelog
 
-## atomzero 0.70.0 - unreleased
+## atomzero 0.70.0 - 2026-11-25
 
 - Added a **verified teacher distillation pipeline**: Qwen2.5-0.5B generates copy answers, a tolerant parser recovers the exact pairs, and only verified rows are canonicalized into 49M training data. A 300-prompt run accepted **153 rows** (json 66, kv 87, yaml 0; 4short 32) and rejected 147.
 - The distilled student started from `multi_recover` and trained on teacher rows + 50% rehearsal. Mixed loss was essentially flat (`0.7769 -> 0.7683`), but held-out 2-3 key copy improved: 2short **32% exact / 50% key-copy** vs multi_recover 0/0; 3short **12% / 28%** vs 0/0; 4short remained 0%.

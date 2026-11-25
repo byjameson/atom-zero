@@ -1,6 +1,6 @@
 # atomzero 0.70.0 - verified teacher distillation gives partial 2-3 key copy
 
-Status: **release candidate**. Base weights remain `0.8.0`.
+Status: **published on 2026-11-25**. Base weights remain `0.8.0`.
 
 ## Highlights
 
@@ -48,3 +48,5 @@ pip install atomzero==0.70.0
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-49m>
 - X: <https://x.com/aigokhan>
 - Instagram: <https://instagram.com/quantsinner>
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-0700-verified-teacher-distillation-gives-partial-2-3-key-copy-31d5>
+- Medium: <https://medium.com/@myredditacc9393/atom-zero-0-70-0-verified-teacher-distillation-gives-partial-2-3-key-copy-45fef0982f0d>
