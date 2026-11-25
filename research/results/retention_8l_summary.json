@@ -1,0 +1,17 @@
+{
+  "schema": "atomzero.retention_summary.v1",
+  "date": "2026-11-25",
+  "content_free": true,
+  "baseline": "atom-zero-49m/0.8.0",
+  "candidate": "fullft_upcycle8l_v1 (63,389,184 params)",
+  "data": [
+    "heldout_city_yaml",
+    "heldout_city_river"
+  ],
+  "max_rows": 200,
+  "rows_scored": 90,
+  "retention_ratio": 1.0889,
+  "retention_ok": true,
+  "threshold": 1.1,
+  "note": "Content-token loss ratio only. Exact match is 0 for both models on this set; this is not a QA capability claim."
+}
