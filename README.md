@@ -347,6 +347,10 @@ copy + content/replay mix with a content-free manifest and an eval-path guard.
 The mixed file still has to pass retention and the checkpoint gate; see
 [`docs/MIXED_REPLAY.md`](docs/MIXED_REPLAY.md).
 
+The `--safety-eval` probe file is generated deterministically by
+`research/build_safety_probes.py`; see
+[`docs/SAFETY_PROBES.md`](docs/SAFETY_PROBES.md).
+
 The model never crawls, mutates its own weights or studies topics on its own
 during chat. **Hungry mode** is an explicit, bounded command for growing the
 retrieval index:
@@ -433,6 +437,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Source reliability ledger: <https://github.com/byjameson/atom-zero/blob/main/docs/RELIABILITY.md>
 - Document version diff: <https://github.com/byjameson/atom-zero/blob/main/docs/DOCUMENT_DIFF.md>
 - Evaluation gate: <https://github.com/byjameson/atom-zero/blob/main/docs/EVALUATION_GATE.md>
+- Deterministic safety probes: <https://github.com/byjameson/atom-zero/blob/main/docs/SAFETY_PROBES.md>
 - Self-improvement architecture: <https://github.com/byjameson/atom-zero/blob/main/docs/SELF_IMPROVEMENT.md>
 - Autonomous loop and sandbox: <https://github.com/byjameson/atom-zero/blob/main/docs/AUTONOMOUS.md>
 - First measured loop cycle: <https://github.com/byjameson/atom-zero/blob/main/docs/LOOP_CYCLE.md>
