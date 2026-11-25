@@ -476,6 +476,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Full fine-tune copy control: <https://github.com/byjameson/atom-zero/blob/main/docs/FULL_FINETUNE_CONTROL.md>
 - Gradient accumulation: <https://github.com/byjameson/atom-zero/blob/main/docs/GRADIENT_ACCUMULATION.md>
 - Replay-aware adapter training: <https://github.com/byjameson/atom-zero/blob/main/docs/REPLAY_TRAINING.md>
+- Optional pretokenized training cache: <https://github.com/byjameson/atom-zero/blob/main/docs/PRETOKENIZED.md>
 - Adapter growth cycle 1: <https://github.com/byjameson/atom-zero/blob/main/docs/ADAPTER_CYCLE_1.md>
 - AISC spec generator: <https://github.com/byjameson/atom-zero/blob/main/docs/AISC_SPEC_GENERATOR.md>
 - Multi-agent orchestration: <https://github.com/byjameson/atom-zero/blob/main/docs/ORCHESTRATION.md>
