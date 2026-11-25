@@ -29,7 +29,7 @@ def test_version_exits_zero(capsys):
 def test_quickstart_passes_teacher_flags(monkeypatch, tmp_path):
     monkeypatch.setattr(
         quickstart, "ensure_assets",
-        lambda cache, download=True: {
+        lambda cache, download=True, **kwargs: {
             "chat_en_bpe8k.json": str(tmp_path / "tokenizer.json")})
     monkeypatch.setattr(quickstart, "seed_demo", lambda path: 0)
     captured = {}
@@ -53,3 +53,50 @@ def test_quickstart_passes_teacher_flags(monkeypatch, tmp_path):
     assert captured["kwargs"]["teacher_label"] == "ollama"
     assert captured["kwargs"]["weekly_reports_path"] == str(
         tmp_path / "reports.json")
+
+def test_model_dir_uses_existing_checkpoint(monkeypatch, tmp_path):
+    captured = {}
+
+    def fake_ensure(cache, download=True, **kwargs):
+        captured["cache"] = str(cache)
+        captured["download"] = download
+        return {"chat_en_bpe8k.json": str(tmp_path / "tokenizer.json")}
+
+    monkeypatch.setattr(quickstart, "ensure_assets", fake_ensure)
+    monkeypatch.setattr(quickstart, "seed_demo", lambda path: 0)
+    monkeypatch.setattr(quickstart, "serve", lambda *a, **k: 0)
+    code = quickstart_main([
+        "--no-browser", "--model-dir", str(tmp_path / "candidate"),
+        "--docs", str(tmp_path / "docs.db")])
+    assert code == 0
+    assert captured["cache"] == str(tmp_path / "candidate")
+    assert captured["download"] is False
+
+
+def test_model_repo_builds_download_base(monkeypatch, tmp_path):
+    captured = {}
+
+    def fake_ensure(cache, download=True, **kwargs):
+        captured["hf_base"] = kwargs.get("hf_base")
+        captured["download"] = download
+        return {"chat_en_bpe8k.json": str(tmp_path / "tokenizer.json")}
+
+    monkeypatch.setattr(quickstart, "ensure_assets", fake_ensure)
+    monkeypatch.setattr(quickstart, "seed_demo", lambda path: 0)
+    monkeypatch.setattr(quickstart, "serve", lambda *a, **k: 0)
+    code = quickstart_main([
+        "--no-browser", "--cache", str(tmp_path / "cache"),
+        "--model-repo", "byjameson/atom-zero-63m-mixed",
+        "--docs", str(tmp_path / "docs.db")])
+    assert code == 0
+    assert captured["hf_base"] == (
+        "https://huggingface.co/byjameson/atom-zero-63m-mixed/resolve/main")
+    assert captured["download"] is True
+
+
+def test_model_repo_rejects_bad_name(monkeypatch, tmp_path):
+    monkeypatch.setattr(quickstart, "seed_demo", lambda path: 0)
+    with pytest.raises(SystemExit):
+        quickstart_main([
+            "--no-browser", "--model-repo", "not-a-repo",
+            "--docs", str(tmp_path / "docs.db")])

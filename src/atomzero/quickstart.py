@@ -55,7 +55,8 @@ def _download(url: str, destination: Path) -> None:
             temporary.unlink(missing_ok=True)
 
 
-def ensure_assets(cache_dir: Path, download: bool = True) -> dict:
+def ensure_assets(cache_dir: Path, download: bool = True,
+                  hf_base: str = HF_BASE) -> dict:
     cache_dir = Path(cache_dir)
     cache_dir.mkdir(parents=True, exist_ok=True)
     paths = {}
@@ -65,8 +66,8 @@ def ensure_assets(cache_dir: Path, download: bool = True) -> dict:
             if not download:
                 raise FileNotFoundError(
                     f"missing {path}; run without --no-download or download "
-                    f"{HF_BASE}/{name}")
-            _download(f"{HF_BASE}/{name}", path)
+                    f"{hf_base}/{name}")
+            _download(f"{hf_base}/{name}", path)
         paths[name] = path
     return paths
 
@@ -95,6 +96,12 @@ def main(argv=None) -> int:
     parser.add_argument("--port", type=int, default=8013)
     parser.add_argument("--cache", default=str(
         Path.home() / ".cache/atomzero/atom-zero-49m"))
+    parser.add_argument("--model-dir", default="",
+                        help="use an existing checkpoint directory and never "
+                             "download (overrides --cache)")
+    parser.add_argument("--model-repo",
+                        default="byjameson/atom-zero-49m",
+                        help="Hugging Face model repo to download from")
     parser.add_argument("--docs", default="data/atomzero_demo.db")
     parser.add_argument("--reports-index", default="data/weekly_reports.json")
     parser.add_argument("--no-download", action="store_true",
@@ -118,7 +125,17 @@ def main(argv=None) -> int:
 
     if args.reset_demo:
         reset_demo(args.docs)
-    assets = ensure_assets(Path(args.cache), download=not args.no_download)
+    repo = args.model_repo.strip().strip("/")
+    if not repo or repo.count("/") != 1:
+        parser.error("--model-repo must look like owner/name")
+    hf_base = f"https://huggingface.co/{repo}/resolve/main"
+    if args.model_dir:
+        cache = Path(args.model_dir)
+        assets = ensure_assets(cache, download=False)
+    else:
+        cache = Path(args.cache)
+        assets = ensure_assets(
+            cache, download=not args.no_download, hf_base=hf_base)
     chunks = seed_demo(args.docs)
     print(f"demo corpus: {args.docs} ({chunks} chunks)", flush=True)
     url = f"http://{args.host}:{args.port}"
@@ -126,7 +143,7 @@ def main(argv=None) -> int:
     if not args.no_browser:
         threading.Timer(1.5, lambda: webbrowser.open(url)).start()
     return serve(
-        str(Path(args.cache)),
+        str(cache),
         str(assets["chat_en_bpe8k.json"]),
         host=args.host,
         port=args.port,

@@ -1,0 +1,51 @@
+{
+  "schema": "atomzero.product_suite_1.0.v1",
+  "date": "2026-11-26",
+  "content_free": true,
+  "candidate": "mixed8_safety_v1 (63,389,184 params)",
+  "baseline": "atom-zero-49m / 0.8.0",
+  "chat_compare": {
+    "prompts": 10,
+    "grounded_docs": {
+      "baseline": "3/3 source-cited",
+      "candidate": "3/3 source-cited",
+      "identical": true
+    },
+    "copy_tool": {
+      "baseline": "1/1 exact",
+      "candidate": "1/1 exact"
+    },
+    "benign_open_prompts": {
+      "count": 5,
+      "candidate_refusals": 4,
+      "candidate_useful": 0,
+      "baseline_useful": 1,
+      "note": "Candidate refuses benign open prompts after safety replay; not a general assistant."
+    },
+    "injection": {
+      "baseline": "no leak but confused",
+      "candidate": "explicit refusal"
+    }
+  },
+  "safety_redteam": {
+    "baseline": "72/72 filter, 72/72 agent",
+    "candidate": "72/72 filter, 72/72 agent"
+  },
+  "injection_redteam": {
+    "baseline": "n/a (static)",
+    "candidate": "4/4"
+  },
+  "document_benchmark": {
+    "status": "pass",
+    "note": "model-independent retrieval/citation regression"
+  },
+  "checkpoint_gate": {
+    "status": "pass",
+    "seeds": [
+      71,
+      72
+    ],
+    "note": "see research/results/mixed8_safety_summary.json"
+  },
+  "decision": "Optional base only. Product default remains 0.8.0 until open-chat quality and human review pass."
+}
