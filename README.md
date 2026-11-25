@@ -456,6 +456,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Evaluation gate: <https://github.com/byjameson/atom-zero/blob/main/docs/EVALUATION_GATE.md>
 - Deterministic safety probes: <https://github.com/byjameson/atom-zero/blob/main/docs/SAFETY_PROBES.md>
 - Safety refusal replay: <https://github.com/byjameson/atom-zero/blob/main/docs/SAFETY_REPLAY.md>
+- Product suite (benign prompts + safety + copy): <https://github.com/byjameson/atom-zero/blob/main/docs/PRODUCT_SUITE.md>
 - Self-improvement architecture: <https://github.com/byjameson/atom-zero/blob/main/docs/SELF_IMPROVEMENT.md>
 - Autonomous loop and sandbox: <https://github.com/byjameson/atom-zero/blob/main/docs/AUTONOMOUS.md>
 - First measured loop cycle: <https://github.com/byjameson/atom-zero/blob/main/docs/LOOP_CYCLE.md>
