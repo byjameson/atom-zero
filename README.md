@@ -284,6 +284,8 @@ See [DOCUMENTS.md](https://github.com/byjameson/atom-zero/blob/main/docs/DOCUMEN
   `key=value` pairs and renders JSON, KV or YAML in ordinary Python. It is a
   runtime transcription tool, not a model capability or a training result; see
   [`docs/COPY_TOOL.md`](docs/COPY_TOOL.md).
+- **Teacher distillation data:** verified, canonicalized copy rows for offline
+  student training; see [`docs/DISTILL_COPY.md`](docs/DISTILL_COPY.md).
 - `POST /v1/agent/plan` executes a small JSON plan through an allowlist:
   - at most **3 steps**;
   - no shell, arbitrary URL or code execution;
