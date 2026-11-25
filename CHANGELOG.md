@@ -1,6 +1,6 @@
 # Changelog
 
-## atomzero 0.60.0 - unreleased
+## atomzero 0.60.0 - 2026-11-25
 
 - Added a **six-criterion capability scorecard** with met/partial/not_met/unknown statuses, evidence paths and next targets. Current status: **met 1, partial 3, not_met 2**.
 - Added **held-out task evidence**: arithmetic, city-YAML and city/river are all 0/30 exact for base and the best copy adapter. Runtime copy-tool accuracy is excluded as tool use.

@@ -1,6 +1,6 @@
 # atomzero 0.60.0 - capability scorecard and controlled attention capacity
 
-Status: **release candidate**. Base weights remain `0.8.0`.
+Status: **published on 2026-11-25**. Base weights remain `0.8.0`.
 
 ## Six-criterion capability scorecard
 
@@ -73,3 +73,5 @@ pip install atomzero==0.60.0
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-49m>
 - X: <https://x.com/aigokhan>
 - Instagram: <https://instagram.com/quantsinner>
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-0600-a-scorecard-that-refuses-to-hide-failures-15h6>
+- Medium: <https://medium.com/@myredditacc9393/atom-zero-0-60-0-a-scorecard-that-refuses-to-hide-failures-3b1f7a748cbf>
