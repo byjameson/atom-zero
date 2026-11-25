@@ -55,7 +55,7 @@ from transfer because it is tool use.
 ## Verification
 
 - Host: 1463 tests passed.
-- VM: 1463 passed in 46.72s.
+- VM: 1463 passed in 47.20s.
 - Benchmark: 20/20.
 - No model weights changed.
 

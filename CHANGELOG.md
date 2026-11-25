@@ -6,7 +6,7 @@
 - Added **held-out task evidence**: arithmetic, city-YAML and city/river are all 0/30 exact for base and the best copy adapter. Runtime copy-tool accuracy is excluded as tool use.
 - Added a **large-base capacity probe**: Qwen2.5-0.5B-Instruct reaches 65/85% exact on 2short, 55/65% on 3short and 55/85% on 4short with tolerant parsing, while the 49M adapter is 0-6% on 3-4 keys. Arithmetic/YAML zero-shot is 0/10. Decision: keep the from-scratch 49M 0.8.0 default; use larger models as teachers/research backends.
 - Added a **controlled QKV vs MLP ablation** (3 seeds): qkv4 3.33% exact / 8.89% key copy; MLP 3.33% / 5.56%; verdict **inconclusive**, intervals overlap. QKV does not break the 3-4 key wall.
-- 1463 tests passed on the VM in 46.72s; benchmark 20/20. Base remains 0.8.0.
+- 1463 tests passed on the VM in 47.20s; benchmark 20/20. Base remains 0.8.0.
 
 ## atomzero 0.50.0 - 2026-11-25
 
