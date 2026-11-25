@@ -344,7 +344,10 @@ sufficient for replacing the base. See
 
 Before full fine-tuning, `research/mix_training_data.py` builds a deduplicated
 copy + content/replay mix with a content-free manifest and an eval-path guard.
-The mixed file still has to pass retention and the checkpoint gate; see
+The content side can be built deterministically from a local facts JSONL with
+`research/build_content_rows.py`; these rows are rehearsal data, not a
+factuality claim. See [`docs/CONTENT_ROWS.md`](docs/CONTENT_ROWS.md). The mixed
+file still has to pass retention and the checkpoint gate; see
 [`docs/MIXED_REPLAY.md`](docs/MIXED_REPLAY.md).
 
 The `--safety-eval` probe file is generated deterministically by
@@ -424,6 +427,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Copy tool: <https://github.com/byjameson/atom-zero/blob/main/docs/COPY_TOOL.md>
 - Content retention eval: <https://github.com/byjameson/atom-zero/blob/main/docs/RETENTION.md>
 - Mixed copy + content replay data: <https://github.com/byjameson/atom-zero/blob/main/docs/MIXED_REPLAY.md>
+- Content replay row builder: <https://github.com/byjameson/atom-zero/blob/main/docs/CONTENT_ROWS.md>
 - Vast.ai GPU runs: <https://github.com/byjameson/atom-zero/blob/main/docs/VASTAI.md>
 - Adapters: <https://github.com/byjameson/atom-zero/blob/main/docs/ADAPTERS.md>
 - Answerability experiment: <https://github.com/byjameson/atom-zero/blob/main/docs/ANSWERABILITY.md>
