@@ -1,99 +1,65 @@
-# Next session - 0.90.0 work in progress
+# Next session - 1.0.0 planning
 
-Snapshot: 2026-11-25, after the 0.80.0 release.
-Main HEAD: `22e1315` (4 commits ahead of `origin/main`, not pushed).
-Working tree: clean. No training or evaluation process is running.
+Snapshot: 2026-11-26, after the 0.90.0 release.
+Main HEAD at release: `174d562`; tag `v0.90.0`.
+No Vast.ai instance is running (verified empty); credit about **$9.54**.
 
 ## Released
 
-`0.80.0` is published and verified on PyPI, GitHub, Hugging Face
-(`atom-zero-49m` and the new `atom-zero-63m` research repo), ModelScope,
-dev.to, Medium, LinkedIn and X. `verify_release --version 0.80.0` reported
-0 failures. Product base remains `0.8.0`.
+`0.90.0` is published and verified on PyPI, GitHub, Hugging Face, ModelScope,
+dev.to, Medium, LinkedIn and X. `verify_release --version 0.90.0` reports
+**0 failures**. CI run `45705068427` on `174d562` is green.
 
-Headline evidence: the 63M depth-upcycled + fully fine-tuned checkpoint
-reaches **89.5% / 77.0% / 65.5% exact** on held-out 2/3/4-key copy (200 rows
-each), versus 49M at 32/12/0. Data-only control (656 new teacher tasks) left
-4short at 0% / 5%. Out-of-distribution key styles score 0/30.
+Key results:
 
-## Merged locally for 0.90.0 (not pushed)
+- 24-layer / 176.8M upcycle: 4short **69.5%** exact (two seeds) but retention
+  **1.664** (fail). Depth rejected.
+- 8-layer 63M + copy/content/safety replay: two seeds pass all four checkpoint
+  gates.
 
-- `feat/content-retention` (`76fe4af`): `research/retention_eval.py`,
-  `tests/test_retention_eval.py`, `docs/RETENTION.md`. Compares a candidate
-  checkpoint with the product base on content loss; `retention_ratio =
-  candidate_content_loss / baseline_content_loss`, default pass `<= 1.10`.
-- `feat/checkpoint-gate` (`f0ee02a`): `research/checkpoint_gate.py`,
-  `tests/test_checkpoint_gate.py`, `docs/CHECKPOINT_GATE.md`. Full-checkpoint
-  gate: content loss, exact match, key-copy, optional safety; missing checks
-  block promotion unless `--allow-missing`.
-- Both merged with `--no-ff`; their 20 tests passed in 7.45s.
+| seed | 4short exact | key-copy | retention | safety |
+|---|---:|---:|---:|---:|
+| 71 | 57.0% | 67.0% | 0.722 | 40/40 |
+| 72 | 58.0% | 63.5% | 0.809 | 40/40 |
 
-## Experiment status
+- Candidate: <https://huggingface.co/byjameson/atom-zero-63m-mixed>
+- Evidence: `research/results/mixed8_safety_summary.json`
+- Product base remains `0.8.0`.
 
-- 8L upcycled base: `checkpoints/upcycle/atom-zero-49m-8l` (63,389,184 params).
-- 8L full fine-tune: `checkpoints/fullft_upcycle8l_v1`. Works: 2short 89.5%,
-  3short 77.0%, 4short 65.5% exact (200 rows each). Trained on copy data only;
-  content retention not yet measured.
-- 8L **LoRA** (`checkpoints/upcycle8l_lora_v1`, 3000 steps, 491,520 params,
-  mixed loss `6.2225 -> 1.3372`): 2short only **2% exact / 6% key-copy**.
-  Frozen interpolated weights do not recover the copy skill; full fine-tuning
-  is the working path. A LoRA-only product path is not supported by evidence.
-- 8L LoRA 3short/4short evaluation was stopped when the PC shut down.
+## What 1.0.0 should decide
 
-## Next steps, in order
+The 63M candidate is marked **promotable** by the checkpoint gate. The next
+boundary is the first real product-base decision:
 
-1. Measure retention of the 63M full fine-tune against the 49M base:
-   ```powershell
-   $env:PYTHONPATH="$PWD;$PWD\src"; $env:PYTHONIOENCODING="utf-8"
-   python research/retention_eval.py `
-     --baseline "$env:USERPROFILE\.cache\atomzero\atom-zero-49m" `
-     --candidate checkpoints/fullft_upcycle8l_v1 `
-     --data data/eval_frozen/heldout_city_yaml.jsonl data/eval_frozen/heldout_city_river.jsonl `
-     --max-rows 200 --per-family `
-     --out research/results/retention_49m_vs_63m.json
-   ```
-2. Run the new checkpoint gate on the 63M candidate with content + copy evals
-   and review the explicit reasons.
-3. If retention fails (expected, copy-only full FT), run the 0.90.0 core
-   experiment: **full fine-tune the 8L base on a copy + content replay mix**
-   (not copy only), then repeat steps 1-2. Locate the original content corpus
-   under the desktop workspace `ai gelistir\data` or `data/learning_queue*.jsonl`
-   before training; do not use eval files.
-4. Optional scale branch: upcycle to 12 layers
-   (`python research/upcycle_model.py --base ... --layers 12`) and repeat the
-   copy evaluation. 91.7M params, ~367 MB fp32.
-5. Finish the 0.90.0 boundary only with: held-out copy numbers, retention
-   ratio, checkpoint gate report, full VM suite + benchmark, then the usual
-   release surfaces and fresh posts.
+1. **Validate general behavior, not only loss.** Run the candidate through the
+   chat, RAG, documents, answerability and safety suites. Content loss is
+   better than the base, but exact QA is still 0 for both on city rows.
+2. **Package a second base.** The download path, cache layout, quickstart,
+   doctor and model card must support a 63M default without breaking the 49M
+   fallback.
+3. **Widen safety evaluation.** The 40/40 result uses disjoint synthetic
+   templates. Add paraphrased, multilingual and multi-turn probes, plus human
+   review of self-harm cases.
+4. **Grow the content replay corpus.** 492 rows from 164 English facts is a
+   proof of concept. The mixed recipe needs a larger, licensed corpus.
+5. **Decide the default.** Keep `0.8.0` unless the candidate passes the full
+   product suite and a human review; otherwise publish it as an optional base.
 
-## Environment reminders
+## Infrastructure
 
-- Training / distillation / large-model work: host GPU (RTX 3050 6GB).
-- Tests, gates, safety verification: VM Ubuntu `192.168.121.128`
-  (`byjameson` / `arslan123`, repo `~/atom-zero`). Suspend or shut down VMware
-  before closing the PC.
-- Do not publish 0.90.0 before its evidence is complete. Release only at the
-  10-minor boundary.
-- Raw comparison JSONs under `research/results/` are gitignored; commit only
-  content-free summaries.
+- Vast.ai pipeline: `scripts/vastai/` + `docs/VASTAI.md`. Preflight, bundle,
+  detached job, automatic destroy. The 24L run cost $0.42 for 2.2 hours.
+- Pretokenized cache: `research/pretokenize.py`, `--cache-dir` in the trainer.
+  Use it for any paid run.
+- Mixed replay: `research/mix_training_data.py`.
+- Content rows: `research/build_content_rows.py`.
+- Safety: `research/build_safety_probes.py`, `research/build_safety_replay.py`.
+- Retention: `research/retention_eval.py`.
+- Gate: `research/checkpoint_gate.py` (supports `--device cuda`).
 
-## Vast.ai infrastructure (ready, nothing rented)
+## Rules
 
-- `scripts/vastai/preflight.py` reads the API key from `Desktop/vastai.txt`,
-  reports balance + credit, filters 24 GB offers and estimates cost.
-- `scripts/vastai/bundle.py` builds a 2.84 MB reproducible bundle (573 files,
-  SHA-256 sidecar) with the exact copy/retention data.
-- `scripts/vastai/job.sh` upgrades to N layers, fine-tunes, evaluates copy and
-  retention, writes `out/summary.json`, `DONE` or `FAILED`.
-- `scripts/vastai/launch.py` is dry-run by default; `--execute` rents,
-  uploads, polls, downloads and destroys in `finally`.
-- Local SSH public key is registered with Vast.ai (key id 2070784).
-- Live offers at setup: RTX 3090 24 GB at **$0.11?0.25/hr**; a 3 h run is
-  about **$0.33?0.75**. Account shows **$10.00 credit**.
-- `--device cuda` was added to `research/compare_adapters.py` so instance
-  evaluation does not fall back to a slow CPU path.
-- Validation: 11 Vast.ai unit tests pass, bundle builds, dry-run prints the
-  plan, `bash -n job.sh` passes, and a 5-row GPU eval on the local 3050 works.
-- Next paid run: 24-layer upcycle (~177M), 2 seeds, 4000 steps, 200-row
-  2/3/4-key evals plus retention, then destroy. Do not run it for a trivial
-  job; the launcher refuses under 30 planned minutes.
+- Training on host GPU or rented GPU; tests and gates on the VMware Ubuntu box.
+- Destroy rented instances even on failure; check for leftovers.
+- Release only at the 10-minor boundary, with fresh posts on every surface.
+- Donation addresses stay unchanged.
