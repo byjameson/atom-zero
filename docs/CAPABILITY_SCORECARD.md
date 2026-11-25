@@ -65,6 +65,15 @@ pretrained, has a different tokenizer/data/compute, and scored 0/10 exact on
 arithmetic and city-YAML zero-shot. The decision is to keep `0.8.0` as the
 low-cost default and use larger models as teachers/research backends.
 
+
+## Distillation evidence (0.70.0)
+
+A verified Qwen teacher distillation cycle improved 2-3 key copy in the 49M
+student: 2short **32% exact / 50% key-copy**, 3short **12% / 28%**, 4short
+**0%** on held-out sets (50/50/20 rows). The 2-3 key gain is real but narrow;
+the 4-key wall remains and the runtime copy tool is still the exact path. This
+is counted as partial retention/transfer evidence, not as a general model win
+and not as a learning-algorithm improvement.
 ## Scoring rules
 
 The status vocabulary is fixed:
