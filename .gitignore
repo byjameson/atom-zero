@@ -15,3 +15,4 @@ research/results/large_base_arith.json
 research/results/large_base_arith_result.json
 research/results/large_base_yaml.json
 research/results/large_base_yaml_result.json
+research/results/distill_*.json
