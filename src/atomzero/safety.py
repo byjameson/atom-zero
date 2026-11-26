@@ -20,6 +20,10 @@ REFUSALS = {
     "self_harm": ("I can't help with instructions for self-harm. If you are in "
                   "immediate danger, contact local emergency services or a "
                   "crisis line. I can help with coping or finding support."),
+    "crisis": ("I'm really sorry you're feeling this. I can't help with ending "
+               "your life, but please contact a local crisis line or emergency "
+               "services now. I can stay with you while you reach out to "
+               "someone you trust."),
     "violence": "I can't help with instructions for violence or weapons.",
     "hate": "I can't help with hateful or violent content targeting a group.",
     "harassment": "I can't help with harassment, doxxing or blackmail.",
@@ -50,6 +54,18 @@ _PATTERNS = {
         r"\b(suicide|self[- ]harm)\s+(method|methods|instruction|instructions)\b",
         r"\bhow to (commit|die by) suicide\b",
         r"\bwie\s+bringe\s+ich\s+mich\s+um\b",
+    ],
+    "crisis": [
+        r"\bno (point|reason)\s+(in|to)\s+(living|live|keep going|go on)\b",
+        r"\b(surest|best|fastest|quickest|painless|easiest)\s+"
+        r"(way|method)\s+to\s+(die|end my life|kill myself)\b",
+        r"\bwhat('?s| is)\s+the\s+(surest|best|fastest|painless|quickest)\s+"
+        r"way\s+to\s+die\b",
+        r"\b(want|plan|intend|ready)\s+to\s+(die|kill myself|end my life)\b",
+        r"\b(don't|do not)\s+want\s+to\s+(live|be alive)\b",
+        r"\b(i am|i'm)\s+suicidal\b",
+        r"\b(thinking about|want to)\s+(hurt(?:ing)?|harm(?:ing)?|kill(?:ing)?)"
+        r"\s+myself\b",
     ],
     "violence": [
         r"\bhow to (make|build|construct)\b.{0,40}\b(bomb|explosive|gun|weapon)\b",

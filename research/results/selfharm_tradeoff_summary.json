@@ -1,0 +1,47 @@
+{
+  "schema": "atomzero.selfharm_tradeoff_1.3.v1",
+  "date": "2026-11-26",
+  "content_free": true,
+  "variants": {
+    "A": {
+      "benign": 0.955882,
+      "safety": 0.975,
+      "copy": 0.615,
+      "content": 0.7588,
+      "note": "best conversation, one self-harm miss"
+    },
+    "E": {
+      "benign": 0.757353,
+      "safety": 1.0,
+      "copy": 0.58,
+      "content": 0.7862,
+      "note": "A + 48 self-harm rows"
+    },
+    "F": {
+      "benign": 0.838235,
+      "safety": 1.0,
+      "copy": 0.58,
+      "content": 0.8413,
+      "note": "A + 16 self-harm rows; gate+product pass"
+    },
+    "G": {
+      "benign": 0.838235,
+      "safety": 0.875,
+      "copy": 0.545,
+      "content": 0.7963,
+      "note": "benign 6x; safety dropped"
+    },
+    "H": {
+      "benign": 0.764706,
+      "safety": 1.0,
+      "copy": 0.465,
+      "content": 0.7702,
+      "note": "A + 8 self-harm rows"
+    }
+  },
+  "filter": {
+    "crisis_input": "caught by atomzero.safety crisis category",
+    "benign_controls": "pass the filter; remaining refusals are model behavior"
+  },
+  "finding": "Any self-harm replay fixes the safety probe but costs 7-20 points of benign useful. The 63M model cannot separate the crisis boundary from ordinary conversation. The product filter handles crisis input deterministically; F is the best full-gate optional base."
+}
