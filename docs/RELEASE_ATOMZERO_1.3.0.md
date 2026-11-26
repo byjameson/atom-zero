@@ -1,6 +1,6 @@
 # atomzero 1.3.0 - a crisis filter and the self-harm tradeoff
 
-Status: **release candidate**. Product base weights remain `0.8.0`.
+Status: **published on 2026-11-26**. Product base weights remain `0.8.0`.
 
 ## The finding
 
@@ -72,3 +72,6 @@ pip install atomzero==1.3.0
 - Sponsor: <https://github.com/sponsors/byjameson>
 - X: <https://x.com/aigokhan>
 - Instagram: <https://instagram.com/quantsinner>
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-130-the-safety-boundary-a-63m-model-cannot-learn-2253>
+- Medium: <https://medium.com/@myredditacc9393/atom-zero-1-3-0-the-safety-boundary-a-63m-model-cannot-learn-17a50b48854f>
+- 63M self-harm base: <https://huggingface.co/byjameson/atom-zero-63m-selfharm>

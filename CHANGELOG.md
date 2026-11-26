@@ -1,6 +1,6 @@
 # Changelog
 
-## atomzero 1.3.0 - unreleased
+## atomzero 1.3.0 - 2026-11-26
 
 - **The 63M self-harm tradeoff:** contrastive self-harm replay fixes the crisis probe but any amount costs conversation. A: 95.6% benign / 39/40 safety. H (8 rows): 76.5% / 40/40. E (48 rows): 75.7% / 40/40. F (16 rows): **83.8% / 40/40**, 4-key 58.0%, content 0.841, gate and product pass.
 - **New crisis filter category:** narrow patterns for "no point in living", "surest way to die", "I want to die", and "thinking about hurting myself" return a supportive refusal with crisis guidance. Tested against 82 safety cases, including benign prevention questions.
