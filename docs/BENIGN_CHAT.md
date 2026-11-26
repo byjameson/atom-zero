@@ -16,24 +16,43 @@ end.
 
 ## What it builds
 
-| category | rows | example topics |
-|---|---:|---|
-| `identity` | 18 | who are you, what can you do |
-| `greeting` | 18 | hello, how are you, good morning |
-| `explanation` | 18 | transformer, RAG, database |
-| `cooking` | 18 | boil an egg, simple pasta, store bread |
-| `travel` | 18 | pack a carry-on, plan a day trip, airport arrival |
-| `coding` | 18 | what is a function, debug a typo, explain a loop |
-| `planning` | 18 | plan a study week, prioritize tasks, make a checklist |
-| `general_knowledge` | 18 | capital of France, boiling point, speed of light |
+| category | default rows | pool | example topics |
+|---|---:|---:|---|
+| `identity` | 60 | 72 | who are you, what can you do, human or program, local or online, languages, limits |
+| `greeting` | 60 | 72 | hello, how are you, good morning, good evening, thanks, goodbye, nice to meet you |
+| `explanation` | 60 | 72 | transformer, RAG, database, API, cache, version control, encryption, JSON |
+| `cooking` | 60 | 72 | boil an egg, simple pasta, store bread, rice, roast vegetables, tea, pancakes, dressing |
+| `travel` | 60 | 72 | pack a carry-on, day trip, airport arrival, jet lag, budget, transit, documents, hotel |
+| `coding` | 60 | 72 | functions, typo debugging, loops, lists and dictionaries, commits, tests, naming, tracebacks |
+| `planning` | 60 | 72 | study week, priorities, checklists, morning routine, project plan, agenda, weekly review, habits |
+| `general_knowledge` | 60 | 72 | France, boiling point, speed of light, largest planet, largest ocean, continents, photosynthesis, blue sky |
 
-The default is 18 rows per category: 8 categories x 18 = 144 rows.
+The default is 60 rows per category: 8 categories x 60 = 480 rows.
 `data/` is gitignored, so generated files stay local. The generator is the
 reviewable source of truth.
 
-Each category has multiple prompt groups and multiple answer variants per
-group. Rows are deterministic combinations of a prompt and an answer, selected
-with the seed. Every normalized `(user, assistant)` pair is unique.
+### 480-row recipe
+
+Each category is authored as a small combinatorial pool rather than a flat
+list:
+
+```text
+8 subject groups
+  x 3 prompt phrasings per subject   (intent / phrasing variants)
+  x 3 answer variants per subject     (direct answer, practical tip, short steps)
+= 72 candidate (user, assistant) pairs per category
+```
+
+The seed selects 60 of the 72 candidates in each category, so the default file
+is 8 x 60 = 480 rows. The remaining 12 per category are alternates: a different
+seed selects a different subset without changing the authored inventory. The
+full pool is validated before selection, and every normalized
+`(user, assistant)` pair across all 576 candidates is unique.
+
+Answers are 1-3 short sentences, between 24 and 300 characters. They vary
+between a direct answer, one practical tip, and a short ordered list or set of
+steps. They are safe, non-personal, and contain a concrete answer rather than a
+refusal.
 
 ## Row shape
 
@@ -46,11 +65,9 @@ Each output line contains exactly:
 `family` is one of the eight categories. `source` is always
 `synthetic_template`, and `style` is always `benign_chat`.
 
-Answers are 1-3 short sentences, between 24 and 300 characters. They are safe,
-non-personal, and contain a concrete answer rather than a refusal. The builder
-rejects answers that contain common refusal markers (`I can't`, `I cannot`,
-`I won't`, `I'm sorry`, `unable to`, and similar), credential-like fragments, or
-an email address, URL or phone number.
+The builder rejects answers that contain common refusal markers (`I can't`,
+`I cannot`, `I won't`, `I'm sorry`, `unable to`, and similar), credential-like
+fragments, or an email address, URL or phone number.
 
 ## Exact command
 
@@ -63,7 +80,7 @@ $env:PYTHONIOENCODING="utf-8"
 python research/build_benign_chat.py `
   --out data/benign_chat_v1/train.jsonl `
   --manifest data/benign_chat_v1/manifest.json `
-  --per-category 18 `
+  --per-category 60 `
   --seed 41
 ```
 
@@ -78,13 +95,15 @@ python research/build_benign_chat.py --force
 |---|---|---|
 | `--out` | `data/benign_chat_v1/train.jsonl` | training JSONL |
 | `--manifest` | `data/benign_chat_v1/manifest.json` | content-free manifest |
-| `--per-category` | `18` | rows per category (the pool has 27 per category) |
+| `--per-category` | `60` | rows per category (the authored pool has 72 per category) |
 | `--seed` | `41` | deterministic combination selection and ordering |
 | `--force` | off | overwrite existing output and manifest |
 
 The same seed and `--per-category` produce byte-identical files. A different
 seed selects a different subset when the pool is larger than the requested
-count. `--per-category` above 27 fails with an explicit error.
+count. `--per-category` above 72 fails with an explicit error. Raising the
+ceiling requires authoring more subject groups, prompts or answer variants, not
+duplicating rows.
 
 ## Add the rows to the mixed replay
 
@@ -101,6 +120,7 @@ python research/mix_training_data.py `
   --copy data/copy_curriculum_v1/train.jsonl `
   --content data/content_v1/train.jsonl `
             data/safety_replay_v1/train.jsonl `
+            data/selfharm_replay_v1/train.jsonl `
             data/benign_chat_v1/train.jsonl `
   --copy-weight 1.0 `
   --content-weight 1.0 `
@@ -111,16 +131,34 @@ python research/mix_training_data.py `
   --manifest data/mixed_replay_v1/manifest.json
 ```
 
-Use the real local copy and content corpora in place of the example paths. The
-mixer reports each source separately, so check that the benign chat source is
-present in `sources` and contributes its rows.
+Use the real local copy and content corpora in place of the example paths, and
+keep the safety sources in the mix. The mixer reports each source separately,
+so check that the benign chat source is present in `sources` and contributes
+its 480 rows.
+
+### Mixing guidance
+
+- **Size.** 480 rows is 0.40% of a 120k mix, 2.4% of a 20k targeted mix, and
+  4.8% of a 10k rehearsal mix. If the benign useful rate is still stuck below
+  90%, a smaller targeted mix or repeated benign rehearsal is usually more
+  effective than adding unrelated rows.
+- **Weights do not duplicate.** The mixer requests
+  `round(weight * unique_rows)` per source and caps each source at the rows it
+  actually contains. `--content-weight` above 1 does not create extra copies of
+  the benign rows. To get more exposure, run additional training epochs or
+  repeat the rehearsal cycle, and record the effective passes in the run notes.
+- **Keep safety replay fixed.** The goal is to change the benign side without
+  changing the safety rows. Do not drop or down-weight safety replay to make
+  room for benign rows.
+- **Gate both sides.** Evaluate the product suite and the disjoint safety
+  probes from the same checkpoint. Report the benign useful rate, safety pass
+  rate and self-harm pass rate together.
 
 **Dilution warning.** Weights are sampling multipliers, not target fractions.
-The mixer never oversamples a source and never duplicates rows. A 144-row file
-is tiny next to a 100k-row copy curriculum and contributes roughly 0.14% of a
-120k mix. Do not treat one mix as proof that benign answering is restored. Use a
-targeted mix or repeated rehearsal cycles, and evaluate both the product suite
-and the safety probes.
+A 480-row file is still small next to a 100k-row copy curriculum. Do not treat
+one mix as proof that benign answering is restored. Use a targeted mix or
+repeated rehearsal cycles, and evaluate both the product suite and the safety
+probes.
 
 ## Hypothesis
 
@@ -155,14 +193,14 @@ exact JSONL bytes. Prompt and answer text is never copied into it.
   "source": "synthetic_template",
   "style": "benign_chat",
   "seed": 41,
-  "per_category": 18,
-  "total": 144,
+  "per_category": 60,
+  "total": 480,
   "categories": ["identity", "..."],
   "counts": {
-    "by_category": {"identity": 18, "...": 18}
+    "by_category": {"identity": 60, "...": 60}
   },
   "sha256": "<64 lowercase hex characters>",
-  "bytes": 37664,
+  "bytes": 125612,
   "content_free": true
 }
 ```
@@ -181,9 +219,9 @@ they depend on the seed, `--per-category` and the generator version.
 - **No factuality guarantee.** General-knowledge answers are common stable
   facts, but the builder does not verify them against an external source. They
   are rehearsal examples, not a knowledge benchmark.
-- **Small and easily diluted.** A 144-row file is a tiny fraction of a
-  copy-heavy mix. Check the mixer manifest and use a targeted ratio if the
-  effect is being tested.
+- **Small and easily diluted.** A 480-row file is still a small fraction of a
+  copy-heavy mix. Check the mixer manifest and use a targeted ratio or repeated
+  rehearsal if the effect is being tested.
 - **Over-correction risk.** More answer-style rows can also make the model more
   willing on prompts it should refuse. Always mix safety replay and gate on both
   the benign product suite and the disjoint safety probes.
@@ -201,7 +239,8 @@ $env:PYTHONIOENCODING="utf-8"
 python -m pytest tests/test_benign_chat.py -q
 ```
 
-The tests cover determinism, default and custom counts, unique pairs, required
-fields, refusal-marker absence, answer length and sentence bounds, safety-filter
-compatibility, a content-free manifest with the output hash, and `--force`
-behavior.
+The tests cover determinism, the 480-row default, 60 rows per category, unique
+`(user, assistant)` pairs across the full 576-candidate pool, required fields,
+refusal-marker absence, answer length and sentence bounds, answer style
+variation, safety-filter compatibility, a content-free manifest with the output
+hash, the CLI default, and `--force` behavior.

@@ -44,20 +44,41 @@ def _manifest_keys(value):
 def test_default_counts_and_row_shape():
     rows = chat.build_rows()
 
+    assert chat.DEFAULT_PER_CATEGORY == 60
     assert len(rows) == (
         chat.DEFAULT_PER_CATEGORY * len(chat.CATEGORY_ORDER))
-    assert len(rows) == 144
+    assert len(rows) == 480
     counts = Counter(row["family"] for row in rows)
     assert counts == {
         category: chat.DEFAULT_PER_CATEGORY
         for category in chat.CATEGORY_ORDER
     }
+    assert counts == {category: 60 for category in chat.CATEGORY_ORDER}
     for row in rows:
         assert set(row) == ROW_FIELDS
         assert row["family"] in chat.CATEGORY_ORDER
         assert row["source"] == "synthetic_template"
         assert row["style"] == "benign_chat"
         assert chat.validate_row(row)
+
+
+def test_cli_default_builds_480_rows(tmp_path):
+    out = tmp_path / "train.jsonl"
+    manifest = tmp_path / "manifest.json"
+
+    assert chat.main([
+        "--out", str(out),
+        "--manifest", str(manifest),
+    ]) == 0
+
+    rows = _read_jsonl(out)
+    assert len(rows) == 480
+    assert Counter(row["family"] for row in rows) == {
+        category: 60 for category in chat.CATEGORY_ORDER
+    }
+    summary = json.loads(manifest.read_text(encoding="utf-8"))
+    assert summary["per_category"] == 60
+    assert summary["total"] == 480
 
 
 def test_build_is_deterministic_and_seed_changes_selection(tmp_path):
@@ -219,14 +240,48 @@ def test_existing_output_requires_force(tmp_path):
 def test_every_category_has_multiple_prompts_and_answers():
     for category in chat.CATEGORY_ORDER:
         groups = chat.TEMPLATES[category]
-        assert len(groups) >= 2
+        assert len(groups) >= 8
         for group in groups:
             assert len(group["prompts"]) >= 2
             assert len(group["answers"]) >= 2
             assert len(set(group["prompts"])) == len(group["prompts"])
             assert len(set(group["answers"])) == len(group["answers"])
-        assert len(chat._combinations(category)) >= (
-            chat.DEFAULT_PER_CATEGORY)
+        combinations = chat._combinations(category)
+        assert len(combinations) == 72
+        assert len(combinations) >= chat.DEFAULT_PER_CATEGORY
+        assert len(combinations) >= 60
+        assert len(set(combinations)) == len(combinations)
+
+
+def test_full_template_pool_is_unique_and_valid():
+    pairs = set()
+    for category in chat.CATEGORY_ORDER:
+        for user, assistant in chat._combinations(category):
+            assert chat.validate_user(user)
+            assert chat.validate_answer(assistant)
+            key = (
+                chat.normalize_text(user),
+                chat.normalize_text(assistant),
+            )
+            assert key not in pairs
+            pairs.add(key)
+    assert len(pairs) == 72 * len(chat.CATEGORY_ORDER)
+    assert len(pairs) == 576
+
+
+def test_answer_styles_vary_in_length_and_sentence_count():
+    answers = [
+        answer
+        for category in chat.CATEGORY_ORDER
+        for group in chat.TEMPLATES[category]
+        for answer in group["answers"]
+    ]
+    sentence_counts = {chat.sentence_count(answer) for answer in answers}
+    lengths = {len(answer) for answer in answers}
+
+    assert sentence_counts == {1, 2, 3}
+    assert len(lengths) > 20
+    assert max(lengths) - min(lengths) > 100
 
 
 def test_invalid_output_and_manifest_paths_are_rejected(tmp_path):
