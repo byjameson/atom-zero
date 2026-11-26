@@ -1,67 +1,64 @@
-# Next session - 1.1.0 planning
+# Next session - 1.2.0 planning
 
-Snapshot: 2026-11-26, after the 1.0.0 release.
-Tag `v1.0.0`; main includes the publication commit.
+Snapshot: 2026-11-26, after the 1.1.0 release.
+Tag `v1.1.0`; main includes the publication commit.
 No Vast.ai instance is running (verified empty); credit about **$9.54**.
 
 ## Released
 
-`1.0.0` is published and verified on PyPI, GitHub, Hugging Face, ModelScope,
-dev.to, Medium, LinkedIn and X. `verify_release --version 1.0.0` reports
-**0 failures**. CI run `45707191185` is green.
+`1.1.0` is published and verified on PyPI, GitHub, Hugging Face, ModelScope,
+dev.to, Medium, LinkedIn and X. `verify_release --version 1.1.0` reports
+**0 failures**. CI run `45729474401` is green.
 
-Core result: the 63M mixed-replay candidate passed every checkpoint gate but
-failed the product suite. Same server, same corpus, ten prompts:
+Key result: benign chat replay fixes the 1.0.0 refusal collapse.
 
-| area | 49M base | 63M candidate |
-|---|---|---|
-| grounded document questions | 3/3 | 3/3 |
-| copy tool | 1/1 | 1/1 |
-| benign open prompts | 1/5 useful | **0/5, 4 refusals** |
-| safety redteam | 72/72 | 72/72 |
+| variant | safety | benign | 2short | 3short | 4short | retention | benign useful | gate |
+|---|---:|---:|---:|---:|---:|---:|---:|---|
+| A | 1x | 3x | 85.0% | 79.5% | **61.5%** | **0.759** | **92%** | 39/40 |
+| B | 5x | 3x | 86.5% | 71.5% | 38.0% | 0.901 | 88% | **40/40** |
 
-The candidate is an optional research base. The product default stays `0.8.0`.
+B is the first candidate to pass both the strict gate and the product suite.
+It is published as `byjameson/atom-zero-63m-benign`, an optional base.
+Default remains `0.8.0`.
 
-## The 1.1.0 experiment
+## 1.2.0 decision
 
-Find the safety-replay ratio that passes the safety gate **without** refusing
-benign open prompts.
+The default-base decision now requires a broader product suite, not a new
+architecture:
 
-1. Generate the safety replay split with ratios 2x, 5x, 10x (current), 20x and
-   a template-diverse variant.
-2. For each: train the 8L mixed model, run the checkpoint gate AND a benign
-   prompt suite (20-30 ordinary prompts: identity, explanation, greeting,
-   cooking, travel, coding help).
-3. Score two axes:
-   - safety gate pass rate on held-out probes,
-   - benign-prompt useful rate (no refusal, on-topic, non-empty).
-4. Pick the smallest safety ratio that keeps the gate pass and restores at
-   least 80% useful benign answers.
-5. Only then consider a default-base change; otherwise publish the finding and
-   keep `0.8.0`.
-
-Add a `research/benign_prompts.py` builder or a fixed JSONL with 25 prompts and
-a `research/product_suite.py` runner that reports both axes content-free. The
-current ad-hoc product test lives in `research/results/product_suite_1.0_summary.json`.
+1. **Expand benign coverage** from 25 to 100+ prompts, including multi-turn
+   greetings, follow-ups, ambiguity and "I don't know" cases.
+2. **Add RAG/doc and tool scenarios** to the product runner (currently the
+   document benchmark is model-independent and the copy tool answers before
+   generation).
+3. **Fix variant A's one safety probe** without losing its 92% benign / 61.5%
+   four-key profile. Check which family the probe belongs to and whether the
+   replay templates cover it.
+4. **Human review** of the self-harm and prompt-injection families.
+5. If A or B passes the expanded suite, make it the default in 1.2.0 and keep
+   the 49M as a fallback. Otherwise keep `0.8.0` and publish the expanded
+   evidence.
 
 ## Infrastructure
 
-- Vast.ai: `scripts/vastai/` + `docs/VASTAI.md`; preflight, bundle, detached
-  job, automatic destroy. Use only for jobs that do not fit locally.
-- Pretokenized cache: `research/pretokenize.py` + `--cache-dir`.
+- Product suite: `research/product_suite.py` (`product_ok` = benign >= 0.8,
+  safety >= 0.9, copy exact >= 0.25).
+- Benign data: `research/build_benign_prompts.py`,
+  `research/build_benign_chat.py`.
+- Safety: `research/build_safety_probes.py`,
+  `research/build_safety_replay.py`.
 - Mixed replay: `research/mix_training_data.py`.
 - Content rows: `research/build_content_rows.py`.
-- Safety probes/replay: `research/build_safety_probes.py`,
-  `research/build_safety_replay.py`.
 - Retention: `research/retention_eval.py`; gate:
-  `research/checkpoint_gate.py` (supports `--device cuda`).
+  `research/checkpoint_gate.py`.
 - Optional bases: `atomzero-quickstart --model-dir` / `--model-repo`;
   `docs/OPTIONAL_BASES.md`.
+- Rented GPU: `scripts/vastai/` + `docs/VASTAI.md`; destroy after every run.
 
 ## Rules
 
 - Training on host GPU or rented GPU; tests and gates on the VMware Ubuntu box.
 - Check for leftover Vast.ai instances and destroy them.
-- Release only at the next 10-step boundary (1.1.0), with new posts on every
-  surface. Donation addresses and product weights stay unchanged unless a new
-  base passes the product suite.
+- Release at the next boundary (1.2.0) with fresh posts. Donation addresses stay
+  unchanged. Default weights change only after the expanded product suite and
+  human review.
