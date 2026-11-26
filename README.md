@@ -10,6 +10,15 @@ package and is **not required** to run Atom Zero. Atom Zero is published on seve
 canonical surfaces: GitHub, Hugging Face, PyPI, dev.to, Medium, LinkedIn and
 ModelScope.
 
+## Support the project
+
+[![Sponsor on GitHub](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-ea4aaa?logo=githubsponsors)](https://github.com/sponsors/byjameson)
+
+Atom Zero is independent and measured in public. Sponsors fund GPU hours,
+distillation and upcycling experiments, safety and retention gates, and
+reproducible releases. The current goal is **$200/month** ? one full release
+cycle. Crypto and other options are in [`docs/DONATE.md`](docs/DONATE.md).
+
 ## Install
 
 ```powershell
