@@ -282,7 +282,7 @@ def main(argv: list[str] | None = None) -> int:
         time.sleep(8)
         check = remote(
             ssh,
-            "pgrep -af 'vastai/job.sh' | head -n 2; "
+            "pgrep -af '[v]astai/job.sh' | head -n 2; "
             "test -f /workspace/out/job.log && tail -n 1 /workspace/out/job.log || true",
             check=False,
         ).strip()
@@ -300,7 +300,7 @@ def main(argv: list[str] | None = None) -> int:
                 ssh,
                 "if [ -f /workspace/out/DONE ]; then echo DONE; "
                 "elif [ -f /workspace/out/FAILED ]; then echo FAILED; "
-                "elif pgrep -f 'vastai/job.sh' >/dev/null; then echo RUNNING; "
+                "elif pgrep -f '[v]astai/job.sh' >/dev/null; then echo RUNNING; "
                 "else echo CRASHED; fi; "
                 "tail -n 2 /workspace/out/job.log 2>/dev/null | tr '\\n' ' '",
                 check=False,

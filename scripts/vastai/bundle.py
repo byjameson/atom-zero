@@ -80,6 +80,8 @@ def _sha256(path: Path) -> str:
 
 
 def _add_bytes(tar: tarfile.TarFile, name: str, data: bytes) -> None:
+    if name.endswith(".sh"):
+        data = data.replace(b"\r\n", b"\n")
     info = tarfile.TarInfo(name)
     info.size = len(data)
     info.mtime = 0
