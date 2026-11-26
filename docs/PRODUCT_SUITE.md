@@ -17,6 +17,15 @@ conversations by default (136 rows total). Both files are research tools: they
 do not train, download, merge or promote weights. See
 [`BENIGN_SUITE.md`](BENIGN_SUITE.md) for the full prompt-set contract.
 
+The suite also has two optional axes added for 1.6.0:
+
+- **multi-turn**: every user turn in a `messages` row is generated and scored;
+  single-turn and multi-turn useful rates are reported separately.
+- **RAG**: `--rag-cases` scores authored document questions against a temporary
+  `atomzero.doc_memory.DocMemory` corpus through the same retrieval and grounded
+  answer code used by the server's `/v1/documents/answer` endpoint. This check
+  does not use the model.
+
 ## Build the benign prompt set
 
 Run from the repository root:
@@ -87,11 +96,27 @@ python research/product_suite.py `
   --safety-eval data/safety_replay_v1/eval.jsonl `
   --copy-eval data/multi_short_v1/stage_4short/eval.jsonl `
   --content-eval data/eval_tmp/city_all.jsonl `
+  --rag-cases examples/rag_suite_v1/cases.jsonl `
   --device cuda `
   --max-new 64 `
   --out research/results/product_suite_mixed8_safety_v1.json `
   --json
 ```
+
+Without `--rag-docs`, the RAG cases run against the built-in authored corpus
+(`launch_policy.txt`, `warranty.txt`, `travel.txt`, `security.txt`). To use the
+same corpus from an explicitly versioned file:
+
+```powershell
+python research/product_suite.py `
+  --candidate checkpoints/mixed8_safety_v1 `
+  --rag-cases examples/rag_suite_v1/cases.jsonl `
+  --rag-docs examples/rag_suite_v1/docs.jsonl `
+  --device cuda --json
+```
+
+Every other eval flag keeps its default. Without `--rag-cases`, the RAG block is
+skipped and its check does not affect `product_ok`.
 
 Exit code is `0` only when `product_ok` is true; otherwise it is `1`. The JSON
 report is written to `--out` and, with `--json`, also printed. Without `--json`
@@ -105,13 +130,36 @@ a short human summary is printed.
 | `--safety-eval` | `data/safety_replay_v1/eval.jsonl` | held-out safety probes |
 | `--copy-eval` | `data/multi_short_v1/stage_4short/eval.jsonl` | copy eval |
 | `--content-eval` | `data/eval_tmp/city_all.jsonl` | content-loss eval |
+| `--rag-cases` | empty | optional RAG case JSONL; enables `rag_ok` |
+| `--rag-docs` | empty | authored document JSONL; built-in corpus when empty |
+| `--multi-turn` | on | evaluate every user turn in multi-turn rows |
+| `--no-multi-turn` | off | score only the final answer of each multi-turn row |
 | `--device` | `cpu` | `cpu`, `cuda` or `auto` |
 | `--max-new` | `64` | generation cap |
 | `--min-benign-useful-rate` | `0.8` | product bar |
 | `--min-safety-pass-rate` | `0.9` | product bar |
 | `--min-copy-exact` | `0.25` | product bar |
+| `--min-rag-pass-rate` | `0.8` | RAG bar, only with `--rag-cases` |
 | `--out` | empty | write the content-free report |
 | `--json` | off | print the report |
+
+The RAG case file is JSONL with one object per line:
+
+```json
+{"user": "What is the launch code?", "expected_substring": "L-7781",
+ "source": "launch_policy.txt"}
+```
+
+The RAG document file is JSONL with one authored document per line:
+
+```json
+{"source": "launch_policy.txt", "title": "Launch policy",
+ "text": "The launch code is L-7781. The primary window opens at 06:30 UTC."}
+```
+
+The sample pair lives in `examples/rag_suite_v1/` because `data/` is gitignored.
+Document text may contain newlines. Invalid rows are counted but never copied
+into the report.
 
 The default baseline is
 `$env:USERPROFILE\.cache\atomzero\atom-zero-49m` (`~/.cache/atomzero/...` on
@@ -140,6 +188,30 @@ user turn, followed by `<|assistant|>`:
 The report also gives `useful`, `refusals`, `empty`, `short`,
 `generation_errors`, `single_turn` and `multi_turn` example counts, and the
 same rates for every category and for the baseline when one is loaded.
+
+#### Single-turn and multi-turn rates
+
+`single_turn_useful_rate` and `multi_turn_useful_rate` use the same
+`useful` classifier but different denominators:
+
+```text
+single_turn_useful_rate = single_turn_useful / single_turn_examples
+multi_turn_useful_rate  = multi_turn_useful  / multi_turn_examples
+```
+
+A multi-turn row's primary useful flag is still its final answer, so
+`multi_turn_useful_rate` remains comparable with earlier suites. With
+`--multi-turn` (the default), every user turn is also generated from the
+authored transcript prefix ending at that turn. The extra fields are:
+
+- `multi_turn_turns`: number of generated user-turn answers in multi-turn rows.
+- `multi_turn_turn_useful` / `multi_turn_turn_useful_rate`: turn-level useful
+  count and rate. Every turn has equal weight.
+- `multi_turn_both_turns_useful` /
+  `multi_turn_both_turns_useful_rate`: multi-turn rows where every user turn
+  was useful. The name is historical; it covers all user turns.
+- `multi_turn_all_turns_evaluated`: false only under `--no-multi-turn`, which
+  scores the final answer and sets the turn-level rates to `null`.
 
 This is a lexical screen, not an answer-quality grader. A four-word answer can
 still be wrong, and phrases such as Ã¢â‚¬Å“I'm sorry to hear thatÃ¢â‚¬Â are counted as
@@ -187,6 +259,43 @@ part of `product_ok`; the checkpoint gate owns the retention threshold. Both
 models use the same tokenizer (baseline first, then candidate, then
 `data/chat_en_bpe8k.json`) so token losses are comparable.
 
+### RAG pass (server path)
+
+`--rag-cases` answers each `{user, expected_substring, source}` case with
+`DocMemory.search` plus `grounded_answer`. Those are the two functions behind
+`atomzero.chat_server.doc_answer` and the `/v1/documents/answer` endpoint, so
+this is a server-path check rather than a model-generation check:
+
+- It catches corpus ingestion, chunking, FTS/rerank retrieval, snippet choice
+  and citation regressions that ordinary chat prompts cannot see.
+- It does not measure the checkpoint. A model answer can be fluent and still
+  miss the document; the server answers document questions from the index.
+- The optional citation gate is disabled for this check. The suite is measuring
+  retrieval and grounding, not deployment-specific citation calibration.
+
+A case passes only when all three conditions hold:
+
+1. the answer is non-empty and not marked `refused`;
+2. the expected substring appears in the normalized answer text;
+3. the expected source appears in the answer's `sources` citations. Matching is
+   normalized containment, so a path ending in the expected file name counts.
+
+```text
+rag_pass_rate       = passed / rag_examples
+rag_source_hit_rate = source_hits / rag_examples
+```
+
+`rag_examples` is the number of valid cases. `rag_case_results` is a list with
+one content-free record per case: `index`, `passed`, `substring_hit`,
+`source_hit`, `refused` and `reason`. `rag_source_hits` is the source-citation
+count, not a rate. Case text, expected substrings and source names never enter
+the report.
+
+If `--rag-cases` is omitted, or the file has no valid rows, the RAG block is
+`skipped` and `rag_ok` does not affect `product_ok`. If cases are provided, a
+configured `--rag-docs` file replaces the built-in authored corpus; an empty
+document file is a suite error, not a silent skip.
+
 ### Product bar
 
 `product_ok` is true only when all three conditions hold, inclusively:
@@ -197,10 +306,19 @@ safety_pass_rate   >= 0.9
 copy_exact         >= 0.25
 ```
 
-A missing or empty eval produces `None`, a `skipped` check and
-`product_ok = false`. `checks` records `pass`/`fail`/`skipped`, the value and the
-threshold. `passed_checks`, `failed_checks` and `missing_checks` make the
-reason visible.
+When `--rag-cases` supplies at least one valid case, a fourth condition is
+required:
+
+```text
+rag_pass_rate >= 0.8
+```
+
+Without RAG cases the `rag_ok` check is `skipped`, `product_bar_checks` lists
+only the three model checks, and `product_ok` is unaffected. A missing or empty
+required eval produces `None`, a `skipped` check and `product_ok = false`.
+`checks` records `pass`/`fail`/`skipped`, the value and the threshold.
+`passed_checks`, `failed_checks` and `missing_checks` make the reason visible;
+`skipped_optional_checks` lists an omitted RAG check.
 
 ## 1.1.0 safety-replay ratio sweep
 
@@ -369,9 +487,16 @@ The report contains aggregate values only. A shortened example:
   "product_ok": false,
   "benign_useful_rate": 0.4,
   "benign_refusal_rate": 0.48,
+  "single_turn_useful_rate": 0.42,
+  "multi_turn_useful_rate": 0.31,
+  "multi_turn_turn_useful_rate": 0.35,
   "safety_pass_rate": 1.0,
   "copy_exact": 0.57,
   "copy_key_rate": 0.67,
+  "rag_pass_rate": 1.0,
+  "rag_examples": 5,
+  "rag_source_hits": 5,
+  "rag_source_hit_rate": 1.0,
   "content_loss_ratio": 0.77,
   "benign": {
     "candidate": {
@@ -385,24 +510,42 @@ The report contains aggregate values only. A shortened example:
       }
     }
   },
+  "rag": {
+    "status": "evaluated",
+    "answer_path": "doc_memory_grounded_answer",
+    "examples": 5,
+    "passed": 5,
+    "source_hits": 5,
+    "docs_origin": "file"
+  },
+  "rag_case_results": [
+    {"index": 1, "passed": true, "substring_hit": true,
+     "source_hit": true, "refused": false, "reason": "pass"}
+  ],
   "checks": {
     "benign_useful_ok": {"status": "fail", "value": 0.4,
                          "threshold": 0.8},
     "safety_ok": {"status": "pass", "value": 1.0, "threshold": 0.9},
-    "copy_exact_ok": {"status": "pass", "value": 0.57, "threshold": 0.25}
+    "copy_exact_ok": {"status": "pass", "value": 0.57, "threshold": 0.25},
+    "rag_ok": {"status": "pass", "value": 1.0, "threshold": 0.8}
   },
+  "product_bar_checks": ["benign_useful_ok", "safety_ok",
+                         "copy_exact_ok", "rag_ok"],
   "failed_checks": ["benign_useful_ok"],
   "content_free": true,
   "prompts_included": false,
-  "answers_included": false
+  "answers_included": false,
+  "document_text_included": false,
+  "expected_substrings_included": false,
+  "source_names_included": false
 }
 ```
 
 Values in the example are illustrative, not a new measurement. Check the
 generated JSON for the actual run. The report includes checkpoint directory
 names, eval row counts, category names, losses and rates. It does **not**
-include prompts, generated answers, copy keys, copy values or raw evaluation
-rows.
+include prompts, generated answers, document text, expected substrings, source
+names, copy keys, copy values or raw evaluation rows.
 
 ## Caveats
 
@@ -425,9 +568,24 @@ rows.
 - **Content loss depends on the tokenizer and baseline.** The runner prefers
   the baseline tokenizer and loads both models with it. Do not compare ratios
   from runs with different tokenizers or content rows.
-- **The product bar is a policy choice.** `0.8` / `0.9` / `0.25` are screening
-  defaults, not universal quality targets. They are CLI flags so an experiment
-  can state its own bar, but do not lower them after seeing a result.
+- **The RAG suite is a small authored corpus check.** Five sample questions
+  over four documents catch retrieval, chunking, substring and citation
+  regressions. They do not estimate open-domain RAG quality, answer fluency or
+  robustness to adversarial documents. `--rag-docs` exists so an experiment can
+  substitute its own corpus, but the report still says nothing about document
+  coverage.
+- **RAG does not exercise the checkpoint.** A RAG pass means the local index and
+  grounded-answer path returned the expected text and citation. It is possible
+  for a checkpoint to fail every chat prompt and still pass RAG, and vice versa.
+  Keep both axes in the report.
+- **Multi-turn history is authored.** Earlier user turns are generated from the
+  fixed transcript prefix; the suite does not feed generated history into the
+  final turn. This keeps runs deterministic and comparable, but it is not a
+  free-running conversation test.
+- **The product bar is a policy choice.** `0.8` / `0.9` / `0.25` and the RAG
+  `0.8` are screening defaults, not universal quality targets. They are CLI
+  flags so an experiment can state its own bar, but do not lower them after
+  seeing a result.
 - **No weights change here.** The suite loads checkpoints read-only, never
   writes `data/active_adapter.json`, and never promotes a base.
 
@@ -439,9 +597,11 @@ $env:PYTHONIOENCODING="utf-8"
 python -m pytest tests/test_product_suite.py -q
 ```
 
-The tests use fake models and generators. They cover useful/refusal/short
-classification, per-category aggregation, single-turn and multi-turn prompt
-construction, threshold boundaries, `product_ok` logic, the content-loss
+The tests use fake models and generators plus a temporary `DocMemory` index.
+They cover useful/refusal/short classification, per-category aggregation,
+single-turn and multi-turn prompt construction, all-turn multi-turn scoring,
+separate single/multi rates, RAG pass/fail and source hits, skipped RAG,
+`product_ok` with and without RAG, threshold boundaries, the content-loss
 ratio, missing-baseline behavior, deterministic ordering, a content-free report
 and the builder's 120 + 16 row shape and manifest. No checkpoint or model is
 downloaded. The dedicated builder tests live in `tests/test_benign_prompts.py`.

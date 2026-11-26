@@ -1,0 +1,5 @@
+{"user": "What is the launch code?", "expected_substring": "L-7781", "source": "launch_policy.txt"}
+{"user": "When does the primary launch window open?", "expected_substring": "06:30 UTC", "source": "launch_policy.txt"}
+{"user": "How long do I have to submit a warranty claim?", "expected_substring": "30 days", "source": "warranty.txt"}
+{"user": "What is the travel portal code?", "expected_substring": "TR-42", "source": "travel.txt"}
+{"user": "What color badge do visitors receive?", "expected_substring": "blue badge", "source": "security.txt"}
