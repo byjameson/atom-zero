@@ -393,9 +393,12 @@ privacy and harmful/illegal requests; see
 [`docs/BOUNDARY_PAIRS.md`](docs/BOUNDARY_PAIRS.md). Ordinary conversational
 rehearsal rows for countering over-refusal are built by
 `research/build_benign_chat.py`; see
-[`docs/BENIGN_CHAT.md`](docs/BENIGN_CHAT.md). The product screen's benign
-control set is built by `research/build_benign_prompts.py`: 120 single-turn
-prompts plus 16 multi-turn cases by default; see
+[`docs/BENIGN_CHAT.md`](docs/BENIGN_CHAT.md). A teacher-generated variant keeps
+the same eight categories and authored-prompt approach but asks a larger local
+teacher for filtered, paraphrased answers; see
+[`docs/TEACHER_BENIGN_CHAT.md`](docs/TEACHER_BENIGN_CHAT.md). The product
+screen's benign control set is built by `research/build_benign_prompts.py`: 120
+single-turn prompts plus 16 multi-turn cases by default; see
 [`docs/BENIGN_SUITE.md`](docs/BENIGN_SUITE.md).
 
 The model never crawls, mutates its own weights or studies topics on its own
@@ -489,6 +492,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Safety refusal replay: <https://github.com/byjameson/atom-zero/blob/main/docs/SAFETY_REPLAY.md>
 - Contrastive boundary pairs: <https://github.com/byjameson/atom-zero/blob/main/docs/BOUNDARY_PAIRS.md>
 - Benign chat replay: <https://github.com/byjameson/atom-zero/blob/main/docs/BENIGN_CHAT.md>
+- Teacher-generated benign chat: <https://github.com/byjameson/atom-zero/blob/main/docs/TEACHER_BENIGN_CHAT.md>
 - Benign prompt suite: <https://github.com/byjameson/atom-zero/blob/main/docs/BENIGN_SUITE.md>
 - Product suite (benign prompts + safety + copy): <https://github.com/byjameson/atom-zero/blob/main/docs/PRODUCT_SUITE.md>
 - Server product suite (RAG + copy + multi-turn over HTTP): <https://github.com/byjameson/atom-zero/blob/main/docs/SERVER_PRODUCT_SUITE.md>
