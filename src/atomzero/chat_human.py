@@ -540,6 +540,13 @@ class ChatHuman:
             reply = ("I remember: " + "; ".join(
                 f"{fact['key']} is {fact['value']}" for fact in facts[-8:])
                 if facts else "I do not know anything about you yet.")
+        elif re.search(
+                r"\b(what(?:'s| is) your name|who are you|what are you)\b",
+                low):
+            reply = ("I am Atom Zero, a 63M local, source-cited assistant. "
+                     "I answer from local documents, cite the source, or say "
+                     "I do not know. I am a research assistant, not a "
+                     "general model.")
         elif "what is my name" in low or "who am i" in low:
             name = next((f["value"] for f in self.data["facts"]
                          if f["key"] == "name"), None)

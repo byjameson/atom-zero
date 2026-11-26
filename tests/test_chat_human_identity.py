@@ -7,3 +7,10 @@ def test_chat_human_answers_name_and_likes_from_memory(tmp_path):
     human.respond("remember that I like green tea")
     assert human.respond("what is my name?") == "Your name is Alex."
     assert "green tea" in human.respond("what do I like?")
+
+
+def test_chat_human_answers_its_own_name(tmp_path):
+    human = ChatHuman(tmp_path / "memory.json")
+    reply = human.respond("what is your name?")
+    assert "Atom Zero" in reply
+    assert "do not have a source" not in reply
