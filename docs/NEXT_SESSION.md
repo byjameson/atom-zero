@@ -44,7 +44,7 @@ variant beat J on the full profile, so the default did not change.
 - Medium: <https://medium.com/@myredditacc9393/atom-zero-1-6-0-teacher-data-raised-conversation-but-the-profile-still-belongs-to-the-63m-default-31a8766050f2>
 - LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7531767417052774400/>
 - X: <https://x.com/aigokhan/status/2126001867994112013>
-- Reddit: <https://www.reddit.com/r/LocalLLM/comments/1y6bl28/atom_zero_160_teacher_data_raised_conversation_to/> (u/John_howey; active, post a new thread per release)
+- Reddit: <https://www.reddit.com/r/LocalLLM/comments/1y6bl28/atom_zero_160_teacher_data_raised_conversation_to/> and <https://www.reddit.com/r/localaiapps/comments/1y6b3qn/atom_zero_160_teacher_data_raised_conversation_to/> (u/John_howey). Posts must stay **link-free**: Reddit filters external links. The profile carries the links: GitHub, Live demo, PyPI, Hugging Face; the About text points visitors to them.
 - Live demo: <https://modelscope.cn/studios/byjameson/atomzerodemo> (CPU, synthetic demo corpus)
 - LinkedIn demo post: <https://www.linkedin.com/in/g%C3%B6khan-cava-874a32157/recent-activity/all/>
 
