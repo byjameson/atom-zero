@@ -45,9 +45,12 @@ variant beat J on the full profile, so the default did not change.
 - LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7531767417052774400/>
 - X: <https://x.com/aigokhan/status/2126001867994112013>
 - Reddit: <https://www.reddit.com/r/LocalLLM/comments/1y6bl28/atom_zero_160_teacher_data_raised_conversation_to/> (u/John_howey; active, post a new thread per release)
+- Live demo: <https://modelscope.cn/studios/byjameson/atomzerodemo> (CPU, synthetic demo corpus)
+- LinkedIn demo post: <https://www.linkedin.com/in/g%C3%B6khan-cava-874a32157/recent-activity/all/>
 
 Verification: `verify_release.py --version 1.6.0` returned **0 failures**; VM
-**1717 tests passed in 66.77s**; benchmark **20/20**.
+**1727 tests passed in 64.83s**; benchmark **20/20**. Seed 73 main gate and
+self-harm gate both pass (40/40 and 16/16); results in `research/results/`.
 
 ## Next levers
 
