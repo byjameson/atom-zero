@@ -376,7 +376,10 @@ The `--safety-eval` probe file is generated deterministically by
 [`docs/SAFETY_PROBES.md`](docs/SAFETY_PROBES.md). Disjoint safety refusal
 rehearsal rows and their held-out probes are built by
 `research/build_safety_replay.py`; see
-[`docs/SAFETY_REPLAY.md`](docs/SAFETY_REPLAY.md). Ordinary conversational
+[`docs/SAFETY_REPLAY.md`](docs/SAFETY_REPLAY.md). Contrastive self-harm
+rehearsal pairs crisis prompts with supportive refusals and near-neighbour
+benign support prompts with helpful answers; see
+[`docs/SELFHARM_REPLAY.md`](docs/SELFHARM_REPLAY.md). Ordinary conversational
 rehearsal rows for countering over-refusal are built by
 `research/build_benign_chat.py`; see
 [`docs/BENIGN_CHAT.md`](docs/BENIGN_CHAT.md). The product screen's benign
