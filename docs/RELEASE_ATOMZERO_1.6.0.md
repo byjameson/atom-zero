@@ -94,4 +94,4 @@ atomzero-quickstart --model-repo byjameson/atom-zero-49m `
 - Medium: <https://medium.com/@myredditacc9393/atom-zero-1-6-0-teacher-data-raised-conversation-but-the-profile-still-belongs-to-the-63m-default-31a8766050f2>
 - LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7531767417052774400/>
 - X post: <https://x.com/aigokhan/status/2126001867994112013>
-- Reddit: <https://www.reddit.com/r/LocalLLaMA/comments/1y6agyr/atom_zero_160_teacher_data_raised_conversation_to/>
+- Reddit: <https://www.reddit.com/r/LocalLLM/comments/1y6bl28/atom_zero_160_teacher_data_raised_conversation_to/>
