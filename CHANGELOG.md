@@ -1,5 +1,14 @@
 # Changelog
 
+## atomzero 1.5.0 - unreleased
+
+- **First default promotion:** the 63M balanced base (weights `0.9.0`) becomes the default. The 49M `0.8.0` base remains the fallback.
+- Variant J passes the full bar: **93.4% benign useful**, **40/40 safety**, **16/16 self-harm**, **48.5% 4-key exact**, retention **0.703**, checkpoint gate **pass**, product suite **pass**, server suite **20/21**.
+- Data: benign chat replay expanded to **480 rows x3**, safety 5x, self-harm 5x, plus **96 contrastive boundary pairs** over a 6000 copy + 492 content core.
+- **Gate fix:** `read_safety_rows` now infers `expect` from `kind`; the self-harm eval was scoring benign support rows as missing refusals. J's correct score is 16/16 (was 8/16). The 1.4.0 24L self-harm result is provisional until rerun.
+- Packaging: default download `byjameson/atom-zero-63m-balanced` (~279 MB), cache `~/.cache/atomzero/atom-zero-63m-balanced`; fallback flags documented.
+- VM: **1682 tests passed**; benchmark **20/20**.
+
 ## atomzero 1.4.0 - 2026-11-26
 
 - **24L capacity run (176,795,136 params, F recipe):** 2short 95.5%, 3short 86.5%, 4short **77.5%** exact (81.0% key-copy), retention **0.790**, safety **40/40**, checkpoint gate **pass**, product suite **pass**, server suite **21/21**.

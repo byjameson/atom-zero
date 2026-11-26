@@ -1,23 +1,23 @@
-# Atom Zero 49.2M model card
+# Atom Zero 63M model card
 
-Version: model weights `0.8.0`; standalone `atomzero 1.4.0`<br>
-Last updated: 2026-11-24
+Version: model weights `0.9.0`; standalone `atomzero 1.5.0`<br>
+Last updated: 2026-11-26
 License: Apache-2.0 for code and weights; data attribution in `NOTICE`.
 
 ```powershell
-pip install atomzero==1.4.0
+pip install atomzero==1.5.0
 atomzero-quickstart
 ```
 
-The first run downloads the ~197 MB checkpoint/tokenizer from Hugging Face,
+The first run downloads the ~279 MB checkpoint/tokenizer from Hugging Face,
 seeds a demo corpus and opens the local UI.
 
-## What's new in 1.4.0
+## What's new in 1.5.0
 
-- Behavior-gated adapter promotion: full loss, content loss, exact match and key copy are required.
-- Content/key/value/syntax audits and a staged copy curriculum.
-- Rehearsal recovered one-key JSON to 72% exact / 82% key copy; multi remains hard at 8% / 18%.
-- 1248 tests passed on the 8 vCPU VM; benchmark 20/20. Weights remain 0.8.0.
+- Default base promoted to the 63M balanced checkpoint (weights 0.9.0): 93.4% benign, 40/40 safety, 16/16 self-harm, 48.5% 4-key exact, retention 0.703.
+- Benign replay expanded to 480 rows x3; 96 contrastive boundary pairs; safety and self-harm 5x.
+- The 49M 0.8.0 base remains the fallback.
+- 1682 tests passed on the VM; benchmark 20/20.
 
 ![Atom Zero architecture](https://raw.githubusercontent.com/byjameson/atom-zero/main/docs/figures/atomzero_architecture.png)
 

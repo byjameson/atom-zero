@@ -1,4 +1,18 @@
-# Atom Zero handoff - 2026-11-24
+# Atom Zero handoff - 2026-11-26
+
+## Current state (1.5.0)
+
+- Last released boundary: `1.5.0`; all canonical surfaces published.
+- Default base: **63M balanced** (`byjameson/atom-zero-63m-balanced`, weights `0.9.0`);
+  the 49M `0.8.0` base is the fallback.
+- Full bar passed: benign 93.4%, safety 40/40, self-harm 16/16, 4-key 48.5%,
+  retention 0.703, gate/product/server pass.
+- Gate fix: safety eval rows infer `expect` from `kind`; 24L self-harm result is
+  provisional until rerun.
+- Next boundary: `1.6.0`; next levers are the 24L re-evaluation with the fixed
+  gate, teacher-generated benign conversation, and a broader multi-turn suite.
+
+## Historical notes (pre-1.5.0)
 
 ## Current state
 

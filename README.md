@@ -1,7 +1,7 @@
-# Atom Zero 49.2M — a local assistant that cites its sources
+# Atom Zero 63M — a local assistant that cites its sources
 
-Atom Zero is a local, source-cited assistant built around a **49.2M parameter
-model trained from scratch**. Facts live in a local RAG index, not in the model
+Atom Zero is a local, source-cited assistant built around a **63.4M parameter model**,
+depth-upcycled from the 49.2M from-scratch base and validated as the default. Facts live in a local RAG index, not in the model
 weights; the model handles wording and behavior while deterministic tools,
 documents, memory and citations do the rest.
 
@@ -41,8 +41,8 @@ atomzero-quickstart
 
 The first run:
 
-1. downloads the ~197 MB checkpoint/tokenizer from
-   [Hugging Face](https://huggingface.co/byjameson/atom-zero-49m);
+1. downloads the ~279 MB checkpoint/tokenizer from
+   [Hugging Face](https://huggingface.co/byjameson/atom-zero-63m-balanced);
 2. seeds a small demo corpus (launch code, warranty, travel, visitor badge);
 3. starts the local UI at `http://127.0.0.1:8013`;
 4. opens the browser.
@@ -65,10 +65,18 @@ atomzero-quickstart --model-dir checkpoints/mixed8_safety_v1
 atomzero-quickstart --model-repo byjameson/atom-zero-63m-mixed
 ```
 
-The 63M candidate passes the checkpoint gate but fails open-chat quality, so it
-remains optional. See [`docs/OPTIONAL_BASES.md`](docs/OPTIONAL_BASES.md).
+The 63M balanced base is the default. The 49M `0.8.0` base remains as a
+fallback:
 
-The cache lives at `~/.cache/atomzero/atom-zero-49m`.
+```powershell
+atomzero-quickstart --model-repo byjameson/atom-zero-49m `
+  --cache ~/.cache/atomzero/atom-zero-49m
+```
+
+See [`docs/OPTIONAL_BASES.md`](docs/OPTIONAL_BASES.md) for the other research
+bases.
+
+The cache lives at `~/.cache/atomzero/atom-zero-63m-balanced`.
 
 ## Check your install
 
@@ -124,7 +132,7 @@ More fixes are in [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
 
 | area | implemented |
 |---|---|
-| core model | 49.2M decoder-only transformer, BPE-8k, 6 layers, 768 dim, 128 context |
+| core model | 63.4M decoder-only transformer, BPE-8k, 8 layers (upcycled), 768 dim, 128 context |
 | training | 175.37M clean + 214.8M replay; 40k product checkpoint |
 | RAG | SQLite FTS5, hashed/MiniLM embeddings, hybrid candidates, lexical+cosine rerank |
 | vector index | cached vectors, prewarmed numpy matrix, IVF ANN above 256 chunks, exact fallback |
@@ -144,10 +152,10 @@ More fixes are in [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
 
 | item | value |
 |---|---|
-| name | Atom Zero 49.2M (`transformer_behavior_50m_scaled`) |
+| name | Atom Zero 63M balanced (`atom-zero-63m-balanced`) |
 | architecture | decoder-only transformer |
-| parameters | 49,213,440 |
-| layers / dim / heads / FF | 6 / 768 / 12 / 3072 |
+| parameters | 63,389,184 |
+| layers / dim / heads / FF | 8 / 768 / 12 / 3072 |
 | context | 128 tokens |
 | tokenizer | 8,192-token BPE (`chat_en_bpe8k.json`) |
 | checkpoint step | 40,000 |
@@ -534,7 +542,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Benchmarks: <https://github.com/byjameson/atom-zero/blob/main/docs/BENCHMARKS.md>
 - AISC architecture audit: <https://github.com/byjameson/atom-zero/blob/main/docs/AISC_AUDIT.md>
 - Public SQuAD retrieval benchmark: <https://github.com/byjameson/atom-zero/blob/main/benchmarks/README.md>
-- Hugging Face: <https://huggingface.co/byjameson/atom-zero-49m>
+- Hugging Face: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-49m>
 - dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-a-49m-local-assistant-that-says-i-dont-know-1p7m>
 - Medium: <https://medium.com/@myredditacc9393/atom-zero-a-49m-local-assistant-that-says-i-dont-know-df1ebc0e2e78>

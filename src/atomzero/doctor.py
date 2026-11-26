@@ -25,11 +25,11 @@ from pathlib import Path
 from atomzero import __version__
 
 EXPECTED_CACHE = {
-    "model.pt": 196_875_355,
-    "config.json": 126,
+    "model.pt": 278_746_911,
+    "config.json": 1327,
     "chat_en_bpe8k.json": 551_291,
 }
-DEFAULT_CACHE = Path.home() / ".cache/atomzero/atom-zero-49m"
+DEFAULT_CACHE = Path.home() / ".cache/atomzero/atom-zero-63m-balanced"
 
 
 @dataclass

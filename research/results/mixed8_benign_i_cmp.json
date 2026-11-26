@@ -1,0 +1,423 @@
+{
+  "base": "checkpoints/upcycle/atom-zero-49m-8l",
+  "data": "C:\\Users\\biris\\AppData\\Local\\Temp\\opencode\\atom-zero-clean\\data\\staged_copy_v1\\mixed_eval.jsonl",
+  "examples": 250,
+  "created": "2026-11-26T12:20:08",
+  "models": [
+    {
+      "label": "base",
+      "path": "checkpoints/upcycle/atom-zero-49m-8l",
+      "metrics": {
+        "examples": 250,
+        "tokens": 5606,
+        "loss": 6.222528260986676,
+        "ppl": 503.9758050100852,
+        "content_loss": 6.220521119270091,
+        "content_ppl": 502.96526863181583,
+        "content_tokens": 3546,
+        "key_loss": 6.662141287073501,
+        "key_tokens": 1753,
+        "value_loss": 5.786336969004356,
+        "value_tokens": 1794,
+        "syntax_loss": 6.228300789596387,
+        "syntax_tokens": 2059,
+        "categories": true,
+        "exact_match": {
+          "examples": 250,
+          "matches": 0,
+          "rate": 0.0,
+          "max_new": 64,
+          "families": {
+            "staged_copy_echo_json": {
+              "examples": 50,
+              "matches": 0,
+              "rate": 0.0
+            },
+            "staged_copy_echo_kv": {
+              "examples": 50,
+              "matches": 0,
+              "rate": 0.0
+            },
+            "staged_copy_multi": {
+              "examples": 50,
+              "matches": 0,
+              "rate": 0.0
+            },
+            "staged_copy_two_json": {
+              "examples": 50,
+              "matches": 0,
+              "rate": 0.0
+            },
+            "staged_copy_two_kv": {
+              "examples": 50,
+              "matches": 0,
+              "rate": 0.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "mixed8_benign_i",
+      "path": "C:\\Users\\biris\\AppData\\Local\\Temp\\opencode\\atom-zero-clean\\checkpoints\\mixed8_benign_i",
+      "metrics": {
+        "examples": 250,
+        "tokens": 5606,
+        "loss": 0.7488384941739671,
+        "ppl": 2.1145425362248425,
+        "content_loss": 0.9006581951599045,
+        "content_ppl": 2.4612225429126067,
+        "content_tokens": 3546,
+        "key_loss": 0.9650719115619498,
+        "key_tokens": 1753,
+        "value_loss": 0.8405956585957961,
+        "value_tokens": 1794,
+        "syntax_loss": 0.4847930685188877,
+        "syntax_tokens": 2059,
+        "categories": true,
+        "exact_match": {
+          "examples": 250,
+          "matches": 43,
+          "rate": 0.172,
+          "max_new": 64,
+          "families": {
+            "staged_copy_echo_json": {
+              "examples": 50,
+              "matches": 21,
+              "rate": 0.42
+            },
+            "staged_copy_echo_kv": {
+              "examples": 50,
+              "matches": 0,
+              "rate": 0.0
+            },
+            "staged_copy_multi": {
+              "examples": 50,
+              "matches": 1,
+              "rate": 0.02
+            },
+            "staged_copy_two_json": {
+              "examples": 50,
+              "matches": 20,
+              "rate": 0.4
+            },
+            "staged_copy_two_kv": {
+              "examples": 50,
+              "matches": 1,
+              "rate": 0.02
+            }
+          }
+        }
+      },
+      "vs_base": {
+        "loss_delta": -5.47368976681271,
+        "loss_relative": -0.8796568753461591,
+        "ppl_ratio": -0.9958042776752298
+      },
+      "families": {
+        "staged_copy_echo_json": {
+          "baseline": {
+            "examples": 50,
+            "tokens": 758,
+            "loss": 6.023076533013095,
+            "ppl": 412.84678067003784,
+            "content_loss": 5.544523357738892,
+            "content_tokens": 358,
+            "key_loss": 4.852961823121102,
+            "key_tokens": 192,
+            "value_loss": 6.344401759224529,
+            "value_tokens": 166,
+            "syntax_loss": 6.451381624282804,
+            "syntax_tokens": 400
+          },
+          "adapter": {
+            "examples": 50,
+            "tokens": 758,
+            "loss": 0.17921926733843568,
+            "ppl": 1.1962830212065143,
+            "content_loss": 0.03851630905245143,
+            "content_tokens": 358,
+            "key_loss": 0.03684439686304586,
+            "key_tokens": 192,
+            "value_loss": 0.040450087006462694,
+            "value_tokens": 166,
+            "syntax_loss": 0.3051484168285606,
+            "syntax_tokens": 400
+          }
+        },
+        "staged_copy_echo_kv": {
+          "baseline": {
+            "examples": 50,
+            "tokens": 554,
+            "loss": 5.039434687755598,
+            "ppl": 154.38271591295742,
+            "content_loss": 6.047046030013911,
+            "content_tokens": 354,
+            "key_loss": 6.984820660035215,
+            "key_tokens": 199,
+            "value_loss": 4.843064408244625,
+            "value_tokens": 155,
+            "syntax_loss": 3.2559626788273452,
+            "syntax_tokens": 200
+          },
+          "adapter": {
+            "examples": 50,
+            "tokens": 554,
+            "loss": 1.8900946727298227,
+            "ppl": 6.619995384411205,
+            "content_loss": 1.8688912308504568,
+            "content_tokens": 354,
+            "key_loss": 2.136884297769582,
+            "key_tokens": 199,
+            "value_loss": 1.52482271267687,
+            "value_tokens": 155,
+            "syntax_loss": 1.9276246944911326,
+            "syntax_tokens": 200
+          }
+        },
+        "staged_copy_multi": {
+          "baseline": {
+            "examples": 50,
+            "tokens": 1864,
+            "loss": 6.672925777189722,
+            "ppl": 790.7056520330235,
+            "content_loss": 6.590066147218258,
+            "content_tokens": 1304,
+            "key_loss": 6.962480291370577,
+            "key_tokens": 611,
+            "value_loss": 6.254791221393525,
+            "value_tokens": 694,
+            "syntax_loss": 6.875551089137953,
+            "syntax_tokens": 559
+          },
+          "adapter": {
+            "examples": 50,
+            "tokens": 1864,
+            "loss": 1.1869083700517729,
+            "ppl": 3.276934461753481,
+            "content_loss": 1.4405368313356006,
+            "content_tokens": 1304,
+            "key_loss": 1.1169367363603873,
+            "key_tokens": 611,
+            "value_loss": 1.7320999922152183,
+            "value_tokens": 694,
+            "syntax_loss": 0.5865321602599455,
+            "syntax_tokens": 559
+          }
+        },
+        "staged_copy_two_json": {
+          "baseline": {
+            "examples": 50,
+            "tokens": 1387,
+            "loss": 6.586108537053753,
+            "ppl": 724.9542410384494,
+            "content_loss": 6.179761093419892,
+            "content_tokens": 787,
+            "key_loss": 6.2132772187941985,
+            "key_tokens": 377,
+            "value_loss": 6.148942607404982,
+            "value_tokens": 410,
+            "syntax_loss": 7.119101066912214,
+            "syntax_tokens": 600
+          },
+          "adapter": {
+            "examples": 50,
+            "tokens": 1387,
+            "loss": 0.13908743924409603,
+            "ppl": 1.149224582939294,
+            "content_loss": 0.1141975492793173,
+            "content_tokens": 787,
+            "key_loss": 0.19223279944257693,
+            "key_tokens": 377,
+            "value_loss": 0.04244318510480786,
+            "value_tokens": 410,
+            "syntax_loss": 0.1717346783280967,
+            "syntax_tokens": 600
+          }
+        },
+        "staged_copy_two_kv": {
+          "baseline": {
+            "examples": 50,
+            "tokens": 1043,
+            "loss": 5.707467317809766,
+            "ppl": 301.1074921603885,
+            "content_loss": 6.0234939377418995,
+            "content_tokens": 743,
+            "key_loss": 7.381028677381694,
+            "key_tokens": 374,
+            "value_loss": 4.647564418432189,
+            "value_tokens": 369,
+            "syntax_loss": 4.9247748044164235,
+            "syntax_tokens": 300
+          },
+          "adapter": {
+            "examples": 50,
+            "tokens": 1043,
+            "loss": 0.5845795445794227,
+            "ppl": 1.794236430589597,
+            "content_loss": 0.7402747326120271,
+            "content_tokens": 743,
+            "key_loss": 1.349029011251867,
+            "key_tokens": 374,
+            "value_loss": 0.12327175100958775,
+            "value_tokens": 369,
+            "syntax_loss": 0.19897445956190496,
+            "syntax_tokens": 300
+          }
+        }
+      }
+    }
+  ],
+  "families": {
+    "staged_copy_echo_json": {
+      "baseline": {
+        "examples": 50,
+        "tokens": 758,
+        "loss": 6.023076533013095,
+        "ppl": 412.84678067003784,
+        "content_loss": 5.544523357738892,
+        "content_tokens": 358,
+        "key_loss": 4.852961823121102,
+        "key_tokens": 192,
+        "value_loss": 6.344401759224529,
+        "value_tokens": 166,
+        "syntax_loss": 6.451381624282804,
+        "syntax_tokens": 400
+      },
+      "adapter": {
+        "examples": 50,
+        "tokens": 758,
+        "loss": 0.17921926733843568,
+        "ppl": 1.1962830212065143,
+        "content_loss": 0.03851630905245143,
+        "content_tokens": 358,
+        "key_loss": 0.03684439686304586,
+        "key_tokens": 192,
+        "value_loss": 0.040450087006462694,
+        "value_tokens": 166,
+        "syntax_loss": 0.3051484168285606,
+        "syntax_tokens": 400
+      }
+    },
+    "staged_copy_echo_kv": {
+      "baseline": {
+        "examples": 50,
+        "tokens": 554,
+        "loss": 5.039434687755598,
+        "ppl": 154.38271591295742,
+        "content_loss": 6.047046030013911,
+        "content_tokens": 354,
+        "key_loss": 6.984820660035215,
+        "key_tokens": 199,
+        "value_loss": 4.843064408244625,
+        "value_tokens": 155,
+        "syntax_loss": 3.2559626788273452,
+        "syntax_tokens": 200
+      },
+      "adapter": {
+        "examples": 50,
+        "tokens": 554,
+        "loss": 1.8900946727298227,
+        "ppl": 6.619995384411205,
+        "content_loss": 1.8688912308504568,
+        "content_tokens": 354,
+        "key_loss": 2.136884297769582,
+        "key_tokens": 199,
+        "value_loss": 1.52482271267687,
+        "value_tokens": 155,
+        "syntax_loss": 1.9276246944911326,
+        "syntax_tokens": 200
+      }
+    },
+    "staged_copy_multi": {
+      "baseline": {
+        "examples": 50,
+        "tokens": 1864,
+        "loss": 6.672925777189722,
+        "ppl": 790.7056520330235,
+        "content_loss": 6.590066147218258,
+        "content_tokens": 1304,
+        "key_loss": 6.962480291370577,
+        "key_tokens": 611,
+        "value_loss": 6.254791221393525,
+        "value_tokens": 694,
+        "syntax_loss": 6.875551089137953,
+        "syntax_tokens": 559
+      },
+      "adapter": {
+        "examples": 50,
+        "tokens": 1864,
+        "loss": 1.1869083700517729,
+        "ppl": 3.276934461753481,
+        "content_loss": 1.4405368313356006,
+        "content_tokens": 1304,
+        "key_loss": 1.1169367363603873,
+        "key_tokens": 611,
+        "value_loss": 1.7320999922152183,
+        "value_tokens": 694,
+        "syntax_loss": 0.5865321602599455,
+        "syntax_tokens": 559
+      }
+    },
+    "staged_copy_two_json": {
+      "baseline": {
+        "examples": 50,
+        "tokens": 1387,
+        "loss": 6.586108537053753,
+        "ppl": 724.9542410384494,
+        "content_loss": 6.179761093419892,
+        "content_tokens": 787,
+        "key_loss": 6.2132772187941985,
+        "key_tokens": 377,
+        "value_loss": 6.148942607404982,
+        "value_tokens": 410,
+        "syntax_loss": 7.119101066912214,
+        "syntax_tokens": 600
+      },
+      "adapter": {
+        "examples": 50,
+        "tokens": 1387,
+        "loss": 0.13908743924409603,
+        "ppl": 1.149224582939294,
+        "content_loss": 0.1141975492793173,
+        "content_tokens": 787,
+        "key_loss": 0.19223279944257693,
+        "key_tokens": 377,
+        "value_loss": 0.04244318510480786,
+        "value_tokens": 410,
+        "syntax_loss": 0.1717346783280967,
+        "syntax_tokens": 600
+      }
+    },
+    "staged_copy_two_kv": {
+      "baseline": {
+        "examples": 50,
+        "tokens": 1043,
+        "loss": 5.707467317809766,
+        "ppl": 301.1074921603885,
+        "content_loss": 6.0234939377418995,
+        "content_tokens": 743,
+        "key_loss": 7.381028677381694,
+        "key_tokens": 374,
+        "value_loss": 4.647564418432189,
+        "value_tokens": 369,
+        "syntax_loss": 4.9247748044164235,
+        "syntax_tokens": 300
+      },
+      "adapter": {
+        "examples": 50,
+        "tokens": 1043,
+        "loss": 0.5845795445794227,
+        "ppl": 1.794236430589597,
+        "content_loss": 0.7402747326120271,
+        "content_tokens": 743,
+        "key_loss": 1.349029011251867,
+        "key_tokens": 374,
+        "value_loss": 0.12327175100958775,
+        "value_tokens": 369,
+        "syntax_loss": 0.19897445956190496,
+        "syntax_tokens": 300
+      }
+    }
+  }
+}

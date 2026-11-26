@@ -17,7 +17,7 @@ from atomzero import __version__
 from atomzero.chat_server import serve
 from atomzero.doc_memory import DocMemory
 
-HF_BASE = "https://huggingface.co/byjameson/atom-zero-49m/resolve/main"
+HF_BASE = "https://huggingface.co/byjameson/atom-zero-63m-balanced/resolve/main"
 FILES = {
     "model.pt": 190_000_000,
     "config.json": 100,
@@ -95,12 +95,12 @@ def main(argv=None) -> int:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8013)
     parser.add_argument("--cache", default=str(
-        Path.home() / ".cache/atomzero/atom-zero-49m"))
+        Path.home() / ".cache/atomzero/atom-zero-63m-balanced"))
     parser.add_argument("--model-dir", default="",
                         help="use an existing checkpoint directory and never "
                              "download (overrides --cache)")
     parser.add_argument("--model-repo",
-                        default="byjameson/atom-zero-49m",
+                        default="byjameson/atom-zero-63m-balanced",
                         help="Hugging Face model repo to download from")
     parser.add_argument("--docs", default="data/atomzero_demo.db")
     parser.add_argument("--reports-index", default="data/weekly_reports.json")
