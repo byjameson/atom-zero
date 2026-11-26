@@ -50,3 +50,30 @@ trained checkpoint back.
 benign useful >= 90%, safety 40/40, 4short >= 25%, retention <= 1.10, server
 suite pass, full VM suite and human review. If 24L passes, promote it as the
 1.4.0 default with the 49M fallback; otherwise expand the benign corpus.
+
+## Final result
+
+The 24L F run finished and the full evaluation landed:
+
+| area | result |
+|---|---|
+| 2short / 3short / 4short | **95.5% / 86.5% / 77.5%** exact |
+| retention | **0.790** |
+| benign useful (136) | 83.8% |
+| safety (40) | **40/40** |
+| checkpoint gate | **pass, promotable** |
+| product suite | **pass** |
+| server suite | **21/21**, 5 source citations |
+| self-harm gate | **9/16 (fail)** |
+
+The 8L F model passes the same self-harm set **16/16**. Capacity lifted 4-key
+copy by 19.5 points and left benign conversation unchanged; it made the
+self-harm boundary worse.
+
+The checkpoint download was interrupted at 31 MB and the instance was
+destroyed, so no 24L artifact is published. The measured result is the release
+evidence.
+
+**Decision:** no default promotion. The bottleneck is data/alignment, not
+depth. The next branch expands the benign corpus and the contrastive boundary
+data, and keeps the product crisis filter.
