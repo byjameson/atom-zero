@@ -36,6 +36,14 @@ DEFAULT_DATA = (
     "data/pretok/mixed_v1/weights.npy",
     "data/pretok/mixed_v1/lengths.npy",
     "data/pretok/mixed_v1/meta.json",
+    "data/mixed_benign_f/train.jsonl",
+    "data/pretok/mixed_benign_f/input_ids.npy",
+    "data/pretok/mixed_benign_f/labels.npy",
+    "data/pretok/mixed_benign_f/weights.npy",
+    "data/pretok/mixed_benign_f/lengths.npy",
+    "data/pretok/mixed_benign_f/meta.json",
+    "data/benign_v1/prompts.jsonl",
+    "data/selfharm_replay_v1/eval.jsonl",
 )
 
 EXCLUDE_PREFIXES = (".git/", "checkpoints/", "dist/", "data/", "__pycache__/")

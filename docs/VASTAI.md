@@ -119,6 +119,21 @@ Expected outputs: `summary.json`, `upcycle_24l.json`, full fine-tune reports,
 - Run the VM suite and the checkpoint gate before any claim.
 - If the run failed: read `job.log`; do not silently retry a paid run.
 
+
+### 1.4.0 capacity run (24L on the F recipe)
+
+```powershell
+python scripts/vastai/launch.py --offer-id <24GB_OFFER> --dph <PRICE> `
+  --layers 24 --seeds "71" --steps 3000 --batch 16 `
+  --train-data data/mixed_benign_f/train.jsonl `
+  --cache-dir data/pretok/mixed_benign_f `
+  --run-tag f24 --max-hours 3 --execute
+```
+
+The job now also runs the checkpoint gate (two safety sets), the 136-prompt
+product suite and the server-level suite, and writes their summaries into
+`out/summary.json` before the instance is destroyed.
+
 ## Manual fallback
 
 If the launcher fails after the instance exists, use the CLI directly:

@@ -111,6 +111,39 @@ for SEED in $SEEDS; do
       --out "$OUT/${NAME}_retention.json" || echo "retention failed for $NAME"
   fi
 
+  if [ "${RUN_FULL:-1}" = "1" ]; then
+    "$PY" research/checkpoint_gate.py \
+      --candidate "$CKPT" --baseline "$BASE_DIR" \
+      --content-eval data/eval_frozen/heldout_city_yaml.jsonl \
+      --copy-eval data/multi_short_v1/stage_4short/eval.jsonl \
+      --safety-eval data/safety_replay_v1/eval.jsonl \
+      --device cuda --out "$OUT/${NAME}_gate.json" \
+      || echo "checkpoint gate failed for $NAME"
+
+    "$PY" research/checkpoint_gate.py \
+      --candidate "$CKPT" --baseline "$BASE_DIR" \
+      --content-eval data/eval_frozen/heldout_city_yaml.jsonl \
+      --copy-eval data/multi_short_v1/stage_4short/eval.jsonl \
+      --safety-eval data/selfharm_replay_v1/eval.jsonl \
+      --device cuda --out "$OUT/${NAME}_selfharm_gate.json" \
+      || echo "self-harm gate failed for $NAME"
+
+    "$PY" research/product_suite.py \
+      --candidate "$CKPT" --baseline "$BASE_DIR" \
+      --benign data/benign_v1/prompts.jsonl \
+      --safety-eval data/safety_replay_v1/eval.jsonl \
+      --copy-eval data/multi_short_v1/stage_4short/eval.jsonl \
+      --content-eval data/eval_frozen/heldout_city_yaml.jsonl \
+      --device cuda --max-new 64 \
+      --out "$OUT/${NAME}_product.json" --json \
+      || echo "product suite failed for $NAME"
+
+    "$PY" research/server_product_suite.py \
+      --model-dir "$CKPT" --port 8031 --timeout 300 \
+      --out "$OUT/${NAME}_server.json" --json \
+      || echo "server suite failed for $NAME"
+  fi
+
   if [ -n "${HF_TOKEN:-}" ] && [ -n "${HF_REPO:-}" ]; then
     "$PY" - "$CKPT" "$HF_REPO" <<'PY' || echo "HF upload failed"
 import os, sys
@@ -159,6 +192,19 @@ for name in names:
         tr = t.get("train", t)
         run["train_loss"] = tr.get("train_loss")
         run["params"] = tr.get("total_parameters", tr.get("trainable_parameters"))
+    for key in ("gate", "selfharm_gate", "product", "server"):
+        p = out / f"{name}_{key}.json"
+        if p.exists():
+            d = json.loads(p.read_text(encoding="utf-8"))
+            checks = d.get("checks") or {}
+            safety = (d.get("safety_pass_rate")
+                      or (checks.get("safety_ok") or {}).get("candidate_safety_pass_rate"))
+            run[key] = {
+                "status": d.get("status") or d.get("server_ok"),
+                "product_ok": d.get("product_ok"),
+                "benign": d.get("benign_useful_rate"),
+                "safety": safety,
+            }
     summary["runs"][name] = run
 (out / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
 print(json.dumps(summary, indent=2))
