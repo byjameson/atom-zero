@@ -1,0 +1,334 @@
+{
+  "baseline": {
+    "content_loss": 4.153866554384547,
+    "content_tokens": 972,
+    "exact_match": {
+      "examples": 90,
+      "matches": 0,
+      "rate": 0.0
+    },
+    "examples": 90,
+    "key_copy": {
+      "examples": 90,
+      "key_recall": 0.0,
+      "matches": 0,
+      "rate": 0.0,
+      "skipped": 0
+    },
+    "key_loss": 6.510842948251715,
+    "key_tokens": 285,
+    "loss": 4.1226132844872865,
+    "ppl": 61.720324462419235,
+    "syntax_loss": 4.075147329038373,
+    "syntax_tokens": 640,
+    "tokens": 1612,
+    "value_loss": 3.176081587496421,
+    "value_tokens": 687
+  },
+  "candidate": {
+    "content_loss": 3.740471104610838,
+    "content_tokens": 972,
+    "exact_match": {
+      "examples": 90,
+      "matches": 0,
+      "rate": 0.0
+    },
+    "examples": 90,
+    "key_copy": {
+      "examples": 90,
+      "key_recall": 0.1,
+      "matches": 1,
+      "rate": 0.011111111111111112,
+      "skipped": 0
+    },
+    "key_loss": 5.743273478711439,
+    "key_tokens": 285,
+    "loss": 3.137125952368043,
+    "ppl": 23.037560574239418,
+    "syntax_loss": 2.2207955034836457,
+    "syntax_tokens": 640,
+    "tokens": 1612,
+    "value_loss": 2.909614224525436,
+    "value_tokens": 687
+  },
+  "content_free": true,
+  "exact_match_max_new": 64,
+  "families": {
+    "city_json": {
+      "baseline": {
+        "content_loss": 5.790586707715453,
+        "content_tokens": 112,
+        "exact_match": {
+          "examples": 10,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "examples": 10,
+        "key_copy": {
+          "examples": 10,
+          "key_recall": 0.0,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "key_loss": 8.160638586680095,
+        "key_tokens": 30,
+        "loss": 6.272296329714218,
+        "ppl": 529.6923306159533,
+        "syntax_loss": 6.8118107470683755,
+        "syntax_tokens": 100,
+        "tokens": 212,
+        "value_loss": 4.923494556874729,
+        "value_tokens": 82
+      },
+      "candidate": {
+        "content_loss": 6.806470452862413,
+        "content_tokens": 112,
+        "exact_match": {
+          "examples": 10,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "examples": 10,
+        "key_copy": {
+          "examples": 10,
+          "key_recall": 0.0,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "key_loss": 10.904055372873943,
+        "key_tokens": 30,
+        "loss": 4.056967933222933,
+        "ppl": 57.79879531863225,
+        "syntax_loss": 0.9775252989798173,
+        "syntax_tokens": 100,
+        "tokens": 212,
+        "value_loss": 5.307354018711854,
+        "value_tokens": 82
+      },
+      "retention_ok": false,
+      "retention_ratio": 1.1754371010097102
+    },
+    "city_kv": {
+      "baseline": {
+        "content_loss": 3.9286787402584937,
+        "content_tokens": 141,
+        "exact_match": {
+          "examples": 13,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "examples": 13,
+        "key_copy": {
+          "examples": 13,
+          "key_recall": 0.0,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "key_loss": 6.400346245521154,
+        "key_tokens": 39,
+        "loss": 3.556788283395985,
+        "ppl": 35.050444083347514,
+        "syntax_loss": 2.8845247329475407,
+        "syntax_tokens": 78,
+        "tokens": 219,
+        "value_loss": 2.9836294000110057,
+        "value_tokens": 102
+      },
+      "candidate": {
+        "content_loss": 2.7421107015523773,
+        "content_tokens": 141,
+        "exact_match": {
+          "examples": 13,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "examples": 13,
+        "key_copy": {
+          "examples": 13,
+          "key_recall": 0.5,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "key_loss": 3.1734693340766125,
+        "key_tokens": 39,
+        "loss": 2.1688505373044644,
+        "ppl": 8.748222503747645,
+        "syntax_loss": 1.1325725094972698,
+        "syntax_tokens": 78,
+        "tokens": 219,
+        "value_loss": 2.577179459704876,
+        "value_tokens": 102
+      },
+      "retention_ok": true,
+      "retention_ratio": 0.6979727493248674
+    },
+    "city_yaml": {
+      "baseline": {
+        "content_loss": 3.5152209874048883,
+        "content_tokens": 535,
+        "exact_match": {
+          "examples": 48,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "examples": 48,
+        "key_copy": {
+          "examples": 48,
+          "key_recall": 0.0,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "key_loss": 6.570545868534181,
+        "key_tokens": 144,
+        "loss": 3.0507770830342142,
+        "ppl": 21.13175917543994,
+        "syntax_loss": 2.1880080466394753,
+        "syntax_tokens": 288,
+        "tokens": 823,
+        "value_loss": 2.3899862485746626,
+        "value_tokens": 391
+      },
+      "candidate": {
+        "content_loss": 3.5061509124712553,
+        "content_tokens": 535,
+        "exact_match": {
+          "examples": 48,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "examples": 48,
+        "key_copy": {
+          "examples": 48,
+          "key_recall": 0.0,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "key_loss": 7.61976741005977,
+        "key_tokens": 144,
+        "loss": 3.6016201793350833,
+        "ppl": 36.65757820761281,
+        "syntax_loss": 3.7789675521041013,
+        "syntax_tokens": 288,
+        "tokens": 823,
+        "value_loss": 1.9911617164284263,
+        "value_tokens": 391
+      },
+      "retention_ok": true,
+      "retention_ratio": 0.9974197710567468
+    },
+    "river_json": {
+      "baseline": {
+        "content_loss": 5.794022231704974,
+        "content_tokens": 149,
+        "exact_match": {
+          "examples": 15,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "examples": 15,
+        "key_copy": {
+          "examples": 15,
+          "key_recall": 0.0,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "key_loss": 6.356498140965899,
+        "key_tokens": 60,
+        "loss": 6.222522135961015,
+        "ppl": 503.9727181548006,
+        "syntax_loss": 6.648165364091595,
+        "syntax_tokens": 150,
+        "tokens": 299,
+        "value_loss": 5.414824989506598,
+        "value_tokens": 89
+      },
+      "candidate": {
+        "content_loss": 3.492319819476586,
+        "content_tokens": 149,
+        "exact_match": {
+          "examples": 15,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "examples": 15,
+        "key_copy": {
+          "examples": 15,
+          "key_recall": 0.0,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "key_loss": 1.3740369102983094,
+        "key_tokens": 60,
+        "loss": 2.1655454093397264,
+        "ppl": 8.719356238536559,
+        "syntax_loss": 0.8476161778478126,
+        "syntax_tokens": 150,
+        "tokens": 299,
+        "value_loss": 4.9203757133046375,
+        "value_tokens": 89
+      },
+      "retention_ok": true,
+      "retention_ratio": 0.6027453260994686
+    },
+    "river_kv": {
+      "baseline": {
+        "content_loss": 2.6033238981584352,
+        "content_tokens": 35,
+        "exact_match": {
+          "examples": 4,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "examples": 4,
+        "key_copy": {
+          "examples": 4,
+          "key_recall": 0.0,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "key_loss": 2.8007571290945634,
+        "key_tokens": 12,
+        "loss": 2.807889841370663,
+        "ppl": 16.574905610595327,
+        "syntax_loss": 3.106215194246033,
+        "syntax_tokens": 24,
+        "tokens": 59,
+        "value_loss": 2.5003152559308903,
+        "value_tokens": 23
+      },
+      "candidate": {
+        "content_loss": 2.5894063648036014,
+        "content_tokens": 35,
+        "exact_match": {
+          "examples": 4,
+          "matches": 0,
+          "rate": 0.0
+        },
+        "examples": 4,
+        "key_copy": {
+          "examples": 4,
+          "key_recall": 0.625,
+          "matches": 1,
+          "rate": 0.25
+        },
+        "key_loss": 0.5214378792540325,
+        "key_tokens": 12,
+        "loss": 1.870509842694816,
+        "ppl": 6.491605253233519,
+        "syntax_loss": 0.8221189544838126,
+        "syntax_tokens": 24,
+        "tokens": 59,
+        "value_loss": 3.668346444220768,
+        "value_tokens": 23
+      },
+      "retention_ok": true,
+      "retention_ratio": 0.9946539370822512
+    }
+  },
+  "retention_ok": true,
+  "retention_ratio": 0.900479361972436,
+  "rows": 90,
+  "schema": "atomzero.retention_eval.v1",
+  "threshold": 1.1,
+  "tokens": 1612
+}

@@ -58,3 +58,23 @@ they answer before generation, but the assistant's general chat is broken.
   satisfy the gate, not so much that benign prompts are refused.
 
 Evidence: `research/results/product_suite_1.0_summary.json`.
+
+## The benign-replay variants (1.1.0)
+
+Benign chat replay (144 rows x3) fixes the refusal collapse:
+
+| variant | safety | benign | 2short | 3short | 4short | retention | benign useful | gate |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| A | 1x | 3x | 85.0% | 79.5% | **61.5%** | **0.759** | **92%** | 39/40 |
+| B | 5x | 3x | 86.5% | 71.5% | 38.0% | 0.901 | 88% | **40/40** |
+
+B is published as `byjameson/atom-zero-63m-benign` and is the first optional
+base to pass both the strict gate and the product suite. A has the better
+product profile and fails only one safety probe.
+
+```powershell
+atomzero-quickstart --model-repo byjameson/atom-zero-63m-benign
+```
+
+The default remains `0.8.0` until one more product-suite expansion and human
+review.
