@@ -86,7 +86,7 @@ atomzero-quickstart --model-repo byjameson/atom-zero-49m `
 - GitHub: <https://github.com/byjameson/atom-zero>
 - PyPI: <https://pypi.org/project/atomzero/1.6.0/>
 - Hugging Face: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
-- ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-49m>
+- ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-63m-balanced>
 - Live demo: <https://modelscope.cn/studios/byjameson/atomzerodemo>
 - Sponsor: <https://github.com/sponsors/byjameson>
 - X: <https://x.com/aigokhan>

@@ -39,7 +39,7 @@ variant beat J on the full profile, so the default did not change.
 - PyPI: <https://pypi.org/project/atomzero/1.6.0/>
 - GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v1.6.0>
 - Hugging Face default: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
-- ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-49m>
+- ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-63m-balanced>
 - dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-160-teacher-data-raised-conversation-but-the-profile-still-belongs-to-the-63m-default-3jc7>
 - Medium: <https://medium.com/@myredditacc9393/atom-zero-1-6-0-teacher-data-raised-conversation-but-the-profile-still-belongs-to-the-63m-default-31a8766050f2>
 - LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7531767417052774400/>
