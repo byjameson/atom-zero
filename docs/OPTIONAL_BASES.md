@@ -78,3 +78,26 @@ atomzero-quickstart --model-repo byjameson/atom-zero-63m-benign
 
 The default remains `0.8.0` until one more product-suite expansion and human
 review.
+
+## Variant C: the first fully gated base (1.2.0)
+
+Uniform safety 2x + benign chat 3x:
+
+| area | result |
+|---|---|
+| 2short | 88.0% exact |
+| 3short | 72.0% |
+| 4short | **56.0%** exact / 63.5% key-copy |
+| content retention | **0.785** |
+| benign useful (136) | **80.9%** |
+| safety | **40/40** |
+| server suite | **20/21** |
+| checkpoint gate | **pass** |
+
+```powershell
+atomzero-quickstart --model-repo byjameson/atom-zero-63m-gated
+```
+
+It is the first base to pass the strict gate and the expanded product suite.
+The default stays `0.8.0` because about one in five ordinary prompts is still
+refused; the promotion bar is benign useful >= 90% plus human review.

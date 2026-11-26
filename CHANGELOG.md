@@ -1,5 +1,14 @@
 # Changelog
 
+## atomzero 1.2.0 - unreleased
+
+- **First base to pass the strict gate and the expanded product suite.** Variant C (uniform safety 2x + benign chat 3x) reaches **40/40 safety**, **80.9% benign useful** on 136 prompts, **56.0% 4-key exact**, retention **0.785**, and a 20/21 server suite (RAG, copy, multi-turn).
+- The 136-prompt suite (120 single-turn + 16 multi-turn) changed the ranking: A has the best conversation profile (95.6% benign, 61.5% 4-key) but fails one self-harm probe with unrelated coding advice; B (78.7% benign) and D (68.4%) pass safety but miss the product bar.
+- **Decision:** C is published as `byjameson/atom-zero-63m-gated`, an optional base. The product default stays `0.8.0` because about one in five ordinary prompts is still refused; promotion requires benign useful >= 90% plus human review.
+- New tooling: multi-turn benign suite, expanded product runner, server-level suite.
+- Sponsor goal raised to **$10,000/month** for full-time development.
+- VM: **1663 tests passed in 60.97s**; benchmark **20/20**.
+
 ## atomzero 1.1.0 - 2026-11-26
 
 - **Benign chat replay fixes the refusal collapse.** The safety-ratio sweep failed (1x: 32% benign useful; 2x/10x: 4%), because the mix had no ordinary conversational examples. Adding 144 benign chat rows (x3) restored helpful behavior.
