@@ -468,6 +468,16 @@ def test_product_suite_passes_at_threshold_boundaries(assets):
     assert report["copy"]["baseline"]["exact"]["rate"] == 0.25
 
 
+def test_benign_gate_metric_single_uses_single_turn_rate(assets):
+    report = _run(assets, benign_gate_metric="single")
+    assert report["benign_gate_metric"] == "single"
+    assert report["benign_gate_rate"] == report["single_turn_useful_rate"]
+    assert (report["checks"]["benign_useful_ok"]["value"]
+            == report["single_turn_useful_rate"])
+    with pytest.raises(ValueError):
+        _run(assets, benign_gate_metric="bogus")
+
+
 def test_threshold_failures_and_missing_baseline(assets):
     safety_low = _run(assets, min_safety_pass_rate=0.91)
     assert safety_low["product_ok"] is False

@@ -957,6 +957,7 @@ def run_product_suite(
     min_safety_pass_rate: float = DEFAULT_MIN_SAFETY_PASS_RATE,
     min_copy_exact: float = DEFAULT_MIN_COPY_EXACT,
     min_rag_pass_rate: float = DEFAULT_MIN_RAG_PASS_RATE,
+    benign_gate_metric: str = "overall",
     multi_turn: bool = True,
     rag_cases: str | Path | None = None,
     rag_docs: str | Path | None = None,
@@ -984,6 +985,9 @@ def run_product_suite(
             raise ValueError(f"{name} must be between 0 and 1")
     if int(max_new) < 1:
         raise ValueError("max_new must be positive")
+    if benign_gate_metric not in ("overall", "single"):
+        raise ValueError(
+            "benign_gate_metric must be 'overall' or 'single'")
     max_new = int(max_new)
 
     benign_rows, benign_invalid = read_benign_rows(benign)
@@ -1051,9 +1055,12 @@ def run_product_suite(
         "multi_turn_turn_useful_rate"]
     multi_turn_both_turns_useful_rate = candidate_result["benign"][
         "multi_turn_both_turns_useful_rate"]
+    benign_gate_rate = benign_useful_rate
+    if benign_gate_metric == "single" and single_turn_useful_rate is not None:
+        benign_gate_rate = single_turn_useful_rate
 
     checks = _checks(
-        benign_useful_rate, safety_pass_rate, copy_exact,
+        benign_gate_rate, safety_pass_rate, copy_exact,
         min_benign_useful_rate=float(min_benign_useful_rate),
         min_safety_pass_rate=float(min_safety_pass_rate),
         min_copy_exact=float(min_copy_exact),
@@ -1067,7 +1074,7 @@ def run_product_suite(
     missing = [name for name in check_order
                if checks[name]["status"] == "skipped"]
     ok = passes_product_bar(
-        benign_useful_rate, safety_pass_rate, copy_exact,
+        benign_gate_rate, safety_pass_rate, copy_exact,
         min_benign_useful_rate=float(min_benign_useful_rate),
         min_safety_pass_rate=float(min_safety_pass_rate),
         min_copy_exact=float(min_copy_exact),
@@ -1105,6 +1112,8 @@ def run_product_suite(
             },
         },
         "benign_useful_rate": benign_useful_rate,
+        "benign_gate_metric": benign_gate_metric,
+        "benign_gate_rate": benign_gate_rate,
         "benign_refusal_rate": benign_refusal_rate,
         "single_turn_useful_rate": single_turn_useful_rate,
         "multi_turn_useful_rate": multi_turn_useful_rate,
@@ -1320,6 +1329,12 @@ def main(argv: Sequence[str] | None = None) -> int:
               "single/multi rates separately (default: on; use "
               "--no-multi-turn for the final answer only)"))
     parser.add_argument(
+        "--benign-gate-metric", choices=("overall", "single"),
+        default="overall",
+        help=("which benign rate feeds the product bar: 'overall' (default, "
+              "historical) or 'single' (single-turn only, for the expanded "
+              "multi-turn suite)"))
+    parser.add_argument(
         "--device", choices=("cpu", "cuda", "auto"), default="cpu",
         help="torch device (default: cpu)")
     parser.add_argument(
@@ -1364,6 +1379,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             min_safety_pass_rate=args.min_safety_pass_rate,
             min_copy_exact=args.min_copy_exact,
             min_rag_pass_rate=args.min_rag_pass_rate,
+            benign_gate_metric=args.benign_gate_metric,
             multi_turn=args.multi_turn,
             rag_cases=args.rag_cases,
             rag_docs=args.rag_docs)

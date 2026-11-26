@@ -1,0 +1,102 @@
+{
+  "metrics": {
+    "benign_gate_rate": {
+      "max": 0.966667,
+      "mean": 0.95,
+      "min": 0.925,
+      "n": 3
+    },
+    "benign_useful_rate": {
+      "max": 0.863095,
+      "mean": 0.827381,
+      "min": 0.791667,
+      "n": 3
+    },
+    "content_loss_ratio": {
+      "max": 0.984699,
+      "mean": 0.839955,
+      "min": 0.702847,
+      "n": 3
+    },
+    "copy_exact": {
+      "max": 0.485,
+      "mean": 0.481667,
+      "min": 0.475,
+      "n": 3
+    },
+    "multi_turn_both_turns_useful_rate": {
+      "max": 0.395833,
+      "mean": 0.284722,
+      "min": 0.208333,
+      "n": 3
+    },
+    "multi_turn_useful_rate": {
+      "max": 0.625,
+      "mean": 0.520833,
+      "min": 0.458333,
+      "n": 3
+    },
+    "rag_pass_rate": {
+      "max": 1.0,
+      "mean": 1.0,
+      "min": 1.0,
+      "n": 3
+    },
+    "safety_pass_rate": {
+      "max": 1.0,
+      "mean": 1.0,
+      "min": 1.0,
+      "n": 3
+    },
+    "single_turn_useful_rate": {
+      "max": 0.966667,
+      "mean": 0.95,
+      "min": 0.925,
+      "n": 3
+    }
+  },
+  "runs": [
+    {
+      "benign_gate_rate": 0.958333,
+      "benign_useful_rate": 0.863095,
+      "content_loss_ratio": 0.702847,
+      "copy_exact": 0.485,
+      "multi_turn_both_turns_useful_rate": 0.395833,
+      "multi_turn_useful_rate": 0.625,
+      "product_ok": true,
+      "rag_pass_rate": 1.0,
+      "run": "mixed8_benign_j",
+      "safety_pass_rate": 1.0,
+      "single_turn_useful_rate": 0.958333,
+      "status": "pass"
+    },
+    {
+      "benign_gate_rate": 0.966667,
+      "benign_useful_rate": 0.827381,
+      "content_loss_ratio": 0.984699,
+      "copy_exact": 0.475,
+      "multi_turn_both_turns_useful_rate": 0.25,
+      "multi_turn_useful_rate": 0.479167,
+      "product_ok": true,
+      "rag_pass_rate": 1.0,
+      "run": "mixed8_benign_j_s72",
+      "safety_pass_rate": 1.0,
+      "single_turn_useful_rate": 0.966667,
+      "status": "pass"
+    },
+    {
+      "benign_gate_rate": 0.925,
+      "benign_useful_rate": 0.791667,
+      "content_loss_ratio": 0.83232,
+      "copy_exact": 0.485,
+      "multi_turn_both_turns_useful_rate": 0.208333,
+      "multi_turn_useful_rate": 0.458333,
+      "product_ok": false,
+      "rag_pass_rate": 1.0,
+      "run": "mixed8_benign_j_s73",
+      "safety_pass_rate": 1.0,
+      "single_turn_useful_rate": 0.925,
+      "status": "fail"
+    }
+  ]
+}

@@ -125,6 +125,41 @@ def set_trainable_parameters(model, freeze: str = "none") -> dict:
     }
 
 
+def kl_anchor_loss(candidate_logits: torch.Tensor,
+                   reference_logits: torch.Tensor,
+                   labels: torch.Tensor, *, temperature: float = 1.0,
+                   ignore_index: int = -100) -> torch.Tensor:
+    """KL(reference || candidate) on assistant tokens only.
+
+    The reference is treated as a fixed distribution. ``labels`` selects the
+    assistant positions (anything other than ``ignore_index``); prompt and
+    padding positions are excluded. The result is the mean per-token KL, with
+    the usual ``T**2`` scaling when a temperature other than 1.0 is used.
+    """
+    if not math.isfinite(temperature) or temperature <= 0:
+        raise ValueError("temperature must be finite and > 0")
+    if candidate_logits.shape != reference_logits.shape:
+        raise ValueError(
+            "candidate and reference logits must have the same shape")
+    if labels.shape != candidate_logits.shape[:2]:
+        raise ValueError(
+            "labels must match the batch and sequence dimensions of logits")
+    flat_candidate = candidate_logits.reshape(-1, candidate_logits.shape[-1])
+    flat_reference = reference_logits.reshape(-1, reference_logits.shape[-1])
+    flat_labels = labels.reshape(-1)
+    mask = flat_labels != ignore_index
+    if not bool(mask.any()):
+        # Keep the graph connected even when a batch has no assistant tokens.
+        return candidate_logits.sum() * 0.0
+    candidate = flat_candidate[mask] / temperature
+    reference = flat_reference[mask] / temperature
+    log_candidate = F.log_softmax(candidate, dim=-1)
+    probs_reference = F.softmax(reference, dim=-1)
+    return F.kl_div(
+        log_candidate, probs_reference, reduction="batchmean"
+    ) * (temperature ** 2)
+
+
 def _batch_stream(rows: list[dict], batch_size: int, seed: int):
     """Endless deterministic batches, reshuffled every epoch."""
     generator = torch.Generator().manual_seed(seed)
@@ -151,7 +186,11 @@ def train_control(model, tok, rows: list[dict], *, steps: int, lr: float,
                   batch_size: int = 4, max_seq: int = 256,
                   content_weight: float = 1.0, seed: int = 13,
                   freeze: str = "none", device=None,
-                  log_every: int = 50, cache=None) -> dict:
+                  log_every: int = 50, cache=None,
+                  anchor_rows: list[dict] | None = None,
+                  anchor_model=None, anchor_beta: float = 0.0,
+                  anchor_batch_size: int = 4,
+                  anchor_temperature: float = 1.0) -> dict:
     """Train the full model (or a frozen subset) for ``steps`` updates.
 
     When ``cache`` is a :class:`research.pretokenize.PretokenizedCache`, rows
@@ -178,6 +217,17 @@ def train_control(model, tok, rows: list[dict], *, steps: int, lr: float,
         raise ValueError("max_seq must be >= 3")
     if (not math.isfinite(content_weight)) or content_weight < 1.0:
         raise ValueError("content_weight must be finite and >= 1.0")
+    if not math.isfinite(anchor_beta) or anchor_beta < 0:
+        raise ValueError("anchor_beta must be finite and >= 0")
+    if anchor_beta > 0 and (anchor_model is None or not anchor_rows):
+        raise ValueError(
+            "anchor_beta > 0 needs anchor_model and anchor_rows")
+    if anchor_beta > 0 and anchor_model is model:
+        raise ValueError("anchor_model must be a separate frozen model")
+    if anchor_batch_size < 1:
+        raise ValueError("anchor_batch_size must be >= 1")
+    if (not math.isfinite(anchor_temperature)) or anchor_temperature <= 0:
+        raise ValueError("anchor_temperature must be finite and > 0")
     target = torch.device(
         device or next(model.parameters()).device)
     torch.manual_seed(seed)
@@ -187,8 +237,18 @@ def train_control(model, tok, rows: list[dict], *, steps: int, lr: float,
     optimizer = torch.optim.AdamW(params, lr=lr)
     stream = (_batch_stream(rows, batch_size, seed) if cache is None
               else _cache_batch_stream(cache, batch_size, seed))
+    anchor_stream = None
+    if anchor_beta > 0:
+        anchor_model.to(target)
+        anchor_model.eval()
+        for parameter in anchor_model.parameters():
+            parameter.requires_grad = False
+        anchor_stream = _batch_stream(
+            anchor_rows, anchor_batch_size, seed + 1)
     model.train()
     losses = []
+    task_losses: list[float] = []
+    anchor_losses: list[float] = []
     empty_batches = 0
     started = time.time()
     while len(losses) < steps:
@@ -225,21 +285,60 @@ def train_control(model, tok, rows: list[dict], *, steps: int, lr: float,
                     "no row produced a scorable assistant token; check the "
                     "tokenizer tags and max_seq")
             continue
-        loss = batch_loss / valid
-        loss.backward()
+        task_loss = batch_loss / valid
+        total_loss = task_loss
+        anchor_value = None
+        if anchor_beta > 0:
+            anchor_batch = next(anchor_stream)
+            anchor_sum = None
+            anchor_valid = 0
+            for item in anchor_batch:
+                encoded = _encode(tok, item, max_seq, target)
+                if encoded is None:
+                    continue
+                anchor_x, anchor_y = encoded
+                with torch.no_grad():
+                    reference_logits = anchor_model(anchor_x)
+                candidate_logits = model(anchor_x)
+                anchor_loss = kl_anchor_loss(
+                    candidate_logits, reference_logits, anchor_y,
+                    temperature=anchor_temperature)
+                anchor_sum = (anchor_loss if anchor_sum is None
+                              else anchor_sum + anchor_loss)
+                anchor_valid += 1
+            if anchor_valid:
+                anchor_value = anchor_sum / anchor_valid
+                total_loss = total_loss + anchor_beta * anchor_value
+        total_loss.backward()
         torch.nn.utils.clip_grad_norm_(params, 1.0)
         optimizer.step()
-        losses.append(float(loss.detach().cpu()))
+        losses.append(float(total_loss.detach().cpu()))
+        task_losses.append(float(task_loss.detach().cpu()))
+        if anchor_value is not None:
+            anchor_losses.append(float(anchor_value.detach().cpu()))
         if log_every and len(losses) % log_every == 0:
-            print(json.dumps({
+            record = {
                 "step": len(losses),
                 "loss": round(losses[-1], 5),
                 "elapsed_seconds": round(time.time() - started, 2),
-            }), flush=True)
+            }
+            if anchor_value is not None:
+                record["anchor_loss"] = round(
+                    float(anchor_value.detach().cpu()), 5)
+            print(json.dumps(record), flush=True)
     tail = losses[-20:]
+    task_tail = task_losses[-20:]
+    anchor_tail = anchor_losses[-20:]
     summary = {
         **selection,
         "train_loss": sum(tail) / len(tail),
+        "task_loss": sum(task_tail) / len(task_tail),
+        "anchor_loss": (sum(anchor_tail) / len(anchor_tail)
+                        if anchor_tail else None),
+        "anchor_beta": anchor_beta,
+        "anchor_rows": len(anchor_rows) if anchor_rows else 0,
+        "anchor_batch_size": anchor_batch_size,
+        "anchor_temperature": anchor_temperature,
         "train_steps": steps,
         "train_examples": train_examples,
         "batch_size": batch_size,
@@ -455,6 +554,26 @@ def main(argv=None) -> int:
         "--cache-dir", default="",
         help="pretokenized training cache from research/pretokenize.py; "
              "empty keeps the on-the-fly tokenizer path")
+    parser.add_argument(
+        "--anchor-model", default="",
+        help="frozen reference checkpoint for the KL anchor (e.g. the J "
+             "default); required when --anchor-beta > 0")
+    parser.add_argument(
+        "--anchor-data", default="",
+        help="JSONL of content/copy/boundary training rows used for the KL "
+             "anchor; required when --anchor-beta > 0")
+    parser.add_argument(
+        "--anchor-beta", type=float, default=0.0,
+        help="weight of the KL(reference || candidate) anchor; 0 disables it")
+    parser.add_argument(
+        "--anchor-batch-size", type=int, default=4,
+        help="rows sampled from --anchor-data per training step")
+    parser.add_argument(
+        "--anchor-temperature", type=float, default=1.0,
+        help="softmax temperature for the KL anchor")
+    parser.add_argument(
+        "--device", default="",
+        help="cpu or cuda; empty auto-detects (CUDA when available)")
     args = parser.parse_args(argv)
     if args.steps < 1:
         parser.error("--steps must be >= 1")
@@ -466,11 +585,24 @@ def main(argv=None) -> int:
         parser.error("--max-seq must be >= 3")
     if not math.isfinite(args.content_weight) or args.content_weight < 1.0:
         parser.error("--content-weight must be finite and >= 1.0")
+    if not math.isfinite(args.anchor_beta) or args.anchor_beta < 0:
+        parser.error("--anchor-beta must be finite and >= 0")
+    if args.anchor_beta > 0:
+        if not args.anchor_model or not args.anchor_data:
+            parser.error(
+                "--anchor-model and --anchor-data are required when "
+                "--anchor-beta > 0")
+        if args.anchor_batch_size < 1:
+            parser.error("--anchor-batch-size must be >= 1")
+        if (not math.isfinite(args.anchor_temperature)
+                or args.anchor_temperature <= 0):
+            parser.error("--anchor-temperature must be finite and > 0")
     result_path = _resolve(args.result)
     comparison_path = _resolve(args.comparison)
     if result_path == comparison_path:
         parser.error("--result and --comparison must be different files")
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(
+        args.device or ("cuda" if torch.cuda.is_available() else "cpu"))
     train_path = _resolve(args.train)
     eval_path = _resolve(args.eval)
     train_rows = read_rows(train_path)
@@ -493,11 +625,24 @@ def main(argv=None) -> int:
                 "file (sha256 mismatch); rebuild it from this training JSONL "
                 "or point --train at the cached source")
     model, tok = load_model(args.base, device=device)
+    anchor_rows = None
+    anchor_model = None
+    anchor_path = None
+    if args.anchor_beta > 0:
+        anchor_path = _resolve(args.anchor_data)
+        anchor_rows = read_rows(anchor_path)
+        if not anchor_rows:
+            raise SystemExit("--anchor-data needs at least one row")
+        anchor_model, _ = load_model(args.anchor_model, device=device)
     training = train_control(
         model, tok, train_rows, steps=args.steps, lr=args.lr,
         batch_size=args.batch_size, max_seq=args.max_seq,
         content_weight=args.content_weight, seed=args.seed,
-        freeze=args.freeze, device=device, cache=cache)
+        freeze=args.freeze, device=device, cache=cache,
+        anchor_rows=anchor_rows, anchor_model=anchor_model,
+        anchor_beta=args.anchor_beta,
+        anchor_batch_size=args.anchor_batch_size,
+        anchor_temperature=args.anchor_temperature)
     training["train_data"] = _display_path(train_path)
     out = _resolve(args.out)
     metadata = {
@@ -508,11 +653,19 @@ def main(argv=None) -> int:
     }
     if cache_dir is not None:
         metadata["cache_dir"] = _display_path(cache_dir)
+    if anchor_path is not None:
+        metadata["anchor_model"] = str(args.anchor_model)
+        metadata["anchor_data"] = _display_path(anchor_path)
+        metadata["anchor_beta"] = args.anchor_beta
+        metadata["anchor_batch_size"] = args.anchor_batch_size
+        metadata["anchor_temperature"] = args.anchor_temperature
     saved = save_checkpoint(
         model, out, config=checkpoint_config(model), tokenizer=tok,
         metadata=metadata, train_summary=training)
     # Free the training state before loading fresh models for the comparison.
     del model
+    if anchor_model is not None:
+        del anchor_model
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
     comparison = compare(
