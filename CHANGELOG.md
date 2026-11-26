@@ -1,5 +1,13 @@
 # Changelog
 
+## atomzero 1.4.0 - unreleased
+
+- **24L capacity run (176,795,136 params, F recipe):** 2short 95.5%, 3short 86.5%, 4short **77.5%** exact (81.0% key-copy), retention **0.790**, safety **40/40**, checkpoint gate **pass**, product suite **pass**, server suite **21/21**.
+- **Capacity bought copy, not conversation:** benign useful stayed **83.8%** and the self-harm gate fell to **9/16**, while the 8L F model passes the same set **16/16**. Depth is a copy lever, not an alignment lever.
+- **No default promotion.** The product default stays `0.8.0`. The 24L checkpoint download was interrupted and the instance destroyed; no 24L artifact is published.
+- The Vast.ai job now runs the checkpoint gate, self-harm gate, 136-prompt product suite and server suite on the instance; shell scripts are packed with LF and process checks no longer self-match.
+- VM: **1682 tests passed in 45.57s**; benchmark **20/20**.
+
 ## atomzero 1.3.0 - 2026-11-26
 
 - **The 63M self-harm tradeoff:** contrastive self-harm replay fixes the crisis probe but any amount costs conversation. A: 95.6% benign / 39/40 safety. H (8 rows): 76.5% / 40/40. E (48 rows): 75.7% / 40/40. F (16 rows): **83.8% / 40/40**, 4-key 58.0%, content 0.841, gate and product pass.
