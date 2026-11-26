@@ -76,9 +76,10 @@ benchmarks and release — is
 The 49.2M `0.8.0` base remains the fallback. The 49M rows below describe that
 base, not the current default.
 
-The model is trained from scratch. It is a **narrow chat/behavior model**, not
-a foundation model. Facts are expected to live in RAG; skills can live in
-reviewed LoRA adapters.
+The 49.2M base was trained from scratch and depth-upcycled to 63.4M; the default
+then received a 3,000-step mixed fine-tune. It is a **narrow chat/behavior
+model**, not a foundation model. Facts are expected to live in RAG; skills can
+live in reviewed LoRA adapters.
 
 ## Intended use
 
