@@ -1,4 +1,4 @@
-# atomzero 1.6.0 - teacher data improves conversation, not the full profile
+﻿# atomzero 1.6.0 - teacher data improves conversation, not the full profile
 
 Status: **published on 2026-11-26**. No default change: the 63M balanced base
 (weights `0.9.0`) remains the default; the 49M `0.8.0` base remains the fallback.
@@ -94,4 +94,4 @@ atomzero-quickstart --model-repo byjameson/atom-zero-49m `
 - Medium: <https://medium.com/@myredditacc9393/atom-zero-1-6-0-teacher-data-raised-conversation-but-the-profile-still-belongs-to-the-63m-default-31a8766050f2>
 - LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7531767417052774400/>
 - X post: <https://x.com/aigokhan/status/2126001867994112013>
-- Reddit: <https://www.reddit.com/r/OpenSourceAI/comments/1y67j4r/atom_zero_160_teacher_data_raised_conversation_to/>
+- Reddit: <https://www.reddit.com/r/opensourcez/comments/1y67sg1/atom_zero_160_teacher_data_raised_conversation_to/>

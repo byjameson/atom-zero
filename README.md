@@ -1,4 +1,4 @@
-# Atom Zero 63M — a local assistant that cites its sources
+﻿# Atom Zero 63M â€” a local assistant that cites its sources
 
 Atom Zero is a local, source-cited assistant built around a **63.4M parameter model**,
 depth-upcycled from the 49.2M from-scratch base and validated as the default. Facts live in a local RAG index, not in the model
@@ -141,7 +141,7 @@ More fixes are in [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
 | sessions | transcript restore, JSON export/import, exact Forget, session Forget |
 | research | approved-only queue, Wikipedia fetch, worker lock/log, teacher synthesis |
 | teacher | local Ollama/OpenAI-compatible, unverified notes, reviewer verification |
-| curiosity | gap → pending topic → approval → Wikipedia + teacher → RAG note |
+| curiosity | gap â†’ pending topic â†’ approval â†’ Wikipedia + teacher â†’ RAG note |
 | self-learning | RAG memory (no weights), reviewed LoRA (weights), manual full training |
 | provider | optional local free-form chat; RAG/tools stay local |
 | safety | optional rules + local linear ML head; off by default; exact fallback |
@@ -221,28 +221,28 @@ as model transfer.
 - **Exact code/ID retrieval:** `L-7781` and `W-7781` are treated as distinct
   identifiers in FTS candidates, reranking and snippets.
 - **Turkish morphology:** suffix, final-consonant and vowel-drop matching
-  (`kitap` / `kitabın`, `ağaç` / `ağacın`, `ev` / `evler`, `şehir` / `şehrin`,
+  (`kitap` / `kitabÄ±n`, `aÄŸaÃ§` / `aÄŸacÄ±n`, `ev` / `evler`, `ÅŸehir` / `ÅŸehrin`,
   `burun` / `burnu`) plus FTS prefix variants for Turkish queries; English
   matching is unchanged.
 - **Collection scope in the UI:** choose an exact source or type a prefix such
   as `notes/`; search, Answer and Summarize collection share the same scope.
 - **Second brain graph:** local co-occurrence graph over names, codes and years
   with source counts and one-click evidence; CLI `graph`/`entity`/`path`, HTTP
-  and UI. Chat answers “what is related to X?” and multi-hop “how is X
-  connected to Y?” with graph evidence.
+  and UI. Chat answers â€œwhat is related to X?â€ and multi-hop â€œhow is X
+  connected to Y?â€ with graph evidence.
 - **Source comparison:** flag overlapping claims with different numbers, units,
   dates, code identifiers or negation, with lexical and topic-paraphrase
   alignment; CLI/API/UI and chat (`compare sources A and B`) keep both snippets
   and locators for review. It is a hint, not a truth verdict.
 - **Document timeline:** `atomzero-docs timeline`,
-  `GET /v1/documents/timeline`, chat `timeline` / `zaman çizelgesi` and the UI
+  `GET /v1/documents/timeline`, chat `timeline` / `zaman Ã§izelgesi` and the UI
   Show timeline action extract full dates and year-only mentions with
   source/title/page/section provenance; `--entity` / `entity=` / the UI entity
   filter scopes events to an entity. English and Turkish dates normalize to
   ISO, and year-only events keep `precision=year`.
 - **Typed relations:** `atomzero-docs relations`,
   `atomzero-docs relation-path`, `GET /v1/graph/relations`,
-  `GET /v1/graph/relations/path`, chat (`relations for X`, `X ilişkileri`,
+  `GET /v1/graph/relations/path`, chat (`relations for X`, `X iliÅŸkileri`,
   `relation path from X to Y`) and the UI Show relations action extract
   explicit `located_in`, `capital_of`, `founded_by`, `ceo_of` and `born_in`
   triples with source/title/page/section provenance; multi-hop paths use those
@@ -284,8 +284,8 @@ as model transfer.
   `repair report archive` / `repair report w0001` with `confirm reports`,
   `compare reports w0001 w0002` with Markdown export, archive
   `prune/keep/delete` previews,
-  `weekly review` (optionally `for 14 days` / `haftalık özet 14 gün`) and
-  `plan goal ...` → `confirm plan` with explicit task creation only after
+  `weekly review` (optionally `for 14 days` / `haftalÄ±k Ã¶zet 14 gÃ¼n`) and
+  `plan goal ...` â†’ `confirm plan` with explicit task creation only after
   confirmation.
 - **Goal-flow regression:** an end-to-end HTTP benchmark checks plan creates no
   tasks, confirm creates exactly three once, and cancel leaves memory unchanged.
@@ -335,8 +335,8 @@ assistant can propose pending research topics, but **nothing fetches until a
 human approves**:
 
 ```text
-question → no local source → knowledge gap
-gap → pending curiosity topic
+question â†’ no local source â†’ knowledge gap
+gap â†’ pending curiosity topic
 human approves
 worker fetches Wikipedia context
 local Ollama teacher synthesizes
@@ -462,7 +462,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 ## Links
 
 - PyPI: <https://pypi.org/project/atomzero/1.6.0/>
-- Reddit: <https://www.reddit.com/r/OpenSourceAI/comments/1y67j4r/atom_zero_160_teacher_data_raised_conversation_to/>
+- Reddit: <https://www.reddit.com/r/opensourcez/comments/1y67sg1/atom_zero_160_teacher_data_raised_conversation_to/>
 - GitHub source: <https://github.com/byjameson/atom-zero>
 - X: <https://x.com/aigokhan>
 - Instagram: <https://instagram.com/quantsinner>

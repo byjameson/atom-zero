@@ -1,4 +1,4 @@
-# Next session - 1.7.0 planning
+﻿# Next session - 1.7.0 planning
 
 Snapshot: 2026-11-26, **1.6.0 published and verified**.
 Head: release commit `eb400cb` plus this docs update; tag `v1.6.0`.
@@ -44,7 +44,7 @@ variant beat J on the full profile, so the default did not change.
 - Medium: <https://medium.com/@myredditacc9393/atom-zero-1-6-0-teacher-data-raised-conversation-but-the-profile-still-belongs-to-the-63m-default-31a8766050f2>
 - LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7531767417052774400/>
 - X: <https://x.com/aigokhan/status/2126001867994112013>
-- Reddit: <https://www.reddit.com/r/OpenSourceAI/comments/1y67j4r/atom_zero_160_teacher_data_raised_conversation_to/>
+- Reddit: <https://www.reddit.com/r/opensourcez/comments/1y67sg1/atom_zero_160_teacher_data_raised_conversation_to/>
 
 Verification: `verify_release.py --version 1.6.0` returned **0 failures**; VM
 **1717 tests passed in 66.77s**; benchmark **20/20**.
