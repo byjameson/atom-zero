@@ -6,9 +6,9 @@ weights; the model handles wording and behavior while deterministic tools,
 documents, memory and citations do the rest.
 
 This is the standalone **`atomzero`** package. The low-VRAM trainer is a separate
-package and is **not required** to run Atom Zero. Atom Zero is published on seven
-canonical surfaces: GitHub, Hugging Face, PyPI, dev.to, Medium, LinkedIn and
-ModelScope.
+package and is **not required** to run Atom Zero. Atom Zero is published on eight
+canonical surfaces: GitHub, Hugging Face, PyPI, dev.to, Medium, LinkedIn, Reddit
+and ModelScope.
 
 ## Support the project
 
@@ -462,6 +462,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 ## Links
 
 - PyPI: <https://pypi.org/project/atomzero/1.6.0/>
+- Reddit: <https://www.reddit.com/r/OpenSourceAI/comments/1y67j4r/atom_zero_160_teacher_data_raised_conversation_to/>
 - GitHub source: <https://github.com/byjameson/atom-zero>
 - X: <https://x.com/aigokhan>
 - Instagram: <https://instagram.com/quantsinner>

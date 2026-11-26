@@ -32,8 +32,8 @@ benchmarks and release — is
 
 | area | implemented |
 |---|---|
-| core model | 49.2M decoder-only transformer, BPE-8k, 6 layers, 768 dim, 128 context |
-| training | 175.37M clean + 214.8M replay; 40k product checkpoint |
+| core model | 63.4M balanced decoder-only transformer, BPE-8k, 8 layers, 768 dim, 128-token runtime context; 49.2M fallback |
+| training | 49.2M base upcycled to 8 layers / 63.4M; 3,000-step mixed fine-tune; 49.2M 40k product checkpoint remains the fallback |
 | RAG | SQLite FTS5, hashed/MiniLM embeddings, hybrid candidates, lexical+cosine rerank |
 | vector index | cached `doc_vectors`, prewarmed numpy matrix, IVF ANN above 256 chunks, exact fallback |
 | tools | time, safe arithmetic, task add/list/complete, name/likes memory, allowlisted 3-step plan API with confirmation |
@@ -63,15 +63,18 @@ benchmarks and release — is
 
 | item | value |
 |---|---|
-| name | Atom Zero 49.2M (`transformer_behavior_50m_scaled`) |
-| architecture | decoder-only transformer |
-| parameters | 49,213,440 |
-| layers / dim / heads / FF | 6 / 768 / 12 / 3072 |
-| context | 128 tokens |
+| name | Atom Zero 63.4M balanced (`atom-zero-63m-balanced`, weights `0.9.0`) |
+| architecture | decoder-only transformer, depth-upcycled from the 49.2M base |
+| parameters | 63,389,184 |
+| layers / dim / heads / FF | 8 / 768 / 12 / 3072 |
+| context | 128-token runtime context (512 max in the research config) |
 | tokenizer | 8,192-token BPE (`data/chat_en_bpe8k.json`) |
-| checkpoint step | 40,000 |
-| training tokens | 175.37M clean + replay mix to 214.8M |
+| checkpoint step | 3,000 mixed fine-tune steps |
+| training data | 6000 copy + 492 content + 480 benign x3 + 40 safety x5 + 16 self-harm x5 + 96 boundary pairs |
 | runtime | PyTorch, CUDA or CPU; RTX 3050 6 GB tested |
+
+The 49.2M `0.8.0` base remains the fallback. The 49M rows below describe that
+base, not the current default.
 
 The model is trained from scratch. It is a **narrow chat/behavior model**, not
 a foundation model. Facts are expected to live in RAG; skills can live in
@@ -101,14 +104,26 @@ raw-model probe uses no RAG, no tools and no agent.
 
 | variant | raw knowledge | product | behavior | notes |
 |---|---:|---:|---:|---|
-| base 49.2M | 2/10 | 21/21 | 16/16 | no RAG/tools |
-| product 49.2M (40k) | 2/10 | 21/21 | 16/16 | scaled corpus |
+| 49M fallback base | 2/10 | 21/21 | 16/16 | no RAG/tools |
+| 49M fallback product (40k) | 2/10 | 21/21 | 16/16 | scaled corpus |
 | + adapter `v0001` | 2/10 | 21/21 | 16/16 | adapter does not add facts |
 | + RAG/tools | — | 21/21 | 16/16 | source-cited answers |
 | + hybrid neural retrieval | — | 21/21 | 16/16 | retrieval top-1 **1.000** vs FTS 0.850 |
 | + optional ML safety | — | 26/26 | 16/16 | filter off by default |
 
-Language-model fit on the clean scaled validation shard:
+63M balanced default on the 1.5.0/1.6.0 product suite:
+
+| area | result |
+|---|---:|
+| benign useful (136) | 93.4% |
+| safety (40) | 40/40 |
+| self-harm (16) | 16/16 |
+| 4-key copy | 48.5% exact |
+| retention | 0.703 |
+| multi-turn | 75% final / 50% both turns |
+| RAG | 100% |
+
+Language-model fit on the clean scaled validation shard (49M fallback):
 
 | metric | base | product 40k |
 |---|---:|---:|
@@ -159,7 +174,7 @@ teacher, and the note remains unverified until a reviewer marks it.
 
 ## Why it is different
 
-- **49M local core**, not a 7B+ general model; the harness is the product.
+- **63M balanced local core** (49M fallback), not a 7B+ general model; the harness is the product.
 - **Source-cited RAG first**: hybrid FTS + MiniLM retrieval, top-1 1.000 on the
   authored held-out set, with exact fallback and local vector index.
 - **Deterministic tools and personal memory** rather than free-form tool
@@ -174,7 +189,7 @@ teacher, and the note remains unverified until a reviewer marks it.
 
 ## Limitations
 
-- 2/10 raw knowledge; weak general reasoning and coding.
+- The 49M fallback scores 2/10 raw knowledge; the 63M default is tuned for conversation and copy, not broad knowledge. Weak general reasoning and coding.
 - English-first tokenizer/data.
 - No autonomous research or free-form tool planning; the plan API is a
   constrained allowlist/executor.
