@@ -1,14 +1,15 @@
-# Next session - 1.6.0 in progress
+# Next session - 1.7.0 planning
 
-Snapshot: 2026-11-26, paused for PC shutdown.
-Head: the 1.6.0 data/tooling merges; no training is running; GPU idle.
-No Vast.ai instance is running; credit about **$8.88**.
-Sponsor goal: **$10,000/month**.
+Snapshot: 2026-11-26, **1.6.0 published and verified**.
+Head: release commit `eb400cb` plus this docs update; tag `v1.6.0`.
+No training is running; GPU idle. No Vast.ai instance is running; credit about
+**$8.88**. Sponsor goal: **$10,000/month**.
 
 ## Released baseline
 
-`1.5.0` is published and verified. The default is the **63M balanced** checkpoint
-(`byjameson/atom-zero-63m-balanced`, weights `0.9.0`):
+`1.6.0` is published. The default is still the **63M balanced** checkpoint
+(`byjameson/atom-zero-63m-balanced`, weights `0.9.0`); the 49M `0.8.0` base is
+the fallback.
 
 | area | J (default) |
 |---|---:|
@@ -21,87 +22,50 @@ Sponsor goal: **$10,000/month**.
 | multi-turn | 75% final / 50% both turns |
 | gate / product / server | pass / pass / 20/21 |
 
-The 49M `0.8.0` base is the fallback.
+## 1.6.0 result
 
-## 1.6.0 work so far
+| variant | benign | safety | self-harm | 4-key | retention | multi-turn | gate |
+|---|---:|---:|---:|---:|---:|---|---|
+| J | 93.4% | 40/40 | 16/16 | 48.5% | 0.703 | 75% / 50% | pass |
+| K | **98.5%** | 39/40 | 14/16 | 48.5% | 0.808 | **93.8% / 75%** | fail |
+| K2 | 89.0% | **40/40** | **16/16** | **53.5%** | 0.816 | 62.5% / 56.3% | pass |
+| K3 | 95.6% | **40/40** | **16/16** | 45.0% | 0.828 | 68.8% / 37.5% | pass |
 
-Merged and tested (35 tests):
+K3 passed every gate but lost copy, retention and multi-turn against J. No
+variant beat J on the full profile, so the default did not change.
 
-- Teacher benign chat generator (`research/build_teacher_benign_chat.py`).
-- Product suite 1.6: RAG cases + separate multi-turn rates
-  (`research/product_suite.py`, `examples/rag_suite_v1/`).
+## Published surfaces
 
-Teacher run (Qwen2.5-0.5B, host GPU):
+- PyPI: <https://pypi.org/project/atomzero/1.6.0/>
+- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v1.6.0>
+- Hugging Face default: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
+- ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-49m>
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-160-teacher-data-raised-conversation-but-the-profile-still-belongs-to-the-63m-default-3jc7>
+- Medium: <https://medium.com/@myredditacc9393/atom-zero-1-6-0-teacher-data-raised-conversation-but-the-profile-still-belongs-to-the-63m-default-31a8766050f2>
+- LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7531767417052774400/>
+- X: <https://x.com/aigokhan/status/2126001867994112013>
 
-```text
-requested 400 -> accepted 260, rejected attempts 437, duplicates 0
-identity 50, greeting 50, explanation 19, cooking 28,
-travel 15, coding 16, planning 32, general 50
-```
+Verification: `verify_release.py --version 1.6.0` returned **0 failures**; VM
+**1717 tests passed in 66.77s**; benchmark **20/20**.
 
-Expanded-suite results:
+## Next levers
 
-| variant | mix | benign | safety | self-harm | copy | multi-turn | gate |
-|---|---|---:|---:|---:|---:|---:|---|
-| J | 1.5.0 default | 93.4% | 40/40 | 16/16 | 48.5% | 75% / 50% | pass |
-| K | J + teacher 260x2 | **98.5%** | 39/40 | 14/16 | 48.5% | **93.8% / 75%** | fail |
-| K2 | safety/selfharm 8x | 89.0% | **40/40** | **16/16** | **53.5%** | 62.5% / 56% | pass |
-
-K gains conversation but loses one safety probe and two self-harm pairs. K2
-restores the gates but drops below 90% benign. Neither beats J on the full
-profile.
-
-## Resume here
-
-K3 (middle point) is built but not trained:
-
-```text
-data/mixed_benign_k3/train.jsonl  (8980 rows)
-base 6492 + benign 480x3 + teacher 260x2 + safety 40x6 + selfharm 16x6
-+ boundary 96x2; seed 97
-cache: data/pretok/mixed_benign_k3
-```
-
-Train:
-
-```powershell
-$env:PYTHONPATH="$PWD;$PWD\src"
-$env:PYTHONIOENCODING="utf-8"
-python research/finetune_copy_control.py `
-  --base checkpoints/upcycle/atom-zero-49m-8l `
-  --train data/mixed_benign_k3/train.jsonl `
-  --cache-dir data/pretok/mixed_benign_k3 `
-  --eval data/staged_copy_v1/mixed_eval.jsonl `
-  --out checkpoints/mixed8_benign_k3 `
-  --steps 3000 --lr 0.00005 --batch-size 4 --max-seq 256 `
-  --content-weight 2 --seed 71 `
-  --result research/results/mixed8_benign_k3.json `
-  --comparison research/results/mixed8_benign_k3_cmp.json
-```
-
-Then run the expanded product suite (with RAG), the main gate, the self-harm
-gate, server suite, 2/3-short copy and retention. Promote K3 only if it beats
-the J profile: benign >= 93.4%, safety 40/40, self-harm 16/16, copy >= 48.5%,
-multi-turn >= 75%, retention <= 0.703.
-
-## After K3
-
-1. If K3 wins, train 24L on the same mix on Vast.ai with `--copy-checkpoint`.
-   Verify the checkpoint size before destroy; the previous 24L transfer stopped
-   at 31 MB. If scp drops again, upload to HF from the instance with a scoped
-   token or split the transfer.
-2. Re-read the 1.4.0 24L self-harm result with the kind-aware gate; with the
-   fixed data it is 8 benign + 1 crisis = 1/8 crisis refusals, so the old F mix
-   is genuinely weak.
-3. If K3 does not win, keep the 63M balanced default and publish the 1.6.0
-   frontier: teacher data improves conversation but the safety/benign balance
-   is still the binding constraint.
-4. Full VM suite (1693+ tests) and benchmark before any 1.6.0 release.
+1. Close the teacher-data line: K/K2/K3 are measured; do not rerun them.
+2. A 1.7.0 candidate must beat J on the **full** profile: benign >= 93.4%,
+   safety 40/40, self-harm 16/16, 4-key >= 48.5%, retention <= 0.703,
+   multi-turn >= 75% / 50%, RAG 100%.
+3. The remaining options are a better data objective (safety-preserving chat or
+   a different replay balance), a capacity run with the corrected gate, or a
+   different copy/retention trade. More of the same teacher rows is ruled out.
+4. The 24L retest is still pending; it was gated on a winning 8L mix and no mix
+   won. Do not rent a GPU for it until an 8L mix clears the bar.
+5. Before 1.7.0: full VM suite and benchmark, then release at the boundary.
 
 ## Rules
 
 - Training on host GPU or rented GPU; tests and gates on the VMware Ubuntu box.
-- Check for leftover Vast.ai instances and destroy them.
-- Release only at the 1.6.0 boundary with fresh posts. Donation addresses stay
-  unchanged. Default weights change only after the full product suite and human
-  review.
+- Vast.ai only for substantial runs; destroy the instance and check for
+  leftovers afterward.
+- Release every 0.1 boundary; new posts, not edits.
+- Donation addresses stay unchanged unless the user asks.
+- Default weights change only after the full product suite and human review.

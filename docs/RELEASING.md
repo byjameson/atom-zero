@@ -3,12 +3,11 @@
 Canonical surfaces: GitHub, Hugging Face, PyPI, dev.to, Medium, LinkedIn and
 ModelScope.
 
-Current batch: **1.5.0 published. Next boundary: 1.6.0.** It adds the bounded self-improve loop,
-committed-change scope verification and the fifth measured cycle with an actual
-nested `opencode run` process. Post-release work adds the self-code audit, its
-planner/runner integration and the sixth measured cycle.
-`1493` Atom Zero tests pass; AISC 0.5.1 has `223` tests and
-`benchmarks/self_improvement_regression.py` passes 20/20.
+Current batch: **1.6.0 published. Next boundary: 1.7.0.** 1.6.0 adds the
+teacher benign chat generator and the expanded product suite (local RAG cases and
+separate multi-turn final/both rates), and records the K/K2/K3 frontier. No
+default change: the 63M balanced base stays default. `1717` Atom Zero tests pass
+on the VM; benchmark 20/20.
 
 ## Release cadence
 

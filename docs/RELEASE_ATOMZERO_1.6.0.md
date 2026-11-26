@@ -90,3 +90,7 @@ atomzero-quickstart --model-repo byjameson/atom-zero-49m `
 - Sponsor: <https://github.com/sponsors/byjameson>
 - X: <https://x.com/aigokhan>
 - Instagram: <https://instagram.com/quantsinner>
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-160-teacher-data-raised-conversation-but-the-profile-still-belongs-to-the-63m-default-3jc7>
+- Medium: <https://medium.com/@myredditacc9393/atom-zero-1-6-0-teacher-data-raised-conversation-but-the-profile-still-belongs-to-the-63m-default-31a8766050f2>
+- LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7531767417052774400/>
+- X post: <https://x.com/aigokhan/status/2126001867994112013>
