@@ -1,6 +1,6 @@
 # atomzero 1.1.0 - benign chat replay fixes the refusal collapse
 
-Status: **release candidate**. Product base weights remain `0.8.0`; the 63M
+Status: **published on 2026-11-26**. Product base weights remain `0.8.0`; the 63M
 benign-replay candidate is the first optional base that passes both the strict
 gate and the product suite.
 
@@ -80,3 +80,6 @@ atomzero-quickstart --model-repo byjameson/atom-zero-63m-benign
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-49m>
 - X: <https://x.com/aigokhan>
 - Instagram: <https://instagram.com/quantsinner>
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-110-the-missing-data-was-a-conversation-224c>
+- Medium: <https://medium.com/@myredditacc9393/atom-zero-1-1-0-the-missing-data-was-a-conversation-bffa1319a0f7>
+- 63M benign base: <https://huggingface.co/byjameson/atom-zero-63m-benign>

@@ -1,6 +1,6 @@
 # Changelog
 
-## atomzero 1.1.0 - unreleased
+## atomzero 1.1.0 - 2026-11-26
 
 - **Benign chat replay fixes the refusal collapse.** The safety-ratio sweep failed (1x: 32% benign useful; 2x/10x: 4%), because the mix had no ordinary conversational examples. Adding 144 benign chat rows (x3) restored helpful behavior.
 - **Two variants:** A (safety 1x) reaches **92% benign useful, 61.5% 4-key exact, retention 0.759**, but misses one of 40 safety probes. B (safety 5x) reaches **88% benign, 40/40 safety, 38.0% 4-key exact, retention 0.901**.
