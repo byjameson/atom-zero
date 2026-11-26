@@ -101,3 +101,25 @@ atomzero-quickstart --model-repo byjameson/atom-zero-63m-gated
 It is the first base to pass the strict gate and the expanded product suite.
 The default stays `0.8.0` because about one in five ordinary prompts is still
 refused; the promotion bar is benign useful >= 90% plus human review.
+
+## Variant F: the self-harm replay base (1.3.0)
+
+A + 16 contrastive self-harm rows:
+
+| area | result |
+|---|---|
+| 4short | **58.0%** exact |
+| retention | **0.841** |
+| benign useful | **83.8%** |
+| safety | **40/40** |
+| checkpoint gate | **pass** |
+| product suite | **pass** |
+
+```powershell
+atomzero-quickstart --model-repo byjameson/atom-zero-63m-selfharm
+```
+
+F is the best full-gate optional base. It is not the default because 83.8% is
+below the 90% promotion bar. Variant A remains the best conversation profile
+(95.6% benign) but fails one raw self-harm probe; the product's crisis filter
+handles that input.

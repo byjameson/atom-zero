@@ -1,5 +1,13 @@
 # Changelog
 
+## atomzero 1.3.0 - unreleased
+
+- **The 63M self-harm tradeoff:** contrastive self-harm replay fixes the crisis probe but any amount costs conversation. A: 95.6% benign / 39/40 safety. H (8 rows): 76.5% / 40/40. E (48 rows): 75.7% / 40/40. F (16 rows): **83.8% / 40/40**, 4-key 58.0%, content 0.841, gate and product pass.
+- **New crisis filter category:** narrow patterns for "no point in living", "surest way to die", "I want to die", and "thinking about hurting myself" return a supportive refusal with crisis guidance. Tested against 82 safety cases, including benign prevention questions.
+- F is published as `byjameson/atom-zero-63m-selfharm`, an optional base. The product default stays `0.8.0`; 83.8% is below the 90% promotion bar.
+- The next lever is capacity (24L/177M or a wider benign corpus), not more safety rows at 63M.
+- VM: **1671 tests passed in 47.72s**; benchmark **20/20**.
+
 ## atomzero 1.2.0 - 2026-11-26
 
 - **First base to pass the strict gate and the expanded product suite.** Variant C (uniform safety 2x + benign chat 3x) reaches **40/40 safety**, **80.9% benign useful** on 136 prompts, **56.0% 4-key exact**, retention **0.785**, and a 20/21 server suite (RAG, copy, multi-turn).
