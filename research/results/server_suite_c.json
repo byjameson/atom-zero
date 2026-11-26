@@ -1,0 +1,124 @@
+{
+  "answers_included": false,
+  "areas": {
+    "benign": {
+      "errors": 0,
+      "examples": 10,
+      "pass_rate": 0.9,
+      "passed": 9,
+      "refusal_rate": 0.1,
+      "refusals": 1,
+      "source_citations": 0
+    },
+    "copy": {
+      "errors": 0,
+      "examples": 3,
+      "pass_rate": 1.0,
+      "passed": 3,
+      "refusal_rate": 0.0,
+      "refusals": 0,
+      "source_citations": 0
+    },
+    "multi_turn": {
+      "errors": 0,
+      "examples": 3,
+      "pass_rate": 1.0,
+      "passed": 3,
+      "refusal_rate": 0.0,
+      "refusals": 0,
+      "source_citations": 0
+    },
+    "rag": {
+      "errors": 0,
+      "examples": 5,
+      "pass_rate": 1.0,
+      "passed": 5,
+      "refusal_rate": 0.0,
+      "refusals": 0,
+      "source_citations": 5
+    }
+  },
+  "checkpoint": {
+    "model_dir": "mixed8_benign_c"
+  },
+  "checks": {
+    "benign_ok": {
+      "name": "benign_ok",
+      "ok": true,
+      "reason": "benign_ok",
+      "status": "pass",
+      "threshold": 0.8,
+      "value": 0.9
+    },
+    "copy_ok": {
+      "name": "copy_ok",
+      "ok": true,
+      "reason": "copy_ok",
+      "status": "pass",
+      "threshold": 0.8,
+      "value": 1.0
+    },
+    "multi_turn_ok": {
+      "name": "multi_turn_ok",
+      "ok": true,
+      "reason": "multi_turn_ok",
+      "status": "pass",
+      "threshold": 0.66,
+      "value": 1.0
+    },
+    "rag_ok": {
+      "name": "rag_ok",
+      "ok": true,
+      "reason": "rag_ok",
+      "status": "pass",
+      "threshold": 0.8,
+      "value": 1.0
+    }
+  },
+  "content_free": true,
+  "decision": "server_ok",
+  "failed_checks": [],
+  "keys_included": false,
+  "method": "server_product_suite_v1",
+  "missing_checks": [],
+  "note": "A server pass is a screening result, not a release decision; read the live replies before promoting a model.",
+  "ok": true,
+  "passed_checks": [
+    "rag_ok",
+    "copy_ok",
+    "multi_turn_ok",
+    "benign_ok"
+  ],
+  "prompts_included": false,
+  "reasons": [
+    "rag_ok",
+    "copy_ok",
+    "multi_turn_ok",
+    "benign_ok"
+  ],
+  "server": {
+    "host": "127.0.0.1",
+    "kept": false,
+    "port": 8034,
+    "started": true
+  },
+  "server_ok": true,
+  "status": "pass",
+  "thresholds": {
+    "min_benign_useful_rate": 0.8,
+    "min_copy_pass_rate": 0.8,
+    "min_multi_turn_useful_rate": 0.66,
+    "min_rag_pass_rate": 0.8,
+    "min_useful_words": 4
+  },
+  "totals": {
+    "errors": 0,
+    "examples": 21,
+    "passed": 20,
+    "refusals": 1,
+    "source_citations": 5
+  },
+  "training_performed": false,
+  "values_included": false,
+  "weights_changed": false
+}

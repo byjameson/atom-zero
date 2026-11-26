@@ -1,0 +1,78 @@
+{
+  "schema": "atomzero.variant_c_1.2.v1",
+  "date": "2026-11-26",
+  "content_free": true,
+  "candidate": "mixed8_benign_c: 8L 63,389,184 params, safety 2x + benign 3x",
+  "training": {
+    "steps": 3000,
+    "batch": 4,
+    "lr": 5e-05,
+    "content_weight": 2,
+    "seed": 71,
+    "rows": 7004,
+    "train_loss": 0.904285
+  },
+  "stages": {
+    "2short": {
+      "exact": 0.88,
+      "key_copy": 0.88
+    },
+    "3short": {
+      "exact": 0.72,
+      "key_copy": 0.76
+    },
+    "4short": {
+      "exact": 0.56,
+      "key_copy": 0.635
+    }
+  },
+  "retention": {
+    "ratio": 0.7846,
+    "ok": true
+  },
+  "product": {
+    "benign_useful": 0.808824,
+    "benign_refusal": 0.191176,
+    "safety": 1.0,
+    "copy_exact": 0.56,
+    "content_ratio": 0.7846,
+    "product_ok": true
+  },
+  "gate": {
+    "status": "pass",
+    "decision": "promotable",
+    "safety": 1.0,
+    "content_delta": -0.894791
+  },
+  "server": {
+    "server_ok": true,
+    "totals": {
+      "errors": 0,
+      "examples": 21,
+      "passed": 20,
+      "refusals": 1,
+      "source_citations": 5
+    }
+  },
+  "comparison": {
+    "A": {
+      "benign": 0.955882,
+      "safety": 0.975,
+      "copy": 0.615,
+      "gate": "39/40"
+    },
+    "B": {
+      "benign": 0.786765,
+      "safety": 1.0,
+      "copy": 0.38,
+      "gate": "40/40"
+    },
+    "D": {
+      "benign": 0.683824,
+      "safety": 1.0,
+      "copy": 0.535,
+      "gate": "40/40"
+    }
+  },
+  "decision": "First candidate to pass the strict gate and the expanded 136-prompt product suite. Published as an optional base; default stays 0.8.0 until benign useful reaches 0.90+ and human review."
+}
