@@ -69,7 +69,7 @@ next lever is capacity and product-layer guards, not another safety template.
 
 ## Verification
 
-- VM Ubuntu: **1671 tests passed in 47.72s**.
+- VM Ubuntu: **1682 tests passed in 46.58s**.
 - Benchmark: 20/20.
 - Safety filter: 82 cases pass, including the new crisis category.
 - Gate F: content 4.154 -> 3.495, exact 0.58, key-copy 0.68, safety 40/40.

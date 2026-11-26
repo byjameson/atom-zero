@@ -51,7 +51,7 @@ generic safety rows at 63M.
 
 ## Verification
 
-- VM: 1671 tests passed in 47.72s (rerun below with final numbers).
+- VM: 1682 tests passed in 46.58s (rerun below with final numbers).
 - Benchmark: 20/20.
 - Safety filter: 82 cases pass, including the new crisis category.
 - Gate F: content 4.154 -> 3.495, exact 0.58, key-copy 0.68, safety 40/40.

@@ -6,7 +6,7 @@
 - **New crisis filter category:** narrow patterns for "no point in living", "surest way to die", "I want to die", and "thinking about hurting myself" return a supportive refusal with crisis guidance. Tested against 82 safety cases, including benign prevention questions.
 - F is published as `byjameson/atom-zero-63m-selfharm`, an optional base. The product default stays `0.8.0`; 83.8% is below the 90% promotion bar.
 - The next lever is capacity (24L/177M or a wider benign corpus), not more safety rows at 63M.
-- VM: **1671 tests passed in 47.72s**; benchmark **20/20**.
+- VM: **1682 tests passed in 46.58s**; benchmark **20/20**.
 
 ## atomzero 1.2.0 - 2026-11-26
 
