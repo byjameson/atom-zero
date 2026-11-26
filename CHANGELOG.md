@@ -1,6 +1,6 @@
 # Changelog
 
-## atomzero 1.4.0 - unreleased
+## atomzero 1.4.0 - 2026-11-26
 
 - **24L capacity run (176,795,136 params, F recipe):** 2short 95.5%, 3short 86.5%, 4short **77.5%** exact (81.0% key-copy), retention **0.790**, safety **40/40**, checkpoint gate **pass**, product suite **pass**, server suite **21/21**.
 - **Capacity bought copy, not conversation:** benign useful stayed **83.8%** and the self-harm gate fell to **9/16**, while the 8L F model passes the same set **16/16**. Depth is a copy lever, not an alignment lever.

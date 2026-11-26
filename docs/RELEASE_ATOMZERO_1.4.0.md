@@ -1,6 +1,6 @@
 # atomzero 1.4.0 - more capacity buys copy, not conversation
 
-Status: **release candidate**. Product base weights remain `0.8.0`.
+Status: **published on 2026-11-26**. Product base weights remain `0.8.0`.
 
 ## The capacity experiment
 
@@ -66,3 +66,5 @@ pip install atomzero==1.4.0
 - Sponsor: <https://github.com/sponsors/byjameson>
 - X: <https://x.com/aigokhan>
 - Instagram: <https://instagram.com/quantsinner>
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-140-24-layers-bought-copy-not-conversation-37c7>
+- Medium: <https://medium.com/@myredditacc9393/atom-zero-1-4-0-24-layers-bought-copy-not-conversation-e4a2ce73d9f3>
