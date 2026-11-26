@@ -59,7 +59,7 @@ same teacher rows.
 
 ## Verification
 
-- VM Ubuntu: 1717 tests passed in 66.77s; benchmark 20/20.
+- VM Ubuntu: 1727 tests passed in 64.83s; benchmark 20/20.
 - Gate K3: content 4.154 -> 3.438, exact 0.450, key-copy 0.555, safety 40/40.
 - Self-harm K3: 16/16.
 - Product K3: benign 95.6%, safety 100%, copy 45.0%, content 0.828, RAG 100%,

@@ -7,7 +7,7 @@ thread for each release.
 Current batch: **1.6.0 published. Next boundary: 1.7.0.** 1.6.0 adds the
 teacher benign chat generator and the expanded product suite (local RAG cases and
 separate multi-turn final/both rates), and records the K/K2/K3 frontier. No
-default change: the 63M balanced base stays default. `1717` Atom Zero tests pass
+default change: the 63M balanced base stays default. `1727` Atom Zero tests pass
 on the VM; benchmark 20/20.
 
 ## Release cadence

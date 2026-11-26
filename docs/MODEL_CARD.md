@@ -17,7 +17,7 @@ seeds a demo corpus and opens the local UI.
 - Teacher benign chat generated 260 validated rows from 400 requests; the expanded product suite adds local RAG cases and separate multi-turn final/both rates.
 - K reaches 98.5% benign and 93.8% multi-turn but loses safety (39/40) and self-harm (14/16). K2 restores 40/40 and 16/16 but benign falls to 89.0%. K3 passes all gates but copy 45.0%, retention 0.828 and multi-turn 68.8% / 37.5% stay below the default.
 - No default change: this card still describes the 63M balanced base (weights 0.9.0). The 49M 0.8.0 base remains the fallback.
-- 1717 tests passed in 66.77s on the VM; benchmark 20/20.
+- 1727 tests passed in 64.83s on the VM; benchmark 20/20.
 
 ![Atom Zero architecture](https://raw.githubusercontent.com/byjameson/atom-zero/main/docs/figures/atomzero_architecture.png)
 
@@ -50,7 +50,7 @@ benchmarks and release — is
 | privacy | localhost, no telemetry, SSRF guard, upload caps, deletion |
 | UI | chat, documents, gaps, research queue, teacher notes, adapters, health |
 | packaging | standalone `atomzero` package (assistant deps only), `atomzero`/`atomzero-quickstart` entry points, GitHub release, HF/ModelScope weights |
-| tests | 1717 passed; product suite 136 prompts; behavior 16/16; retrieval 1.000 |
+| tests | 1727 passed; product suite 136 prompts; behavior 16/16; retrieval 1.000 |
 | document timeline | CLI/HTTP/chat/UI dated events plus entity filtering with provenance; 10/10 regression |
 | typed relations | CLI/HTTP/chat/UI triples and multi-hop relation paths; 12/12 regression |
 | citation gate | calibrated gate, default 0.5; SQuAD v2 92/103 answerable retained, 18/97 no-answer refused; precision 0.479 |
@@ -226,9 +226,10 @@ Evidence lives in `research/results/` and
 - GitHub source: <https://github.com/byjameson/atom-zero>
 - Atom Zero PyPI: <https://pypi.org/project/atomzero/1.6.0/>
 - Hugging Face: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
-- ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-49m>
-- launch article: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-a-49m-local-assistant-that-says-i-dont-know-1p7m>
-- Medium: <https://medium.com/@myredditacc9393/atom-zero-a-49m-local-assistant-that-says-i-dont-know-df1ebc0e2e78>
+- ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-63m-balanced>
+- Live demo: <https://modelscope.cn/studios/byjameson/atomzerodemo>
+- 1.6.0 article: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-160-teacher-data-raised-conversation-but-the-profile-still-belongs-to-the-63m-default-3jc7>
+- Medium: <https://medium.com/@myredditacc9393/atom-zero-1-6-0-teacher-data-raised-conversation-but-the-profile-still-belongs-to-the-63m-default-31a8766050f2>
 - LinkedIn: <https://www.linkedin.com/in/g%C3%B6khan-cava-874a32157/>
 - X: <https://x.com/aigokhan>
 - Instagram: <https://instagram.com/quantsinner>

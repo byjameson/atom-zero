@@ -5,7 +5,7 @@
 - **Teacher data improves conversation, not the full profile.** K (teacher 2x, safety 5x) reaches **98.5% benign / 93.8% final-turn multi-turn** but fails safety (39/40) and self-harm (14/16). K2 (safety/self-harm 8x) restores **40/40 / 16/16** and lifts copy to **53.5%**, but benign falls to 89.0%. K3 (6x midpoint) passes **40/40 / 16/16**, the checkpoint gate and the product gate, but copy 45.0%, retention 0.828 and multi-turn 68.8% / 37.5% are below J.
 - **No default promotion.** The 63M balanced base (weights `0.9.0`) remains the default; the 49M `0.8.0` base remains the fallback.
 - Teacher benign chat generator: 400 requested -> **260 accepted**, 437 rejected attempts, 0 duplicates. The expanded product suite adds local RAG cases and separate multi-turn final/both rates; **35 tests**.
-- VM: **1717 tests passed in 66.77s**; benchmark **20/20**.
+- VM: **1727 tests passed in 64.83s**; benchmark **20/20**.
 
 ## atomzero 1.5.0 - 2026-11-26
 

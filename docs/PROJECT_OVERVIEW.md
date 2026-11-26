@@ -7,8 +7,8 @@ shorter pages link here.
 
 ## 1. One-paragraph summary
 
-Atom Zero is a **local, source-cited assistant** built around a **49.2M-parameter
-transformer trained from scratch**. The model is deliberately small: it handles
+Atom Zero is a **local, source-cited assistant** built around a **63.4M-parameter
+balanced transformer**, depth-upcycled from the 49.2M from-scratch base. The model is deliberately small: it handles
 short wording and behavior, while SQLite retrieval supplies facts, deterministic
 tools handle arithmetic/time/tasks/memory, and a reviewed adapter path handles
 style and skills. Unanswered questions become knowledge gaps; a human approves
@@ -35,7 +35,7 @@ its own. Apache-2.0 code and weights, no hosted service, no telemetry.
 - a model that stores all facts in its weights;
 - an autonomous crawler or self-modifying agent;
 - a hosted multi-tenant service;
-- a claim that 49.2M parameters are enough for general intelligence.
+- a claim that 63.4M parameters are enough for general intelligence.
 
 ## 3. Architecture
 
@@ -45,7 +45,7 @@ its own. Apache-2.0 code and weights, no hosted service, no telemetry.
 |---|---|---|
 | UI/API | `src/atomzero/chat_server.py` | browser chat, documents, scoped answers, extractive summaries, second brain graph, evidence panel, constrained plan API, tasks, gaps, queues, teacher notes, adapters, health |
 | agent runtime | `src/atomzero/agent_runtime.py`, `research/chat_human.py` | tool routing, memory, RAG, missing-source path |
-| core model | `src/atomzero/transformer.py` + checkpoint | 49.2M decoder-only transformer |
+| core model | `src/atomzero/transformer.py` + checkpoint | 63.4M decoder-only transformer (upcycled from 49.2M) |
 | retrieval | `src/atomzero/doc_memory.py`, `neural_embedder.py` | FTS5 + hashed/MiniLM vectors + reranking |
 | memory | SQLite + session JSON | documents, provenance, facts, tasks, episodes |
 | research | `src/atomzero/research_queue.py`, `research/research_worker.py` | approved Wikipedia fetch + teacher synthesis |
@@ -60,22 +60,23 @@ its own. Apache-2.0 code and weights, no hosted service, no telemetry.
 
 | item | value |
 |---|---|
-| parameters | 49,213,440 |
+| parameters | 63,389,184 |
 | architecture | decoder-only transformer |
-| layers / dim / heads / FF | 6 / 768 / 12 / 3072 |
+| layers / dim / heads / FF | 8 / 768 / 12 / 3072 |
 | context | 128 tokens |
 | tokenizer | 8,192-token BPE (`data/chat_en_bpe8k.json`) |
-| checkpoint step | 40,000 |
-| clean train tokens | 175.37M |
-| replay mix | 214.8M tokens |
-| clean valid tokens | 3.21M |
+| checkpoint step | 3,000 mixed fine-tune steps (from the 49M 40k base) |
+| clean train tokens (49M base) | 175.37M |
+| replay mix (49M base) | 214.8M tokens |
+| clean valid tokens (49M base) | 3.21M |
 
-The 40k checkpoint is the product checkpoint
-(`checkpoints/transformer_behavior_50m_scaled`). A lower-LR resume to 48k did
-not materially beat it (best 44k: chat bpb 1.3800 / assistant 3.8497 vs 40k
-1.3815 / 3.8551), so 40k remains the product.
+The 63M balanced default (`byjameson/atom-zero-63m-balanced`, weights 0.9.0) is
+the product checkpoint. The 49M 40k checkpoint
+(`checkpoints/transformer_behavior_50m_scaled`) remains the fallback; a lower-LR
+resume to 48k did not materially beat it (best 44k: chat bpb 1.3800 / assistant
+3.8497 vs 40k 1.3815 / 3.8551).
 
-Clean scaled-valid fit:
+Clean scaled-valid fit (49M fallback):
 
 | metric | base | product 40k |
 |---|---:|---:|
@@ -86,7 +87,7 @@ Clean scaled-valid fit:
 | wiki bpb | — | **2.1746** |
 
 The raw knowledge probe stays at **2/10**. Training improves behavior and
-language-model fit; it does not turn a 49M model into a fact database.
+language-model fit; it does not turn a 63.4M model into a fact database.
 
 ## 5. Runtime and deterministic tools
 
@@ -104,7 +105,7 @@ This is intentionally conservative. It is reliable and easy to audit, but it is
 not free-form tool planning. A separate `POST /v1/agent/plan` endpoint executes
 a caller-supplied JSON plan through an allowlist: at most 3 steps, no shell or
 arbitrary URL, and explicit `confirm: true` before task/research side effects.
-The 49M model does not choose those steps. See [`TOOL_PLANNING.md`](TOOL_PLANNING.md).
+The 63.4M model does not choose those steps. See [`TOOL_PLANNING.md`](TOOL_PLANNING.md).
 
 ## 6. Retrieval (RAG)
 
@@ -237,7 +238,7 @@ The server can route free-form chat to any OpenAI-compatible endpoint:
 
 ```powershell
 python -m atomzero.chat_server `
-  --model checkpoints/transformer_behavior_50m_scaled `
+  --model ~/.cache/atomzero/atom-zero-63m-balanced `
   --docs data/docs.db `
   --chat-provider-url http://127.0.0.1:11434/v1 `
   --chat-provider-model llama3.2:3b `
@@ -248,7 +249,7 @@ RAG, tools and memory stay local. Source-grounded questions still use local
 notes; with `--allow-general-chat`, unsourced questions go to the provider and
 report no sources. The provider is text-only: it does not plan or execute tools.
 A local URL keeps prompts on the machine; a remote URL does not. The default
-remains the 49.2M model.
+remains the 63.4M balanced model.
 
 ## 11. Safety (optional)
 
@@ -287,7 +288,7 @@ whether to enable it.
 
 | check | result |
 |---|---:|
-| raw 49.2M, no RAG/tools | **2/10** |
+| raw 49.2M fallback, no RAG/tools | **2/10** |
 | product with RAG/tools | **21/21** |
 | behavior checks | **16/16** |
 | source-cited retrieval top-1 | **1.000** (FTS 0.850) |
@@ -298,7 +299,7 @@ whether to enable it.
 | typed relations regression | **12/12** |
 | citation gate, SQuAD v2 (default 0.5) | **92/103 answerable retained; 18/97 no-answer refused; precision 0.479** |
 | safety-enabled product | **26/26** |
-| test suite | **432 passed** |
+| test suite | **1727 passed** |
 
 The product benchmark is narrow and authored: tools, memory, tasks, retrieval,
 teacher-note review, missing-source detection and one short generation. It is
@@ -307,16 +308,16 @@ not MMLU, GSM8K or HumanEval. The 21/21 is the product, not the bare model.
 ## 14. Packaging and reproduction
 
 ```powershell
-pip install atomzero==0.6.0
+pip install atomzero==1.6.0
 atomzero-quickstart
 ```
 
-`atomzero 0.6.0` is the standalone assistant package. `streamft 1.0` is the
+`atomzero 1.6.0` is the standalone assistant package. `streamft 1.0` is the
 separate low-VRAM trainer; `streamft 0.9.2` is the last compatibility release
 that bundled Atom Zero. The quickstart downloads the checkpoint/tokenizer from
 Hugging Face, seeds a demo corpus, starts the server and opens the browser.
-`--provider` enables local Ollama. Both packages are on PyPI; the 49.2M
-checkpoint is not bundled in either wheel.
+`--provider` enables local Ollama. Both packages are on PyPI; the 63.4M
+balanced checkpoint is not bundled in either wheel.
 
 Reference machine: RTX 3050 Laptop 6 GB, 34 GB RAM, Windows 11. The core also
 runs on CPU, slower.
@@ -324,7 +325,7 @@ runs on CPU, slower.
 ## 15. Released artifacts and contact
 
 Atom Zero canonical surfaces: GitHub, Hugging Face, PyPI, dev.to, Medium,
-LinkedIn and ModelScope.
+LinkedIn, Reddit and ModelScope.
 
 - GitHub (trainer monorepo): https://github.com/byjameson/stream-finetune
 - GitHub (Atom Zero): https://github.com/byjameson/atom-zero
@@ -332,10 +333,11 @@ LinkedIn and ModelScope.
 - Atom Zero releases: https://github.com/byjameson/atom-zero/releases
 - streamft PyPI (trainer): https://pypi.org/project/streamft/
 - atomzero PyPI (standalone assistant): https://pypi.org/project/atomzero/
-- Hugging Face: https://huggingface.co/byjameson/atom-zero-49m
-- ModelScope: https://modelscope.cn/models/byjameson/atom-zero-49m
-- dev.to: https://dev.to/mycute_97b39c4e34027570f9/atom-zero-a-49m-local-assistant-that-says-i-dont-know-1p7m
-- Medium: https://medium.com/@myredditacc9393/atom-zero-a-49m-local-assistant-that-says-i-dont-know-df1ebc0e2e78
+- Hugging Face: https://huggingface.co/byjameson/atom-zero-63m-balanced
+- ModelScope: https://modelscope.cn/models/byjameson/atom-zero-63m-balanced
+- Live demo: https://modelscope.cn/studios/byjameson/atomzerodemo
+- dev.to: https://dev.to/mycute_97b39c4e34027570f9/atom-zero-160-teacher-data-raised-conversation-but-the-profile-still-belongs-to-the-63m-default-3jc7
+- Medium: https://medium.com/@myredditacc9393/atom-zero-1-6-0-teacher-data-raised-conversation-but-the-profile-still-belongs-to-the-63m-default-31a8766050f2
 - LinkedIn: https://www.linkedin.com/in/g%C3%B6khan-cava-874a32157/
 - X: https://x.com/aigokhan
 - Instagram: https://instagram.com/quantsinner

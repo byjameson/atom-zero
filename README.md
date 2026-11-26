@@ -117,7 +117,7 @@ More fixes are in [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
 - **A reviewed research loop:** approved-only Wikipedia fetches, local teacher
   notes and a human approval gate.
 - **A small-model + harness reference:** the harness is the reusable asset; the
-  49.2M core is deliberately narrow.
+  63.4M core is deliberately narrow.
 - **Optionally, a front-end for a stronger local provider** while RAG, tools and
   memory stay local.
 
@@ -128,14 +128,14 @@ More fixes are in [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
 - Not a hosted, multi-tenant service.
 - Not a model that stores all facts in its weights.
 - Not an autonomous crawler or self-modifying agent.
-- Not a claim that 49.2M parameters are enough for general intelligence.
+- Not a claim that 63.4M parameters are enough for general intelligence.
 
 ## System features
 
 | area | implemented |
 |---|---|
 | core model | 63.4M decoder-only transformer, BPE-8k, 8 layers (upcycled), 768 dim, 128 context |
-| training | 175.37M clean + 214.8M replay; 40k product checkpoint |
+| training | 49.2M base upcycled to 8 layers / 63.4M; 3,000-step mixed fine-tune |
 | RAG | SQLite FTS5, hashed/MiniLM embeddings, hybrid candidates, lexical+cosine rerank |
 | vector index | cached vectors, prewarmed numpy matrix, IVF ANN above 256 chunks, exact fallback |
 | documents | text/Markdown/HTML/PDF/DOCX ingestion, page/section citations, evidence panel/API |
@@ -160,19 +160,20 @@ More fixes are in [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
 | layers / dim / heads / FF | 8 / 768 / 12 / 3072 |
 | context | 128 tokens |
 | tokenizer | 8,192-token BPE (`chat_en_bpe8k.json`) |
-| checkpoint step | 40,000 |
-| training tokens | 175.37M clean + replay mix to 214.8M |
+| checkpoint step | 3,000 mixed fine-tune steps (from the 49M 40k base) |
+| training data | 6000 copy + 492 content + 480 benign x3 + 40 safety x5 + 16 self-harm x5 + 96 boundary pairs |
 | runtime | PyTorch, CUDA or CPU; RTX 3050 6 GB tested |
 
-The model is trained from scratch. It is a **narrow chat/behavior model**, not a
-foundation model. Facts are expected to live in RAG; skills can live in reviewed
-LoRA adapters.
+The 49.2M base was trained from scratch and depth-upcycled to 63.4M; the default
+then received a 3,000-step mixed fine-tune. It is a **narrow chat/behavior
+model**, not a foundation model. Facts are expected to live in RAG; skills can
+live in reviewed LoRA adapters.
 
 ## Honest benchmark
 
 | check | result |
 |---|---:|
-| raw 49.2M, no RAG/tools | **2/10** |
+| raw 49.2M fallback, no RAG/tools | **2/10** |
 | product with RAG/tools | **21/21** |
 | behavior checks | **16/16** |
 | source-cited retrieval top-1 | **1.000** (FTS 0.850) |
@@ -183,10 +184,10 @@ LoRA adapters.
 | document timeline regression | **10/10** |
 | typed relations regression | **12/12** |
 | citation gate, SQuAD v2 (default 0.5) | **92/103 answerable retained; 18/97 no-answer refused; precision 0.479** |
-| test suite | **432 passed** |
+| test suite | **1727 passed** |
 
 The raw-model probe asks ten simple general questions with no documents, no
-calculator and no agent. The 49.2M model gets **2/10**. The product gets
+calculator and no agent. The 49.2M fallback gets **2/10**. The product gets
 **21/21** because the runtime does the work.
 
 The raw `pytest -v` run for the tested commit, together with the AISC suite
@@ -326,7 +327,7 @@ See [DOCUMENTS.md](https://github.com/byjameson/atom-zero/blob/main/docs/DOCUMEN
   - **explicit confirmation** before task/research side effects;
   - text arguments pass the optional safety filter when enabled.
 
-The 49.2M model does not choose tools freely. This is a constrained executor,
+The 63.4M model does not choose tools freely. This is a constrained executor,
 not model-driven planning. See
 [TOOL_PLANNING.md](https://github.com/byjameson/atom-zero/blob/main/docs/TOOL_PLANNING.md).
 
@@ -437,7 +438,7 @@ the exact rules. It is an operator tool, not a hosted content policy.
 
 ## Limits
 
-- 2/10 raw knowledge; weak general reasoning and coding.
+- 2/10 raw knowledge on the 49M fallback; weak general reasoning and coding.
 - English-first tokenizer/data.
 - 128-token core context; longer context is a model/training change.
 - No OCR; scanned PDFs need OCR before ingestion.
@@ -543,7 +544,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Multi-agent orchestration: <https://github.com/byjameson/atom-zero/blob/main/docs/ORCHESTRATION.md>
 - Branch research: <https://github.com/byjameson/atom-zero/blob/main/docs/BRANCH_RESEARCH.md>
 - 1.0.0 parallel batch plan: <https://github.com/byjameson/atom-zero/blob/main/docs/BATCH_1.0.0.md>
-- Release cadence: one major version per release (next: 1.0.0)
+- Release cadence: one minor version per release (next: 1.7.0)
 - Ten-increment batch plan: <https://github.com/byjameson/atom-zero/blob/main/docs/BATCH_0.7.0.md>
 - Self-improvement batch plan: <https://github.com/byjameson/atom-zero/blob/main/docs/BATCH_0.9.0.md>
 - Benchmarks: <https://github.com/byjameson/atom-zero/blob/main/docs/BENCHMARKS.md>
@@ -552,8 +553,8 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Hugging Face: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-63m-balanced>
 - Live demo: <https://modelscope.cn/studios/byjameson/atomzerodemo>
-- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-a-49m-local-assistant-that-says-i-dont-know-1p7m>
-- Medium: <https://medium.com/@myredditacc9393/atom-zero-a-49m-local-assistant-that-says-i-dont-know-df1ebc0e2e78>
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-160-teacher-data-raised-conversation-but-the-profile-still-belongs-to-the-63m-default-3jc7>
+- Medium: <https://medium.com/@myredditacc9393/atom-zero-1-6-0-teacher-data-raised-conversation-but-the-profile-still-belongs-to-the-63m-default-31a8766050f2>
 - LinkedIn: <https://www.linkedin.com/in/g%C3%B6khan-cava-874a32157/>
 - Contact: **gokhancava@gmail.com**
 
