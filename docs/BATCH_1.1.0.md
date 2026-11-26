@@ -65,3 +65,26 @@ unsafe.
 
 The release only changes the default base if a candidate passes the product
 suite; otherwise 1.1.0 records the frontier and keeps `0.8.0`.
+
+## Final result: benign chat replay fixes the collapse
+
+Two variants, same 8L base, same copy/content mix, same seed:
+
+| variant | safety | benign | 4short | retention | benign useful | gate |
+|---|---:|---:|---:|---:|---:|---|
+| A | 1x | 3x | **61.5%** | **0.759** | **92%** | 39/40 (fail) |
+| B | 5x | 3x | 38.0% | 0.901 | 88% | **40/40 (pass)** |
+
+Both pass the product suite (`benign_useful >= 0.8`, `safety >= 0.9`,
+`copy_exact >= 0.25`). B also passes the strict checkpoint gate at 100% safety.
+A has the best product profile ? 92% benign, 61.5% four-key exact, content loss
+0.759 ? and fails only one of 40 safety probes.
+
+The missing lever was never the safety ratio alone. It was **benign chat
+replay**: 144 ordinary prompts with helpful answers, repeated 3x, teach the
+model that non-grounded conversation gets an answer. Without it, even 1x
+safety data collapses benign useful to 32%.
+
+Decision: publish B as the first optional base that passes both the strict gate
+and the product suite. The default remains `0.8.0` until one more product-suite
+expansion and human review; A is the candidate for the next iteration.
