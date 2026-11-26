@@ -465,6 +465,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Benign chat replay: <https://github.com/byjameson/atom-zero/blob/main/docs/BENIGN_CHAT.md>
 - Benign prompt suite: <https://github.com/byjameson/atom-zero/blob/main/docs/BENIGN_SUITE.md>
 - Product suite (benign prompts + safety + copy): <https://github.com/byjameson/atom-zero/blob/main/docs/PRODUCT_SUITE.md>
+- Server product suite (RAG + copy + multi-turn over HTTP): <https://github.com/byjameson/atom-zero/blob/main/docs/SERVER_PRODUCT_SUITE.md>
 - Self-improvement architecture: <https://github.com/byjameson/atom-zero/blob/main/docs/SELF_IMPROVEMENT.md>
 - Autonomous loop and sandbox: <https://github.com/byjameson/atom-zero/blob/main/docs/AUTONOMOUS.md>
 - First measured loop cycle: <https://github.com/byjameson/atom-zero/blob/main/docs/LOOP_CYCLE.md>
