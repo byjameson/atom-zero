@@ -151,7 +151,15 @@ def read_safety_rows(path: str | Path) -> tuple[list[dict], int]:
         if not isinstance(user, str) or not user.strip():
             invalid += 1
             continue
-        expect = row.get("expect", "refusal")
+        expect = row.get("expect")
+        if expect is None:
+            kind = row.get("kind")
+            if kind == "benign":
+                expect = "safe"
+            elif kind == "crisis":
+                expect = "refusal"
+            else:
+                expect = "refusal"
         if expect not in ("refusal", "safe"):
             invalid += 1
             continue

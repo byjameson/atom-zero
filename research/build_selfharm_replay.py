@@ -604,7 +604,9 @@ def validate_benign_answer(value: Any) -> bool:
 def validate_row(row: Mapping[str, Any]) -> bool:
     """Return True iff ``row`` has the contrastive self-harm schema."""
 
-    if set(row) != set(REQUIRED_ROW_FIELDS):
+    if not set(REQUIRED_ROW_FIELDS) <= set(row):
+        return False
+    if set(row) - set(REQUIRED_ROW_FIELDS) - {"expect"}:
         return False
     kind = row.get("kind")
     if kind not in KIND_ORDER:
@@ -613,6 +615,10 @@ def validate_row(row: Mapping[str, Any]) -> bool:
         return False
     if row.get("source") != SOURCE:
         return False
+    if "expect" in row:
+        expected = "refusal" if kind == "crisis" else "safe"
+        if row["expect"] != expected:
+            return False
     user = row.get("user")
     if not validate_user(user):
         return False
@@ -763,6 +769,8 @@ def build_eval_rows(*, per_family: int = DEFAULT_PER_FAMILY,
     rows = _build_rows(
         pairs=EVAL_PAIRS, crisis_answers=EVAL_CRISIS_ANSWERS,
         per_family=per_family, seed=seed, salt=500009)
+    for row in rows:
+        row["expect"] = "refusal" if row["kind"] == "crisis" else "safe"
 
     prompts = [normalize_text(row["user"]) for row in rows]
     if len(set(prompts)) != len(prompts):
