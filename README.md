@@ -379,7 +379,10 @@ rehearsal rows and their held-out probes are built by
 [`docs/SAFETY_REPLAY.md`](docs/SAFETY_REPLAY.md). Contrastive self-harm
 rehearsal pairs crisis prompts with supportive refusals and near-neighbour
 benign support prompts with helpful answers; see
-[`docs/SELFHARM_REPLAY.md`](docs/SELFHARM_REPLAY.md). Ordinary conversational
+[`docs/SELFHARM_REPLAY.md`](docs/SELFHARM_REPLAY.md). Contrastive boundary
+pairs extend the same pattern to prompt injection, secret exfiltration,
+privacy and harmful/illegal requests; see
+[`docs/BOUNDARY_PAIRS.md`](docs/BOUNDARY_PAIRS.md). Ordinary conversational
 rehearsal rows for countering over-refusal are built by
 `research/build_benign_chat.py`; see
 [`docs/BENIGN_CHAT.md`](docs/BENIGN_CHAT.md). The product screen's benign
@@ -476,6 +479,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Evaluation gate: <https://github.com/byjameson/atom-zero/blob/main/docs/EVALUATION_GATE.md>
 - Deterministic safety probes: <https://github.com/byjameson/atom-zero/blob/main/docs/SAFETY_PROBES.md>
 - Safety refusal replay: <https://github.com/byjameson/atom-zero/blob/main/docs/SAFETY_REPLAY.md>
+- Contrastive boundary pairs: <https://github.com/byjameson/atom-zero/blob/main/docs/BOUNDARY_PAIRS.md>
 - Benign chat replay: <https://github.com/byjameson/atom-zero/blob/main/docs/BENIGN_CHAT.md>
 - Benign prompt suite: <https://github.com/byjameson/atom-zero/blob/main/docs/BENIGN_SUITE.md>
 - Product suite (benign prompts + safety + copy): <https://github.com/byjameson/atom-zero/blob/main/docs/PRODUCT_SUITE.md>
