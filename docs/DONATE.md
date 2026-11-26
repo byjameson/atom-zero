@@ -6,6 +6,16 @@ larger evaluation runs, document/data work and release maintenance.
 There is no paid support, token, or investment offer. Donations do not buy
 influence over results, reviews or roadmap decisions.
 
+## GitHub Sponsors (preferred)
+
+Monthly or one-time via GitHub: <https://github.com/sponsors/byjameson>
+
+The current goal is **$200/month** ? one full release cycle: GPU hours for
+distillation and upcycling, safety and retention gates, and reproducible
+releases on every surface. Tiers start at **$5/month**; one-time tiers are also
+available. GitHub Sponsors is the lowest-friction option and the one that shows
+up on the repository.
+
 ## Crypto
 
 - **EVM-compatible networks** (Ethereum, BNB Smart Chain, Polygon, Optimism,
