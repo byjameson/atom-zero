@@ -43,6 +43,7 @@ DEFAULT_DATA = (
     "data/pretok/mixed_benign_f/lengths.npy",
     "data/pretok/mixed_benign_f/meta.json",
     "data/benign_v1/prompts.jsonl",
+    "data/safety_replay_v1/eval.jsonl",
     "data/selfharm_replay_v1/eval.jsonl",
 )
 

@@ -182,6 +182,7 @@ def main(argv: list[str] | None = None) -> int:
                         default="data/multi_short_v1/train_all_plus_distill.jsonl")
     parser.add_argument("--cache-dir", default="")
     parser.add_argument("--run-tag", default="")
+    parser.add_argument("--copy-checkpoint", action="store_true")
     parser.add_argument("--max-hours", type=float, default=3.0)
     parser.add_argument("--planned-minutes", type=float, default=60.0)
     parser.add_argument("--poll-seconds", type=int, default=60)
@@ -262,6 +263,7 @@ def main(argv: list[str] | None = None) -> int:
             f"LAYERS={args.layers} SEEDS='{args.seeds}' STEPS={args.steps} "
             f"BATCH={args.batch} RUN_TAG='{run_tag}' "
             f"TRAIN_DATA='{args.train_data}' CACHE_DIR='{args.cache_dir}' "
+            f"COPY_CHECKPOINT={1 if args.copy_checkpoint else 0} "
         )
         # A plain nohup still leaks the SSH channel's extra fds, so the server
         # waits for the training process. Start a fully detached session with

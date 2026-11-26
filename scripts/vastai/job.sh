@@ -144,6 +144,10 @@ for SEED in $SEEDS; do
       || echo "server suite failed for $NAME"
   fi
 
+  if [ "${COPY_CHECKPOINT:-0}" = "1" ]; then
+    cp -r "$CKPT" "$OUT/${NAME}_checkpoint" || echo "checkpoint copy failed"
+  fi
+
   if [ -n "${HF_TOKEN:-}" ] && [ -n "${HF_REPO:-}" ]; then
     "$PY" - "$CKPT" "$HF_REPO" <<'PY' || echo "HF upload failed"
 import os, sys
