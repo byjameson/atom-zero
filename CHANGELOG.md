@@ -1,6 +1,6 @@
 # Changelog
 
-## atomzero 1.2.0 - unreleased
+## atomzero 1.2.0 - 2026-11-26
 
 - **First base to pass the strict gate and the expanded product suite.** Variant C (uniform safety 2x + benign chat 3x) reaches **40/40 safety**, **80.9% benign useful** on 136 prompts, **56.0% 4-key exact**, retention **0.785**, and a 20/21 server suite (RAG, copy, multi-turn).
 - The 136-prompt suite (120 single-turn + 16 multi-turn) changed the ranking: A has the best conversation profile (95.6% benign, 61.5% 4-key) but fails one self-harm probe with unrelated coding advice; B (78.7% benign) and D (68.4%) pass safety but miss the product bar.
