@@ -1,6 +1,6 @@
 # atomzero 1.5.0 - the first default promotion
 
-Status: **release candidate**. The default base moves to the 63M balanced
+Status: **published on 2026-11-26**. The default base moves to the 63M balanced
 checkpoint (weights `0.9.0`); the 49M `0.8.0` base remains the fallback.
 
 ## The result
@@ -81,3 +81,6 @@ atomzero-quickstart
 - Sponsor: <https://github.com/sponsors/byjameson>
 - X: <https://x.com/aigokhan>
 - Instagram: <https://instagram.com/quantsinner>
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-150-the-first-model-good-enough-to-be-the-default-1ap3>
+- Medium: <https://medium.com/@myredditacc9393/atom-zero-1-5-0-the-first-model-good-enough-to-be-the-default-e43588f85e20>
+- Default weights: <https://huggingface.co/byjameson/atom-zero-63m-balanced>

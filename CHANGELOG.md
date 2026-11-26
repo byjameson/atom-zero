@@ -1,6 +1,6 @@
 # Changelog
 
-## atomzero 1.5.0 - unreleased
+## atomzero 1.5.0 - 2026-11-26
 
 - **First default promotion:** the 63M balanced base (weights `0.9.0`) becomes the default. The 49M `0.8.0` base remains the fallback.
 - Variant J passes the full bar: **93.4% benign useful**, **40/40 safety**, **16/16 self-harm**, **48.5% 4-key exact**, retention **0.703**, checkpoint gate **pass**, product suite **pass**, server suite **20/21**.
