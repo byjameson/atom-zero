@@ -1,8 +1,7 @@
 # Releasing Atom Zero
 
 Canonical surfaces: GitHub, Hugging Face, PyPI, dev.to, Medium, LinkedIn,
-Reddit and ModelScope. Reddit is owner-paused; skip it in the release checklist
-until it is explicitly re-enabled.
+Reddit and ModelScope. Reddit is active again; post a new thread for each release.
 
 Current batch: **1.6.0 published. Next boundary: 1.7.0.** 1.6.0 adds the
 teacher benign chat generator and the expanded product suite (local RAG cases and

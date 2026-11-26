@@ -462,7 +462,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 ## Links
 
 - PyPI: <https://pypi.org/project/atomzero/1.6.0/>
-- Reddit: <https://www.reddit.com/r/opensourcez/>
+- Reddit: <https://www.reddit.com/r/LocalLLaMA/comments/1y6agyr/atom_zero_160_teacher_data_raised_conversation_to/>
 - GitHub source: <https://github.com/byjameson/atom-zero>
 - X: <https://x.com/aigokhan>
 - Instagram: <https://instagram.com/quantsinner>
