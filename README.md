@@ -10,6 +10,9 @@ package and is **not required** to run Atom Zero. Atom Zero is published on eigh
 canonical surfaces: GitHub, Hugging Face, PyPI, dev.to, Medium, LinkedIn, Reddit
 and ModelScope.
 
+**Live demo:** [Atom Zero 63M on ModelScope Studio](https://modelscope.cn/studios/byjameson/atomzerodemo)
+— CPU, synthetic demo corpus, research demo only.
+
 ## Support the project
 
 [![Sponsor on GitHub](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-ea4aaa?logo=githubsponsors)](https://github.com/sponsors/byjameson)
@@ -549,6 +552,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Public SQuAD retrieval benchmark: <https://github.com/byjameson/atom-zero/blob/main/benchmarks/README.md>
 - Hugging Face: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-49m>
+- Live demo: <https://modelscope.cn/studios/byjameson/atomzerodemo>
 - dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-a-49m-local-assistant-that-says-i-dont-know-1p7m>
 - Medium: <https://medium.com/@myredditacc9393/atom-zero-a-49m-local-assistant-that-says-i-dont-know-df1ebc0e2e78>
 - LinkedIn: <https://www.linkedin.com/in/g%C3%B6khan-cava-874a32157/>
