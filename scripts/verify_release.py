@@ -91,7 +91,7 @@ def main(argv=None) -> int:
             any(name.endswith(".whl") for name in assets)
             and any(name.endswith(".tar.gz") for name in assets),
             "GitHub assets", ", ".join(assets) or "none")
-        readme = fetch(f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/README.md")
+        readme = fetch(f"https://raw.githubusercontent.com/{GITHUB_REPO}/refs/heads/main/README.md")
         failures += not check(version in readme, "GitHub README version", version)
     except Exception as exc:
         failures += 1
