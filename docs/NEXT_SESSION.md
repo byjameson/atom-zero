@@ -71,6 +71,7 @@ python research/finetune_copy_control.py `
   --base checkpoints/upcycle/atom-zero-49m-8l `
   --train data/mixed_benign_k3/train.jsonl `
   --cache-dir data/pretok/mixed_benign_k3 `
+  --eval data/staged_copy_v1/mixed_eval.jsonl `
   --out checkpoints/mixed8_benign_k3 `
   --steps 3000 --lr 0.00005 --batch-size 4 --max-seq 256 `
   --content-weight 2 --seed 71 `
