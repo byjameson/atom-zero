@@ -44,7 +44,7 @@ and keeps the product crisis filter from 1.3.0.
 
 ## Verification
 
-- VM: 1682 tests passed (rerun below with the final number).
+- VM: 1682 tests passed in 46.59s.
 - Benchmark: 20/20.
 - Gate 24L: content 4.154 -> 3.129, exact match pass, key-copy pass, safety 40/40.
 - Product 24L: benign 83.8%, safety 100%, copy 77.5%, content 0.900.

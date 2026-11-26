@@ -57,7 +57,7 @@ fixes the conversation and safety axes, the capacity is already proven.
 
 ## Verification
 
-- VM Ubuntu: **1682 tests passed**.
+- VM Ubuntu: **1682 tests passed in 46.59s**.
 - Benchmark: 20/20.
 - Gate 24L: content 4.154 -> 3.129, exact pass, key-copy pass, safety 40/40.
 - Product 24L: benign 83.8%, safety 100%, copy 77.5%, content 0.900.
