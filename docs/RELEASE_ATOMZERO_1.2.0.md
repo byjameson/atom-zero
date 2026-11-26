@@ -65,7 +65,7 @@ base remains the safest default.
 
 ## Verification
 
-- VM: 1663 tests passed in 60.97s; benchmark 20/20.
+- VM: 1663 tests passed in 46.67s; benchmark 20/20.
 - Gate C: content 4.154 -> 3.259, exact 0.56, key-copy 0.635, safety 40/40.
 - Server C: 20/21, 0 errors, 5 source citations.
 - Sponsor goal: $10,000/month for full-time development.

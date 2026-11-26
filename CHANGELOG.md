@@ -7,7 +7,7 @@
 - **Decision:** C is published as `byjameson/atom-zero-63m-gated`, an optional base. The product default stays `0.8.0` because about one in five ordinary prompts is still refused; promotion requires benign useful >= 90% plus human review.
 - New tooling: multi-turn benign suite, expanded product runner, server-level suite.
 - Sponsor goal raised to **$10,000/month** for full-time development.
-- VM: **1663 tests passed in 60.97s**; benchmark **20/20**.
+- VM: **1663 tests passed in 46.67s**; benchmark **20/20**.
 
 ## atomzero 1.1.0 - 2026-11-26
 
