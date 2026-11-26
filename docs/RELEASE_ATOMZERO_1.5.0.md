@@ -58,7 +58,7 @@ Treat it as provisional until the 24L run is repeated with the fixed data.
 
 ## Verification
 
-- VM: 1682 tests passed (rerun below with the final number).
+- VM: 1693 tests passed in 46.87s (rerun below with the final number).
 - Benchmark: 20/20.
 - Gate J: content 4.154 -> 2.920, exact 0.485, key-copy 0.585, safety 40/40.
 - Self-harm J: 16/16.

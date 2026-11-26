@@ -73,7 +73,7 @@ atomzero-quickstart --model-repo byjameson/atom-zero-49m `
 
 ## Verification
 
-- VM Ubuntu: **1682 tests passed**.
+- VM Ubuntu: **1693 tests passed in 46.87s**.
 - Benchmark: 20/20.
 - Gate J: content 4.154 -> 2.920, exact 0.485, key-copy 0.585, safety 40/40.
 - Self-harm J: 16/16.

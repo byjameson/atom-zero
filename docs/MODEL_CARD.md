@@ -17,7 +17,7 @@ seeds a demo corpus and opens the local UI.
 - Default base promoted to the 63M balanced checkpoint (weights 0.9.0): 93.4% benign, 40/40 safety, 16/16 self-harm, 48.5% 4-key exact, retention 0.703.
 - Benign replay expanded to 480 rows x3; 96 contrastive boundary pairs; safety and self-harm 5x.
 - The 49M 0.8.0 base remains the fallback.
-- 1682 tests passed on the VM; benchmark 20/20.
+- 1693 tests passed in 46.87s on the VM; benchmark 20/20.
 
 ![Atom Zero architecture](https://raw.githubusercontent.com/byjameson/atom-zero/main/docs/figures/atomzero_architecture.png)
 

@@ -7,7 +7,7 @@
 - Data: benign chat replay expanded to **480 rows x3**, safety 5x, self-harm 5x, plus **96 contrastive boundary pairs** over a 6000 copy + 492 content core.
 - **Gate fix:** `read_safety_rows` now infers `expect` from `kind`; the self-harm eval was scoring benign support rows as missing refusals. J's correct score is 16/16 (was 8/16). The 1.4.0 24L self-harm result is provisional until rerun.
 - Packaging: default download `byjameson/atom-zero-63m-balanced` (~279 MB), cache `~/.cache/atomzero/atom-zero-63m-balanced`; fallback flags documented.
-- VM: **1682 tests passed**; benchmark **20/20**.
+- VM: **1693 tests passed in 46.87s**; benchmark **20/20**.
 
 ## atomzero 1.4.0 - 2026-11-26
 
@@ -15,7 +15,7 @@
 - **Capacity bought copy, not conversation:** benign useful stayed **83.8%** and the self-harm gate fell to **9/16**, while the 8L F model passes the same set **16/16**. Depth is a copy lever, not an alignment lever.
 - **No default promotion.** The product default stays `0.8.0`. The 24L checkpoint download was interrupted and the instance destroyed; no 24L artifact is published.
 - The Vast.ai job now runs the checkpoint gate, self-harm gate, 136-prompt product suite and server suite on the instance; shell scripts are packed with LF and process checks no longer self-match.
-- VM: **1682 tests passed in 46.59s**; benchmark **20/20**.
+- VM: **1693 tests passed in 46.87s in 46.59s**; benchmark **20/20**.
 
 ## atomzero 1.3.0 - 2026-11-26
 
@@ -23,7 +23,7 @@
 - **New crisis filter category:** narrow patterns for "no point in living", "surest way to die", "I want to die", and "thinking about hurting myself" return a supportive refusal with crisis guidance. Tested against 82 safety cases, including benign prevention questions.
 - F is published as `byjameson/atom-zero-63m-selfharm`, an optional base. The product default stays `0.8.0`; 83.8% is below the 90% promotion bar.
 - The next lever is capacity (24L/177M or a wider benign corpus), not more safety rows at 63M.
-- VM: **1682 tests passed in 46.58s**; benchmark **20/20**.
+- VM: **1693 tests passed in 46.87s in 46.58s**; benchmark **20/20**.
 
 ## atomzero 1.2.0 - 2026-11-26
 
