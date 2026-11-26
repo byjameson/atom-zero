@@ -1,4 +1,5 @@
 import json
+from collections import Counter
 
 import pytest
 
@@ -245,6 +246,85 @@ def test_benign_metrics_aggregate_by_category(assets):
     assert cooking["useful"] == 1
     assert cooking["refusals"] == 1
     assert metrics["categories"]["travel"]["short"] == 1
+    assert metrics["single_turn"] == 10
+    assert metrics["multi_turn"] == 0
+
+
+def test_read_benign_rows_supports_multi_turn(tmp_path):
+    first_user = f"{PROMPT_SENTINEL} introduce yourself"
+    follow_up = f"{PROMPT_SENTINEL} what should I ask next"
+    row = {
+        "id": "multi-1",
+        "category": "identity",
+        "expect": "answer",
+        "messages": [
+            {"role": "user", "content": first_user},
+            {"role": "assistant", "content": "I am a small local assistant."},
+            {"role": "user", "content": follow_up},
+        ],
+    }
+    path = _write_jsonl(tmp_path / "multi.jsonl", [row])
+    rows, invalid = suite.read_benign_rows(path)
+
+    assert invalid == 0
+    assert len(rows) == 1
+    assert rows[0]["user"] == follow_up
+    assert rows[0]["category"] == "identity"
+    assert rows[0]["messages"][1]["content"] == (
+        "I am a small local assistant.")
+    prompt = suite.prompt_for_row(rows[0])
+    assert prompt == (
+        f"<|user|> {first_user} <|assistant|> I am a small local assistant. "
+        f"<|user|> {follow_up} <|assistant|>")
+
+    metrics = suite.benign_metrics(
+        FakeModel("candidate"), TOK, rows,
+        generator=fake_generator, max_new=64)
+    assert metrics["examples"] == 1
+    assert metrics["single_turn"] == 0
+    assert metrics["multi_turn"] == 1
+    assert metrics["useful"] == 1
+
+
+def test_read_benign_rows_rejects_malformed_multi_turn(tmp_path):
+    bad_rows = [
+        {
+            "category": "identity",
+            "messages": [
+                {"role": "user", "content": "hello"},
+                {"role": "assistant", "content": "hi"},
+            ],
+        },
+        {
+            "category": "identity",
+            "messages": [
+                {"role": "user", "content": "hello"},
+                {"role": "user", "content": "again"},
+                {"role": "user", "content": "last"},
+            ],
+        },
+        {
+            "category": "identity",
+            "user": "both forms",
+            "messages": [
+                {"role": "user", "content": "hello"},
+                {"role": "assistant", "content": "hi"},
+                {"role": "user", "content": "last"},
+            ],
+        },
+        {
+            "category": "identity",
+            "messages": [
+                {"role": "user", "content": "hello"},
+                {"role": "assistant", "content": ""},
+                {"role": "user", "content": "last"},
+            ],
+        },
+    ]
+    path = _write_jsonl(tmp_path / "bad.jsonl", bad_rows)
+    rows, invalid = suite.read_benign_rows(path)
+    assert rows == []
+    assert invalid == len(bad_rows)
 
 
 def test_product_suite_passes_at_threshold_boundaries(assets):
@@ -357,19 +437,26 @@ def test_cli_writes_content_free_json_and_exit_status(
     assert ANSWER_SENTINEL not in text
 
 
-def test_builder_emits_25_prompts_with_fixed_counts():
+def test_builder_emits_default_prompt_counts():
     first = builder.build_rows(seed=17)
     second = builder.build_rows(seed=17)
     assert first == second
-    assert len(first) == builder.TOTAL == 25
-    counts = {}
-    for row in first:
-        counts[row["category"]] = counts.get(row["category"], 0) + 1
-    assert counts == builder.PER_CATEGORY
-    assert len({row["id"] for row in first}) == 25
-    assert len({row["user"] for row in first}) == 25
+    assert len(first) == 136
+    assert len([row for row in first if "user" in row]) == builder.TOTAL
+    assert builder.TOTAL == 120
+    assert len([row for row in first if "messages" in row]) == 16
+    single_counts = Counter(
+        row["category"] for row in first if "user" in row)
+    assert single_counts == {
+        category: 15 for category in builder.CATEGORY_ORDER
+    }
+    multi_counts = Counter(
+        row["category"] for row in first if "messages" in row)
+    assert multi_counts == {
+        category: 2 for category in builder.CATEGORY_ORDER
+    }
+    assert len({row["id"] for row in first}) == 136
     assert all(row["expect"] == "answer" for row in first)
-    assert all(row["forbidden_refusal_markers"] == [] for row in first)
     assert all(builder.validate_row(row) for row in first)
 
 
@@ -377,16 +464,28 @@ def test_builder_manifest_is_content_free(tmp_path):
     rows = builder.build_rows(seed=17)
     manifest = builder.build_manifest(rows, seed=17)
     text = json.dumps(manifest, sort_keys=True)
-    assert manifest["total"] == 25
+    assert manifest["total"] == 136
+    assert manifest["single_turn"] == 120
+    assert manifest["multi_turn"] == 16
     assert manifest["seed"] == 17
-    assert manifest["counts"]["by_category"] == builder.PER_CATEGORY
+    assert manifest["counts"]["by_category"] == {
+        category: 17 for category in builder.CATEGORY_ORDER
+    }
     assert len(manifest["sha256"]) == 64
     assert manifest["content_free"] is True
     for category_pool in builder.PROMPTS.values():
         for _template_id, prompt in category_pool:
             assert prompt not in text
+    for multi_pool in builder.MULTI_TURN_PROMPTS.values():
+        for _template_id, first, reply, follow_up in multi_pool:
+            assert first not in text
+            assert reply not in text
+            assert follow_up not in text
     for row in rows:
-        assert row["user"] not in text
+        if "user" in row:
+            assert row["user"] not in text
+        for message in row.get("messages", []):
+            assert message["content"] not in text
         assert row["id"] not in text
 
     out = tmp_path / "prompts.jsonl"
