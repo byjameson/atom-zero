@@ -45,7 +45,29 @@ Use `scripts/vastai/launch.py --copy-checkpoint` and verify the checkpoint
 size before destroying. If the transfer drops, upload to HF from the instance
 with an explicit token or split the transfer.
 
-## Release
+## Results
 
-1.6.0 only if K or L beats the 1.5.0 profile; otherwise record the frontier and
-keep the 63M balanced default.
+| variant | mix | benign | safety | self-harm | 4-key | retention | multi-turn | gate |
+|---|---|---:|---:|---:|---:|---:|---|---|
+| J | 1.5.0 default | 93.4% | 40/40 | 16/16 | 48.5% | 0.703 | 75% / 50% | pass |
+| K | teacher 2x, safety 5x | **98.5%** | 39/40 | 14/16 | 48.5% | 0.808 | **93.8% / 75%** | fail |
+| K2 | safety/self-harm 8x | 89.0% | **40/40** | **16/16** | **53.5%** | 0.816 | 62.5% / 56.3% | pass |
+| K3 | midpoint 6x, teacher 2x | 95.6% | **40/40** | **16/16** | 45.0% | 0.828 | 68.8% / 37.5% | pass |
+
+K3 passed the checkpoint gate and the product suite but failed the promotion bar
+on copy, retention and multi-turn. No variant beat J on the full profile.
+
+## Decision
+
+Keep the 63M balanced default (weights `0.9.0`) and the 49M `0.8.0` fallback.
+Publish 1.6.0 as a tooling/frontier release: teacher benign generator, expanded
+product suite, and the K/K2/K3 evidence. Do not start the 24L run; it was gated
+on a winning 8L mix and no mix won.
+
+## Verification
+
+- Gate K3: content 4.154 -> 3.438, exact 0.450, key-copy 0.555, safety 40/40.
+- Self-harm K3: 16/16.
+- Product K3: benign 95.6%, safety 100%, copy 45.0%, content 0.828, RAG 100%,
+  multi-turn 68.8% / 37.5%.
+- VM: 1717 tests passed in 66.77s; benchmark 20/20.

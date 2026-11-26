@@ -1,23 +1,23 @@
 # Atom Zero 63M model card
 
-Version: model weights `0.9.0`; standalone `atomzero 1.5.0`<br>
+Version: model weights `0.9.0`; standalone `atomzero 1.6.0`<br>
 Last updated: 2026-11-26
 License: Apache-2.0 for code and weights; data attribution in `NOTICE`.
 
 ```powershell
-pip install atomzero==1.5.0
+pip install atomzero==1.6.0
 atomzero-quickstart
 ```
 
 The first run downloads the ~279 MB checkpoint/tokenizer from Hugging Face,
 seeds a demo corpus and opens the local UI.
 
-## What's new in 1.5.0
+## What's new in 1.6.0
 
-- Default base promoted to the 63M balanced checkpoint (weights 0.9.0): 93.4% benign, 40/40 safety, 16/16 self-harm, 48.5% 4-key exact, retention 0.703.
-- Benign replay expanded to 480 rows x3; 96 contrastive boundary pairs; safety and self-harm 5x.
-- The 49M 0.8.0 base remains the fallback.
-- 1693 tests passed in 46.87s on the VM; benchmark 20/20.
+- Teacher benign chat generated 260 validated rows from 400 requests; the expanded product suite adds local RAG cases and separate multi-turn final/both rates.
+- K reaches 98.5% benign and 93.8% multi-turn but loses safety (39/40) and self-harm (14/16). K2 restores 40/40 and 16/16 but benign falls to 89.0%. K3 passes all gates but copy 45.0%, retention 0.828 and multi-turn 68.8% / 37.5% stay below the default.
+- No default change: this card still describes the 63M balanced base (weights 0.9.0). The 49M 0.8.0 base remains the fallback.
+- 1717 tests passed in 66.77s on the VM; benchmark 20/20.
 
 ![Atom Zero architecture](https://raw.githubusercontent.com/byjameson/atom-zero/main/docs/figures/atomzero_architecture.png)
 
@@ -50,7 +50,7 @@ benchmarks and release — is
 | privacy | localhost, no telemetry, SSRF guard, upload caps, deletion |
 | UI | chat, documents, gaps, research queue, teacher notes, adapters, health |
 | packaging | standalone `atomzero` package (assistant deps only), `atomzero`/`atomzero-quickstart` entry points, GitHub release, HF/ModelScope weights |
-| tests | 432 passed; product 21/21; behavior 16/16; retrieval 1.000 |
+| tests | 1717 passed; product suite 136 prompts; behavior 16/16; retrieval 1.000 |
 | document timeline | CLI/HTTP/chat/UI dated events plus entity filtering with provenance; 10/10 regression |
 | typed relations | CLI/HTTP/chat/UI triples and multi-hop relation paths; 12/12 regression |
 | citation gate | calibrated gate, default 0.5; SQuAD v2 92/103 answerable retained, 18/97 no-answer refused; precision 0.479 |
@@ -207,10 +207,10 @@ Evidence lives in `research/results/` and
 
 ## Published artifacts
 
-- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v0.6.0>
+- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v1.6.0>
 - GitHub source: <https://github.com/byjameson/atom-zero>
-- Atom Zero PyPI: <https://pypi.org/project/atomzero/0.6.0/>
-- Hugging Face: <https://huggingface.co/byjameson/atom-zero-49m>
+- Atom Zero PyPI: <https://pypi.org/project/atomzero/1.6.0/>
+- Hugging Face: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-49m>
 - launch article: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-a-49m-local-assistant-that-says-i-dont-know-1p7m>
 - Medium: <https://medium.com/@myredditacc9393/atom-zero-a-49m-local-assistant-that-says-i-dont-know-df1ebc0e2e78>
