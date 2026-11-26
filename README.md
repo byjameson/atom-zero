@@ -16,8 +16,10 @@ ModelScope.
 
 Atom Zero is independent and measured in public. Sponsors fund GPU hours,
 distillation and upcycling experiments, safety and retention gates, and
-reproducible releases. The current goal is **$200/month** ? one full release
-cycle. Crypto and other options are in [`docs/DONATE.md`](docs/DONATE.md).
+reproducible releases. The current goal is **$10,000/month** to fund Atom Zero
+full-time: one researcher, rented GPU time for distillation/upcycling, data and
+release infrastructure, and safety review. Crypto and other options are in
+[`docs/DONATE.md`](docs/DONATE.md).
 
 ## Install
 
