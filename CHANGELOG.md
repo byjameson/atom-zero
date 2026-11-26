@@ -6,7 +6,7 @@
 - **Two variants:** A (safety 1x) reaches **92% benign useful, 61.5% 4-key exact, retention 0.759**, but misses one of 40 safety probes. B (safety 5x) reaches **88% benign, 40/40 safety, 38.0% 4-key exact, retention 0.901**.
 - **B is the first candidate to pass both the strict checkpoint gate and the product suite.** It is published as `byjameson/atom-zero-63m-benign`, an optional base. The product default stays `0.8.0` pending one more product-suite expansion and human review.
 - New tools: 25-prompt benign suite, content-free product runner (`benign_useful_rate`, `safety_pass_rate`, `copy_exact`, `content_loss_ratio`, `product_ok`), 144-row benign chat replay builder.
-- VM: **1621 tests passed in 51.85s**; benchmark **20/20**.
+- VM: **1631 tests passed in 47.30s**; benchmark **20/20**.
 
 ## atomzero 1.0.0 - 2026-11-26
 

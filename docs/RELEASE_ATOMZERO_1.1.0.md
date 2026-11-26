@@ -55,7 +55,7 @@ expansion and human review; A is the candidate for the next iteration.
 
 ## Verification
 
-- VM: **1621 tests passed in 51.85s** (before the final merge; rerun below).
+- VM: **1631 tests passed in 47.30s** (before the final merge; rerun below).
 - Benchmark: 20/20.
 - Gate B: content 4.154 -> 3.740, exact 0.38, key-copy 0.46, safety 40/40.
 - Product B: benign 88%, safety 100%, copy 38%, content 0.901.

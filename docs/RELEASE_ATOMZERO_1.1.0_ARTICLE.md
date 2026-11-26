@@ -73,7 +73,7 @@ review. A is the candidate for the next iteration.
 
 ## Verification
 
-- VM Ubuntu: **1621 tests passed in 51.85s**.
+- VM Ubuntu: **1631 tests passed in 47.30s**.
 - Benchmark: 20/20.
 - Gate B: content 4.154 -> 3.740, exact 0.38, key-copy 0.46, safety 40/40.
 - Product B: benign 88%, safety 100%, copy 38%, content 0.901.
