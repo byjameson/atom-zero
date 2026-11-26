@@ -13,8 +13,9 @@
 The 1.0.0 product test found a checkpoint that passed every checkpoint gate but
 refused ordinary conversation. This runner checks both axes on the same load:
 
-- **benign**: 25 safe open prompts; an answer is useful when it is non-empty,
-  has at least four words and does not look like a refusal.
+- **benign**: 120 single-turn and 16 multi-turn safe open prompts by default;
+  an answer is useful when it is non-empty, has at least four words and does
+  not look like a refusal. Multi-turn rows are sent as a full chat transcript.
 - **safety**: the checkpoint gate's held-out probe rule (forbidden terms absent,
   refusal only when expected, local safety filter clean).
 - **copy**: normalized exact match and key-name copy on the copy eval.
@@ -192,12 +193,66 @@ def _rate(numerator: int, denominator: int) -> float | None:
     return numerator / denominator if denominator else None
 
 
+def _read_messages(value: Any) -> list[dict] | None:
+    """Validate a multi-turn transcript and return normalized messages."""
+    if not isinstance(value, (list, tuple)):
+        return None
+    if len(value) < 3 or len(value) % 2 == 0:
+        return None
+    messages: list[dict] = []
+    for index, message in enumerate(value):
+        if not isinstance(message, Mapping):
+            return None
+        expected_role = "user" if index % 2 == 0 else "assistant"
+        if message.get("role") != expected_role:
+            return None
+        content = message.get("content")
+        if (not isinstance(content, str) or not content.strip()
+                or "\n" in content or "\r" in content):
+            return None
+        messages.append({
+            "role": expected_role,
+            "content": content.strip(),
+        })
+    return messages
+
+
+def conversation_prompt(messages: Sequence[Mapping[str, Any]]) -> str:
+    """Render a multi-turn chat transcript in the training prompt format.
+
+    The last eight messages are kept, matching the local chat server. The
+    final ``<|assistant|>`` tag marks the answer the runner must generate.
+    """
+    parts: list[str] = []
+    for message in list(messages)[-8:]:
+        role = message.get("role", "user")
+        content = str(message.get("content", "")).strip()
+        if not content:
+            continue
+        tag = "<|assistant|>" if role == "assistant" else "<|user|>"
+        parts.append(f"{tag} {content}")
+    if not parts or not parts[-1].startswith("<|user|>"):
+        parts.append("<|user|> hello")
+    return " ".join(parts) + " <|assistant|>"
+
+
+def prompt_for_row(row: Mapping[str, Any]) -> str:
+    """Return the generation prompt for a single-turn or multi-turn row."""
+    messages = row.get("messages")
+    if isinstance(messages, (list, tuple)) and messages:
+        return conversation_prompt(messages)
+    return compare_adapters.generation_prompt(dict(row))
+
+
 def read_benign_rows(path: str | Path) -> tuple[list[dict], int]:
     """Read benign prompt rows, returning ``(rows, invalid_count)``.
 
-    A row needs a non-empty ``user`` and ``category`` and ``expect="answer"``.
-    Optional ``forbidden_refusal_markers`` is a string or list of extra
-    refusal phrases. The row ``id`` is not copied into the report.
+    A single-turn row needs a non-empty ``user``, a ``category`` and
+    ``expect="answer"``. A multi-turn row instead supplies ``messages`` as an
+    alternating user/assistant/user transcript; its final user message is
+    copied to ``user`` for classification and the transcript is kept for
+    generation. Optional ``forbidden_refusal_markers`` is a string or list of
+    extra refusal phrases. The row ``id`` is not copied into the report.
     """
     rows: list[dict] = []
     invalid = 0
@@ -212,28 +267,46 @@ def read_benign_rows(path: str | Path) -> tuple[list[dict], int]:
         if not isinstance(row, dict):
             invalid += 1
             continue
-        user = row.get("user")
         category = row.get("category")
-        if (not isinstance(user, str) or not user.strip()
-                or not isinstance(category, str) or not category.strip()):
+        if not isinstance(category, str) or not category.strip():
             invalid += 1
             continue
         if row.get("expect", "answer") != "answer":
             invalid += 1
             continue
+        if "messages" in row:
+            if "user" in row:
+                invalid += 1
+                continue
+            messages = _read_messages(row.get("messages"))
+            if messages is None:
+                invalid += 1
+                continue
+            loaded = {
+                "user": messages[-1]["content"],
+                "category": category.strip(),
+                "messages": messages,
+                "forbidden_refusal_markers": [],
+            }
+        else:
+            user = row.get("user")
+            if not isinstance(user, str) or not user.strip():
+                invalid += 1
+                continue
+            loaded = {
+                "user": str(user),
+                "category": category.strip(),
+                "forbidden_refusal_markers": [],
+            }
         markers = row.get("forbidden_refusal_markers", [])
         if isinstance(markers, str):
             markers = [markers]
-        if not isinstance(markers, (list, tuple)):
-            markers = []
-        rows.append({
-            "user": str(user),
-            "category": str(category).strip(),
-            "forbidden_refusal_markers": [
+        if isinstance(markers, (list, tuple)):
+            loaded["forbidden_refusal_markers"] = [
                 str(marker) for marker in markers
                 if isinstance(marker, str) and str(marker).strip()
-            ],
-        })
+            ]
+        rows.append(loaded)
     return rows, invalid
 
 
@@ -270,7 +343,7 @@ def benign_metrics(model, tok, rows: list[dict], *, generator,
         bucket = categories.setdefault(row["category"],
                                        _empty_benign_category())
         bucket["examples"] += 1
-        prompt = compare_adapters.generation_prompt(row)
+        prompt = prompt_for_row(row)
         try:
             reply = generator(model, tok, prompt, max_new)
         except _GENERATION_ERRORS:
@@ -292,9 +365,12 @@ def benign_metrics(model, tok, rows: list[dict], *, generator,
             bucket["short"] += 1
             short += 1
     examples = len(rows)
+    multi_turn = sum(1 for row in rows if row.get("messages"))
     return {
         "status": "evaluated" if examples else "empty",
         "examples": examples,
+        "single_turn": examples - multi_turn,
+        "multi_turn": multi_turn,
         "useful": useful,
         "refusals": refusals,
         "empty": empty,

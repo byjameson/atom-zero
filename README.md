@@ -368,7 +368,10 @@ rehearsal rows and their held-out probes are built by
 [`docs/SAFETY_REPLAY.md`](docs/SAFETY_REPLAY.md). Ordinary conversational
 rehearsal rows for countering over-refusal are built by
 `research/build_benign_chat.py`; see
-[`docs/BENIGN_CHAT.md`](docs/BENIGN_CHAT.md).
+[`docs/BENIGN_CHAT.md`](docs/BENIGN_CHAT.md). The product screen's benign
+control set is built by `research/build_benign_prompts.py`: 120 single-turn
+prompts plus 16 multi-turn cases by default; see
+[`docs/BENIGN_SUITE.md`](docs/BENIGN_SUITE.md).
 
 The model never crawls, mutates its own weights or studies topics on its own
 during chat. **Hungry mode** is an explicit, bounded command for growing the
@@ -460,6 +463,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - Deterministic safety probes: <https://github.com/byjameson/atom-zero/blob/main/docs/SAFETY_PROBES.md>
 - Safety refusal replay: <https://github.com/byjameson/atom-zero/blob/main/docs/SAFETY_REPLAY.md>
 - Benign chat replay: <https://github.com/byjameson/atom-zero/blob/main/docs/BENIGN_CHAT.md>
+- Benign prompt suite: <https://github.com/byjameson/atom-zero/blob/main/docs/BENIGN_SUITE.md>
 - Product suite (benign prompts + safety + copy): <https://github.com/byjameson/atom-zero/blob/main/docs/PRODUCT_SUITE.md>
 - Self-improvement architecture: <https://github.com/byjameson/atom-zero/blob/main/docs/SELF_IMPROVEMENT.md>
 - Autonomous loop and sandbox: <https://github.com/byjameson/atom-zero/blob/main/docs/AUTONOMOUS.md>
