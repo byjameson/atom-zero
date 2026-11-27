@@ -27,12 +27,14 @@ checkpoint (`byjameson/atom-zero-63m-balanced`, weights `0.9.0`); the 49M
 | arm | single | multi final/both | 4-key | retention | safety | product |
 |---|---:|---:|---:|---:|---:|---|
 | J | 95.8% | 62.5 / 39.6 | 48.5% | 0.703 | 40/40 | ok |
-| T 7B s71 | 95.8% | **79.2 / 47.9** | 38.5% | **0.868** | 40/40 | ok |
+| T 7B s71 | 95.8% | **79.2 / 47.9** | 38.5% | 0.868 | 40/40 | ok |
 | TA 7B s71 | 97.5% | 77.1 / 45.8 | 38.5% | 0.844 | 40/40 | ok |
 
 T and TA are rejected on the **10 pp copy regression**; the J anchor did not
-recover copy. The A anchor arm stays parked (s72 self-harm 14/16). No seeds
-72/73 are trained for T/TA because the recipe cannot close the copy gap.
+recover copy. Retention is also worse, not better: 0.868 / 0.844 vs J seed 71's
+0.703 (lower is better; J seed mean 0.840). The A anchor arm stays parked (s72
+self-harm 14/16). No seeds 72/73 are trained for T/TA because the recipe cannot
+close the copy gap.
 
 ## 1.6.0 result
 

@@ -15,15 +15,16 @@ teacher produced 260 accepted answers; the internal fallback mix is 8980 rows
 | arm | single | multi final/both | 4-key copy | retention | safety | product |
 |---|---:|---:|---:|---:|---:|---|
 | J 1.6.0 (default) | 95.8% | 62.5 / 39.6 | 48.5% | 0.703 | 40/40 | ok |
-| T 7B s71 (no anchor) | 95.8% | **79.2 / 47.9** | **38.5%** | **0.868** | 40/40 | ok |
+| T 7B s71 (no anchor) | 95.8% | **79.2 / 47.9** | **38.5%** | 0.868 | 40/40 | ok |
 | TA 7B s71 (J anchor) | 97.5% | 77.1 / 45.8 | **38.5%** | 0.844 | 40/40 | ok |
 
-T is the conversation win: **79.2% final-turn / 47.9% both-turn** multi-turn
-and retention **0.868**. It also loses **10 pp 4-key copy** (48.5% -> 38.5%),
-beyond the 3-5 pp budget, so T alone is not a promotion. TA adds the J anchor
-(beta 0.3) to recover copy while keeping the multi-turn and retention gain, but
-the anchor leaves copy at **38.5%** and multi-turn at **77.1 / 45.8%**. The copy
-gap is unchanged, so TA is rejected too.
+T is the conversation win: **79.2% final-turn / 47.9% both-turn** multi-turn.
+It also loses **10 pp 4-key copy** (48.5% -> 38.5%) and **regresses retention**
+(0.868; higher is worse, J seed mean 0.840). The copy loss is beyond the 3-5 pp
+budget, so T alone is not a promotion. TA adds the J anchor (beta 0.3) to recover
+copy while keeping the multi-turn gain, but the anchor leaves copy at **38.5%**
+and multi-turn at **77.1 / 45.8%** (retention 0.844, not a gain). The copy gap is
+unchanged, so TA is rejected too.
 
 ## What changed
 

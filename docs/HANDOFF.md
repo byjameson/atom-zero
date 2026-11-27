@@ -7,8 +7,9 @@
 - Default base: **63M balanced** (`byjameson/atom-zero-63m-balanced`, weights `0.9.0`);
   the 49M `0.8.0` base is the fallback.
 - 1.7.0 result: T (7B mix) reached **79.2% final-turn / 47.9% both-turn**,
-  retention **0.868**, safety 40/40, but copy fell to **38.5%**. TA (7B mix + J
-  anchor) reached 77.1 / 45.8, copy 38.5%, retention 0.844, safety 40/40: the
+  safety 40/40, but copy fell to **38.5%** and retention regressed to **0.868**
+  (higher is worse; J seed mean 0.840). TA (7B mix + J anchor) reached
+  77.1 / 45.8, copy 38.5%, retention 0.844 (not a gain), safety 40/40: the
   anchor did not recover the 10 pp copy gap. Both arms are rejected.
 - A s73 main gate was promotable, but the A anchor arm is parked: s72 failed
   self-harm **14/16**.
