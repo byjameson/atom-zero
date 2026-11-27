@@ -1,6 +1,6 @@
 # atomzero 2.0.0 - history-aware context adapter
 
-Status: **in preparation.** The default moves to the 63M `1.2.0` weights;
+Status: **published on 2026-11-28.** The default moves to the 63M `1.2.0` weights;
 the 49M `0.8.0` base remains the fallback and the 1.9.0 63M weights stay
 available as the previous checkpoint.
 
