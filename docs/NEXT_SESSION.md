@@ -55,7 +55,7 @@ variant beat J on the full profile, so the default did not change.
 - Hugging Face default: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-63m-balanced>
 - dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-170-a-7b-teacher-lifted-conversation-copy-still-set-the-price-34mk>
-- Medium 1.7.0: draft saved; platform **24h story limit**, scheduled publish at 20:30 local (draft `1c56db98740a`)
+- Medium 1.7.0: **skipped by decision**; no backfill. The next Medium post is the current version when posting is available.
 - LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7531889078800347136/>
 - X: <https://x.com/aigokhan/status/2126123168846741572>
 - Reddit: **not used anymore**. Reddit filters remove posts; do not post or reply there. The existing profile/post stay as history only.

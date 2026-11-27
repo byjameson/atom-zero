@@ -4,6 +4,10 @@ Canonical surfaces: GitHub, Hugging Face, PyPI, dev.to, Medium, LinkedIn,
 X and ModelScope. Reddit is **not used**; its filters remove posts, so do not
 post or reply there.
 
+Medium policy: if a release cannot be posted because of the 24-hour story
+limit, do **not** backfill it later. Post the current version when the limit
+allows; past versions are not reposted.
+
 Current batch: **1.7.0 is the release boundary (prepared). Next boundary:
 1.8.0.** 1.7.0 records the 7B teacher arms T/TA (multi-turn up, copy down 10 pp),
 keeps J as default, scopes the ModelScope Studio demo and carries the live demo
