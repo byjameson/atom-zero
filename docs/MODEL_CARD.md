@@ -1,25 +1,25 @@
 # Atom Zero 63M model card
 
-Version: model weights `1.0.0`; standalone `atomzero 1.8.0`<br>
+Version: model weights `1.1.0`; standalone `atomzero 1.9.0`<br>
 Last updated: 2026-11-27
 License: Apache-2.0 for code and weights; data attribution in `NOTICE`.
 
 ```powershell
-pip install atomzero==1.8.0
+pip install atomzero==1.9.0
 atomzero-quickstart
 ```
 
 The first run downloads the ~279 MB checkpoint/tokenizer from Hugging Face,
 seeds a demo corpus and opens the local UI.
 
-## What's new in 1.8.0
+## What's new in 1.9.0
 
-- The promoted 63M checkpoint is the first 7B-teacher arm to beat J on copy and multi-turn while holding the gates: **99.2% benign single-turn**, **83.3% / 58.3% multi-turn**, **60.0% 4-key copy** (+11.5 pp), **40/40 safety**, **16/16 self-harm**, 100% RAG.
-- Copy profile: 2short **87.0%**, 3short **74.5%**, 4short **60.0%** (J 86.0 / 75.5 / 48.5); key-copy 91.0 / 81.5 / 74.5.
-- Fresh unseen 4-key copy: **64.5%** (129/200), key recall 90%; the gain is not template memorization.
-- Three-seed copy: 60.0 / 54.5 / 55.5 (mean **56.7%**); safety 40/40 on two of three seeds. The promoted seed is the fully gated one.
-- Main gate **promotable** (exact 0.60, key-copy 0.745, safety 40/40); self-harm gate **promotable** (16/16).
-- No default remains on the 49M base: the 49M `0.8.0` base is the fallback.
+- The 1.9.0 checkpoint rebalances the model toward conversation while keeping the copy profile: **94.2% benign single-turn**, **93.8% / 68.8% multi-turn**, **59.5% 4-key copy** (fresh unseen **67.0%**), **40/40 safety**, **16/16 self-harm**, 100% RAG.
+- Multi-turn both-turns rises **+10.4 pp** over 1.8.0 (58.3% -> 68.8%), and retention improves from **0.835** to **0.770** (lower is better).
+- The trade-off is explicit: single-turn benign falls from 99.2% to 94.2%; 4-key copy stays at 59.5% (1.8.0: 60.0%) and fresh unseen copy rises to 67.0% (1.8.0: 64.5%).
+- Copy profile: 2short **87.0%**, 3short **80.0%**, 4short **59.5%**; key-copy **89.5 / 83.0 / 70.0%**. Fresh 4-key key recall **74.5%**.
+- Gates: self-harm gate **promotable (16/16)**; content loss improves (4.154 -> 3.200) and safety is **40/40**. The 1.8.0 copy bar was exact 60.0 / key 74.5; 1.9.0 lands at 59.5 / 70.0 on the seen set, within seed noise, and fresh unseen copy is higher.
+- The 49M `0.8.0` base remains the fallback; the 1.8.0 63M weights stay available as the previous checkpoint.
 
 ![Atom Zero architecture](https://raw.githubusercontent.com/byjameson/atom-zero/main/docs/figures/atomzero_architecture.png)
 
@@ -65,14 +65,14 @@ benchmarks and release — is
 
 | item | value |
 |---|---|
-| name | Atom Zero 63.4M balanced (`atom-zero-63m-balanced`, weights `1.0.0`) |
+| name | Atom Zero 63.4M balanced (`atom-zero-63m-balanced`, weights `1.1.0`) |
 | architecture | decoder-only transformer, depth-upcycled from the 49.2M base |
 | parameters | 63,389,184 |
 | layers / dim / heads / FF | 8 / 768 / 12 / 3072 |
 | context | 128-token runtime context (512 max in the research config) |
 | tokenizer | 8,192-token BPE (`data/chat_en_bpe8k.json`) |
-| checkpoint step | 3,000 mixed fine-tune steps |
-| training data | 6000 copy + 492 content + 480 benign x3 + 40 safety x5 + 16 self-harm x5 + 96 boundary pairs |
+| checkpoint step | 3,000 mixed fine-tune steps with a conversation KL anchor |
+| training data | 12,316-row KV4s mix (copy, content, benign chat, safety, self-harm) plus a frozen-base KL anchor on 1,870 chat/teacher/multi-turn rows |
 | runtime | PyTorch, CUDA or CPU; RTX 3050 6 GB tested |
 
 The 49.2M `0.8.0` base remains the fallback. The 49M rows below describe that

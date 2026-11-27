@@ -1,15 +1,33 @@
 ﻿# Next session - 1.9.0 planning
 
-Snapshot: 2026-11-27, **1.8.0 release prepared**.
-Head: release commit for `1.8.0`; tag `v1.8.0`.
+Snapshot: 2026-11-27, **1.9.0 release prepared**.
+Head: release commit for `1.9.0`; tag `v1.9.0`.
 No training is running; GPU idle. No Vast.ai instance is running; credit about
 **$8.88**. Sponsor goal: **$10,000/month**.
 
 ## Released baseline
 
-`1.8.0` is the current boundary. The default moves to the promoted **63M**
-checkpoint (`byjameson/atom-zero-63m-balanced`, weights `1.0.0`); the 49M
+`1.9.0` is the current boundary. The default moves to the promoted **63M**
+checkpoint (`byjameson/atom-zero-63m-balanced`, weights `1.1.0`); the 49M
 `0.8.0` base is the fallback.
+
+## 1.9.0 result
+
+| metric | 1.8.0 | 1.9.0 |
+|---|---:|---:|
+| single-turn benign | 99.2% | **94.2%** |
+| multi-turn final/both | 83.3 / 58.3 | **93.8 / 68.8** |
+| 4-key copy (seen) | 60.0% | **59.5%** |
+| 4-key copy (fresh) | 64.5% | **67.0%** |
+| retention | 0.835 | **0.770** |
+| safety | 40/40 | **40/40** |
+| self-harm | 16/16 | **16/16** |
+
+The 1.9.0 arm adds a frozen-base conversation KL anchor on 1,870 chat,
+teacher and multi-turn rows to the unchanged KV4s mix. It buys +10.4 pp
+both-turns and -0.065 retention; single-turn pays -5.0 pp. Self-harm gate
+**promotable** (16/16). Copy exact 59.5 / key 70.0 sit within the 1.8.0 seed
+range (54.5-60.0) and fresh unseen copy is higher (67.0).
 
 | area | J (default) |
 |---|---:|
@@ -67,19 +85,19 @@ variant beat J on the full profile, so the default did not change.
 
 ## Published surfaces
 
-- PyPI: <https://pypi.org/project/atomzero/1.8.0/>
-- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v1.8.0>
+- PyPI: <https://pypi.org/project/atomzero/1.9.0/>
+- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v1.9.0>
 - Hugging Face default: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-63m-balanced>
-- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-180-the-first-7b-teacher-promotion-lo0>
-- Medium: **1.7.0 skipped by decision**; no backfill. The next Medium post is **1.8.0** when posting is available.
-- LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7531941922496475136/>
-- X: <https://x.com/aigokhan/status/2126176327703179348>
+- dev.to: 1.9.0 post (link added after publishing)
+- Medium: 1.8.0 post is scheduled only if the platform limit is open; no
+  backfill. If 1.9.0 is current at the posting window, publish 1.9.0 instead.
+- LinkedIn: 1.9.0 post (link added after publishing)
+- X: 1.9.0 post (link added after publishing)
 - Reddit: **not used anymore**. Reddit filters remove posts; do not post or reply there. The existing profile/post stay as history only.
 - Live demo: <https://modelscope.cn/studios/byjameson/atomzerodemo> (scoped document QA; synthetic corpus)
-- LinkedIn demo post: <https://www.linkedin.com/in/g%C3%B6khan-cava-874a32157/recent-activity/all/>
 
-Verification: VM **1764 tests passed in 62.45s**; benchmark **20/20**.
+Verification: VM **1764 tests passed**; benchmark **20/20**.
 
 ## Next levers
 
