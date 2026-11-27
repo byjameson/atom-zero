@@ -2,21 +2,12 @@
 
 ## PAUSED 2026-11-27 (user shutting down the PC)
 
-**Resume here.** 1.9.0 is released on PyPI, GitHub, HF, ModelScope Studio,
-dev.to, Medium, LinkedIn and X; VM is 1764 passed / 20/20. One mirror is
-unfinished:
+**Resume here.** 1.9.0 is fully mirrored on PyPI, GitHub, HF, ModelScope,
+dev.to, Medium, LinkedIn and X; `verify_release.py --version 1.9.0` reports
+**0 failures**. VM is 1764 passed / 20/20.
 
-1. **ModelScope weights upload was interrupted.** The SDK uploader
-   (`C:\Users\biris\AppData\Local\Temp\opencode\upload_ms_token_190.py`) was
-   stopped after ~2 h; the remote is still `2236c29` (1.8.0 card). Re-run it,
-   let all four uploads finish (model.pt, config.json, tokenizer, README),
-   then verify raw `config.json` says version 1.9.0 / weights 1.1.0. The
-   ModelScope Studio already runs 1.9.0 via HF.
-
-Medium 1.9.0 is published:
-<https://medium.com/@myredditacc9393/atom-zero-1-9-0-fewer-refusals-copy-held-coherence-is-next-6bfdf07d7fef>
-(corrected "fewer refusals" draft; older drafts stay unpublished; no 1.8.0
-backfill).
+ModelScope weights are complete: raw `config.json` is version 1.9.0 /
+weights 1.1.0, and the card is current. The Studio already runs 1.9.0 via HF.
 
 No training ran after the opener arm; GPU is idle. No Vast.ai instance is
 running (`[]`). The opener arm and all 2.0.0 plans are internal, not public.
@@ -128,11 +119,15 @@ Verification: VM **1764 tests passed**; benchmark **20/20**.
    99.2 / 93.8 / 58.0, but its replies were visibly degenerate. **Rejected.**
    Do not promote metric-only wins; require a coherence audit below the
    agreed flag rate (target <= 30%).
-3. Next data objective: diverse **multi-turn dialogues** from the 7B teacher
-   (real turn-1/turn-2 pairs, not chained single prompts), mixed with the KV4s
-   copy rows, plus the anchor. Generate on Vast.ai only; destroy afterwards.
-4. Keep the 1.9.0 default until a candidate improves coherence, single >= 97%,
-   copy >= 55%, safety 40/40, self-harm 16/16.
+3. A history-conditioning LoRA on 1.9.0 raises held-out context recall from
+   10% to **66.5%** while keeping single 95%, copy 63.5%, retention 0.675.
+   The unresolved part is safety: the full safety patch reaches 16/16 but
+   over-refuses (multi both 41.7%); gentler patches miss one self-harm prompt
+   or flag a benign-support reply. The next data objective is benign
+   **contrastive** safety data (crisis vs ordinary distress/support) plus real
+   multi-turn dialogues, then retrain the context adapter.
+4. Keep the 1.9.0 default until a candidate improves context and keeps
+   single >= 94%, multi >= 60%, copy >= 55%, safety 40/40, self-harm 16/16.
 5. Do **not** repeat 24L, cw3, MT-chain, self-teacher-replacement, soup or the
    opener arm; each is measured and rejected.
 
