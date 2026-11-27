@@ -1,5 +1,28 @@
 ﻿# Next session - 1.9.0 planning
 
+## PAUSED 2026-11-27 (user shutting down the PC)
+
+**Resume here.** 1.9.0 is released on PyPI, GitHub, HF, dev.to, LinkedIn and
+X; the Studio runs 1.9.0 (L-7781 verified) and VM is 1764 passed / 20/20.
+Two mirrors are unfinished:
+
+1. **ModelScope weights upload was interrupted.** The SDK uploader
+   (`C:\Users\biris\AppData\Local\Temp\opencode\upload_ms_token_190.py`) was
+   stopped after ~2 h; the remote is still `2236c29` (1.8.0 card). Re-run it,
+   let all four uploads finish (model.pt, config.json, tokenizer, README),
+   then verify raw `config.json` says version 1.9.0 / weights 1.1.0. The
+   ModelScope Studio already runs 1.9.0 via HF.
+2. **Medium 1.9.0 was not published.** The corrected draft is
+   <https://medium.com/p/6bfdf07d7fef/edit>; the automation
+   `aut_21db0b169001RSFg3qmpz4uVnE` was due 20:30 but cannot run while the PC
+   is off. On resume, publish it only if the 24-hour limit is open (no 1.8.0
+   backfill), then add the URL to `RELEASE_ATOMZERO_1.9.0.md`, `README.md`,
+   `MODEL_CARD.md`, `NEXT_SESSION.md`, commit/push and update the GitHub
+   release body.
+
+No training ran after the opener arm; GPU is idle. No Vast.ai instance is
+running (`[]`). The opener arm and all 2.0.0 plans are internal, not public.
+
 Snapshot: 2026-11-27, **1.9.0 release prepared**.
 Head: release commit for `1.9.0`; tag `v1.9.0`.
 No training is running; GPU idle. No Vast.ai instance is running; credit about
