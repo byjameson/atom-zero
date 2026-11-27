@@ -1,27 +1,36 @@
-﻿# Next session - 1.9.0 planning
+﻿# Next session - 2.0.0 planning
 
-## PAUSED 2026-11-27 (user shutting down the PC)
-
-**Resume here.** 1.9.0 is fully mirrored on PyPI, GitHub, HF, ModelScope,
-dev.to, Medium, LinkedIn and X; `verify_release.py --version 1.9.0` reports
-**0 failures**. VM is 1764 passed / 20/20.
-
-ModelScope weights are complete: raw `config.json` is version 1.9.0 /
-weights 1.1.0, and the card is current. The Studio already runs 1.9.0 via HF.
-
-No training ran after the opener arm; GPU is idle. No Vast.ai instance is
-running (`[]`). The opener arm and all 2.0.0 plans are internal, not public.
-
-Snapshot: 2026-11-27, **1.9.0 release prepared**.
-Head: release commit for `1.9.0`; tag `v1.9.0`.
-No training is running; GPU idle. No Vast.ai instance is running; credit about
-**$8.88**. Sponsor goal: **$10,000/month**.
+Snapshot: 2026-11-28, **2.0.0 release prepared**. Head: release commit for
+`2.0.0`; tag `v2.0.0`. No training is running; GPU idle. No Vast.ai instance
+is running. Sponsor goal: **$10,000/month**.
 
 ## Released baseline
 
-`1.9.0` is the current boundary. The default moves to the promoted **63M**
-checkpoint (`byjameson/atom-zero-63m-balanced`, weights `1.1.0`); the 49M
-`0.8.0` base is the fallback.
+`2.0.0` is the current boundary. The default moves to the promoted **63M**
+checkpoint (`byjameson/atom-zero-63m-balanced`, weights `1.2.0`); the 49M
+`0.8.0` base is the fallback. The 1.9.0 63M weights stay available as the
+previous checkpoint.
+
+## 2.0.0 result
+
+| metric | 1.9.0 | 2.0.0 |
+|---|---:|---:|
+| single-turn benign | 94.2% | **97.5%** |
+| multi-turn final/both | 93.8 / 68.8 | **83.3 / 58.3** |
+| 4-key copy (seen) | 59.5% | **63.0%** |
+| 4-key copy (fresh) | 67.0% | **75.0%** |
+| retention | 0.770 | **0.700** |
+| history recall (held-out) | 10.0% | **65.0%** |
+| safety | 40/40 | **40/40** |
+| self-harm | 16/16 | **16/16** |
+
+2.0.0 adds a history-conditioning LoRA to 1.9.0, plus a small safety adapter
+with benign-support contrast. Main gate **promotable** (exact 63.0, key 73.0);
+self-harm gate **promotable** (16/16); fresh 4-key copy **75.0%**. The
+automatic multi-turn both-turns score falls 68.8 -> 58.3 because the safety
+adapter is more cautious on ambiguous identity/greeting turns; the metric is
+refusal/word-count only, not coherence. History recall is measured on 200
+held-out counterfactual pairs.
 
 ## 1.9.0 result
 

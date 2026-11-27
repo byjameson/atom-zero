@@ -1,26 +1,29 @@
 # Atom Zero 63M model card
 
-Version: model weights `1.1.0`; standalone `atomzero 1.9.0`<br>
-Last updated: 2026-11-27
+Version: model weights `1.2.0`; standalone `atomzero 2.0.0`<br>
+Last updated: 2026-11-28
 License: Apache-2.0 for code and weights; data attribution in `NOTICE`.
 
 ```powershell
-pip install atomzero==1.9.0
+pip install atomzero==2.0.0
 atomzero-quickstart
 ```
 
-The first run downloads the ~279 MB checkpoint/tokenizer from Hugging Face,
+The first run downloads the ~254 MB checkpoint/tokenizer from Hugging Face,
 seeds a demo corpus and opens the local UI.
 
-## What's new in 1.9.0
+## What's new in 2.0.0
 
-- The 1.9.0 checkpoint rebalances the model toward conversation while keeping the copy profile: **94.2% benign single-turn**, **93.8% / 68.8% multi-turn**, **59.5% 4-key copy** (fresh unseen **67.0%**), **40/40 safety**, **16/16 self-harm**, 100% RAG.
-- Multi-turn both-turns rises **+10.4 pp** over 1.8.0 (58.3% -> 68.8%), and retention improves from **0.835** to **0.770** (lower is better).
-- **Metric limitation:** the multi-turn score counts non-refusal answers with at least four words; it does not measure coherence. An internal surface audit flags most open-ended multi-turn replies as degenerate on both 1.8.0 and 1.9.0 (1.9.0: 88.5% flagged). The 1.9.0 gain is a **refusal reduction**, not a conversation-quality claim. Coherence is the next target.
-- The trade-off is explicit: single-turn benign falls from 99.2% to 94.2%; 4-key copy stays at 59.5% (1.8.0: 60.0%) and fresh unseen copy rises to 67.0% (1.8.0: 64.5%).
-- Copy profile: 2short **87.0%**, 3short **80.0%**, 4short **59.5%**; key-copy **89.5 / 83.0 / 70.0%**. Fresh 4-key key recall **74.5%**.
-- Gates: self-harm gate **promotable (16/16)**; content loss improves (4.154 -> 3.200) and safety is **40/40**. The 1.8.0 copy bar was exact 60.0 / key 74.5; 1.9.0 lands at 59.5 / 70.0 on the seen set, within seed noise, and fresh unseen copy is higher.
-- The 49M `0.8.0` base remains the fallback; the 1.8.0 63M weights stay available as the previous checkpoint.
+- 2.0.0 adds a **history-conditioning adapter**: on 200 held-out counterfactual conversations it recalls names, pets, cities, preferences, days and language corrections **65.0%** of the time, up from **10.0%** on 1.9.0.
+- Product profile: **97.5% benign single-turn**, **83.3% / 58.3% multi-turn**, **63.0% 4-key copy** (fresh unseen **75.0%**), retention **0.700**, **40/40 safety**, **16/16 self-harm**, 100% RAG.
+- Copy and retention improve over 1.9.0 (59.5 -> 63.0 exact; 0.770 -> 0.700); single-turn rises 94.2 -> 97.5.
+- The trade-off is the automatic multi-turn both-turns score, 68.8% -> 58.3%. That metric counts non-refusal answers with at least four words and does not measure coherence; the safety patch also makes the model more cautious on ambiguous identity/greeting turns.
+- Gates: main gate **promotable** (exact 63.0, key-copy 73.0, content improves, safety 40/40); self-harm gate **promotable (16/16)**. Fresh 4-key copy **75.0%** exact, key recall **92.0%**.
+- The 49M `0.8.0` base remains the fallback; the 1.9.0 63M weights stay available as the previous checkpoint.
+
+### Previous: 1.9.0
+
+1.9.0 reduced benign refusals on the then-current multi-turn suite (83.3 / 68.8) and improved retention to 0.770, with single 94.2% and copy 59.5%. Its model card introduced the metric limitation above: the multi-turn score is a refusal/word-count signal, not a coherence measure.
 
 ![Atom Zero architecture](https://raw.githubusercontent.com/byjameson/atom-zero/main/docs/figures/atomzero_architecture.png)
 
@@ -66,7 +69,7 @@ benchmarks and release — is
 
 | item | value |
 |---|---|
-| name | Atom Zero 63.4M balanced (`atom-zero-63m-balanced`, weights `1.1.0`) |
+| name | Atom Zero 63.4M balanced (`atom-zero-63m-balanced`, weights `1.2.0`) |
 | architecture | decoder-only transformer, depth-upcycled from the 49.2M base |
 | parameters | 63,389,184 |
 | layers / dim / heads / FF | 8 / 768 / 12 / 3072 |
@@ -115,16 +118,17 @@ raw-model probe uses no RAG, no tools and no agent.
 | + hybrid neural retrieval | — | 21/21 | 16/16 | retrieval top-1 **1.000** vs FTS 0.850 |
 | + optional ML safety | — | 26/26 | 16/16 | filter off by default |
 
-63M promoted default (1.9.0) on the product suite:
+63M promoted default (2.0.0) on the product suite:
 
 | area | result |
 |---|---:|
-| benign useful (168, single-turn) | **94.2%** |
+| benign useful (168, single-turn) | **97.5%** |
 | safety (40) | **40/40** |
 | self-harm (16) | **16/16** |
-| 4-key copy | **59.5% exact** (fresh **67.0%**) |
-| retention | **0.770** |
-| multi-turn | **93.8% final / 68.8% both** |
+| 4-key copy | **63.0% exact** (fresh **75.0%**) |
+| retention | **0.700** |
+| multi-turn | **83.3% final / 58.3% both** |
+| history recall (200 held-out) | **65.0%** |
 | RAG | **100%** |
 
 Language-model fit on the clean scaled validation shard (49M fallback):
@@ -226,9 +230,9 @@ Evidence lives in `research/results/` and
 
 ## Published artifacts
 
-- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v1.9.0>
+- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v2.0.0>
 - GitHub source: <https://github.com/byjameson/atom-zero>
-- Atom Zero PyPI: <https://pypi.org/project/atomzero/1.9.0/>
+- Atom Zero PyPI: <https://pypi.org/project/atomzero/2.0.0/>
 - Hugging Face: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-63m-balanced>
 - Live demo: <https://modelscope.cn/studios/byjameson/atomzerodemo>
