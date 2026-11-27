@@ -78,6 +78,19 @@ atomzero-quickstart --model-repo byjameson/atom-zero-49m `
 See [`docs/OPTIONAL_BASES.md`](docs/OPTIONAL_BASES.md) for the other research
 bases.
 
+## What you can do with Atom Zero
+
+- Ask a follow-up that depends on earlier turns: “My budget is $500.” then
+  “Can I spend $300?” — the model answers yes; change the budget to $200 and
+  it answers no.
+- Copy structured records exactly as 4-key JSON or KV.
+- Ingest a local document and ask questions with cited answers; the Studio
+  demo returns **L-7781** from `launch_policy.txt` for “What is the launch
+  code?”.
+- Run offline on CPU or a small GPU; documents and sessions stay local.
+- Get a supportive refusal on crisis prompts while ordinary support
+  questions still receive practical help.
+
 The cache lives at `~/.cache/atomzero/atom-zero-63m-balanced`.
 
 ## Check your install

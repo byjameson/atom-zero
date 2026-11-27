@@ -25,6 +25,15 @@ seeds a demo corpus and opens the local UI.
 
 1.9.0 reduced benign refusals on the then-current multi-turn suite (83.3 / 68.8) and improved retention to 0.770, with single 94.2% and copy 59.5%. Its model card introduced the metric limitation above: the multi-turn score is a refusal/word-count signal, not a coherence measure.
 
+### What you can do with 2.0.0
+
+- **Follow-up questions that depend on history:** say “My budget is $500.” then ask “Can I spend $300?” — the model answers yes; change the budget to $200 and it answers no.
+- **Structured copying:** reproduce 4-key JSON or KV records exactly (63.0% on the seen set, 75.0% on fresh unseen records).
+- **Local document QA:** ask about a file you ingested and get a cited answer; the Studio demo answers “What is the launch code?” with **L-7781** and `launch_policy.txt`.
+- **Offline use:** 63M parameters, CPU or a small GPU, Apache-2.0; facts stay in the local RAG index, not in the weights.
+- **Safety-aware conversation:** crisis prompts get a supportive refusal, while ordinary “how do I support a friend?” questions still get practical help.
+- **No telemetry:** localhost by default; documents, sessions and memory stay on your machine.
+
 ![Atom Zero architecture](https://raw.githubusercontent.com/byjameson/atom-zero/main/docs/figures/atomzero_architecture.png)
 
 ## Full system context

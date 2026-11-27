@@ -29,6 +29,20 @@ does not measure coherence. The safety patch also makes the model more
 cautious on ambiguous identity and greeting turns. Single-turn, copy,
 retention and history recall all improve.
 
+## What you can do with 2.0.0
+
+- Ask a follow-up that depends on an earlier turn: “My budget is $500.” then
+  “Can I spend $300?” -> yes; change the budget to $200 -> no.
+- Copy structured records: 4-key JSON/KV, 63.0% exact on the seen set and
+  75.0% on fresh unseen records.
+- Ask a question over a local document and get a cited answer; the Studio
+  demo answers “What is the launch code?” with **L-7781** and
+  `launch_policy.txt`.
+- Run offline on CPU or a small GPU (63M parameters, Apache-2.0); facts live
+  in the local RAG index, not in the weights.
+- Get a supportive refusal on crisis prompts while ordinary support
+  questions still receive practical help.
+
 ## What changed
 
 - A history-conditioning LoRA is trained on 2,000 counterfactual two-turn
