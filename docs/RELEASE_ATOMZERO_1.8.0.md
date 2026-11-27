@@ -91,6 +91,9 @@ atomzero-quickstart --model-repo byjameson/atom-zero-49m `
 - Sponsor: <https://github.com/sponsors/byjameson>
 - X: <https://x.com/aigokhan>
 - Instagram: <https://instagram.com/quantsinner>
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-180-the-first-7b-teacher-promotion-lo0>
+- LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7531941922496475136/>
+- X post: <https://x.com/aigokhan/status/2126176327703179348>
 
 Medium: the 1.7.0 post was skipped by the platform limit; the next Medium post
 is 1.8.0 when posting is available (no backfill).

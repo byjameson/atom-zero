@@ -67,19 +67,19 @@ variant beat J on the full profile, so the default did not change.
 
 ## Published surfaces
 
-- PyPI: <https://pypi.org/project/atomzero/1.7.0/>
-- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v1.7.0>
+- PyPI: <https://pypi.org/project/atomzero/1.8.0/>
+- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v1.8.0>
 - Hugging Face default: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-63m-balanced>
-- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-170-a-7b-teacher-lifted-conversation-copy-still-set-the-price-34mk>
-- Medium 1.7.0: **skipped by decision**; no backfill. The next Medium post is the current version when posting is available.
-- LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7531889078800347136/>
-- X: <https://x.com/aigokhan/status/2126123168846741572>
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-180-the-first-7b-teacher-promotion-lo0>
+- Medium: **1.7.0 skipped by decision**; no backfill. The next Medium post is **1.8.0** when posting is available.
+- LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7531941922496475136/>
+- X: <https://x.com/aigokhan/status/2126176327703179348>
 - Reddit: **not used anymore**. Reddit filters remove posts; do not post or reply there. The existing profile/post stay as history only.
 - Live demo: <https://modelscope.cn/studios/byjameson/atomzerodemo> (scoped document QA; synthetic corpus)
 - LinkedIn demo post: <https://www.linkedin.com/in/g%C3%B6khan-cava-874a32157/recent-activity/all/>
 
-Verification: VM **1764 tests passed in 78.23s**; benchmark **20/20**.
+Verification: VM **1764 tests passed in 62.45s**; benchmark **20/20**.
 
 ## Next levers
 
