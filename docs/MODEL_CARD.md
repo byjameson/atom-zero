@@ -1,23 +1,23 @@
 # Atom Zero 63M model card
 
-Version: model weights `0.9.0`; standalone `atomzero 1.6.0`<br>
-Last updated: 2026-11-26
+Version: model weights `0.9.0`; standalone `atomzero 1.7.0`<br>
+Last updated: 2026-11-27
 License: Apache-2.0 for code and weights; data attribution in `NOTICE`.
 
 ```powershell
-pip install atomzero==1.6.0
+pip install atomzero==1.7.0
 atomzero-quickstart
 ```
 
 The first run downloads the ~279 MB checkpoint/tokenizer from Hugging Face,
 seeds a demo corpus and opens the local UI.
 
-## What's new in 1.6.0
+## What's new in 1.7.0
 
-- Teacher benign chat generated 260 validated rows from 400 requests; the expanded product suite adds local RAG cases and separate multi-turn final/both rates.
-- K reaches 98.5% benign and 93.8% multi-turn but loses safety (39/40) and self-harm (14/16). K2 restores 40/40 and 16/16 but benign falls to 89.0%. K3 passes all gates but copy 45.0%, retention 0.828 and multi-turn 68.8% / 37.5% stay below the default.
-- No default change: this card still describes the 63M balanced base (weights 0.9.0). The 49M 0.8.0 base remains the fallback.
-- 1727 tests passed in 64.83s on the VM; benchmark 20/20.
+- A 7B teacher mix lifts multi-turn to **79.2% final-turn / 47.9% both-turn** (T) and retention to **0.868**, with safety 40/40, but 4-key copy falls to **38.5%** from the default's 48.5%.
+- Adding the J anchor (TA) keeps copy at 38.5% and multi-turn at 77.1% / 45.8%; the anchor does not recover the 10 pp copy gap. TA is rejected.
+- No default change: this card still describes the 63M balanced base (weights 0.9.0). The 49M 0.8.0 base remains the fallback. The A anchor arm is parked after seed 72 failed self-harm 14/16.
+- 1764 tests passed in 57.97s on the VM; benchmark 20/20 (pre-bump run; the final run is repeated after the version bump).
 
 ![Atom Zero architecture](https://raw.githubusercontent.com/byjameson/atom-zero/main/docs/figures/atomzero_architecture.png)
 
@@ -50,7 +50,7 @@ benchmarks and release — is
 | privacy | localhost, no telemetry, SSRF guard, upload caps, deletion |
 | UI | chat, documents, gaps, research queue, teacher notes, adapters, health |
 | packaging | standalone `atomzero` package (assistant deps only), `atomzero`/`atomzero-quickstart` entry points, GitHub release, HF/ModelScope weights |
-| tests | 1727 passed; product suite 136 prompts; behavior 16/16; retrieval 1.000 |
+| tests | 1764 passed; product suite 136 prompts; behavior 16/16; retrieval 1.000 |
 | document timeline | CLI/HTTP/chat/UI dated events plus entity filtering with provenance; 10/10 regression |
 | typed relations | CLI/HTTP/chat/UI triples and multi-hop relation paths; 12/12 regression |
 | citation gate | calibrated gate, default 0.5; SQuAD v2 92/103 answerable retained, 18/97 no-answer refused; precision 0.479 |
@@ -223,9 +223,9 @@ Evidence lives in `research/results/` and
 
 ## Published artifacts
 
-- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v1.6.0>
+- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v1.7.0>
 - GitHub source: <https://github.com/byjameson/atom-zero>
-- Atom Zero PyPI: <https://pypi.org/project/atomzero/1.6.0/>
+- Atom Zero PyPI: <https://pypi.org/project/atomzero/1.7.0/>
 - Hugging Face: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-63m-balanced>
 - Live demo: <https://modelscope.cn/studios/byjameson/atomzerodemo>

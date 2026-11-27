@@ -1,15 +1,15 @@
-﻿# Next session - 1.7.0 planning
+﻿# Next session - 1.8.0 planning
 
-Snapshot: 2026-11-26, **1.6.0 published and verified**.
-Head: release commit `eb400cb` plus this docs update; tag `v1.6.0`.
+Snapshot: 2026-11-27, **1.7.0 release prepared**.
+Head: release commit for `1.7.0`; tag `v1.7.0`.
 No training is running; GPU idle. No Vast.ai instance is running; credit about
 **$8.88**. Sponsor goal: **$10,000/month**.
 
 ## Released baseline
 
-`1.6.0` is published. The default is still the **63M balanced** checkpoint
-(`byjameson/atom-zero-63m-balanced`, weights `0.9.0`); the 49M `0.8.0` base is
-the fallback.
+`1.7.0` is the current boundary. The default is still the **63M balanced**
+checkpoint (`byjameson/atom-zero-63m-balanced`, weights `0.9.0`); the 49M
+`0.8.0` base is the fallback.
 
 | area | J (default) |
 |---|---:|
@@ -21,6 +21,18 @@ the fallback.
 | RAG suite | 100% |
 | multi-turn | 75% final / 50% both turns |
 | gate / product / server | pass / pass / 20/21 |
+
+## 1.7.0 result
+
+| arm | single | multi final/both | 4-key | retention | safety | product |
+|---|---:|---:|---:|---:|---:|---|
+| J | 95.8% | 62.5 / 39.6 | 48.5% | 0.703 | 40/40 | ok |
+| T 7B s71 | 95.8% | **79.2 / 47.9** | 38.5% | **0.868** | 40/40 | ok |
+| TA 7B s71 | 97.5% | 77.1 / 45.8 | 38.5% | 0.844 | 40/40 | ok |
+
+T and TA are rejected on the **10 pp copy regression**; the J anchor did not
+recover copy. The A anchor arm stays parked (s72 self-harm 14/16). No seeds
+72/73 are trained for T/TA because the recipe cannot close the copy gap.
 
 ## 1.6.0 result
 

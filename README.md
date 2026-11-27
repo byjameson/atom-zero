@@ -1,4 +1,4 @@
-﻿# Atom Zero 63M â€” a local assistant that cites its sources
+# Atom Zero 63M — a local assistant that cites its sources
 
 Atom Zero is a local, source-cited assistant built around a **63.4M parameter model**,
 depth-upcycled from the 49.2M from-scratch base and validated as the default. Facts live in a local RAG index, not in the model
@@ -26,7 +26,7 @@ release infrastructure, and safety review. Crypto and other options are in
 ## Install
 
 ```powershell
-pip install atomzero==1.6.0
+pip install atomzero==1.7.0
 ```
 
 Optional local MiniLM reranker:
@@ -184,7 +184,7 @@ live in reviewed LoRA adapters.
 | document timeline regression | **10/10** |
 | typed relations regression | **12/12** |
 | citation gate, SQuAD v2 (default 0.5) | **92/103 answerable retained; 18/97 no-answer refused; precision 0.479** |
-| test suite | **1727 passed** |
+| test suite | **1764 passed** |
 
 The raw-model probe asks ten simple general questions with no documents, no
 calculator and no agent. The 49.2M fallback gets **2/10**. The product gets
@@ -231,8 +231,8 @@ as model transfer.
   as `notes/`; search, Answer and Summarize collection share the same scope.
 - **Second brain graph:** local co-occurrence graph over names, codes and years
   with source counts and one-click evidence; CLI `graph`/`entity`/`path`, HTTP
-  and UI. Chat answers â€œwhat is related to X?â€ and multi-hop â€œhow is X
-  connected to Y?â€ with graph evidence.
+  and UI. Chat answers “what is related to X?” and multi-hop “how is X
+  connected to Y?” with graph evidence.
 - **Source comparison:** flag overlapping claims with different numbers, units,
   dates, code identifiers or negation, with lexical and topic-paraphrase
   alignment; CLI/API/UI and chat (`compare sources A and B`) keep both snippets
@@ -464,11 +464,11 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 
 ## Links
 
-- PyPI: <https://pypi.org/project/atomzero/1.6.0/>
+- PyPI: <https://pypi.org/project/atomzero/1.7.0/>
 - GitHub source: <https://github.com/byjameson/atom-zero>
 - X: <https://x.com/aigokhan>
 - Instagram: <https://instagram.com/quantsinner>
-- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v1.6.0>
+- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v1.7.0>
 - Quickstart: <https://github.com/byjameson/atom-zero/blob/main/docs/QUICKSTART_ATOMZERO.md>
 - Model card: <https://github.com/byjameson/atom-zero/blob/main/docs/MODEL_CARD.md>
 - Full project map: <https://github.com/byjameson/atom-zero/blob/main/docs/PROJECT_OVERVIEW.md>

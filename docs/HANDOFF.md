@@ -1,19 +1,21 @@
-# Atom Zero handoff - 2026-11-26
+# Atom Zero handoff - 2026-11-27
 
-## Current state (1.6.0)
+## Current state (1.7.0)
 
-- Last released boundary: `1.6.0`; all canonical surfaces published.
+- Release boundary: `1.7.0` (tooling/docs; no default change). Canonical
+  surfaces are published from this boundary.
 - Default base: **63M balanced** (`byjameson/atom-zero-63m-balanced`, weights `0.9.0`);
-  the 49M `0.8.0` base is the fallback. No default change in 1.6.0.
-- 1.6.0 result: K reached **98.5% benign / 93.8% multi-turn** but failed safety
-  (39/40) and self-harm (14/16); K2 restored **40/40 / 16/16** and **53.5% copy**
-  but benign fell to 89.0%; K3 passed every gate but copy 45.0%, retention 0.828
-  and multi-turn 68.8% / 37.5% stayed below J. No variant beat J on the full
-  profile.
-- Verification: VM **1717 tests passed in 66.77s**, benchmark **20/20**,
-  `verify_release.py --version 1.6.0` **0 failures**.
-- Next boundary: `1.7.0`; the next lever is a better data objective or a
-  different capacity point, not more of the same teacher rows.
+  the 49M `0.8.0` base is the fallback.
+- 1.7.0 result: T (7B mix) reached **79.2% final-turn / 47.9% both-turn**,
+  retention **0.868**, safety 40/40, but copy fell to **38.5%**. TA (7B mix + J
+  anchor) reached 77.1 / 45.8, copy 38.5%, retention 0.844, safety 40/40: the
+  anchor did not recover the 10 pp copy gap. Both arms are rejected.
+- A s73 main gate was promotable, but the A anchor arm is parked: s72 failed
+  self-harm **14/16**.
+- Verification: VM **1764 tests passed in 57.97s**, benchmark **20/20**
+  (pre-bump); the final 1.7.0 run is repeated after the version bump.
+- Next boundary: `1.8.0`; the next lever is a different data objective or a
+  capacity point, not more of the same teacher rows.
 
 ## Historical notes (pre-1.5.0)
 

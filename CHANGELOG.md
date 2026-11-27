@@ -1,5 +1,14 @@
 # Changelog
 
+## atomzero 1.7.0 - 2026-11-27
+
+- **A 7B teacher lifts conversation, not the full profile.** T (7B mix, no anchor) reaches **79.2% final-turn / 47.9% both-turn** multi-turn, retention **0.868**, safety **40/40**, but 4-key copy falls to **38.5%** (J 48.5%). TA (7B mix + J anchor, beta 0.3) reaches **77.1 / 45.8**, copy **38.5%**, retention **0.844**, safety **40/40**: the anchor does not recover copy, so TA is rejected.
+- **No default promotion.** J / 63M balanced (weights `0.9.0`) stays the default; the 49M `0.8.0` base remains the fallback. The A anchor arm is parked after seed 72 failed self-harm **14/16**.
+- 7B teacher pipeline: 260 accepted answers; fallback mix 8980 rows (518 7B + 2 base fallback), 854,500 pretokenized tokens. One substituted explanation prompt is recorded in the manifest.
+- Scoped ModelScope Studio demo: **Atom Zero 63M — document QA demo**; out-of-corpus questions get a scope message before the model runs, while launch/warranty/travel/visitor questions stay cited.
+- Reddit is no longer a release surface (its filters remove posts); the README, release checklist and release body were updated. PyPI metadata now carries the live demo URL.
+- VM: **1764 tests passed in 57.97s**; benchmark **20/20** (pre-bump); the final run is repeated after the version bump.
+
 ## atomzero 1.6.0 - 2026-11-26
 
 - **Teacher data improves conversation, not the full profile.** K (teacher 2x, safety 5x) reaches **98.5% benign / 93.8% final-turn multi-turn** but fails safety (39/40) and self-harm (14/16). K2 (safety/self-harm 8x) restores **40/40 / 16/16** and lifts copy to **53.5%**, but benign falls to 89.0%. K3 (6x midpoint) passes **40/40 / 16/16**, the checkpoint gate and the product gate, but copy 45.0%, retention 0.828 and multi-turn 68.8% / 37.5% are below J.
