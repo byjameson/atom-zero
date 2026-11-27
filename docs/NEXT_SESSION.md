@@ -110,7 +110,7 @@ variant beat J on the full profile, so the default did not change.
 - GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v2.0.0>
 - Hugging Face default: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-63m-balanced>
-  (weights upload in progress; raw config will read 2.0.0 / 1.2.0 when done)
+  (weights 2.0.0 / 1.2.0 verified; `verify_release.py` reports 0 failures)
 - ModelScope Studio: 2.0.0, L-7781 verified
 - dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-200-a-history-aware-context-adapter-1k0j>
 - Medium: 2.0.0 post is scheduled for 2026-11-28 20:30 (the 24-hour limit is
