@@ -1,6 +1,6 @@
 # atomzero 1.7.0 - a 7B teacher lifts conversation, the joint profile still decides
 
-Status: **release prepared, not yet published.** No default change: the 63M
+Status: **published on 2026-11-27.** No default change: the 63M
 balanced base (weights `0.9.0`) remains the default; the 49M `0.8.0` base
 remains the fallback. The A anchor arm is parked after seed 72 failed self-harm
 14/16.
@@ -86,6 +86,4 @@ atomzero-quickstart --model-repo byjameson/atom-zero-49m `
 - Live demo: <https://modelscope.cn/studios/byjameson/atomzerodemo>
 - Sponsor: <https://github.com/sponsors/byjameson>
 - X: <https://x.com/aigokhan>
-- dev.to: pending
-- Medium: pending
-- LinkedIn: pending
+- Instagram: <https://instagram.com/quantsinner>
