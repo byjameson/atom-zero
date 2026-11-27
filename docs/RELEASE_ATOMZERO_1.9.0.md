@@ -70,7 +70,7 @@ automatic score alone is not a release gate.
 - Hugging Face: `byjameson/atom-zero-63m-balanced`, weights `1.1.0`
 - ModelScope: `byjameson/atom-zero-63m-balanced` (weights mirror uploading; the Studio already runs 1.9.0)
 - ModelScope Studio: <https://modelscope.cn/studios/byjameson/atomzerodemo>
-- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-190-conversation-restored-copy-held-32g5>
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-190-fewer-refusals-copy-held-coherence-is-next-3abb>
 - LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7532076136877420545/>
 - X: <https://x.com/aigokhan/status/2126313696213475520>
 - Medium: 1.9.0 post when the platform limit opens; no backfill.

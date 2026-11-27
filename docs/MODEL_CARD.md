@@ -232,7 +232,7 @@ Evidence lives in `research/results/` and
 - Hugging Face: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-63m-balanced>
 - Live demo: <https://modelscope.cn/studios/byjameson/atomzerodemo>
-- 1.9.0 article: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-190-conversation-restored-copy-held-32g5>
+- 1.9.0 article: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-190-fewer-refusals-copy-held-coherence-is-next-3abb>
 - Medium: <https://medium.com/@myredditacc9393> (1.9.0 post when the platform limit opens)
 - LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7532076136877420545/>
 - X: <https://x.com/aigokhan>

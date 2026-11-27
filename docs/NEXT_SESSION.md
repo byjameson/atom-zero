@@ -89,7 +89,7 @@ variant beat J on the full profile, so the default did not change.
 - GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v1.9.0>
 - Hugging Face default: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-63m-balanced>
-- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-190-conversation-restored-copy-held-32g5>
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-190-fewer-refusals-copy-held-coherence-is-next-3abb>
 - Medium: 1.9.0 draft is scheduled for 20:30 Europe/Istanbul; publish only
   if the platform limit is open, otherwise skip (no backfill).
 - LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7532076136877420545/>
