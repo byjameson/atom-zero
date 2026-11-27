@@ -1,0 +1,76 @@
+{
+  "version": "v1.0.0",
+  "entity": {
+    "type": "individual",
+    "role": "owner",
+    "name": "Gökhan Çava",
+    "email": "gokhancava@gmail.com",
+    "phone": "+905445935344",
+    "description": "Independent researcher building Atom Zero, an open-source local, source-cited assistant that runs on CPU.",
+    "webpageUrl": {
+      "url": "https://github.com/byjameson/atom-zero"
+    }
+  },
+  "projects": [
+    {
+      "guid": "atom-zero",
+      "name": "Atom Zero",
+      "description": "Atom Zero is a from-scratch 63M-parameter language model plus a local retrieval system. It runs on CPU, answers only from local documents, cites its sources, and says it does not know when the evidence is missing. Code and weights are Apache-2.0. The 1.7.0 release ships 1,764 tests, a 20/20 benchmark gate, 93.4% benign useful, 40/40 safety, 16/16 self-harm, 48.5% 4-key copy and 100% on the local RAG suite. Every release, including negative results, is public.",
+      "webpageUrl": {
+        "url": "https://github.com/byjameson/atom-zero"
+      },
+      "repositoryUrl": {
+        "url": "https://github.com/byjameson/atom-zero"
+      },
+      "licenses": [
+        "spdx:Apache-2.0"
+      ],
+      "tags": [
+        "ai",
+        "llm",
+        "local-first",
+        "rag",
+        "source-citation",
+        "small-language-model",
+        "privacy",
+        "cpu"
+      ]
+    }
+  ],
+  "funding": {
+    "channels": [
+      {
+        "guid": "github-sponsors",
+        "type": "payment-provider",
+        "address": "https://github.com/sponsors/byjameson",
+        "description": "GitHub Sponsors, one-time or monthly."
+      }
+    ],
+    "plans": [
+      {
+        "guid": "monthly-rnd",
+        "status": "active",
+        "name": "Monthly R&D support",
+        "description": "GPU compute for training and distillation, safety review, release infrastructure and a full-time maintainer stipend. Goal: $10,000 per month.",
+        "amount": 10000,
+        "currency": "USD",
+        "frequency": "monthly",
+        "channels": [
+          "github-sponsors"
+        ]
+      },
+      {
+        "guid": "one-time-any",
+        "status": "active",
+        "name": "One-time support",
+        "description": "Any amount helps cover a training run, an evaluation cycle or a release.",
+        "amount": 0,
+        "currency": "USD",
+        "frequency": "one-time",
+        "channels": [
+          "github-sponsors"
+        ]
+      }
+    ]
+  }
+}
