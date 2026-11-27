@@ -55,6 +55,8 @@ retention and history recall all improve.
 - Hugging Face: `byjameson/atom-zero-63m-balanced`, weights `1.2.0`
 - ModelScope: `byjameson/atom-zero-63m-balanced`
 - ModelScope Studio: <https://modelscope.cn/studios/byjameson/atomzerodemo>
-- dev.to, LinkedIn, X: release post (links added after publishing)
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-200-a-history-aware-context-adapter-1k0j>
+- LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7532210386427703296/>
+- X: <https://x.com/aigokhan/status/2126444828980371675>
 - Medium: the 24-hour limit is active; no backfill. The current 2.0.0 post is
   scheduled for the next window.

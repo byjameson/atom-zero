@@ -236,11 +236,11 @@ Evidence lives in `research/results/` and
 - Hugging Face: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-63m-balanced>
 - Live demo: <https://modelscope.cn/studios/byjameson/atomzerodemo>
-- 1.9.0 article: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-190-fewer-refusals-copy-held-coherence-is-next-3abb>
-- Medium: <https://medium.com/@myredditacc9393/atom-zero-1-9-0-fewer-refusals-copy-held-coherence-is-next-6bfdf07d7fef>
-- LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7532076136877420545/>
+- 2.0.0 article: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-200-a-history-aware-context-adapter-1k0j>
+- Medium: <https://medium.com/@myredditacc9393> (2.0.0 post scheduled for the next window)
+- LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7532210386427703296/>
 - X: <https://x.com/aigokhan>
-- X post: <https://x.com/aigokhan/status/2126313696213475520>
+- X post: <https://x.com/aigokhan/status/2126444828980371675>
 - Instagram: <https://instagram.com/quantsinner>
 - document formats: <https://github.com/byjameson/atom-zero/blob/main/docs/DOCUMENTS.md>
 

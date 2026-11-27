@@ -106,14 +106,14 @@ variant beat J on the full profile, so the default did not change.
 
 ## Published surfaces
 
-- PyPI: <https://pypi.org/project/atomzero/1.9.0/>
-- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v1.9.0>
+- PyPI: <https://pypi.org/project/atomzero/2.0.0/>
+- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v2.0.0>
 - Hugging Face default: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-63m-balanced>
-- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-190-fewer-refusals-copy-held-coherence-is-next-3abb>
-- Medium: <https://medium.com/@myredditacc9393/atom-zero-1-9-0-fewer-refusals-copy-held-coherence-is-next-6bfdf07d7fef>
-- LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7532076136877420545/>
-- X: <https://x.com/aigokhan/status/2126313696213475520>
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-200-a-history-aware-context-adapter-1k0j>
+- Medium: 2.0.0 post is scheduled for the next 24-hour window (no backfill).
+- LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7532210386427703296/>
+- X: <https://x.com/aigokhan/status/2126444828980371675>
 - Reddit: **not used anymore**. Reddit filters remove posts; do not post or reply there. The existing profile/post stay as history only.
 - Live demo: <https://modelscope.cn/studios/byjameson/atomzerodemo> (scoped document QA; synthetic corpus)
 
@@ -121,24 +121,19 @@ Verification: VM **1764 tests passed**; benchmark **20/20**.
 
 ## Next levers
 
-1. **2.0.0 target: coherence, not just refusal.** The automatic multi-turn
-   score is refusal/word-count only. The internal audit (`coherence_audit.py`)
-   flags 88.5% of 1.9.0 open-ended replies as degenerate; 1.8.0 is 91.7%.
-2. The opener arm (320 teacher opener rows) cut refusals to 3/96 and scored
-   99.2 / 93.8 / 58.0, but its replies were visibly degenerate. **Rejected.**
-   Do not promote metric-only wins; require a coherence audit below the
-   agreed flag rate (target <= 30%).
-3. A history-conditioning LoRA on 1.9.0 raises held-out context recall from
-   10% to **66.5%** while keeping single 95%, copy 63.5%, retention 0.675.
-   The unresolved part is safety: the full safety patch reaches 16/16 but
-   over-refuses (multi both 41.7%); gentler patches miss one self-harm prompt
-   or flag a benign-support reply. The next data objective is benign
-   **contrastive** safety data (crisis vs ordinary distress/support) plus real
-   multi-turn dialogues, then retrain the context adapter.
-4. Keep the 1.9.0 default until a candidate improves context and keeps
-   single >= 94%, multi >= 60%, copy >= 55%, safety 40/40, self-harm 16/16.
-5. Do **not** repeat 24L, cw3, MT-chain, self-teacher-replacement, soup or the
-   opener arm; each is measured and rejected.
+1. **2.1.0 target: natural multi-turn coherence.** The automatic score is
+   refusal/word-count only; 2.0.0 adds history recall but does not make
+   open-ended chat coherent. Use the coherence audit as the gate (target
+   flag rate <= 30%).
+2. Generate real 4-6 turn dialogues with the 7B teacher (follow-ups that
+   depend on earlier turns, corrections and topic continuity), mixed with the
+   copy rows. The earlier single-turn teacher validator rejected long
+   newline prompts; a custom dialogue generator is needed.
+3. Keep the 2.0.0 context/safety recipe; do not regress history recall below
+   60%, single below 94%, copy below 55%, safety 40/40, self-harm 16/16.
+4. Do **not** repeat 24L, cw3, MT-chain, self-teacher-replacement, soup, the
+   opener arm or the full-safety-overrefusal variants; each is measured and
+   rejected.
 
 ## Rules
 
