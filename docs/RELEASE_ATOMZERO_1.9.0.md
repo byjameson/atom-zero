@@ -73,4 +73,4 @@ automatic score alone is not a release gate.
 - dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-190-fewer-refusals-copy-held-coherence-is-next-3abb>
 - LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7532076136877420545/>
 - X: <https://x.com/aigokhan/status/2126313696213475520>
-- Medium: 1.9.0 post when the platform limit opens; no backfill.
+- Medium: <https://medium.com/@myredditacc9393/atom-zero-1-9-0-fewer-refusals-copy-held-coherence-is-next-6bfdf07d7fef>

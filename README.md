@@ -553,7 +553,7 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-63m-balanced>
 - Live demo: <https://modelscope.cn/studios/byjameson/atomzerodemo>
 - dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-180-the-first-7b-teacher-promotion-lo0>
-- Medium: <https://medium.com/@myredditacc9393/atom-zero-1-6-0-teacher-data-raised-conversation-but-the-profile-still-belongs-to-the-63m-default-31a8766050f2>
+- Medium: <https://medium.com/@myredditacc9393/atom-zero-1-9-0-fewer-refusals-copy-held-coherence-is-next-6bfdf07d7fef>
 - LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7531941922496475136/>
 - X post: <https://x.com/aigokhan/status/2126176327703179348>
 - Contact: **gokhancava@gmail.com**
