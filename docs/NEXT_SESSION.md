@@ -89,11 +89,11 @@ variant beat J on the full profile, so the default did not change.
 - GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v1.9.0>
 - Hugging Face default: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-63m-balanced>
-- dev.to: 1.9.0 post (link added after publishing)
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-190-conversation-restored-copy-held-32g5>
 - Medium: 1.8.0 post is scheduled only if the platform limit is open; no
   backfill. If 1.9.0 is current at the posting window, publish 1.9.0 instead.
-- LinkedIn: 1.9.0 post (link added after publishing)
-- X: 1.9.0 post (link added after publishing)
+- LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7532076136877420545/>
+- X: <https://x.com/aigokhan/status/2126313696213475520>
 - Reddit: **not used anymore**. Reddit filters remove posts; do not post or reply there. The existing profile/post stay as history only.
 - Live demo: <https://modelscope.cn/studios/byjameson/atomzerodemo> (scoped document QA; synthetic corpus)
 

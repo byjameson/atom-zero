@@ -1,6 +1,6 @@
 # atomzero 1.9.0 - conversation restored, copy held
 
-Status: **in preparation.** The default moves to the 63M `1.1.0` weights;
+Status: **published on 2026-11-27.** The default moves to the 63M `1.1.0` weights;
 the 49M `0.8.0` base remains the fallback and the 1.8.0 63M weights stay
 available as the previous checkpoint.
 
@@ -54,4 +54,7 @@ Copy profile (exact): 2short **87.0%**, 3short **80.0%**, 4short
 - Hugging Face: `byjameson/atom-zero-63m-balanced`, weights `1.1.0`
 - ModelScope: `byjameson/atom-zero-63m-balanced`
 - ModelScope Studio: <https://modelscope.cn/studios/byjameson/atomzerodemo>
-- dev.to, LinkedIn, X: release post (links added after publishing)
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-190-conversation-restored-copy-held-32g5>
+- LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7532076136877420545/>
+- X: <https://x.com/aigokhan/status/2126313696213475520>
+- Medium: 1.9.0 post when the platform limit opens; no backfill.
