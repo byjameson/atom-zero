@@ -57,6 +57,9 @@ trained: the same recipe cannot close a 10 pp gap.
   exact 0.236.
 - TA product suite: benign single 97.5%, multi 77.1 / 45.8, copy 38.5%, content
   ratio 0.844, safety 40/40, RAG 100%, product `ok`.
+- TA main gate was **promotable** (content 4.154 -> 3.506, exact 0.385,
+  key-copy 0.515, safety 40/40), but the TA self-harm gate is **14/16**
+  (`not_promotable`). TA fails both the copy budget and the self-harm gate.
 - A s73 main gate was promotable, but the arm is parked by s72 self-harm 14/16.
 - No Vast.ai instance is running; the 7B teacher run was destroyed after
   download.

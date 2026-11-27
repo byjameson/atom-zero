@@ -15,7 +15,7 @@ seeds a demo corpus and opens the local UI.
 ## What's new in 1.7.0
 
 - A 7B teacher mix lifts multi-turn to **79.2% final-turn / 47.9% both-turn** (T), with safety 40/40, but 4-key copy falls to **38.5%** from the default's 48.5% and retention regresses to **0.868** (higher is worse; J seed mean 0.840).
-- Adding the J anchor (TA) keeps copy at 38.5% and multi-turn at 77.1% / 45.8%; the anchor does not recover the 10 pp copy gap. TA is rejected.
+- Adding the J anchor (TA) keeps copy at 38.5% and multi-turn at 77.1% / 45.8%; the anchor does not recover the 10 pp copy gap, and TA's self-harm gate is **14/16**. TA is rejected.
 - No default change: this card still describes the 63M balanced base (weights 0.9.0). The 49M 0.8.0 base remains the fallback. The A anchor arm is parked after seed 72 failed self-harm 14/16.
 - 1764 tests passed in 57.97s on the VM; benchmark 20/20 (pre-bump run; the final run is repeated after the version bump).
 

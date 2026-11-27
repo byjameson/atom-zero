@@ -2,7 +2,7 @@
 
 ## atomzero 1.7.0 - 2026-11-27
 
-- **A 7B teacher lifts conversation, not the full profile.** T (7B mix, no anchor) reaches **79.2% final-turn / 47.9% both-turn** multi-turn, safety **40/40**, but 4-key copy falls to **38.5%** (J 48.5%) and retention regresses to **0.868** (higher is worse; J seed mean 0.840). TA (7B mix + J anchor, beta 0.3) reaches **77.1 / 45.8**, copy **38.5%**, retention **0.844** (not a gain), safety **40/40**: the anchor does not recover copy, so TA is rejected.
+- **A 7B teacher lifts conversation, not the full profile.** T (7B mix, no anchor) reaches **79.2% final-turn / 47.9% both-turn** multi-turn, safety **40/40**, but 4-key copy falls to **38.5%** (J 48.5%) and retention regresses to **0.868** (higher is worse; J seed mean 0.840). TA (7B mix + J anchor, beta 0.3) reaches **77.1 / 45.8**, copy **38.5%**, retention **0.844** (not a gain), safety **40/40**: the anchor does not recover copy, so TA is rejected. The TA self-harm gate is **14/16** (`not_promotable`), so the arm fails both copy and safety.
 - **No default promotion.** J / 63M balanced (weights `0.9.0`) stays the default; the 49M `0.8.0` base remains the fallback. The A anchor arm is parked after seed 72 failed self-harm **14/16**.
 - 7B teacher pipeline: 260 accepted answers; fallback mix 8980 rows (518 7B + 2 base fallback), 854,500 pretokenized tokens. One substituted explanation prompt is recorded in the manifest.
 - Scoped ModelScope Studio demo: **Atom Zero 63M — document QA demo**; out-of-corpus questions get a scope message before the model runs, while launch/warranty/travel/visitor questions stay cited.
