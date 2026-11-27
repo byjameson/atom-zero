@@ -101,18 +101,20 @@ Verification: VM **1764 tests passed**; benchmark **20/20**.
 
 ## Next levers
 
-1. **2.0.0 target: benign over-refusal.** 1.9.0 still refuses 16/96 multi-turn
-   turns, mostly turn 1 on short openers (coding, cooking, travel). The
-   single-turn cost (94.2%) is the same failure.
-2. 160 conversational opener prompts are ready in
-   `data/teacher_openers_7b_v1/prompts_160.jsonl` (no eval overlap); the 7B
-   teacher is generating answers on Vast.ai. Add those rows to the KV4s mix
-   (and the anchor data) and retrain from the 49M base.
-3. Keep the anchor beta 1.0 recipe. Success bar: single >= 97%, multi both
-   >= 68.8%, copy >= 55%, retention <= 0.80, safety 40/40, self-harm 16/16.
-4. Do **not** repeat 24L, cw3, MT-chain, self-teacher-replacement or soup;
-   each is measured and rejected.
-5. Before 2.0.0: full VM suite and benchmark, then release at the boundary.
+1. **2.0.0 target: coherence, not just refusal.** The automatic multi-turn
+   score is refusal/word-count only. The internal audit (`coherence_audit.py`)
+   flags 88.5% of 1.9.0 open-ended replies as degenerate; 1.8.0 is 91.7%.
+2. The opener arm (320 teacher opener rows) cut refusals to 3/96 and scored
+   99.2 / 93.8 / 58.0, but its replies were visibly degenerate. **Rejected.**
+   Do not promote metric-only wins; require a coherence audit below the
+   agreed flag rate (target <= 30%).
+3. Next data objective: diverse **multi-turn dialogues** from the 7B teacher
+   (real turn-1/turn-2 pairs, not chained single prompts), mixed with the KV4s
+   copy rows, plus the anchor. Generate on Vast.ai only; destroy afterwards.
+4. Keep the 1.9.0 default until a candidate improves coherence, single >= 97%,
+   copy >= 55%, safety 40/40, self-harm 16/16.
+5. Do **not** repeat 24L, cw3, MT-chain, self-teacher-replacement, soup or the
+   opener arm; each is measured and rejected.
 
 ## Rules
 
@@ -122,3 +124,4 @@ Verification: VM **1764 tests passed**; benchmark **20/20**.
 - Release every 0.1 boundary; new posts, not edits.
 - Donation addresses stay unchanged unless the user asks.
 - Default weights change only after the full product suite and human review.
+- A metric-only pass is not a release decision; inspect coherence samples.

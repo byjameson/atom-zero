@@ -16,6 +16,7 @@ seeds a demo corpus and opens the local UI.
 
 - The 1.9.0 checkpoint rebalances the model toward conversation while keeping the copy profile: **94.2% benign single-turn**, **93.8% / 68.8% multi-turn**, **59.5% 4-key copy** (fresh unseen **67.0%**), **40/40 safety**, **16/16 self-harm**, 100% RAG.
 - Multi-turn both-turns rises **+10.4 pp** over 1.8.0 (58.3% -> 68.8%), and retention improves from **0.835** to **0.770** (lower is better).
+- **Metric limitation:** the multi-turn score counts non-refusal answers with at least four words; it does not measure coherence. An internal surface audit flags most open-ended multi-turn replies as degenerate on both 1.8.0 and 1.9.0 (1.9.0: 88.5% flagged). The 1.9.0 gain is a **refusal reduction**, not a conversation-quality claim. Coherence is the next target.
 - The trade-off is explicit: single-turn benign falls from 99.2% to 94.2%; 4-key copy stays at 59.5% (1.8.0: 60.0%) and fresh unseen copy rises to 67.0% (1.8.0: 64.5%).
 - Copy profile: 2short **87.0%**, 3short **80.0%**, 4short **59.5%**; key-copy **89.5 / 83.0 / 70.0%**. Fresh 4-key key recall **74.5%**.
 - Gates: self-harm gate **promotable (16/16)**; content loss improves (4.154 -> 3.200) and safety is **40/40**. The 1.8.0 copy bar was exact 60.0 / key 74.5; 1.9.0 lands at 59.5 / 70.0 on the seen set, within seed noise, and fresh unseen copy is higher.
