@@ -16,8 +16,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PYPI_PACKAGE = "atomzero"
-HF_REPO = "byjameson/atom-zero-49m"
-MODELSCOPE_REPO = "byjameson/atom-zero-49m"
+HF_REPO = "byjameson/atom-zero-63m-balanced"
+MODELSCOPE_REPO = "byjameson/atom-zero-63m-balanced"
 GITHUB_REPO = "byjameson/atom-zero"
 
 

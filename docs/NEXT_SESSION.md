@@ -90,8 +90,8 @@ variant beat J on the full profile, so the default did not change.
 - Hugging Face default: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-63m-balanced>
 - dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-190-conversation-restored-copy-held-32g5>
-- Medium: 1.8.0 post is scheduled only if the platform limit is open; no
-  backfill. If 1.9.0 is current at the posting window, publish 1.9.0 instead.
+- Medium: 1.9.0 draft is scheduled for 20:30 Europe/Istanbul; publish only
+  if the platform limit is open, otherwise skip (no backfill).
 - LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7532076136877420545/>
 - X: <https://x.com/aigokhan/status/2126313696213475520>
 - Reddit: **not used anymore**. Reddit filters remove posts; do not post or reply there. The existing profile/post stay as history only.
@@ -101,16 +101,18 @@ Verification: VM **1764 tests passed**; benchmark **20/20**.
 
 ## Next levers
 
-1. Close the teacher-data line: K/K2/K3 are measured; do not rerun them.
-2. A 1.7.0 candidate must beat J on the **full** profile: benign >= 93.4%,
-   safety 40/40, self-harm 16/16, 4-key >= 48.5%, retention <= 0.703,
-   multi-turn >= 75% / 50%, RAG 100%.
-3. The remaining options are a better data objective (safety-preserving chat or
-   a different replay balance), a capacity run with the corrected gate, or a
-   different copy/retention trade. More of the same teacher rows is ruled out.
-4. The 24L retest is still pending; it was gated on a winning 8L mix and no mix
-   won. Do not rent a GPU for it until an 8L mix clears the bar.
-5. Before 1.7.0: full VM suite and benchmark, then release at the boundary.
+1. **2.0.0 target: benign over-refusal.** 1.9.0 still refuses 16/96 multi-turn
+   turns, mostly turn 1 on short openers (coding, cooking, travel). The
+   single-turn cost (94.2%) is the same failure.
+2. 160 conversational opener prompts are ready in
+   `data/teacher_openers_7b_v1/prompts_160.jsonl` (no eval overlap); the 7B
+   teacher is generating answers on Vast.ai. Add those rows to the KV4s mix
+   (and the anchor data) and retrain from the 49M base.
+3. Keep the anchor beta 1.0 recipe. Success bar: single >= 97%, multi both
+   >= 68.8%, copy >= 55%, retention <= 0.80, safety 40/40, self-harm 16/16.
+4. Do **not** repeat 24L, cw3, MT-chain, self-teacher-replacement or soup;
+   each is measured and rejected.
+5. Before 2.0.0: full VM suite and benchmark, then release at the boundary.
 
 ## Rules
 
