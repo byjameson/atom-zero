@@ -48,21 +48,19 @@ variant beat J on the full profile, so the default did not change.
 
 ## Published surfaces
 
-- PyPI: <https://pypi.org/project/atomzero/1.6.0/>
-- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v1.6.0>
+- PyPI: <https://pypi.org/project/atomzero/1.7.0/>
+- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v1.7.0>
 - Hugging Face default: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-63m-balanced>
-- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-160-teacher-data-raised-conversation-but-the-profile-still-belongs-to-the-63m-default-3jc7>
-- Medium: <https://medium.com/@myredditacc9393/atom-zero-1-6-0-teacher-data-raised-conversation-but-the-profile-still-belongs-to-the-63m-default-31a8766050f2>
-- LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7531767417052774400/>
-- X: <https://x.com/aigokhan/status/2126001867994112013>
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-170-a-7b-teacher-lifted-conversation-copy-still-set-the-price-34mk>
+- Medium 1.7.0: draft saved; platform **24h story limit**, scheduled publish at 20:30 local (draft `1c56db98740a`)
+- LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7531889078800347136/>
+- X: <https://x.com/aigokhan/status/2126123168846741572>
 - Reddit: **not used anymore**. Reddit filters remove posts; do not post or reply there. The existing profile/post stay as history only.
-- Live demo: <https://modelscope.cn/studios/byjameson/atomzerodemo> (CPU, synthetic demo corpus)
+- Live demo: <https://modelscope.cn/studios/byjameson/atomzerodemo> (scoped document QA; synthetic corpus)
 - LinkedIn demo post: <https://www.linkedin.com/in/g%C3%B6khan-cava-874a32157/recent-activity/all/>
 
-Verification: `verify_release.py --version 1.6.0` returned **0 failures**; VM
-**1727 tests passed in 64.83s**; benchmark **20/20**. Seed 73 main gate and
-self-harm gate both pass (40/40 and 16/16); results in `research/results/`.
+Verification: VM **1764 tests passed in 78.23s**; benchmark **20/20**.
 
 ## Next levers
 

@@ -229,10 +229,11 @@ Evidence lives in `research/results/` and
 - Hugging Face: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-63m-balanced>
 - Live demo: <https://modelscope.cn/studios/byjameson/atomzerodemo>
-- 1.6.0 article: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-160-teacher-data-raised-conversation-but-the-profile-still-belongs-to-the-63m-default-3jc7>
+- 1.7.0 article: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-170-a-7b-teacher-lifted-conversation-copy-still-set-the-price-34mk>
 - Medium: <https://medium.com/@myredditacc9393/atom-zero-1-6-0-teacher-data-raised-conversation-but-the-profile-still-belongs-to-the-63m-default-31a8766050f2>
-- LinkedIn: <https://www.linkedin.com/in/g%C3%B6khan-cava-874a32157/>
+- LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7531889078800347136/>
 - X: <https://x.com/aigokhan>
+- X post: <https://x.com/aigokhan/status/2126123168846741572>
 - Instagram: <https://instagram.com/quantsinner>
 - document formats: <https://github.com/byjameson/atom-zero/blob/main/docs/DOCUMENTS.md>
 

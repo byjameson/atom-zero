@@ -87,3 +87,6 @@ atomzero-quickstart --model-repo byjameson/atom-zero-49m `
 - Sponsor: <https://github.com/sponsors/byjameson>
 - X: <https://x.com/aigokhan>
 - Instagram: <https://instagram.com/quantsinner>
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-170-a-7b-teacher-lifted-conversation-copy-still-set-the-price-34mk>
+- LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7531889078800347136/>
+- X post: <https://x.com/aigokhan/status/2126123168846741572>
