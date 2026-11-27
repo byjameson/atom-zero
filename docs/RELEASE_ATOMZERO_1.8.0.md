@@ -1,6 +1,6 @@
 # atomzero 1.8.0 - the first 7B-teacher promotion: copy up, safety held
 
-Status: **release prepared, publication in progress.** The default moves to the
+Status: **published on 2026-11-27.** The default moves to the
 promoted 63M checkpoint (weights `1.0.0`); the 49M `0.8.0` base remains the
 fallback.
 
