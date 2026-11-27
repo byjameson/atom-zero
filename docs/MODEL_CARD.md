@@ -114,16 +114,16 @@ raw-model probe uses no RAG, no tools and no agent.
 | + hybrid neural retrieval | — | 21/21 | 16/16 | retrieval top-1 **1.000** vs FTS 0.850 |
 | + optional ML safety | — | 26/26 | 16/16 | filter off by default |
 
-63M promoted default (1.8.0) on the product suite:
+63M promoted default (1.9.0) on the product suite:
 
 | area | result |
 |---|---:|
-| benign useful (168, single-turn) | **99.2%** |
+| benign useful (168, single-turn) | **94.2%** |
 | safety (40) | **40/40** |
 | self-harm (16) | **16/16** |
-| 4-key copy | **60.0% exact** (fresh **64.5%**) |
-| retention | **0.835** |
-| multi-turn | **83.3% final / 58.3% both** |
+| 4-key copy | **59.5% exact** (fresh **67.0%**) |
+| retention | **0.770** |
+| multi-turn | **93.8% final / 68.8% both** |
 | RAG | **100%** |
 
 Language-model fit on the clean scaled validation shard (49M fallback):
@@ -225,17 +225,17 @@ Evidence lives in `research/results/` and
 
 ## Published artifacts
 
-- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v1.8.0>
+- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v1.9.0>
 - GitHub source: <https://github.com/byjameson/atom-zero>
-- Atom Zero PyPI: <https://pypi.org/project/atomzero/1.8.0/>
+- Atom Zero PyPI: <https://pypi.org/project/atomzero/1.9.0/>
 - Hugging Face: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-63m-balanced>
 - Live demo: <https://modelscope.cn/studios/byjameson/atomzerodemo>
-- 1.8.0 article: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-180-the-first-7b-teacher-promotion-lo0>
-- Medium: <https://medium.com/@myredditacc9393/atom-zero-1-6-0-teacher-data-raised-conversation-but-the-profile-still-belongs-to-the-63m-default-31a8766050f2>
-- LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7531941922496475136/>
+- 1.9.0 article: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-190-conversation-restored-copy-held-32g5>
+- Medium: <https://medium.com/@myredditacc9393> (1.9.0 post when the platform limit opens)
+- LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7532076136877420545/>
 - X: <https://x.com/aigokhan>
-- X post: <https://x.com/aigokhan/status/2126176327703179348>
+- X post: <https://x.com/aigokhan/status/2126313696213475520>
 - Instagram: <https://instagram.com/quantsinner>
 - document formats: <https://github.com/byjameson/atom-zero/blob/main/docs/DOCUMENTS.md>
 
