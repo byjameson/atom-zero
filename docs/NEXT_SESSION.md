@@ -1,14 +1,14 @@
-﻿# Next session - 1.8.0 planning
+﻿# Next session - 1.9.0 planning
 
-Snapshot: 2026-11-27, **1.7.0 release prepared**.
-Head: release commit for `1.7.0`; tag `v1.7.0`.
+Snapshot: 2026-11-27, **1.8.0 release prepared**.
+Head: release commit for `1.8.0`; tag `v1.8.0`.
 No training is running; GPU idle. No Vast.ai instance is running; credit about
 **$8.88**. Sponsor goal: **$10,000/month**.
 
 ## Released baseline
 
-`1.7.0` is the current boundary. The default is still the **63M balanced**
-checkpoint (`byjameson/atom-zero-63m-balanced`, weights `0.9.0`); the 49M
+`1.8.0` is the current boundary. The default moves to the promoted **63M**
+checkpoint (`byjameson/atom-zero-63m-balanced`, weights `1.0.0`); the 49M
 `0.8.0` base is the fallback.
 
 | area | J (default) |
@@ -21,6 +21,23 @@ checkpoint (`byjameson/atom-zero-63m-balanced`, weights `0.9.0`); the 49M
 | RAG suite | 100% |
 | multi-turn | 75% final / 50% both turns |
 | gate / product / server | pass / pass / 20/21 |
+
+## 1.8.0 result
+
+| metric | J (1.7.0) | 1.8.0 promoted | 3-seed mean |
+|---|---:|---:|---:|
+| single-turn benign | 95.8% | **99.2%** | — |
+| multi-turn final/both | 62.5 / 39.6 | **83.3 / 58.3** | 81.9 / 59.0 |
+| 4-key copy (seen) | 48.5% | **60.0%** | 56.7% |
+| 4-key copy (fresh) | — | **64.5%** | — |
+| retention | 0.703 | 0.835 | 0.846 |
+| safety | 40/40 | **40/40** | 2/3 seeds |
+| self-harm | 16/16 | **16/16** | — |
+
+Main gate **promotable** (exact 0.60, key 0.745, safety 40/40); self-harm gate
+**promotable** (16/16). s72 was 39/40 on product safety; the promoted seed is
+the fully gated one. Medium 1.7.0 was skipped; the next Medium post is 1.8.0
+when the platform allows (no backfill).
 
 ## 1.7.0 result
 

@@ -1,23 +1,25 @@
 # Atom Zero 63M model card
 
-Version: model weights `0.9.0`; standalone `atomzero 1.7.0`<br>
+Version: model weights `1.0.0`; standalone `atomzero 1.8.0`<br>
 Last updated: 2026-11-27
 License: Apache-2.0 for code and weights; data attribution in `NOTICE`.
 
 ```powershell
-pip install atomzero==1.7.0
+pip install atomzero==1.8.0
 atomzero-quickstart
 ```
 
 The first run downloads the ~279 MB checkpoint/tokenizer from Hugging Face,
 seeds a demo corpus and opens the local UI.
 
-## What's new in 1.7.0
+## What's new in 1.8.0
 
-- A 7B teacher mix lifts multi-turn to **79.2% final-turn / 47.9% both-turn** (T), with safety 40/40, but 4-key copy falls to **38.5%** from the default's 48.5% and retention regresses to **0.868** (higher is worse; J seed mean 0.840).
-- Adding the J anchor (TA) keeps copy at 38.5% and multi-turn at 77.1% / 45.8%; the anchor does not recover the 10 pp copy gap, and TA's self-harm gate is **14/16**. TA is rejected.
-- No default change: this card still describes the 63M balanced base (weights 0.9.0). The 49M 0.8.0 base remains the fallback. The A anchor arm is parked after seed 72 failed self-harm 14/16.
-- 1764 tests passed in 57.97s on the VM; benchmark 20/20 (pre-bump run; the final run is repeated after the version bump).
+- The promoted 63M checkpoint is the first 7B-teacher arm to beat J on copy and multi-turn while holding the gates: **99.2% benign single-turn**, **83.3% / 58.3% multi-turn**, **60.0% 4-key copy** (+11.5 pp), **40/40 safety**, **16/16 self-harm**, 100% RAG.
+- Copy profile: 2short **87.0%**, 3short **74.5%**, 4short **60.0%** (J 86.0 / 75.5 / 48.5); key-copy 91.0 / 81.5 / 74.5.
+- Fresh unseen 4-key copy: **64.5%** (129/200), key recall 90%; the gain is not template memorization.
+- Three-seed copy: 60.0 / 54.5 / 55.5 (mean **56.7%**); safety 40/40 on two of three seeds. The promoted seed is the fully gated one.
+- Main gate **promotable** (exact 0.60, key-copy 0.745, safety 40/40); self-harm gate **promotable** (16/16).
+- No default remains on the 49M base: the 49M `0.8.0` base is the fallback.
 
 ![Atom Zero architecture](https://raw.githubusercontent.com/byjameson/atom-zero/main/docs/figures/atomzero_architecture.png)
 
@@ -50,7 +52,7 @@ benchmarks and release — is
 | privacy | localhost, no telemetry, SSRF guard, upload caps, deletion |
 | UI | chat, documents, gaps, research queue, teacher notes, adapters, health |
 | packaging | standalone `atomzero` package (assistant deps only), `atomzero`/`atomzero-quickstart` entry points, GitHub release, HF/ModelScope weights |
-| tests | 1764 passed; product suite 136 prompts; behavior 16/16; retrieval 1.000 |
+| tests | 1764 passed; product suite 168 prompts; behavior 16/16; retrieval 1.000 |
 | document timeline | CLI/HTTP/chat/UI dated events plus entity filtering with provenance; 10/10 regression |
 | typed relations | CLI/HTTP/chat/UI triples and multi-hop relation paths; 12/12 regression |
 | citation gate | calibrated gate, default 0.5; SQuAD v2 92/103 answerable retained, 18/97 no-answer refused; precision 0.479 |
@@ -63,7 +65,7 @@ benchmarks and release — is
 
 | item | value |
 |---|---|
-| name | Atom Zero 63.4M balanced (`atom-zero-63m-balanced`, weights `0.9.0`) |
+| name | Atom Zero 63.4M balanced (`atom-zero-63m-balanced`, weights `1.0.0`) |
 | architecture | decoder-only transformer, depth-upcycled from the 49.2M base |
 | parameters | 63,389,184 |
 | layers / dim / heads / FF | 8 / 768 / 12 / 3072 |
@@ -112,17 +114,17 @@ raw-model probe uses no RAG, no tools and no agent.
 | + hybrid neural retrieval | — | 21/21 | 16/16 | retrieval top-1 **1.000** vs FTS 0.850 |
 | + optional ML safety | — | 26/26 | 16/16 | filter off by default |
 
-63M balanced default on the 1.5.0/1.6.0 product suite:
+63M promoted default (1.8.0) on the product suite:
 
 | area | result |
 |---|---:|
-| benign useful (136) | 93.4% |
-| safety (40) | 40/40 |
-| self-harm (16) | 16/16 |
-| 4-key copy | 48.5% exact |
-| retention | 0.703 |
-| multi-turn | 75% final / 50% both turns |
-| RAG | 100% |
+| benign useful (168, single-turn) | **99.2%** |
+| safety (40) | **40/40** |
+| self-harm (16) | **16/16** |
+| 4-key copy | **60.0% exact** (fresh **64.5%**) |
+| retention | **0.835** |
+| multi-turn | **83.3% final / 58.3% both** |
+| RAG | **100%** |
 
 Language-model fit on the clean scaled validation shard (49M fallback):
 
@@ -223,9 +225,9 @@ Evidence lives in `research/results/` and
 
 ## Published artifacts
 
-- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v1.7.0>
+- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v1.8.0>
 - GitHub source: <https://github.com/byjameson/atom-zero>
-- Atom Zero PyPI: <https://pypi.org/project/atomzero/1.7.0/>
+- Atom Zero PyPI: <https://pypi.org/project/atomzero/1.8.0/>
 - Hugging Face: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-63m-balanced>
 - Live demo: <https://modelscope.cn/studios/byjameson/atomzerodemo>

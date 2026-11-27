@@ -8,11 +8,11 @@ Medium policy: if a release cannot be posted because of the 24-hour story
 limit, do **not** backfill it later. Post the current version when the limit
 allows; past versions are not reposted.
 
-Current batch: **1.7.0 is the release boundary (prepared). Next boundary:
-1.8.0.** 1.7.0 records the 7B teacher arms T/TA (multi-turn up, copy down 10 pp),
-keeps J as default, scopes the ModelScope Studio demo and carries the live demo
-URL in the PyPI metadata. Reddit is not a surface. `1764` Atom Zero tests pass
-on the VM; benchmark 20/20.
+Current batch: **1.8.0 is the release boundary (prepared). Next boundary:
+1.9.0.** 1.8.0 promotes the first 7B-teacher arm: copy 60.0%, fresh copy
+64.5%, multi-turn 83.3 / 58.3, safety 40/40, self-harm 16/16, gates
+promotable. The 1.7.0 default J remains the fallback history. Reddit is not a
+surface. `1764` Atom Zero tests pass on the VM; benchmark 20/20.
 
 ## Release cadence
 

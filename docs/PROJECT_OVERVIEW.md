@@ -308,11 +308,11 @@ not MMLU, GSM8K or HumanEval. The 21/21 is the product, not the bare model.
 ## 14. Packaging and reproduction
 
 ```powershell
-pip install atomzero==1.7.0
+pip install atomzero==1.8.0
 atomzero-quickstart
 ```
 
-`atomzero 1.7.0` is the standalone assistant package. `streamft 1.0` is the
+`atomzero 1.8.0` is the standalone assistant package. `streamft 1.0` is the
 separate low-VRAM trainer; `streamft 0.9.2` is the last compatibility release
 that bundled Atom Zero. The quickstart downloads the checkpoint/tokenizer from
 Hugging Face, seeds a demo corpus, starts the server and opens the browser.

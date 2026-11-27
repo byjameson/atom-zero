@@ -1,16 +1,20 @@
 # Atom Zero handoff - 2026-11-27
 
-## Current state (1.7.0)
+## Current state (1.8.0)
 
-- Release boundary: `1.7.0` (tooling/docs; no default change). Canonical
+- Release boundary: `1.8.0` — the first 7B-teacher promotion. Canonical
   surfaces are published from this boundary.
-- Default base: **63M balanced** (`byjameson/atom-zero-63m-balanced`, weights `0.9.0`);
+- Default base: **63M promoted** (`byjameson/atom-zero-63m-balanced`, weights `1.0.0`);
   the 49M `0.8.0` base is the fallback.
-- 1.7.0 result: T (7B mix) reached **79.2% final-turn / 47.9% both-turn**,
-  safety 40/40, but copy fell to **38.5%** and retention regressed to **0.868**
-  (higher is worse; J seed mean 0.840). TA (7B mix + J anchor) reached
-  77.1 / 45.8, copy 38.5%, retention 0.844 (not a gain), safety 40/40: the
-  anchor did not recover the 10 pp copy gap. Both arms are rejected.
+- 1.8.0 result: **99.2% single-turn**, **83.3% / 58.3% multi-turn**, **60.0%**
+  4-key copy (fresh **64.5%**), retention 0.835, safety **40/40**, self-harm
+  **16/16**, RAG 100%. Main and self-harm gates **promotable**.
+- Three-seed copy: 60.0 / 54.5 / 55.5 (mean 56.7); safety 40/40 on 2/3 seeds;
+  the promoted seed is the fully gated one.
+- Verification: main gate exact 0.60, key 0.745, safety 40/40; self-harm 16/16;
+  VM full suite in the release run.
+- Next boundary: `1.9.0`; the next lever is the capacity/format question and a
+  fresh 3-seed gate matrix.
 - A s73 main gate was promotable, but the A anchor arm is parked: s72 failed
   self-harm **14/16**.
 - Verification: VM **1764 tests passed in 57.97s**, benchmark **20/20**

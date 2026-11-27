@@ -15,7 +15,7 @@
     {
       "guid": "atom-zero",
       "name": "Atom Zero",
-      "description": "Atom Zero is a from-scratch 63M-parameter language model plus a local retrieval system. It runs on CPU, answers only from local documents, cites its sources, and says it does not know when the evidence is missing. Code and weights are Apache-2.0. The 1.7.0 release ships 1,764 tests, a 20/20 benchmark gate, 93.4% benign useful, 40/40 safety, 16/16 self-harm, 48.5% 4-key copy and 100% on the local RAG suite. Every release, including negative results, is public.",
+      "description": "Atom Zero is a from-scratch 63M-parameter language model plus a local retrieval system. It runs on CPU, answers only from local documents, cites its sources, and says it does not know when the evidence is missing. Code and weights are Apache-2.0. The 1.8.0 release promotes the first 7B-teacher arm: 99.2% single-turn benign, 83.3% / 58.3% multi-turn, 60.0% 4-key copy (64.5% on a fresh unseen set), 40/40 safety, 16/16 self-harm and 100% on the local RAG suite. Every release, including negative results, is public.",
       "webpageUrl": {
         "url": "https://github.com/byjameson/atom-zero"
       },

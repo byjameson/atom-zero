@@ -1,5 +1,13 @@
 # Changelog
 
+## atomzero 1.8.0 - 2026-11-27
+
+- **First 7B-teacher promotion.** The promoted 63M candidate reaches **99.2% benign single-turn**, **83.3% / 58.3% multi-turn**, **60.0% 4-key copy** (+11.5 pp over J), 0.835 retention, **40/40 safety**, **16/16 self-harm** and 100% local RAG. Fresh unseen 4-key copy is **64.5%**.
+- Three-seed matrix: copy **60.0 / 54.5 / 55.5** (mean **56.7%**); multi-turn mean **81.9 / 59.0**; retention mean 0.846; safety 40/40 on 2/3 seeds (one seed 39/40). The promoted seed is the fully gated one.
+- Gates: main **promotable** (exact 0.60, key-copy 0.745, safety 40/40); self-harm **promotable** (16/16).
+- The default moves to the promoted 63M checkpoint (weights `1.0.0`); the 49M `0.8.0` base remains the fallback.
+- VM full suite and PyPI 1.8.0 are the final release checks.
+
 ## atomzero 1.7.0 - 2026-11-27
 
 - **A 7B teacher lifts conversation, not the full profile.** T (7B mix, no anchor) reaches **79.2% final-turn / 47.9% both-turn** multi-turn, safety **40/40**, but 4-key copy falls to **38.5%** (J 48.5%) and retention regresses to **0.868** (higher is worse; J seed mean 0.840). TA (7B mix + J anchor, beta 0.3) reaches **77.1 / 45.8**, copy **38.5%**, retention **0.844** (not a gain), safety **40/40**: the anchor does not recover copy, so TA is rejected. The TA self-harm gate is **14/16** (`not_promotable`), so the arm fails both copy and safety.
