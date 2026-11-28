@@ -1,32 +1,40 @@
-﻿# Next session - paused before PC shutdown
+﻿# Next session - 12L rejected, 2.2.0 stays
 
-Snapshot: 2026-11-28 08:22, **work paused by the user (PC shutdown)**. Current
-release **2.2.0** (weights `1.2.0`, tools `numeric_tool` + `recall_tool`).
-No training is running; no Vast.ai instance is running.
+Snapshot: 2026-11-28 08:45, **2.2.0 remains the default** (weights `1.2.0`,
+tools `numeric_tool` + `recall_tool`). No training is running; no Vast.ai
+instance is running.
 
-## Resume here: 12L candidate
+## 12L result: rejected
 
 - `checkpoints/upcycle/atom-zero-63m-12l`: 12 layers, 98.0M params (research).
 - `checkpoints/mixed12_j_s71`: 12L full fine-tune on `mixed_benign_j`,
   3,000 steps, lr 5e-5, batch 4 (91.7M params).
-- Product suite (`research/results/product_suite_12l_j.json`): **pass**,
-  single **98.3%**, multi **85.4 / 75.0**, copy exact **60.0%** (key 66.0),
-  safety **40/40**, self-harm **16/16**, content ratio **0.844**.
-- Trade-off vs 2.2.0: single +0.8, both-turns **+16.7**, copy **-3.0**,
-  retention **0.700 -> 0.844**. Copy gap is within the 54.5-60.0 seed range;
-  retention is worse. Decision is open.
-- Next checks before any promotion:
-  1. `python research/multi_turn_eval_v3.py --checkpoint checkpoints/mixed12_j_s71 --device cuda --out research/results/multi_v3_12l_j.json`
-  2. `python research/diagnose_multiturn.py --checkpoint checkpoints/mixed12_j_s71 --prompts data/multi_turn_v3/eval.jsonl --out research/results/multiturn_12l_j.txt --device cuda`
-     then `python research/coherence_audit.py research/results/multiturn_12l_j.txt --out research/results/coherence_12l_j.json`
-  3. If coherence is clean and copy >= 55, prepare a 2.3.0 candidate; otherwise
-     reject and keep 2.2.0.
-  4. Alternative second run (not started): same 12L base on
-     `data/mixed_benign_k3_7b_kv4s_context/train.jsonl` (16,316 rows, cache
-     `data/pretok/mixed_benign_k3_7b_kv4s_context`) with 3,000 steps, lr 5e-5.
-- Medium **2.2.0 is unpublished**. The 24-hour limit was active and the editor
-  returned "cannot save your story". Publish manually when the limit is open;
-  do not backfill 2.0.0/2.1.0. Text: `C:\Users\biris\AppData\Local\Temp\opencode\medium_220.md`.
+- 48-row product suite (`research/results/product_suite_12l_j.json`): pass,
+  single **98.3%**, multi **85.4 / 75.0**, copy **60.0 / 66.0**, safety
+  **40/40**, self-harm **16/16**, content ratio **0.844**.
+- 200-row `multi_turn_v3` (`research/results/multi_v3_12l_j.json`): final
+  **82.0%**, both **74.5%**, turn **85.25%** vs 2.0.0 **87.5 / 77.5 / 88.5**.
+  Refusals: **56/400** turns vs base **35/400**. The 48-row both-turns gain was
+  small-sample noise; the larger set regresses and over-refuses.
+- Coherence audit: 12L **95.0% flagged** vs base **82.5%** on the same 200-row
+  diagnostic; the audit is blunt (both high), so the refusal counts and the
+  qualitative samples are the primary evidence. Samples include an identity
+  question answered with a Python `def` explanation and a benign offline
+  question answered with a security refusal.
+- Decision: **reject 12L J; keep 2.2.0**. Do not promote on the 48-row multi
+  suite; 200 rows is the bar. A 12L run on the KV4s+context mix remains
+  optional, but the multi regression and over-refusal must be explained first.
+- Optional next model branch: 12L on `mixed_benign_k3_7b_kv4s_context`
+  (16,316 rows, cache `data/pretok/mixed_benign_k3_7b_kv4s_context`), but it
+  must explain the 200-row multi regression before any promotion.
+- Coherence tool note: `diagnose_multiturn.py --out X.txt` overwrites the text
+  with JSON; pass `--out X.json` so the dialogue text is `X.txt`.
+
+## Medium 2.2.0
+
+Unpublished: the 24-hour limit was active and the editor returned "cannot save
+your story". Publish manually when the limit is open; do not backfill 2.0.0 or
+2.1.0. Text: `C:\Users\biris\AppData\Local\Temp\opencode\medium_220.md`.
 
 # Previous session - 2.2.0 released
 
