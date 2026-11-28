@@ -372,17 +372,20 @@ ModelScope, GitHub release + assets, dev.to).
    product path.** Do not ship a model arithmetic claim without a held-out
    rule test.
 2. **Copy is tool-covered.** The deterministic copy tool scores 1.0 exact on
-   the 200-row set; the model-only 63.0% is one seed against a 54.5-60.0
+   the 200-row set; the model-only 62.5% is one seed against a 54.5-60.0
    three-seed range. Do not chase copy without a seed-controlled gain.
-3. **Multi-turn routing is parked.** The larger 200-row open-ended eval shows
-   the dialogue adapter at final 88.5% vs base 87.5%, but both-turns 73.0% vs
-   77.5%. The gain does not justify routing; keep the 2.1.0 path.
-4. **Next model-side candidate:** a 12L middle ground or a coherence audit of
-   the 200-row multi-turn set, with full gates and seed control.
-5. **Teacher distillation:** retry only on a host with verified Hugging Face
+3. **Identity weights are closed.** v1/v2/v3/mix all failed (underfit,
+   over-triggering, or creator loss); keep the runtime `identity_tool`.
+4. **ARC-AGI-1 baseline (new branch):** a CPU DSL search solves **12/400
+   training (3.0%)** and **1/400 evaluation (0.25%)**. Next: larger DSL/search
+   or per-task test-time training with a small grid model. Separate from the
+   chat product.
+5. **Next chat model candidate:** a larger mixed-data model or a coherence
+   branch, with full gates and seed control before any 2.5.0 release.
+6. **Teacher distillation:** retry only on a host with verified Hugging Face
    download speed (>=50 MB/s) or a preloaded Qwen image; otherwise use the
    synthetic labeled data.
-6. Do **not** repeat 24L, cw3, MT-chain, self-teacher-replacement, soup, the
+7. Do **not** repeat 24L, cw3, MT-chain, self-teacher-replacement, soup, the
    opener arm or the full-safety-overrefusal variants; each is measured and
    rejected.
 
