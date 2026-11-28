@@ -139,22 +139,25 @@ variant beat J on the full profile, so the default did not change.
 ## Published surfaces
 
 - PyPI: <https://pypi.org/project/atomzero/2.1.0/> (live)
+- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v2.1.0>
+  (wheel + sdist assets attached)
 - Hugging Face default: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
   (card/config 2.1.0, weights 1.2.0 verified)
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-63m-balanced>
   (card 2.1.0 verified)
 - ModelScope Studio: 2.1.0, L-7781 verified
-- GitHub release: pending a write-capable token; commit `8e32519` is ready
-  locally with tag `v2.1.0`.
-- dev.to, Medium, LinkedIn, X: 2.1.0 posts pending after the GitHub release
-  (no edits to older posts).
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-210-exact-budget-and-time-answers-still-63m-and-offline-18e8>
+- LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7532262926141779968/>
+- X: <https://x.com/aigokhan/status/2126498628956983641>
+- Medium: 2.1.0 article ready; the 24-hour limit is still active (latest post
+  10 h old). Publish in the next window, no backfill.
 - Reddit: **not used anymore**. Reddit filters remove posts; do not post or reply there. The existing profile/post stay as history only.
 - Live demo: <https://modelscope.cn/studios/byjameson/atomzerodemo> (scoped document QA; synthetic corpus)
 
 Verification: VM **1780 tests passed**; benchmark **20/20**; product suite
-**pass**; server suite **21/21**; routed context **82.5%**; self-harm **16/16**.
-`verify_release.py --version 2.1.0`: PyPI/HF/ModelScope pass; GitHub 404 until
-the release push.
+**pass**; server suite **21/21**; routed context **82.5%**; self-harm **16/16**;
+`verify_release.py --version 2.1.0` reports **0 failures** (PyPI, HF,
+ModelScope, GitHub release + assets, dev.to).
 
 ## Next levers
 
