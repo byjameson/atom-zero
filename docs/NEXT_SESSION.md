@@ -42,6 +42,23 @@ instance is running.
   benign prompts that currently trigger self-harm/wrongdoing refusals, using
   held-out prompts and the new relevance audit. Target: first-turn refusals
   halved, single >= 97, copy >= 60, self-harm 16/16, safety 40/40.
+  `data/spillover_v1`: 180 train / 280 eval, 12 families, no overlap with
+  `multi_turn_v3`; base 2.0.0 useful **92.86%**, refusal **5.71%** (identity 6,
+  coding 4, planning 4). Adapter `checkpoints/adapters_spillover_v1`: 800 steps,
+  rank 4, alpha 8, lr 5e-5, 50% replay. Gate on spillover refusal, 200-row
+  multi refusals/zero-overlap, single/copy/safety/self-harm.
+  **Spillover eval after adapter: refusal 0.0% (0/280), useful 99.29%** on the
+  held-out set. Full gates running on
+  `checkpoints/atom-zero-63m-2.3.0-spillover`.
+  **200-row multi:** final **87.0**, both **82.0**, turn **91.0**; refusals
+  **10/400 (2.5%)** vs base 35; first-turn 10, second-turn 0. But zero-overlap
+  **42.5%** (base 34.75%) and **23 empty second-turn replies** (new failure
+  mode), plus 3 short. Product suite + self-harm were **not run** (stopped for
+  shutdown); they are the next gate. Checkpoint is ready at
+  `checkpoints/atom-zero-63m-2.3.0-spillover`.
+  Before promotion: run product suite (single/copy/safety) + self-harm, inspect
+  the 23 empty replies (stop/max_new artifact?), and require single >= 97,
+  copy >= 60, safety 40/40, self-harm 16/16, both >= 80, zero-overlap <= 35%.
 - Optional next model branch: 12L on `mixed_benign_k3_7b_kv4s_context`
   (16,316 rows, cache `data/pretok/mixed_benign_k3_7b_kv4s_context`), but it
   must explain the 200-row multi regression before any promotion.
