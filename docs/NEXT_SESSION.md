@@ -164,9 +164,9 @@ ModelScope, GitHub release + assets, dev.to).
 1. **Model-side arithmetic remains research; the runtime checker is the
    product path.** Do not ship a model arithmetic claim without a held-out
    rule test.
-2. **Larger multi-turn eval.** The 4-turn dialogue adapter improves dialogue
-   recall but the current multi-turn set is only 48 rows. Build a 200-row
-   held-out set before any routing claim.
+2. **Multi-turn routing is parked.** The larger 200-row open-ended eval shows
+   the dialogue adapter at final 88.5% vs base 87.5%, but both-turns 73.0% vs
+   77.5%. The gain does not justify routing; keep the 2.1.0 path.
 3. **Teacher distillation:** retry only on a host with verified Hugging Face
    download speed (>=50 MB/s) or a preloaded Qwen image; otherwise use the
    synthetic labeled data.
