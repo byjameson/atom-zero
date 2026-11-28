@@ -21,15 +21,34 @@ instance is running.
   qualitative samples are the primary evidence. Samples include an identity
   question answered with a Python `def` explanation and a benign offline
   question answered with a security refusal.
-- Decision: **reject 12L J; keep 2.2.0**. Do not promote on the 48-row multi
-  suite; 200 rows is the bar. A 12L run on the KV4s+context mix remains
-  optional, but the multi regression and over-refusal must be explained first.
+- **12L KV4s+context** (`checkpoints/mixed12_kv4s_context_s71`): full FT on
+  the 16,316-row mix, 3,000 steps. Copy exact **45.0%** -> rejected without
+  further gates.
+- Decision: **reject both 12L runs; keep 2.2.0**. Do not promote on the 48-row
+  multi suite; 200 rows is the bar.
+
+## 1.9.0 trade-off (no 2.3.0)
+
+- 200-row multi: final **97.0%**, both **81.5%**, turn **90.75%** vs 2.0.0
+  **87.5 / 77.5 / 88.5**; first-turn refusals **30** vs 19, zero-overlap
+  **39.0%** vs 34.75%.
+- Full gates: pass; single **94.17%**, copy **59.5%** (key 70.0), safety
+  **40/40**, self-harm **16/16**, content ratio 0.770, routed context **100%**
+  with tools.
+- Trade-off vs 2.2.0: multi +10.4/+10.5 on 48 rows and +9.5/+4.0 on 200, but
+  single -3.3, copy -3.5, first-turn refusals worse. Not a clear win ->
+  **no 2.3.0**; 2.2.0 stays.
+- Next branch: **spillover-contrast** adapter on 2.0.0 (or 1.9.0) targeting
+  benign prompts that currently trigger self-harm/wrongdoing refusals, using
+  held-out prompts and the new relevance audit. Target: first-turn refusals
+  halved, single >= 97, copy >= 60, self-harm 16/16, safety 40/40.
 - Optional next model branch: 12L on `mixed_benign_k3_7b_kv4s_context`
   (16,316 rows, cache `data/pretok/mixed_benign_k3_7b_kv4s_context`), but it
   must explain the 200-row multi regression before any promotion.
-  **Running now:** `checkpoints/mixed12_kv4s_context_s71`, 3,000 steps,
-  lr 5e-5, batch 4. Gate it on the 200-row multi set, copy, single, safety,
-  self-harm and refusal counts; reject on any multi/refusal regression.
+  **Result: rejected.** `checkpoints/mixed12_kv4s_context_s71` finished with
+  copy exact **45.0%** (2.0.0: 63.0), below the 55% bar; no further gates.
+  Full fine-tuning the 12L base on the 16k mix disrupts copy more than the J
+  mix (60.0). Keep 2.2.0.
 - Coherence tool note: `diagnose_multiturn.py --out X.txt` overwrites the text
   with JSON; pass `--out X.json` so the dialogue text is `X.txt`.
 
