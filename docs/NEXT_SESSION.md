@@ -76,20 +76,26 @@ No training is running; no Vast.ai instance is running. The runtime
   identity replies. The weights-identity branch is **closed**; keep
   `identity_tool`.
 
-## Single-turn recovery: 2.4.0 candidate
+## 2.4.0 released: single-turn recovery
 
-- 2.3.0 single-turn was 95.0% (114/120); failures were mostly short
-  greeting/thanks replies, one identity (tool-covered), one calendar refusal.
 - `data/single_fix_v1`: 60 train / 21 eval **new** greetings, thanks, calendar
   and identity prompts (no benign_v2 eval prompts), replies >= 8 words.
 - Adapter `checkpoints/adapters_single_fix_v1`: 600 steps, rank 4, lr 3e-5,
-  75% replay on spillover-v2.
-- **Result (promote):** single **97.5%**, copy **62.5%**, safety **40/40**,
-  self-harm **16/16**, content **0.693**, 48-row multi 91.67 / 72.92; 200-row
-  multi **91.0 / 83.0**, refusals 5.5%, zero-overlap **32.75%** (2.3.0:
-  33.75). Every release gate holds.
-- Next: version 2.4.0 / weights 1.4.0, VM tests, stage/publish, ModelScope
-  retry (skip if it stalls again), new posts; no Medium until the user says so.
+  75% replay on spillover-v2; merged into
+  `checkpoints/atom-zero-63m-2.4.0-single-fix` (weights **1.4.0**).
+- **Result:** single **97.5%**, copy **62.5%**, safety **40/40**, self-harm
+  **16/16**, content **0.693**, 48-row multi 91.67 / 72.92; 200-row multi
+  **91.0 / 83.0**, refusals 5.5%, zero-overlap **32.75%**.
+- Published: PyPI 2.4.0, HF card/config 2.4.0, GitHub release `v2.4.0` +
+  assets, Studio 2.4.0, dev.to
+  <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-240-single-turn-recovered-multi-turn-improved-27jb>,
+  LinkedIn
+  <https://www.linkedin.com/feed/update/urn:li:activity:7532408369098346496/>,
+  X <https://x.com/aigokhan/status/2126642851857519041>.
+- VM **1814 tests**, benchmark 20/20.
+- ModelScope: bounded 15-minute upload attempt; skip per the user rule if it
+  does not finish (254 MB over a slow home uplink). Medium: no publishing or
+  scheduling until the user says so.
 
 ## 2.3.0 released: spillover-v2 + runtime identity tool
 
