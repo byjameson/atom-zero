@@ -161,12 +161,12 @@ ModelScope, GitHub release + assets, dev.to).
 
 ## Next levers
 
-1. **Model-side arithmetic is research, not a release claim.** The tokenizer
-   splits numbers inconsistently; try a digit-spaced input normalization and a
-   larger decision set, and require >=85% on unseen phrasings before shipping.
-2. **Dialogue adapter routing stays parked.** The 4-turn adapter improves
-   dialogue recall but the multi-turn eval is only 48 rows; a larger held-out
-   set is required before any routing claim.
+1. **Model-side arithmetic remains research; the runtime checker is the
+   product path.** Do not ship a model arithmetic claim without a held-out
+   rule test.
+2. **Larger multi-turn eval.** The 4-turn dialogue adapter improves dialogue
+   recall but the current multi-turn set is only 48 rows. Build a 200-row
+   held-out set before any routing claim.
 3. **Teacher distillation:** retry only on a host with verified Hugging Face
    download speed (>=50 MB/s) or a preloaded Qwen image; otherwise use the
    synthetic labeled data.
