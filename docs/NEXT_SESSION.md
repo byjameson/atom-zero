@@ -153,9 +153,10 @@ variant beat J on the full profile, so the default did not change.
 - Reddit: **not used anymore**. Reddit filters remove posts; do not post or reply there. The existing profile/post stay as history only.
 - Live demo: <https://modelscope.cn/studios/byjameson/atomzerodemo> (scoped document QA; synthetic corpus)
 
-Verification: VM **1780 tests passed**; benchmark **20/20**; product suite
-**pass**; server suite **21/21**; routed context **82.5%**; self-harm **16/16**;
-`verify_release.py --version 2.1.0` reports **0 failures** (PyPI, HF,
+Verification: VM **1803 tests passed**; benchmark **20/20**; product suite
+**pass**; server suite **21/21**; routed context **100%** (200/200); natural
+held-out **100%** (276/276); self-harm **16/16**;
+`verify_release.py --version 2.2.0` reports **0 failures** (PyPI, HF,
 ModelScope, GitHub release + assets, dev.to).
 
 ## Next levers
