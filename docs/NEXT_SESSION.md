@@ -54,6 +54,12 @@ No training is running; no Vast.ai instance is running. The runtime
   Future identity-weights branch: contrastive rows (limitation/offline/
   capability questions with full answers) so the model does not answer every
   identity-adjacent question with its name.
+  **Identity v3 (contrast) also rejected:** 1,200 steps, 120 rows, 50% replay.
+  Contrast eval **55%** but the original identity eval fell to **26.3%**
+  (creator **0/17**, name 10/14); the adapter traded creator facts for
+  adjacent answers. The 63M LoRA cannot hold both with 120 rows. Keep the
+  runtime `identity_tool`; do not attempt another weights-only identity
+  adapter without a much larger mixed dataset and a dedicated identity gate.
 
 ## 2.3.0 released: spillover-v2 + runtime identity tool
 
@@ -72,9 +78,11 @@ No training is running; no Vast.ai instance is running. The runtime
   LinkedIn
   <https://www.linkedin.com/feed/update/urn:li:activity:7532383623811948544/>,
   X <https://x.com/aigokhan/status/2126618148271194231>.
-- **ModelScope upload is still running** (254 MB LFS). Verify it when the
-  background upload finishes; if it stalls, re-run
-  `python research/publish_230.py ms`.
+- **ModelScope upload is still running** (254 MB LFS over a ~0.4 Mbps home
+  uplink; the first attempt hit the 30-minute shell timeout and was restarted
+  with a 2-hour timeout). Verify it when the background upload finishes; if it
+  stalls, re-run `python research/publish_230.py ms` or upload from a Vast
+  instance.
 - **Medium: do not publish or schedule anything** (user instruction,
   2026-11-28). No automation is active. The 2.3.0 text is at
   `C:\Users\biris\AppData\Local\Temp\opencode\medium_230.md` for a manual
