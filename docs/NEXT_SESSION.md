@@ -60,6 +60,9 @@ No training is running; no Vast.ai instance is running. The runtime
   adjacent answers. The 63M LoRA cannot hold both with 120 rows. Keep the
   runtime `identity_tool`; do not attempt another weights-only identity
   adapter without a much larger mixed dataset and a dedicated identity gate.
+  **Identity mix v1 (400 train / 91 eval) also rejected:** identity **81.6%**
+  (creator 14/17, name 12/14), contrast **72.5%** (memory 0/3, source 1/2);
+  better than v3 but below the 95 identity bar. Runtime tool stays.
 
 ## 2.3.0 released: spillover-v2 + runtime identity tool
 
@@ -78,11 +81,13 @@ No training is running; no Vast.ai instance is running. The runtime
   LinkedIn
   <https://www.linkedin.com/feed/update/urn:li:activity:7532383623811948544/>,
   X <https://x.com/aigokhan/status/2126618148271194231>.
-- **ModelScope upload is still running** (254 MB LFS over a ~0.4 Mbps home
-  uplink; the first attempt hit the 30-minute shell timeout and was restarted
-  with a 2-hour timeout). Verify it when the background upload finishes; if it
-  stalls, re-run `python research/publish_230.py ms` or upload from a Vast
-  instance.
+- **ModelScope 2.3.0 skipped.** The 254 MB LFS upload ran at ~40-50 KB/s
+  over the home uplink (14% after ~14 minutes); the 30-minute shell timeout
+  killed it, a 2-hour retry was started, and a Vast upload attempt failed on
+  SSH key authorization. Per the user's rule, a surface that cannot be
+  uploaded is skipped for this version and retried with the next one. No
+  Vast instance remains. `verify_release.py --version 2.3.0` therefore reports
+  one expected ModelScope failure; all other surfaces pass.
 - **Medium: do not publish or schedule anything** (user instruction,
   2026-11-28). No automation is active. The 2.3.0 text is at
   `C:\Users\biris\AppData\Local\Temp\opencode\medium_230.md` for a manual
