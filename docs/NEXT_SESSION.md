@@ -27,6 +27,9 @@ instance is running.
 - Optional next model branch: 12L on `mixed_benign_k3_7b_kv4s_context`
   (16,316 rows, cache `data/pretok/mixed_benign_k3_7b_kv4s_context`), but it
   must explain the 200-row multi regression before any promotion.
+  **Running now:** `checkpoints/mixed12_kv4s_context_s71`, 3,000 steps,
+  lr 5e-5, batch 4. Gate it on the 200-row multi set, copy, single, safety,
+  self-harm and refusal counts; reject on any multi/refusal regression.
 - Coherence tool note: `diagnose_multiturn.py --out X.txt` overwrites the text
   with JSON; pass `--out X.json` so the dialogue text is `X.txt`.
 
