@@ -1,41 +1,41 @@
 # Atom Zero 63M model card
 
-Version: model weights `1.2.0`; standalone `atomzero 2.2.0`<br>
+Version: model weights `1.3.0`; standalone `atomzero 2.3.0`<br>
 Last updated: 2026-11-28
 License: Apache-2.0 for code and weights; data attribution in `NOTICE`.
 
 ```powershell
-pip install atomzero==2.2.0
+pip install atomzero==2.3.0
 atomzero-quickstart
 ```
 
 The first run downloads the ~254 MB checkpoint/tokenizer from Hugging Face,
 seeds a demo corpus and opens the local UI.
 
-## What's new in 2.2.0
+## What's new in 2.3.0
 
-- 2.2.0 adds a **deterministic recall checker** next to the 2.1.0 budget/time checker. Explicit questions about a name, city, language, preference, weekday or pet are answered from the facts stated earlier in the conversation, exactly.
-- Routed context on the 200 held-out context pairs reaches **100%** (2.1.0: 82.5%, 2.0.0: 65.0%): all eight families are **25/25**.
-- On 276 natural held-out phrasings the routed assistant scores **100%** (2.1.0: 91.3%, 2.0.0: 48.2%).
-- The tools trigger on **0/168** benign prompts and **0/16** self-harm prompts, so ordinary chat and crisis handling keep the model path.
-- Model-only context remains **65.0%**; the routed number describes the product path, where exact facts and arithmetic come from tools and the model keeps wording, copy, RAG and safety.
-- Product profile: **97.5% benign single-turn**, **83.3% / 58.3% multi-turn**, **63.0% 4-key copy** (fresh unseen **75.0%**), **40/40 safety**, **16/16 self-harm**, 100% RAG.
-- Weights are unchanged (`1.2.0`). Recall and arithmetic are runtime tools, not model capabilities; the model card says so explicitly.
+- 2.3.0 is the first post-2.0.0 **weights** improvement: a spillover-contrast adapter reduces false self-harm/wrongdoing refusals on benign trigger prompts (cooking “cut”, coding “kill a process”, planning, support).
+- On 200 open-ended multi-turn rows: final **91.0%**, both turns **81.5%**, turn **90.75%** (2.2.0: 87.5 / 77.5 / 88.5). Refusals fall **35 -> 24 per 400 turns (8.75% -> 6.0%)**; topic drift is **33.75%** (2.2.0: 34.75%).
+- Held-out spillover set: refusal **5.71% -> 2.5%**, useful **92.86% -> 96.79%**.
+- Product profile: **95.0% benign single-turn**, **91.7% / 68.8% multi-turn** on the 48-row suite, **62.0% 4-key copy** (key 71.5), **40/40 safety**, **16/16 self-harm**, content ratio **0.694** (2.2.0: 0.700).
+- 2.3.0 also adds a deterministic **identity checker**: “What is your name?” -> “I am Atom Zero, a local assistant created by Gökhan Çava.”; creator and project questions are answered exactly. This is a runtime tool; the weights do not yet store the creator fact.
+- Budget/time (`numeric_tool`) and conversation recall (`recall_tool`) are unchanged; routed context stays **100%** (200/200).
+- Trade-off: single-turn 97.5% -> 95.0% (still above the 94% bar) and copy 63.0% -> 62.0% (within seed noise).
 
-### Previous: 2.1.0
+### Previous: 2.2.0
 
-2.1.0 added the budget/time checker and lifted routed context 65.0% -> 82.5% (budget 4/25 -> 25/25, time 11/25 -> 25/25) with 91.3% on 276 natural phrasings. Weights were unchanged.
+2.2.0 added the recall checker and reached 100% routed context and 100% on 276 natural phrasings with unchanged weights.
 
-### What you can do with 2.2.0
+### What you can do with 2.3.0
 
-- **Recall what you told it:** “My name is Ada.” then “What is my name?” — “Ada.”; “I live in Izmir.” then “Which city do I live in?” — “Izmir.”; “Today is Sunday.” then “What day is tomorrow?” — “Tomorrow is Monday.”
-- **Correct a preference or language:** “I prefer coffee over water.” then “What do I prefer?” — “coffee.”; “Use Java for this project.” then “Actually, use Go. Which language are we using?” — “Go.”
-- **Check a purchase against a budget:** “My budget is $500.” then “Can I spend $300?” — “Yes, $300 is within your $500 budget.” Ask about $650 — “No, $650 is over your $500 budget by $150.”
+- **Ask who it is:** “What is your name?” — “I am Atom Zero, a local assistant created by Gökhan Çava.”; “Who created you?” — “Atom Zero was created by Gökhan Çava.”
+- **Ask benign trigger questions safely:** “How do I kill a background process?”, “What is the safest way to cut an onion?”, “How do I handle a damaged delivery?” — helpful answers instead of a security/self-harm refusal.
+- **Recall what you told it:** “My name is Ada.” then “What is my name?” — “Ada.”; “Today is Sunday.” then “What day is tomorrow?” — “Tomorrow is Monday.”
+- **Check a purchase against a budget:** “My budget is $500.” then “Can I spend $300?” — “Yes, $300 is within your $500 budget.”
 - **Check a task against a time window:** “I have 45 minutes.” then “Can I do a 60-minute task?” — “No, a 60-minute task is 15 minutes over your 45-minute window.”
-- **Structured copying:** reproduce 4-key JSON or KV records exactly (63.0% on the seen set, 75.0% on fresh unseen records).
+- **Structured copying:** reproduce 4-key JSON or KV records exactly (62.0% on the seen set).
 - **Local document QA:** ask about a file you ingested and get a cited answer; the Studio demo answers “What is the launch code?” with **L-7781** and `launch_policy.txt`.
 - **Offline use:** 63M parameters, CPU or a small GPU, Apache-2.0; facts stay in the local RAG index, not in the weights.
-- **Safety-aware conversation:** crisis prompts get a supportive refusal, while ordinary “how do I support a friend?” questions still get practical help.
 - **No telemetry:** localhost by default; documents, sessions and memory stay on your machine.
 
 ![Atom Zero architecture](https://raw.githubusercontent.com/byjameson/atom-zero/main/docs/figures/atomzero_architecture.png)
@@ -55,7 +55,7 @@ benchmarks and release — is
 | training | 49.2M base upcycled to 8 layers / 63.4M; 3,000-step mixed fine-tune; 49.2M 40k product checkpoint remains the fallback |
 | RAG | SQLite FTS5, hashed/MiniLM embeddings, hybrid candidates, lexical+cosine rerank |
 | vector index | cached `doc_vectors`, prewarmed numpy matrix, IVF ANN above 256 chunks, exact fallback |
-| tools | time, safe arithmetic, deterministic budget/time checker (`numeric_tool`), deterministic recall checker (`recall_tool`), task add/list/complete, name/likes memory, allowlisted 3-step plan API with confirmation |
+| tools | time, safe arithmetic, deterministic budget/time checker (`numeric_tool`), deterministic recall (`recall_tool`), deterministic identity (`identity_tool`), task add/list/complete, name/likes memory, allowlisted 3-step plan API with confirmation |
 | sessions | transcript restore, JSON export/import, exact Forget, session Forget |
 | documents | ingest text/Markdown/HTML/PDF/DOCX, page/section citations, evidence panel/API, source/title/sha256, scoped answers, exact-code retrieval, extractive source/collection summaries, headless `atomzero-docs` CLI with sync/status/doctor/export/import, second brain graph, per-source delete |
 | research | approved-only queue, Wikipedia fetch, worker lock/log, teacher synthesis |
@@ -243,9 +243,9 @@ Evidence lives in `research/results/` and
 
 ## Published artifacts
 
-- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v2.2.0>
+- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v2.3.0>
 - GitHub source: <https://github.com/byjameson/atom-zero>
-- Atom Zero PyPI: <https://pypi.org/project/atomzero/2.2.0/>
+- Atom Zero PyPI: <https://pypi.org/project/atomzero/2.3.0/>
 - Hugging Face: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-63m-balanced>
 - Live demo: <https://modelscope.cn/studios/byjameson/atomzerodemo>

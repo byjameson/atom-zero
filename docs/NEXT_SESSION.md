@@ -21,20 +21,50 @@ No training is running; no Vast.ai instance is running. The runtime
 - Do not ship the weights change without the full product/context/self-harm
   gates on the VM.
 
-## Spillover adapter (partial gates, resume here)
+## Spillover adapter v2: 2.3.0 candidate
 
-- `checkpoints/atom-zero-63m-2.3.0-spillover`: adapter `adapters_spillover_v1`
-  merged into 2.0.0.
-- Held-out spillover: refusal **0.0% (0/280)**, useful **99.29%** (base:
-  5.71% / 92.86%).
-- 200-row multi: final **87.0**, both **82.0**, turn **91.0**; refusals
-  **10/400 (2.5%)** vs base 35; first-turn 10, second-turn 0. But zero-overlap
-  **42.5%** (base 34.75%) and **23 empty second-turn replies** (new failure
-  mode) plus 3 short.
-- **Product suite + self-harm were not run** (stopped for shutdown). Next:
-  `product_suite` + `_probe_selfharm`; inspect the 23 empties
-  (stop/max_new artifact?) and require single >=97, copy >=60, safety 40/40,
-  self-harm 16/16, both >=80, zero-overlap <=35.
+- `checkpoints/atom-zero-63m-2.3.0-spillover-v2`: `adapters_spillover_v2`
+  merged into 2.0.0 (600 steps, 75% replay, lr 3e-5, rank 4).
+- Held-out spillover: refusal **2.5%** (base 5.71%), useful **96.79%**.
+- 200-row multi: final **91.0**, both **81.5**, turn **90.75**; refusals
+  **24/400 (6.0%)** vs base 35; zero-overlap **33.75%** vs 34.75%; empties 2
+  (vs 0), short 52 (vs 38).
+- Product suite: **pass**; single **95.0%** (>=94), copy **62.0%** (key 71.5),
+  safety **40/40**, self-harm **16/16**, content ratio **0.694** (2.0.0: 0.700),
+  multi 91.67 / 68.75 on the 48-row set.
+- Net: multi +3.5/+4.0 on 200 rows, refusals -2.75 pp, retention slightly
+  better; single -2.5 (still >=94), copy -1.0 (within seed noise).
+  **Promote as 2.3.0 candidate if the identity add-on and VM gates hold.**
+- Next: train identity LoRA on top of this checkpoint
+  (`data/identity_v1`, 200 train / 38 held-out), gate identity >=95 plus
+  single/copy/safety/self-harm/multi; if it regresses, ship spillover-v2 with
+  the runtime `identity_tool` and keep identity weights for a later pass.
+  **Identity v1 failed:** 600 steps, lr 3e-5, rank 4 -> held-out 0%, train
+  name 3.6%, project 0%; underfit (eval loss 3.10, train loss 2.55). The merge
+  is fine; the adapter did not learn the facts. **v2 running:** 1,600 steps,
+  lr 1e-4, rank 8/alpha 16, 25% replay, on the spillover-v2 checkpoint.
+  **Identity v2 result: rejected.** Held-out identity **~92%** (name 14/14,
+  creator 15/17, project 5/6) and direct answers are correct, but the adapter
+  **over-triggers**: identity-category follow-ups such as "What is the main
+  limitation?" and "Does it work offline?" get "I am Atom Zero." / "Atom Zero."
+  (200-row zero-overlap 43.5% vs 33.75% for spillover-v2). The word-count
+  multi metric rises to 94.5 / 85.0, but the replies are shallow. Keep the
+  conservative runtime `identity_tool`; do not put identity in the weights
+  with this recipe.
+  Future identity-weights branch: contrastive rows (limitation/offline/
+  capability questions with full answers) so the model does not answer every
+  identity-adjacent question with its name.
+
+## 2.3.0 candidate: spillover-v2 + runtime identity tool
+
+- Weights: `checkpoints/atom-zero-63m-2.3.0-spillover-v2` (spillover adapter
+  merged into 2.0.0; weights version -> 1.3.0).
+- Code: runtime `identity_tool` (already committed), numeric/recall tools.
+- Profile: single 95.0, copy 62.0, multi 200 **91.0 / 81.5**, refusals 6.0%,
+  spillover refusal 2.5%, safety 40/40, self-harm 16/16, content 0.694,
+  routed context 100% via tools.
+- Next: VM tests, routed context check, stage/publish 2.3.0, new social posts;
+  Medium should publish **2.3.0** when the limit opens (no 2.2.0 backfill).
 
 # Previous session - 12L rejected, 2.2.0 stays
 

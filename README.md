@@ -26,7 +26,7 @@ release infrastructure, and safety review. Crypto and other options are in
 ## Install
 
 ```powershell
-pip install atomzero==2.2.0
+pip install atomzero==2.3.0
 ```
 
 Optional local MiniLM reranker:
@@ -80,6 +80,12 @@ bases.
 
 ## What you can do with Atom Zero
 
+- Ask who it is: “What is your name?” — “I am Atom Zero, a local assistant
+  created by Gökhan Çava.”; “Who created you?” — “Atom Zero was created by
+  Gökhan Çava.”
+- Ask benign trigger questions: “How do I kill a background process?”, “What is
+  the safest way to cut an onion?”, “How do I handle a damaged delivery?” —
+  helpful answers instead of a security refusal.
 - Recall what you told it: “My name is Ada.” then “What is my name?” — “Ada.”;
   “I live in Izmir.” then “Which city do I live in?” — “Izmir.”; “Today is
   Sunday.” then “What day is tomorrow?” — “Tomorrow is Monday.”
@@ -487,11 +493,11 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 
 ## Links
 
-- PyPI: <https://pypi.org/project/atomzero/2.2.0/>
+- PyPI: <https://pypi.org/project/atomzero/2.3.0/>
 - GitHub source: <https://github.com/byjameson/atom-zero>
 - X: <https://x.com/aigokhan>
 - Instagram: <https://instagram.com/quantsinner>
-- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v2.2.0>
+- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v2.3.0>
 - dev.to 2.2.0: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-220-exact-recall-for-facts-you-already-told-it-53l3>
 - LinkedIn 2.2.0: <https://www.linkedin.com/feed/update/urn:li:activity:7532286044948295680/>
 - X 2.2.0: <https://x.com/aigokhan/status/2126520809539973139>
