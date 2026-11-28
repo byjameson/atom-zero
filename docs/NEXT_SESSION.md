@@ -63,6 +63,33 @@ No training is running; no Vast.ai instance is running. The runtime
   **Identity mix v1 (400 train / 91 eval) also rejected:** identity **81.6%**
   (creator 14/17, name 12/14), contrast **72.5%** (memory 0/3, source 1/2);
   better than v3 but below the 95 identity bar. Runtime tool stays.
+  **Identity mix v2 running:** 1,300 train / 309 eval paraphrases, rank 16,
+  3,000 steps, 50% replay on spillover-v2. Gate: identity >=95, contrast >=85,
+  200-row multi both >=80, zero-overlap <=35, single >=94, copy >=60,
+  safety 40/40, self-harm 16/16. If it fails, close the weights-identity
+  branch and keep `identity_tool`.
+  **Mix v2 result:** identity **94.74%** (36/38), contrast **92.5%** (37/40);
+  near the bar. Full multi/product/self-harm gates running on
+  `checkpoints/atom-zero-63m-2.4.0-identity-mix-v2`.
+  **Mix v2 rejected:** 200-row multi 92.5 / 86.5 but zero-overlap **54%**
+  (base 33.75%), refusals 4.5%; the word-count metric was inflated by shallow
+  identity replies. The weights-identity branch is **closed**; keep
+  `identity_tool`.
+
+## Single-turn recovery: 2.4.0 candidate
+
+- 2.3.0 single-turn was 95.0% (114/120); failures were mostly short
+  greeting/thanks replies, one identity (tool-covered), one calendar refusal.
+- `data/single_fix_v1`: 60 train / 21 eval **new** greetings, thanks, calendar
+  and identity prompts (no benign_v2 eval prompts), replies >= 8 words.
+- Adapter `checkpoints/adapters_single_fix_v1`: 600 steps, rank 4, lr 3e-5,
+  75% replay on spillover-v2.
+- **Result (promote):** single **97.5%**, copy **62.5%**, safety **40/40**,
+  self-harm **16/16**, content **0.693**, 48-row multi 91.67 / 72.92; 200-row
+  multi **91.0 / 83.0**, refusals 5.5%, zero-overlap **32.75%** (2.3.0:
+  33.75). Every release gate holds.
+- Next: version 2.4.0 / weights 1.4.0, VM tests, stage/publish, ModelScope
+  retry (skip if it stalls again), new posts; no Medium until the user says so.
 
 ## 2.3.0 released: spillover-v2 + runtime identity tool
 

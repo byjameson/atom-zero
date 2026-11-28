@@ -1,39 +1,39 @@
 # Atom Zero 63M model card
 
-Version: model weights `1.3.0`; standalone `atomzero 2.3.0`<br>
+Version: model weights `1.4.0`; standalone `atomzero 2.4.0`<br>
 Last updated: 2026-11-28
 License: Apache-2.0 for code and weights; data attribution in `NOTICE`.
 
 ```powershell
-pip install atomzero==2.3.0
+pip install atomzero==2.4.0
 atomzero-quickstart
 ```
 
 The first run downloads the ~254 MB checkpoint/tokenizer from Hugging Face,
 seeds a demo corpus and opens the local UI.
 
-## What's new in 2.3.0
+## What's new in 2.4.0
 
-- 2.3.0 is the first post-2.0.0 **weights** improvement: a spillover-contrast adapter reduces false self-harm/wrongdoing refusals on benign trigger prompts (cooking “cut”, coding “kill a process”, planning, support).
-- On 200 open-ended multi-turn rows: final **91.0%**, both turns **81.5%**, turn **90.75%** (2.2.0: 87.5 / 77.5 / 88.5). Refusals fall **35 -> 24 per 400 turns (8.75% -> 6.0%)**; topic drift is **33.75%** (2.2.0: 34.75%).
-- Held-out spillover set: refusal **5.71% -> 2.5%**, useful **92.86% -> 96.79%**.
-- Product profile: **95.0% benign single-turn**, **91.7% / 68.8% multi-turn** on the 48-row suite, **62.0% 4-key copy** (key 71.5), **40/40 safety**, **16/16 self-harm**, content ratio **0.694** (2.2.0: 0.700).
-- 2.3.0 also adds a deterministic **identity checker**: “What is your name?” -> “I am Atom Zero, a local assistant created by Gökhan Çava.”; creator and project questions are answered exactly. This is a runtime tool; the weights do not yet store the creator fact.
-- Budget/time (`numeric_tool`) and conversation recall (`recall_tool`) are unchanged; routed context stays **100%** (200/200).
-- Trade-off: single-turn 97.5% -> 95.0% (still above the 94% bar) and copy 63.0% -> 62.0% (within seed noise).
+- 2.4.0 recovers the single-turn profile lost in 2.3.0 with a targeted greeting/thanks/calendar fix, on top of the spillover adapter.
+- Single-turn benign rises **95.0% -> 97.5%**, back to the 2.2.0 level; 4-key copy rises **62.0% -> 62.5%**.
+- 200-row multi-turn improves to final **91.0%**, both **83.0%**, turn **91.5%**; refusals **22/400 (5.5%)**; topic drift **32.75%** (2.3.0: 33.75%).
+- Held-out spillover refusal stays **2.5%**; content ratio **0.693** (2.3.0: 0.694); safety **40/40**, self-harm **16/16**.
+- The deterministic **identity checker** from 2.3.0 is unchanged: “Who are you?” and “Who created you?” are answered exactly by the runtime tool. Weights-based identity was tested four ways and rejected (it over-triggered or lost creator accuracy).
+- Budget/time (`numeric_tool`), recall (`recall_tool`) and routed context **100%** are unchanged.
 
-### Previous: 2.2.0
+### Previous: 2.3.0
 
-2.2.0 added the recall checker and reached 100% routed context and 100% on 276 natural phrasings with unchanged weights.
+2.3.0 added the spillover adapter (weights 1.3.0) and the identity tool; it raised 200-row multi to 91.0/81.5 and cut refusals to 6.0%, at a single-turn cost to 95.0%.
 
-### What you can do with 2.3.0
+### What you can do with 2.4.0
 
 - **Ask who it is:** “What is your name?” — “I am Atom Zero, a local assistant created by Gökhan Çava.”; “Who created you?” — “Atom Zero was created by Gökhan Çava.”
+- **Greet or thank it:** “Good afternoon! How are things?” or “Thanks, that was useful.” — a complete, helpful reply instead of a two-word answer.
 - **Ask benign trigger questions safely:** “How do I kill a background process?”, “What is the safest way to cut an onion?”, “How do I handle a damaged delivery?” — helpful answers instead of a security/self-harm refusal.
 - **Recall what you told it:** “My name is Ada.” then “What is my name?” — “Ada.”; “Today is Sunday.” then “What day is tomorrow?” — “Tomorrow is Monday.”
 - **Check a purchase against a budget:** “My budget is $500.” then “Can I spend $300?” — “Yes, $300 is within your $500 budget.”
 - **Check a task against a time window:** “I have 45 minutes.” then “Can I do a 60-minute task?” — “No, a 60-minute task is 15 minutes over your 45-minute window.”
-- **Structured copying:** reproduce 4-key JSON or KV records exactly (62.0% on the seen set).
+- **Structured copying:** reproduce 4-key JSON or KV records (62.5% on the seen set; the explicit copy tool is exact).
 - **Local document QA:** ask about a file you ingested and get a cited answer; the Studio demo answers “What is the launch code?” with **L-7781** and `launch_policy.txt`.
 - **Offline use:** 63M parameters, CPU or a small GPU, Apache-2.0; facts stay in the local RAG index, not in the weights.
 - **No telemetry:** localhost by default; documents, sessions and memory stay on your machine.
