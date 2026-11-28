@@ -145,9 +145,9 @@ variant beat J on the full profile, so the default did not change.
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-63m-balanced>
   (card 2.1.0 verified)
 - ModelScope Studio: 2.1.0, L-7781 verified
-- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-210-exact-budget-and-time-answers-still-63m-and-offline-18e8>
-- LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7532262926141779968/>
-- X: <https://x.com/aigokhan/status/2126498628956983641>
+- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-220-exact-recall-for-facts-you-already-told-it-53l3>
+- LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7532286044948295680/>
+- X: <https://x.com/aigokhan/status/2126520809539973139>
 - Medium: 2.1.0 article ready; the 24-hour limit is still active (latest post
   10 h old). Publish in the next window, no backfill.
 - Reddit: **not used anymore**. Reddit filters remove posts; do not post or reply there. The existing profile/post stay as history only.
