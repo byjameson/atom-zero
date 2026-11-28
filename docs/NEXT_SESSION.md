@@ -55,16 +55,30 @@ No training is running; no Vast.ai instance is running. The runtime
   capability questions with full answers) so the model does not answer every
   identity-adjacent question with its name.
 
-## 2.3.0 candidate: spillover-v2 + runtime identity tool
+## 2.3.0 released: spillover-v2 + runtime identity tool
 
 - Weights: `checkpoints/atom-zero-63m-2.3.0-spillover-v2` (spillover adapter
-  merged into 2.0.0; weights version -> 1.3.0).
-- Code: runtime `identity_tool` (already committed), numeric/recall tools.
+  merged into 2.0.0; weights version **1.3.0**).
+- Code: runtime `identity_tool`, numeric/recall tools.
 - Profile: single 95.0, copy 62.0, multi 200 **91.0 / 81.5**, refusals 6.0%,
   spillover refusal 2.5%, safety 40/40, self-harm 16/16, content 0.694,
   routed context 100% via tools.
-- Next: VM tests, routed context check, stage/publish 2.3.0, new social posts;
-  Medium should publish **2.3.0** when the limit opens (no 2.2.0 backfill).
+- Verification: **VM 1814 tests**, benchmark 20/20, product suite pass,
+  server suite 21/21, routed context 200/200, verify_release 0 failures on
+  PyPI/HF/GitHub/dev.to.
+- Published: PyPI 2.3.0, GitHub release `v2.3.0` + wheel/sdist, HF card/config
+  2.3.0, Studio 2.3.0, dev.to
+  <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-230-knows-its-name-refuses-less-3lbe>,
+  LinkedIn
+  <https://www.linkedin.com/feed/update/urn:li:activity:7532383623811948544/>,
+  X <https://x.com/aigokhan/status/2126618148271194231>.
+- **ModelScope upload is still running** (254 MB LFS). Verify it when the
+  background upload finishes; if it stalls, re-run
+  `python research/publish_230.py ms`.
+- **Medium: do not publish or schedule anything** (user instruction,
+  2026-11-28). No automation is active. The 2.3.0 text is at
+  `C:\Users\biris\AppData\Local\Temp\opencode\medium_230.md` for a manual
+  decision later; do not backfill older versions.
 
 # Previous session - 12L rejected, 2.2.0 stays
 

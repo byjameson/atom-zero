@@ -498,9 +498,9 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 - X: <https://x.com/aigokhan>
 - Instagram: <https://instagram.com/quantsinner>
 - GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v2.3.0>
-- dev.to 2.2.0: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-220-exact-recall-for-facts-you-already-told-it-53l3>
-- LinkedIn 2.2.0: <https://www.linkedin.com/feed/update/urn:li:activity:7532286044948295680/>
-- X 2.2.0: <https://x.com/aigokhan/status/2126520809539973139>
+- dev.to 2.3.0: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-230-knows-its-name-refuses-less-3lbe>
+- LinkedIn 2.3.0: <https://www.linkedin.com/feed/update/urn:li:activity:7532383623811948544/>
+- X 2.3.0: <https://x.com/aigokhan/status/2126618148271194231>
 - Quickstart: <https://github.com/byjameson/atom-zero/blob/main/docs/QUICKSTART_ATOMZERO.md>
 - Model card: <https://github.com/byjameson/atom-zero/blob/main/docs/MODEL_CARD.md>
 - Full project map: <https://github.com/byjameson/atom-zero/blob/main/docs/PROJECT_OVERVIEW.md>
