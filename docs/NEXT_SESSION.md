@@ -1,4 +1,34 @@
-﻿# Next session - 2.2.0 released
+﻿# Next session - paused before PC shutdown
+
+Snapshot: 2026-11-28 08:22, **work paused by the user (PC shutdown)**. Current
+release **2.2.0** (weights `1.2.0`, tools `numeric_tool` + `recall_tool`).
+No training is running; no Vast.ai instance is running.
+
+## Resume here: 12L candidate
+
+- `checkpoints/upcycle/atom-zero-63m-12l`: 12 layers, 98.0M params (research).
+- `checkpoints/mixed12_j_s71`: 12L full fine-tune on `mixed_benign_j`,
+  3,000 steps, lr 5e-5, batch 4 (91.7M params).
+- Product suite (`research/results/product_suite_12l_j.json`): **pass**,
+  single **98.3%**, multi **85.4 / 75.0**, copy exact **60.0%** (key 66.0),
+  safety **40/40**, self-harm **16/16**, content ratio **0.844**.
+- Trade-off vs 2.2.0: single +0.8, both-turns **+16.7**, copy **-3.0**,
+  retention **0.700 -> 0.844**. Copy gap is within the 54.5-60.0 seed range;
+  retention is worse. Decision is open.
+- Next checks before any promotion:
+  1. `python research/multi_turn_eval_v3.py --checkpoint checkpoints/mixed12_j_s71 --device cuda --out research/results/multi_v3_12l_j.json`
+  2. `python research/diagnose_multiturn.py --checkpoint checkpoints/mixed12_j_s71 --prompts data/multi_turn_v3/eval.jsonl --out research/results/multiturn_12l_j.txt --device cuda`
+     then `python research/coherence_audit.py research/results/multiturn_12l_j.txt --out research/results/coherence_12l_j.json`
+  3. If coherence is clean and copy >= 55, prepare a 2.3.0 candidate; otherwise
+     reject and keep 2.2.0.
+  4. Alternative second run (not started): same 12L base on
+     `data/mixed_benign_k3_7b_kv4s_context/train.jsonl` (16,316 rows, cache
+     `data/pretok/mixed_benign_k3_7b_kv4s_context`) with 3,000 steps, lr 5e-5.
+- Medium **2.2.0 is unpublished**. The 24-hour limit was active and the editor
+  returned "cannot save your story". Publish manually when the limit is open;
+  do not backfill 2.0.0/2.1.0. Text: `C:\Users\biris\AppData\Local\Temp\opencode\medium_220.md`.
+
+# Previous session - 2.2.0 released
 
 Snapshot: 2026-11-28, **2.2.0 release**. Weights stay `1.2.0` (63M); the
 release adds the deterministic recall checker next to the 2.1.0 budget/time
