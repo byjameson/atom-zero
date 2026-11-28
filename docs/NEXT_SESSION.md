@@ -124,16 +124,17 @@ Verification: VM **1764 tests passed**; benchmark **20/20**.
 
 ## Next levers
 
-1. **2.1.0 target: natural multi-turn coherence.** The automatic score is
-   refusal/word-count only; 2.0.0 adds history recall but does not make
-   open-ended chat coherent. Use the coherence audit as the gate (target
-   flag rate <= 30%).
-2. Generate real 4-6 turn dialogues with the 7B teacher (follow-ups that
-   depend on earlier turns, corrections and topic continuity), mixed with the
-   copy rows. The earlier single-turn teacher validator rejected long
-   newline prompts; a custom dialogue generator is needed.
-3. Keep the 2.0.0 context/safety recipe; do not regress history recall below
-   60%, single below 94%, copy below 55%, safety 40/40, self-harm 16/16.
+1. **2.1.0 is not ready.** A 4-turn dialogue adapter raises held-out dialogue
+   recall to **69.8%** and multi both to **81.25%**, but the self-harm gate
+   fails 13/16. Adding a safety patch fixes self-harm and dialogue recall
+   (86.3%) but drops single to 90.8%, copy to 55.5%, context to 40.5% and
+   product safety to 39/40.
+2. Next objective: a **joint context + dialogue + safety** adapter with a
+   higher context weight and benign-support contrast; require single >= 94%,
+   multi >= 60%, context >= 60%, copy >= 55%, safety 40/40, self-harm 16/16,
+   and the coherence audit <= 30% flagged.
+3. Generate real 4-6 turn teacher dialogues (not templates) through a custom
+   dialogue job; the earlier single-turn validator rejects long prompts.
 4. Do **not** repeat 24L, cw3, MT-chain, self-teacher-replacement, soup, the
    opener arm or the full-safety-overrefusal variants; each is measured and
    rejected.
