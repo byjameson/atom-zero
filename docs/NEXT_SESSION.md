@@ -93,8 +93,10 @@ No training is running; no Vast.ai instance is running. The runtime
   <https://www.linkedin.com/feed/update/urn:li:activity:7532408369098346496/>,
   X <https://x.com/aigokhan/status/2126642851857519041>.
 - VM **1814 tests**, benchmark 20/20.
-- ModelScope: bounded 15-minute upload attempt; skip per the user rule if it
-  does not finish (254 MB over a slow home uplink). Medium: no publishing or
+- ModelScope: **2.4.0 skipped** after a bounded 15-minute upload attempt did
+  not finish (254 MB over a slow home uplink); per the user rule, retry with
+  2.5.0. `verify_release --version 2.4.0` therefore reports one expected
+  ModelScope failure; all other surfaces pass. Medium: no publishing or
   scheduling until the user says so.
 
 ## 2.3.0 released: spillover-v2 + runtime identity tool
