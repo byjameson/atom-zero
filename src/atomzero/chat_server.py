@@ -89,6 +89,7 @@ import torch
 
 from atomzero import __version__
 from atomzero.copy_router import route_copy
+from atomzero.numeric_router import route_numeric
 from atomzero.doc_memory import SourceNotFound, grounded_answer
 from atomzero.curiosity import (
     CuriosityError, curiosity_items, propose_from_gaps)
@@ -3933,6 +3934,23 @@ def copy_answer(prompt: str) -> dict | None:
     }
 
 
+def numeric_answer(messages) -> dict | None:
+    """Return a deterministic budget/time reply, or None to use the model.
+
+    Only explicit limit-versus-value questions are handled; all other prompts
+    keep the existing RAG/model behaviour. ``source`` marks the runtime tool.
+    """
+    routed = route_numeric(messages)
+    if not routed["handled"]:
+        return None
+    return {
+        "text": routed["answer"],
+        "sources": [],
+        "source": "numeric_tool",
+        "kind": routed["kind"],
+    }
+
+
 def chat_prompt(messages) -> str:
     """Build the chat format used during training."""
     parts = []
@@ -4989,7 +5007,20 @@ class Handler(BaseHTTPRequestHandler):
                     verdict = safety.check(message) if safety else None
                     copy_result = (copy_answer(message)
                                    if verdict is None else None)
-                    if copy_result is not None:
+                    numeric_result = (numeric_answer(messages or [message])
+                                      if verdict is None else None)
+                    if numeric_result is not None:
+                        result = {
+                            "reply": numeric_result["text"],
+                            "tool_calls": [{
+                                "name": "numeric_tool",
+                                "kind": numeric_result["kind"],
+                            }],
+                            "sources": [],
+                            "source": "numeric_tool",
+                        }
+                        result_session_id = session_id or "default"
+                    elif copy_result is not None:
                         result = {
                             "reply": copy_result["text"],
                             "tool_calls": [{
@@ -5041,6 +5072,34 @@ class Handler(BaseHTTPRequestHandler):
             max_new = max(1, min(max_new, 256))
             safety = _state.get("safety")
             verdict = safety.check(doc_query) if safety else None
+            numeric_turns = (messages if self.path == "/v1/chat/completions"
+                             else [doc_query])
+            numeric_result = (numeric_answer(numeric_turns)
+                              if verdict is None else None)
+            if numeric_result is not None:
+                _state["metrics"]["requests"] += 1
+                if self.path == "/generate":
+                    return self._json(200, {
+                        "text": numeric_result["text"],
+                        "sources": [],
+                        "model": _state["name"],
+                        "source": "numeric_tool",
+                        "kind": numeric_result["kind"],
+                    })
+                return self._json(200, {
+                    "id": "tiny-numeric-" + str(abs(hash(numeric_result["text"]))
+                                                % 10**12),
+                    "object": "chat.completion",
+                    "model": _state["name"],
+                    "source": "numeric_tool",
+                    "sources": [],
+                    "choices": [{
+                        "index": 0,
+                        "message": {"role": "assistant",
+                                    "content": numeric_result["text"]},
+                        "finish_reason": "stop",
+                    }],
+                })
             copy_result = (copy_answer(doc_query)
                            if verdict is None else None)
             if copy_result is not None:

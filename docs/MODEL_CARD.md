@@ -1,33 +1,35 @@
 # Atom Zero 63M model card
 
-Version: model weights `1.2.0`; standalone `atomzero 2.0.0`<br>
+Version: model weights `1.2.0`; standalone `atomzero 2.1.0`<br>
 Last updated: 2026-11-28
 License: Apache-2.0 for code and weights; data attribution in `NOTICE`.
 
 ```powershell
-pip install atomzero==2.0.0
+pip install atomzero==2.1.0
 atomzero-quickstart
 ```
 
 The first run downloads the ~254 MB checkpoint/tokenizer from Hugging Face,
 seeds a demo corpus and opens the local UI.
 
-## What's new in 2.0.0
+## What's new in 2.1.0
 
-- 2.0.0 adds a **history-conditioning adapter**: on 200 held-out counterfactual conversations it recalls names, pets, cities, preferences, days and language corrections **65.0%** of the time, up from **10.0%** on 1.9.0.
-- Product profile: **97.5% benign single-turn**, **83.3% / 58.3% multi-turn**, **63.0% 4-key copy** (fresh unseen **75.0%**), retention **0.700**, **40/40 safety**, **16/16 self-harm**, 100% RAG.
-- Copy and retention improve over 1.9.0 (59.5 -> 63.0 exact; 0.770 -> 0.700); single-turn rises 94.2 -> 97.5.
-- The trade-off is the automatic multi-turn both-turns score, 68.8% -> 58.3%. That metric counts non-refusal answers with at least four words and does not measure coherence; the safety patch also makes the model more cautious on ambiguous identity/greeting turns.
-- Gates: main gate **promotable** (exact 63.0, key-copy 73.0, content improves, safety 40/40); self-harm gate **promotable (16/16)**. Fresh 4-key copy **75.0%** exact, key recall **92.0%**.
-- The 49M `0.8.0` base remains the fallback; the 1.9.0 63M weights stay available as the previous checkpoint.
+- 2.1.0 adds a **deterministic budget/time checker** to the local assistant. Explicit questions like “My budget is $500. Can I spend $300?” are answered by code, exactly, with the amount and remainder.
+- History recall rises **65.0% -> 82.5%** on the 200 held-out context pairs: budget **4/25 -> 25/25**, time **11/25 -> 25/25**, all other families unchanged.
+- On 276 natural held-out phrasings the routed assistant scores **91.3%** (2.0.0: 48.2%), with budget **133/133** and time **97/97**.
+- The checker triggers on **0/168** benign prompts and **0/16** self-harm prompts, so ordinary chat and crisis handling keep the model path.
+- Product profile: **97.5% benign single-turn**, **83.3% / 58.3% multi-turn**, **63.0% 4-key copy** (fresh unseen **75.0%**), **40/40 safety**, **16/16 self-harm**, 100% RAG.
+- Weights are unchanged (`1.2.0`). Arithmetic is a runtime tool, not a model capability; the model card says so explicitly.
 
-### Previous: 1.9.0
+### Previous: 2.0.0
 
-1.9.0 reduced benign refusals on the then-current multi-turn suite (83.3 / 68.8) and improved retention to 0.770, with single 94.2% and copy 59.5%. Its model card introduced the metric limitation above: the multi-turn score is a refusal/word-count signal, not a coherence measure.
+2.0.0 added the history-conditioning adapter (recall 10.0% -> 65.0%) and reached 97.5% single-turn, 63.0% 4-key copy, 40/40 safety and 16/16 self-harm. The automatic multi-turn both-turns score is 58.3%; that metric counts non-refusal answers with at least four words and does not measure coherence.
 
-### What you can do with 2.0.0
+### What you can do with 2.1.0
 
-- **Follow-up questions that depend on history:** say “My budget is $500.” then ask “Can I spend $300?” — the model answers yes; change the budget to $200 and it answers no.
+- **Check a purchase against a budget:** say “My budget is $500.” then ask “Can I spend $300?” — “Yes, $300 is within your $500 budget.” Ask about $650 — “No, $650 is over your $500 budget by $150.”
+- **Check a task against a time window:** “I have 45 minutes.” then “Can I do a 60-minute task?” — “No, a 60-minute task is 15 minutes over your 45-minute window.”
+- **Recall conversation facts:** names, cities, languages, days and preferences from earlier turns (82.5% on 200 held-out pairs).
 - **Structured copying:** reproduce 4-key JSON or KV records exactly (63.0% on the seen set, 75.0% on fresh unseen records).
 - **Local document QA:** ask about a file you ingested and get a cited answer; the Studio demo answers “What is the launch code?” with **L-7781** and `launch_policy.txt`.
 - **Offline use:** 63M parameters, CPU or a small GPU, Apache-2.0; facts stay in the local RAG index, not in the weights.
@@ -51,7 +53,7 @@ benchmarks and release — is
 | training | 49.2M base upcycled to 8 layers / 63.4M; 3,000-step mixed fine-tune; 49.2M 40k product checkpoint remains the fallback |
 | RAG | SQLite FTS5, hashed/MiniLM embeddings, hybrid candidates, lexical+cosine rerank |
 | vector index | cached `doc_vectors`, prewarmed numpy matrix, IVF ANN above 256 chunks, exact fallback |
-| tools | time, safe arithmetic, task add/list/complete, name/likes memory, allowlisted 3-step plan API with confirmation |
+| tools | time, safe arithmetic, deterministic budget/time checker (`numeric_tool`), task add/list/complete, name/likes memory, allowlisted 3-step plan API with confirmation |
 | sessions | transcript restore, JSON export/import, exact Forget, session Forget |
 | documents | ingest text/Markdown/HTML/PDF/DOCX, page/section citations, evidence panel/API, source/title/sha256, scoped answers, exact-code retrieval, extractive source/collection summaries, headless `atomzero-docs` CLI with sync/status/doctor/export/import, second brain graph, per-source delete |
 | research | approved-only queue, Wikipedia fetch, worker lock/log, teacher synthesis |
@@ -65,7 +67,7 @@ benchmarks and release — is
 | privacy | localhost, no telemetry, SSRF guard, upload caps, deletion |
 | UI | chat, documents, gaps, research queue, teacher notes, adapters, health |
 | packaging | standalone `atomzero` package (assistant deps only), `atomzero`/`atomzero-quickstart` entry points, GitHub release, HF/ModelScope weights |
-| tests | 1764 passed; product suite 168 prompts; behavior 16/16; retrieval 1.000 |
+| tests | 1779 passed; product suite 168 prompts; behavior 16/16; retrieval 1.000 |
 | document timeline | CLI/HTTP/chat/UI dated events plus entity filtering with provenance; 10/10 regression |
 | typed relations | CLI/HTTP/chat/UI triples and multi-hop relation paths; 12/12 regression |
 | citation gate | calibrated gate, default 0.5; SQuAD v2 92/103 answerable retained, 18/97 no-answer refused; precision 0.479 |
@@ -239,14 +241,14 @@ Evidence lives in `research/results/` and
 
 ## Published artifacts
 
-- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v2.0.0>
+- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v2.1.0>
 - GitHub source: <https://github.com/byjameson/atom-zero>
-- Atom Zero PyPI: <https://pypi.org/project/atomzero/2.0.0/>
+- Atom Zero PyPI: <https://pypi.org/project/atomzero/2.1.0/>
 - Hugging Face: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-63m-balanced>
 - Live demo: <https://modelscope.cn/studios/byjameson/atomzerodemo>
 - 2.0.0 article: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-200-a-history-aware-context-adapter-1k0j>
-- Medium: <https://medium.com/@myredditacc9393> (2.0.0 post scheduled for the next window)
+- Medium: <https://medium.com/@myredditacc9393> (2.1.0 post in the next window)
 - LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7532210386427703296/>
 - X: <https://x.com/aigokhan>
 - X post: <https://x.com/aigokhan/status/2126444828980371675>

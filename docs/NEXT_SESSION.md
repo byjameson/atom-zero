@@ -1,17 +1,50 @@
-﻿# Next session - 2.0.0 planning
+﻿# Next session - 2.1.0 released
 
-Snapshot: 2026-11-28, **2.0.0 release prepared**. Head: release commit for
-`2.0.0`; tag `v2.0.0`. No training is running; GPU idle. No Vast.ai instance
-is running. Sponsor goal: **$10,000/month**.
+Snapshot: 2026-11-28, **2.1.0 release**. Weights stay `1.2.0` (63M); the
+release adds the deterministic budget/time checker. No training is running; GPU
+idle. No Vast.ai instance is running. Sponsor goal: **$10,000/month**.
 
 ## Released baseline
 
-`2.0.0` is the current boundary. The default moves to the promoted **63M**
-checkpoint (`byjameson/atom-zero-63m-balanced`, weights `1.2.0`); the 49M
-`0.8.0` base is the fallback. The 1.9.0 63M weights stay available as the
-previous checkpoint.
+`2.1.0` is the current boundary. The default remains the **63M** checkpoint
+(`byjameson/atom-zero-63m-balanced`, weights `1.2.0`); the 49M `0.8.0` base is
+the fallback and the 1.9.0 63M weights stay available as the previous
+checkpoint.
 
-## 2.0.0 result
+## 2.1.0 result
+
+| metric | 2.0.0 | 2.1.0 |
+|---|---:|---:|
+| single-turn benign | 97.5% | **97.5%** |
+| multi-turn final/both | 83.3 / 58.3 | **83.3 / 58.3** |
+| 4-key copy (seen) | 63.0% | **63.0%** |
+| history recall (200 held-out) | 65.0% | **82.5%** |
+| budget decisions | 4/25 | **25/25** |
+| time decisions | 11/25 | **25/25** |
+| safety | 40/40 | **40/40** |
+| self-harm | 16/16 | **16/16** |
+| RAG | 100% | 100% |
+
+- `src/atomzero/numeric_router.py` answers explicit limit/spend and
+  window/task questions deterministically; everything else keeps the model and
+  RAG path. The API marks it `source: numeric_tool`.
+- Routed natural held-out (276 rows): **91.3%** (2.0.0: 48.2%), budget
+  **133/133**, time **97/97**.
+- False positives: **0/168** benign_v2 prompts, **0/16** self-harm prompts.
+- Product suite: **pass** (single 97.5, multi 83.3/58.3, copy exact 63.0,
+  safety 40/40, content ratio 0.700).
+- Weights are unchanged. Arithmetic is a runtime tool, not a model skill, and
+  the model card says so.
+
+### Why the model does not do the arithmetic
+
+The 63M model learns its recall rows but not the comparison rule. Numbers
+tokenize inconsistently (`500` one token, `846` three, `925` `9` + `25`). A
+LoRA control fits the 200 rows it trained on (89.5%) yet stays near chance on
+1,250 fresh rows (45.9%). The checker is the correct product answer today;
+model-side arithmetic stays research.
+
+## 2.0.0 result (previous boundary)
 
 | metric | 1.9.0 | 2.0.0 |
 |---|---:|---:|
@@ -24,13 +57,12 @@ previous checkpoint.
 | safety | 40/40 | **40/40** |
 | self-harm | 16/16 | **16/16** |
 
-2.0.0 adds a history-conditioning LoRA to 1.9.0, plus a small safety adapter
+2.0.0 added a history-conditioning LoRA to 1.9.0 plus a small safety adapter
 with benign-support contrast. Main gate **promotable** (exact 63.0, key 73.0);
 self-harm gate **promotable** (16/16); fresh 4-key copy **75.0%**. The
 automatic multi-turn both-turns score falls 68.8 -> 58.3 because the safety
 adapter is more cautious on ambiguous identity/greeting turns; the metric is
-refusal/word-count only, not coherence. History recall is measured on 200
-held-out counterfactual pairs.
+refusal/word-count only, not coherence.
 
 ## 1.9.0 result
 
@@ -106,35 +138,35 @@ variant beat J on the full profile, so the default did not change.
 
 ## Published surfaces
 
-- PyPI: <https://pypi.org/project/atomzero/2.0.0/>
-- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v2.0.0>
+- PyPI: <https://pypi.org/project/atomzero/2.1.0/> (live)
 - Hugging Face default: <https://huggingface.co/byjameson/atom-zero-63m-balanced>
+  (card/config 2.1.0, weights 1.2.0 verified)
 - ModelScope: <https://modelscope.cn/models/byjameson/atom-zero-63m-balanced>
-  (weights 2.0.0 / 1.2.0 verified; `verify_release.py` reports 0 failures)
-- ModelScope Studio: 2.0.0, L-7781 verified
-- dev.to: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-200-a-history-aware-context-adapter-1k0j>
-- Medium: 2.0.0 post is scheduled for 2026-11-28 20:30 (the 24-hour limit is
-  active now; no backfill).
-- LinkedIn: <https://www.linkedin.com/feed/update/urn:li:activity:7532210386427703296/>
-- X: <https://x.com/aigokhan/status/2126444828980371675>
+  (card 2.1.0 verified)
+- ModelScope Studio: 2.1.0, L-7781 verified
+- GitHub release: pending a write-capable token; commit `8e32519` is ready
+  locally with tag `v2.1.0`.
+- dev.to, Medium, LinkedIn, X: 2.1.0 posts pending after the GitHub release
+  (no edits to older posts).
 - Reddit: **not used anymore**. Reddit filters remove posts; do not post or reply there. The existing profile/post stay as history only.
 - Live demo: <https://modelscope.cn/studios/byjameson/atomzerodemo> (scoped document QA; synthetic corpus)
 
-Verification: VM **1764 tests passed**; benchmark **20/20**.
+Verification: VM **1780 tests passed**; benchmark **20/20**; product suite
+**pass**; server suite **21/21**; routed context **82.5%**; self-harm **16/16**.
+`verify_release.py --version 2.1.0`: PyPI/HF/ModelScope pass; GitHub 404 until
+the release push.
 
 ## Next levers
 
-1. **2.1.0 is not ready.** A 4-turn dialogue adapter raises held-out dialogue
-   recall to **69.8%** and multi both to **81.25%**, but the self-harm gate
-   fails 13/16. Adding a safety patch fixes self-harm and dialogue recall
-   (86.3%) but drops single to 90.8%, copy to 55.5%, context to 40.5% and
-   product safety to 39/40.
-2. Next objective: a **joint context + dialogue + safety** adapter with a
-   higher context weight and benign-support contrast; require single >= 94%,
-   multi >= 60%, context >= 60%, copy >= 55%, safety 40/40, self-harm 16/16,
-   and the coherence audit <= 30% flagged.
-3. Generate real 4-6 turn teacher dialogues (not templates) through a custom
-   dialogue job; the earlier single-turn validator rejects long prompts.
+1. **Model-side arithmetic is research, not a release claim.** The tokenizer
+   splits numbers inconsistently; try a digit-spaced input normalization and a
+   larger decision set, and require >=85% on unseen phrasings before shipping.
+2. **Dialogue adapter routing stays parked.** The 4-turn adapter improves
+   dialogue recall but the multi-turn eval is only 48 rows; a larger held-out
+   set is required before any routing claim.
+3. **Teacher distillation:** retry only on a host with verified Hugging Face
+   download speed (>=50 MB/s) or a preloaded Qwen image; otherwise use the
+   synthetic labeled data.
 4. Do **not** repeat 24L, cw3, MT-chain, self-teacher-replacement, soup, the
    opener arm or the full-safety-overrefusal variants; each is measured and
    rejected.
