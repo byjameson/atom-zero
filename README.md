@@ -26,7 +26,7 @@ release infrastructure, and safety review. Crypto and other options are in
 ## Install
 
 ```powershell
-pip install atomzero==2.1.0
+pip install atomzero==2.2.0
 ```
 
 Optional local MiniLM reranker:
@@ -80,6 +80,12 @@ bases.
 
 ## What you can do with Atom Zero
 
+- Recall what you told it: “My name is Ada.” then “What is my name?” — “Ada.”;
+  “I live in Izmir.” then “Which city do I live in?” — “Izmir.”; “Today is
+  Sunday.” then “What day is tomorrow?” — “Tomorrow is Monday.”
+- Correct a preference or language: “I prefer coffee over water.” then “What do
+  I prefer?” — “coffee.”; “Use Java for this project.” then “Actually, use Go.
+  Which language are we using?” — “Go.”
 - Check a purchase against a budget: “My budget is $500.” then “Can I spend
   $300?” — “Yes, $300 is within your $500 budget.” Ask about $650 and it
   answers “No, $650 is over your $500 budget by $150.” These answers come
@@ -87,8 +93,6 @@ bases.
 - Check a task against a time window: “I have 45 minutes.” then “Can I do a
   60-minute task?” — “No, a 60-minute task is 15 minutes over your
   45-minute window.”
-- Recall conversation facts: names, cities, languages, days and preferences
-  from earlier turns.
 - Copy structured records exactly as 4-key JSON or KV.
 - Ingest a local document and ask questions with cited answers; the Studio
   demo returns **L-7781** from `launch_policy.txt` for “What is the launch
@@ -483,11 +487,11 @@ Full details: <https://github.com/byjameson/atom-zero/blob/main/docs/DONATE.md>
 
 ## Links
 
-- PyPI: <https://pypi.org/project/atomzero/2.1.0/>
+- PyPI: <https://pypi.org/project/atomzero/2.2.0/>
 - GitHub source: <https://github.com/byjameson/atom-zero>
 - X: <https://x.com/aigokhan>
 - Instagram: <https://instagram.com/quantsinner>
-- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v2.1.0>
+- GitHub release: <https://github.com/byjameson/atom-zero/releases/tag/v2.2.0>
 - dev.to 2.1.0: <https://dev.to/mycute_97b39c4e34027570f9/atom-zero-210-exact-budget-and-time-answers-still-63m-and-offline-18e8>
 - LinkedIn 2.1.0: <https://www.linkedin.com/feed/update/urn:li:activity:7532262926141779968/>
 - X 2.1.0: <https://x.com/aigokhan/status/2126498628956983641>

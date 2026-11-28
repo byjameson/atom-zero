@@ -1,48 +1,47 @@
-﻿# Next session - 2.1.0 released
+﻿# Next session - 2.2.0 released
 
-Snapshot: 2026-11-28, **2.1.0 release**. Weights stay `1.2.0` (63M); the
-release adds the deterministic budget/time checker. No training is running; GPU
-idle. No Vast.ai instance is running. Sponsor goal: **$10,000/month**.
+Snapshot: 2026-11-28, **2.2.0 release**. Weights stay `1.2.0` (63M); the
+release adds the deterministic recall checker next to the 2.1.0 budget/time
+checker. No training is running; GPU idle. No Vast.ai instance is running.
+Sponsor goal: **$10,000/month**.
 
 ## Released baseline
 
-`2.1.0` is the current boundary. The default remains the **63M** checkpoint
+`2.2.0` is the current boundary. The default remains the **63M** checkpoint
 (`byjameson/atom-zero-63m-balanced`, weights `1.2.0`); the 49M `0.8.0` base is
 the fallback and the 1.9.0 63M weights stay available as the previous
 checkpoint.
 
-## 2.1.0 result
+## 2.2.0 result
 
-| metric | 2.0.0 | 2.1.0 |
+| metric | 2.1.0 | 2.2.0 |
 |---|---:|---:|
+| routed context (200 held-out) | 82.5% | **100%** |
+| natural held-out (276) | 91.3% | **100%** |
+| model-only context (200) | 65.0% | 65.0% |
 | single-turn benign | 97.5% | **97.5%** |
 | multi-turn final/both | 83.3 / 58.3 | **83.3 / 58.3** |
 | 4-key copy (seen) | 63.0% | **63.0%** |
-| history recall (200 held-out) | 65.0% | **82.5%** |
-| budget decisions | 4/25 | **25/25** |
-| time decisions | 11/25 | **25/25** |
 | safety | 40/40 | **40/40** |
 | self-harm | 16/16 | **16/16** |
 | RAG | 100% | 100% |
 
-- `src/atomzero/numeric_router.py` answers explicit limit/spend and
-  window/task questions deterministically; everything else keeps the model and
-  RAG path. The API marks it `source: numeric_tool`.
-- Routed natural held-out (276 rows): **91.3%** (2.0.0: 48.2%), budget
-  **133/133**, time **97/97**.
+- `src/atomzero/recall_router.py` answers explicit name/city/language/
+  preference/day/pet questions from the facts stated earlier in the
+  conversation; the API marks it `source: recall_tool`.
+- All eight context families are **25/25** on the routed path; the model alone
+  still scores 65.0%, and the card keeps both numbers separate.
 - False positives: **0/168** benign_v2 prompts, **0/16** self-harm prompts.
 - Product suite: **pass** (single 97.5, multi 83.3/58.3, copy exact 63.0,
   safety 40/40, content ratio 0.700).
-- Weights are unchanged. Arithmetic is a runtime tool, not a model skill, and
-  the model card says so.
+- Weights are unchanged. Recall and arithmetic are runtime tools, not model
+  skills, and the model card says so.
 
-### Why the model does not do the arithmetic
+### Previous: 2.1.0
 
-The 63M model learns its recall rows but not the comparison rule. Numbers
-tokenize inconsistently (`500` one token, `846` three, `925` `9` + `25`). A
-LoRA control fits the 200 rows it trained on (89.5%) yet stays near chance on
-1,250 fresh rows (45.9%). The checker is the correct product answer today;
-model-side arithmetic stays research.
+2.1.0 added the budget/time checker and lifted routed context 65.0% -> 82.5%
+(budget 4/25 -> 25/25, time 11/25 -> 25/25) with 91.3% on 276 natural
+phrasings. Weights were unchanged.
 
 ## 2.0.0 result (previous boundary)
 
