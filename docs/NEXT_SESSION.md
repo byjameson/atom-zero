@@ -1,4 +1,42 @@
-﻿# Next session - 12L rejected, 2.2.0 stays
+﻿# Next session - identity in the weights + spillover gates
+
+Snapshot: 2026-11-28 09:40, **2.2.0 remains the default** (weights `1.2.0`).
+No training is running; no Vast.ai instance is running. The runtime
+`identity_tool` is implemented and tested locally (not released yet).
+
+## User request: put name + creator in the weights
+
+- Goal: the model itself answers "What is your name?" and "Who created you?"
+  without `identity_tool`.
+- Data: 150-300 paraphrases of name/creator questions with short answers
+  ("I am Atom Zero." / "Atom Zero was created by Gökhan Çava."), plus a
+  held-out 50-paraphrase identity eval. Check tokenizer handling of "Gökhan
+  Çava" first; include ASCII "Gokhan Cava" if needed.
+- Train: LoRA on the chosen base with 50% replay, 600-1000 steps; merge and
+  gate.
+- Gates: held-out identity >=95%, single >=97, copy >=60, safety 40/40,
+  self-harm 16/16, 200-row multi both >=80, refusal <=7%.
+- Keep `identity_router.py` as a runtime fallback/display layer; weights
+  become the primary source.
+- Do not ship the weights change without the full product/context/self-harm
+  gates on the VM.
+
+## Spillover adapter (partial gates, resume here)
+
+- `checkpoints/atom-zero-63m-2.3.0-spillover`: adapter `adapters_spillover_v1`
+  merged into 2.0.0.
+- Held-out spillover: refusal **0.0% (0/280)**, useful **99.29%** (base:
+  5.71% / 92.86%).
+- 200-row multi: final **87.0**, both **82.0**, turn **91.0**; refusals
+  **10/400 (2.5%)** vs base 35; first-turn 10, second-turn 0. But zero-overlap
+  **42.5%** (base 34.75%) and **23 empty second-turn replies** (new failure
+  mode) plus 3 short.
+- **Product suite + self-harm were not run** (stopped for shutdown). Next:
+  `product_suite` + `_probe_selfharm`; inspect the 23 empties
+  (stop/max_new artifact?) and require single >=97, copy >=60, safety 40/40,
+  self-harm 16/16, both >=80, zero-overlap <=35.
+
+# Previous session - 12L rejected, 2.2.0 stays
 
 Snapshot: 2026-11-28 08:45, **2.2.0 remains the default** (weights `1.2.0`,
 tools `numeric_tool` + `recall_tool`). No training is running; no Vast.ai

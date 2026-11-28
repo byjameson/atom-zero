@@ -91,6 +91,7 @@ from atomzero import __version__
 from atomzero.copy_router import route_copy
 from atomzero.numeric_router import route_numeric
 from atomzero.recall_router import route_recall
+from atomzero.identity_router import route_identity
 from atomzero.doc_memory import SourceNotFound, grounded_answer
 from atomzero.curiosity import (
     CuriosityError, curiosity_items, propose_from_gaps)
@@ -3969,6 +3970,19 @@ def recall_answer(messages) -> dict | None:
     }
 
 
+def identity_answer(messages) -> dict | None:
+    """Return a deterministic identity reply, or None to use the model."""
+    routed = route_identity(messages)
+    if not routed["handled"]:
+        return None
+    return {
+        "text": routed["answer"],
+        "sources": [],
+        "source": "identity_tool",
+        "kind": routed["kind"],
+    }
+
+
 def chat_prompt(messages) -> str:
     """Build the chat format used during training."""
     parts = []
@@ -5029,6 +5043,8 @@ class Handler(BaseHTTPRequestHandler):
                                       if verdict is None else None)
                     recall_result = (recall_answer(messages or [message])
                                      if verdict is None else None)
+                    identity_result = (identity_answer(messages or [message])
+                                       if verdict is None else None)
                     if numeric_result is not None:
                         result = {
                             "reply": numeric_result["text"],
@@ -5049,6 +5065,17 @@ class Handler(BaseHTTPRequestHandler):
                             }],
                             "sources": [],
                             "source": "recall_tool",
+                        }
+                        result_session_id = session_id or "default"
+                    elif identity_result is not None:
+                        result = {
+                            "reply": identity_result["text"],
+                            "tool_calls": [{
+                                "name": "identity_tool",
+                                "kind": identity_result["kind"],
+                            }],
+                            "sources": [],
+                            "source": "identity_tool",
                         }
                         result_session_id = session_id or "default"
                     elif copy_result is not None:
@@ -5154,6 +5181,32 @@ class Handler(BaseHTTPRequestHandler):
                         "index": 0,
                         "message": {"role": "assistant",
                                     "content": recall_result["text"]},
+                        "finish_reason": "stop",
+                    }],
+                })
+            identity_result = (identity_answer(numeric_turns)
+                               if verdict is None else None)
+            if identity_result is not None:
+                _state["metrics"]["requests"] += 1
+                if self.path == "/generate":
+                    return self._json(200, {
+                        "text": identity_result["text"],
+                        "sources": [],
+                        "model": _state["name"],
+                        "source": "identity_tool",
+                        "kind": identity_result["kind"],
+                    })
+                return self._json(200, {
+                    "id": "tiny-identity-" + str(abs(hash(identity_result["text"]))
+                                                 % 10**12),
+                    "object": "chat.completion",
+                    "model": _state["name"],
+                    "source": "identity_tool",
+                    "sources": [],
+                    "choices": [{
+                        "index": 0,
+                        "message": {"role": "assistant",
+                                    "content": identity_result["text"]},
                         "finish_reason": "stop",
                     }],
                 })
